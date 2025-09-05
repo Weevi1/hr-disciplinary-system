@@ -1,0 +1,774 @@
+/* ============================================= */
+/* 🏗️ MAIN LAYOUT ARCHITECTURE */
+/* Clean, maintainable layout system */
+/* ============================================= */
+
+.main-layout {
+  min-height: 100vh;
+  background: var(--gray-50);
+  position: relative;
+}
+
+/* ============================================= */
+/* 🖥️ DESKTOP HEADER STYLES */
+/* ============================================= */
+
+.main-layout__desktop-header {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: white;
+  border-bottom: 1px solid var(--gray-200);
+  height: var(--header-height-desktop);
+}
+
+.main-layout__desktop-header-content {
+  height: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.main-layout__desktop-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex: 1;
+}
+
+.main-layout__desktop-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ============================================= */
+/* 🎨 LOGO STYLES */
+/* ============================================= */
+
+.main-layout__logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.main-layout__logo-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.main-layout__logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 10px;
+}
+
+.main-layout__logo-text {
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.main-layout__logo-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.main-layout__logo-title {
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--gray-900);
+  line-height: 1.2;
+}
+
+.main-layout__logo-subtitle {
+  font-size: 12px;
+  color: var(--gray-500);
+  line-height: 1.2;
+}
+
+/* ============================================= */
+/* 🧭 DESKTOP NAVIGATION */
+/* ============================================= */
+
+.main-layout__desktop-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.main-layout__nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  background: transparent;
+  color: var(--gray-600);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all var(--duration) ease;
+  text-decoration: none;
+}
+
+.main-layout__nav-item:hover {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+.main-layout__nav-item--active {
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  color: white;
+  box-shadow: var(--shadow-lg);
+}
+
+.main-layout__nav-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* ============================================= */
+/* ⚡ ACTION BUTTONS */
+/* ============================================= */
+
+.main-layout__action-button {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  color: var(--gray-600);
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration) ease;
+}
+
+.main-layout__action-button:hover {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+.main-layout__action-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.main-layout__notifications-button {
+  position: relative;
+}
+
+.main-layout__notification-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  background: var(--color-error);
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+/* ============================================= */
+/* 👤 USER MENU */
+/* ============================================= */
+
+.main-layout__user-menu {
+  position: relative;
+}
+
+.main-layout__user-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all var(--duration) ease;
+}
+
+.main-layout__user-menu-trigger:hover {
+  background: var(--gray-100);
+}
+
+.main-layout__user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.main-layout__user-avatar--large {
+  width: 48px;
+  height: 48px;
+  font-size: 18px;
+}
+
+/* ============================================= */
+/* 🎛️ USER DROPDOWN */
+/* ============================================= */
+
+.main-layout__user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--gray-200);
+  z-index: 50;
+  overflow: hidden;
+}
+
+.main-layout__user-dropdown-content {
+  padding: var(--space-4);
+}
+
+.main-layout__user-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--gray-200);
+  margin-bottom: var(--space-4);
+}
+
+.main-layout__user-name {
+  font-weight: 600;
+  color: var(--gray-900);
+  font-size: 16px;
+}
+
+.main-layout__user-role {
+  font-size: 12px;
+  color: var(--gray-500);
+  text-transform: capitalize;
+}
+
+.main-layout__user-dropdown-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.main-layout__dropdown-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: none;
+  color: var(--gray-700);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all var(--duration) ease;
+  text-align: left;
+  width: 100%;
+}
+
+.main-layout__dropdown-nav-item:hover {
+  background: var(--gray-100);
+}
+
+.main-layout__dropdown-nav-item--active {
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  color: white;
+  box-shadow: var(--shadow);
+}
+
+.main-layout__dropdown-nav-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.main-layout__user-dropdown-footer {
+  border-top: 1px solid var(--gray-200);
+  padding-top: var(--space-4);
+}
+
+.main-layout__logout-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: transparent;
+  border: none;
+  color: var(--color-error);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all var(--duration) ease;
+  width: 100%;
+}
+
+.main-layout__logout-button:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.main-layout__logout-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* ============================================= */
+/* 📱 MOBILE HEADER STYLES */
+/* ============================================= */
+
+.main-layout__mobile-header {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: white;
+  border-bottom: 1px solid var(--gray-200);
+  height: var(--header-height-mobile);
+  transition: transform var(--duration) ease;
+}
+
+.main-layout__mobile-header-content {
+  height: 100%;
+  padding: 0 var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.main-layout__mobile-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.main-layout__mobile-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.main-layout__mobile-menu-button {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  color: var(--gray-600);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration) ease;
+}
+
+.main-layout__mobile-menu-button:hover {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+.main-layout__mobile-menu-icon {
+  width: 24px;
+  height: 24px;
+}
+
+/* ============================================= */
+/* 📱 MOBILE LOGO */
+/* ============================================= */
+
+.main-layout__mobile-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.main-layout__mobile-logo-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.main-layout__mobile-logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.main-layout__mobile-logo-text {
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.main-layout__mobile-logo-title {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--gray-900);
+}
+
+/* ============================================= */
+/* 📱 MOBILE ACTIONS */
+/* ============================================= */
+
+.main-layout__mobile-action-button {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--gray-600);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration) ease;
+}
+
+.main-layout__mobile-action-button:hover {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+.main-layout__mobile-action-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.main-layout__mobile-notifications {
+  position: relative;
+}
+
+.main-layout__mobile-notification-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  background: var(--color-error);
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+.main-layout__mobile-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* ============================================= */
+/* 📱 MOBILE MENU SHEET */
+/* ============================================= */
+
+.main-layout__mobile-menu-dialog {
+  position: relative;
+  z-index: 50;
+}
+
+.main-layout__mobile-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+}
+
+.main-layout__mobile-menu-panel {
+  position: relative;
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  max-width: 320px;
+  flex-direction: column;
+  background: white;
+  box-shadow: var(--shadow-xl);
+}
+
+.main-layout__mobile-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.main-layout__mobile-menu-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.main-layout__mobile-menu-logo-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.main-layout__mobile-menu-logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 10px;
+}
+
+.main-layout__mobile-menu-logo-text {
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.main-layout__mobile-menu-logo-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.main-layout__mobile-menu-logo-title {
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--gray-900);
+  line-height: 1.2;
+}
+
+.main-layout__mobile-menu-logo-subtitle {
+  font-size: 12px;
+  color: var(--gray-500);
+  line-height: 1.2;
+}
+
+.main-layout__mobile-menu-close {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration) ease;
+}
+
+.main-layout__mobile-menu-close:hover {
+  background: var(--gray-200);
+  color: var(--gray-900);
+}
+
+.main-layout__mobile-menu-close-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* ============================================= */
+/* 📱 MOBILE MENU USER INFO */
+/* ============================================= */
+
+.main-layout__mobile-menu-user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.main-layout__mobile-menu-user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.main-layout__mobile-menu-user-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.main-layout__mobile-menu-user-name {
+  font-weight: 600;
+  color: var(--gray-900);
+  font-size: 16px;
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+
+.main-layout__mobile-menu-user-role {
+  font-size: 14px;
+  color: var(--gray-500);
+  text-transform: capitalize;
+}
+
+/* ============================================= */
+/* 📱 MOBILE MENU NAVIGATION */
+/* ============================================= */
+
+.main-layout__mobile-menu-nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.main-layout__mobile-menu-nav-section {
+  flex: 1;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.main-layout__mobile-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: transparent;
+  border: none;
+  color: var(--gray-700);
+  font-size: 16px;
+  font-weight: 500;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all var(--duration) ease;
+  text-align: left;
+  width: 100%;
+}
+
+.main-layout__mobile-nav-item:hover {
+  background: var(--gray-100);
+}
+
+.main-layout__mobile-nav-item--active {
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  color: white;
+  box-shadow: var(--shadow);
+}
+
+.main-layout__mobile-nav-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.main-layout__mobile-menu-nav-footer {
+  border-top: 1px solid var(--gray-200);
+  padding: var(--space-4);
+}
+
+.main-layout__mobile-logout-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: transparent;
+  border: none;
+  color: var(--color-error);
+  font-size: 16px;
+  font-weight: 500;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all var(--duration) ease;
+  width: 100%;
+}
+
+.main-layout__mobile-logout-button:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.main-layout__mobile-logout-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* ============================================= */
+/* 🎯 MAIN CONTENT AREA */
+/* ============================================= */
+
+.main-layout__content {
+  position: relative;
+  width: 100%;
+  /* Content area is completely flexible - components choose their own constraints */
+}
+
+/* ============================================= */
+/* 📱 RESPONSIVE BREAKPOINTS */
+/* ============================================= */
+
+@media (min-width: 768px) {
+  .main-layout__desktop-header {
+    display: block;
+  }
+  
+  .main-layout__mobile-header {
+    display: none;
+  }
+  
+  .main-layout__content {
+    padding-top: 0; /* Desktop header is sticky, not fixed */
+  }
+}
+
+@media (max-width: 767px) {
+  .main-layout__content {
+    padding-top: var(--header-height-mobile); /* Account for fixed mobile header */
+  }
+}

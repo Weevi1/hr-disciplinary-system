@@ -1,0 +1,757 @@
+/* ============================================= */
+/* 🎯 ENHANCED WARNING WIZARD - PROFESSIONAL MOBILE-FIRST */
+/* Ultra-clean, minimal design with maximum professionalism */
+/* ============================================= */
+
+/* ============================================= */
+/* 📱 MODAL WRAPPER - FULL SCREEN NATIVE EXPERIENCE */
+/* ============================================= */
+
+.enhanced-warning-wizard-modal {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  z-index: 9999 !important;
+  
+  /* Mobile-first: Clean full-screen experience */
+  background: #ffffff !important;
+  display: flex !important;
+  flex-direction: column !important;
+  
+  /* Safe area support for modern devices */
+  padding-top: env(safe-area-inset-top) !important;
+  padding-left: env(safe-area-inset-left) !important;
+  padding-right: env(safe-area-inset-right) !important;
+  padding-bottom: 0 !important;
+}
+
+/* ============================================= */
+/* 📦 MODAL CONTAINER - SEAMLESS INTEGRATION */
+/* ============================================= */
+
+.enhanced-warning-wizard-container {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: #ffffff !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* ============================================= */
+/* 🎯 FUNCTIONAL HEADER - PROFESSIONAL & COMPLETE */
+/* Clean design with all essential functionality preserved */
+/* ============================================= */
+
+.wizard-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  padding: 0.75rem 1rem !important;
+  flex-shrink: 0 !important;
+  min-height: 56px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+/* ============================================= */
+/* 🔴 CLOSE BUTTON - VISIBLE & FUNCTIONAL */
+/* ============================================= */
+
+.wizard-header__left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+}
+
+.wizard-header__close-button {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  padding: 0.5rem !important;
+  color: #64748b !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+}
+
+.wizard-header__close-button:active {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  transform: scale(0.96) !important;
+}
+
+/* ============================================= */
+/* 🟢 CLEAR PROGRESS INDICATORS */
+/* Numbered steps with clear visual hierarchy */
+/* ============================================= */
+
+.wizard-header__progress {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  flex: 1 !important;
+  justify-content: center !important;
+  max-width: 120px !important;
+}
+
+.wizard-header__step {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 50% !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  flex-shrink: 0 !important;
+}
+
+.wizard-header__step--active {
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+  transform: scale(1.1) !important;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25) !important;
+}
+
+.wizard-header__step--completed {
+  background: #10b981 !important;
+  color: #ffffff !important;
+}
+
+.wizard-header__step--inactive {
+  background: #f1f5f9 !important;
+  color: #94a3b8 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+/* ============================================= */
+/* 🎤 AUDIO TIMER & RIGHT SIDE CONTROLS */
+/* Keep essential functionality visible */
+/* ============================================= */
+
+.wizard-header__right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+/* Audio recording timer - keep visible and styled */
+.wizard-header__right .font-mono {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border: 1px solid #fde68a !important;
+  border-radius: 6px !important;
+  padding: 0.25rem 0.5rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+}
+
+/* Debug toggle buttons - make them more subtle but functional */
+.wizard-header__right button[title*="Toggle"] {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  padding: 0.25rem !important;
+  color: #64748b !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 12px !important;
+}
+
+.wizard-header__right button[title*="Toggle"]:active {
+  background: #f1f5f9 !important;
+  transform: scale(0.95) !important;
+}
+
+/* Hide only non-essential elements */
+.wizard-header__title,
+.wizard-header__subtitle {
+  display: none !important;
+}
+
+/* ============================================= */
+/* 📄 CONTENT AREA - MAXIMUM SPACE UTILIZATION */
+/* ============================================= */
+
+.wizard-content {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+}
+
+.wizard-content__scrollable {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  
+  /* Optimized padding - wider content area for less scrolling */
+  padding: 1rem 0.625rem 0 0.625rem !important;
+  
+  background: #ffffff !important;
+  
+  /* Premium iOS-style scrolling */
+  -webkit-overflow-scrolling: touch !important;
+  scroll-behavior: smooth !important;
+  overscroll-behavior: contain !important;
+  
+  /* Performance optimizations */
+  transform: translateZ(0) !important;
+  will-change: scroll-position !important;
+}
+
+/* Ultra-subtle scrollbar - almost invisible */
+.wizard-content__scrollable::-webkit-scrollbar {
+  width: 1px !important;
+}
+
+.wizard-content__scrollable::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.wizard-content__scrollable::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2) !important;
+  border-radius: 0.5px !important;
+}
+
+/* ============================================= */
+/* 🎨 PROFESSIONAL TYPOGRAPHY SYSTEM - TIGHTENED */
+/* ============================================= */
+
+.wizard-content__scrollable {
+  line-height: 1.5 !important;
+  color: #0f172a !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* 🎯 ULTRA-TIGHTENED HEADING MARGINS - Eliminate huge gaps */
+.wizard-content__scrollable h1 {
+  font-size: 1.5rem !important; /* 24px */
+  font-weight: 700 !important;
+  margin: 0 0 0.5rem 0 !important; /* Further reduced from 0.75rem */
+  color: #0f172a !important;
+  line-height: 1.3 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.wizard-content__scrollable h2 {
+  font-size: 1.25rem !important; /* 20px */
+  font-weight: 600 !important;
+  margin: 0.75rem 0 0.375rem 0 !important; /* Further reduced top and bottom */
+  color: #1e293b !important;
+  line-height: 1.4 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.wizard-content__scrollable h3 {
+  font-size: 1.125rem !important; /* 18px */
+  font-weight: 600 !important;
+  margin: 0.5rem 0 0.375rem 0 !important; /* Further reduced */
+  color: #334155 !important;
+  line-height: 1.4 !important;
+}
+
+.wizard-content__scrollable h4 {
+  font-size: 1rem !important; /* 16px */
+  font-weight: 600 !important;
+  margin: 0.5rem 0 0.375rem 0 !important; /* Further reduced */
+  color: #475569 !important;
+  line-height: 1.4 !important;
+}
+
+/* Body text - tighter spacing */
+.wizard-content__scrollable p {
+  font-size: 0.9375rem !important; /* 15px */
+  font-weight: 400 !important;
+  margin: 0 0 0.5rem 0 !important; /* Further reduced from 0.75rem */
+  color: #334155 !important;
+  line-height: 1.6 !important;
+}
+
+/* Small text */
+.wizard-content__scrollable .text-sm,
+.wizard-content__scrollable small {
+  font-size: 0.8125rem !important; /* 13px */
+  line-height: 1.5 !important;
+}
+
+/* Extra small text */
+.wizard-content__scrollable .text-xs {
+  font-size: 0.75rem !important; /* 12px */
+  line-height: 1.4 !important;
+}
+
+/* ============================================= */
+/* 🎪 FORM ELEMENTS - REFINED & PROFESSIONAL */
+/* ============================================= */
+
+.wizard-content__scrollable input[type="text"],
+.wizard-content__scrollable input[type="email"],
+.wizard-content__scrollable input[type="tel"],
+.wizard-content__scrollable input[type="url"],
+.wizard-content__scrollable input[type="date"],
+.wizard-content__scrollable input[type="time"],
+.wizard-content__scrollable input[type="number"],
+.wizard-content__scrollable textarea,
+.wizard-content__scrollable select {
+  width: 100% !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 0.875rem !important;
+  font-size: 0.9375rem !important; /* 15px - optimal for mobile */
+  line-height: 1.5 !important;
+  color: #0f172a !important;
+  background: #ffffff !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+.wizard-content__scrollable input:focus,
+.wizard-content__scrollable textarea:focus,
+.wizard-content__scrollable select:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08) !important;
+  outline: none !important;
+}
+
+/* Textarea specific styling */
+.wizard-content__scrollable textarea {
+  min-height: 100px !important;
+  resize: vertical !important;
+}
+
+/* Select specific styling */
+.wizard-content__scrollable select {
+  background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%23475569"><path d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z"/></svg>') !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.75rem center !important;
+  background-size: 16px !important;
+  padding-right: 2.5rem !important;
+}
+
+/* ============================================= */
+/* 🎨 REFINED COLOR UTILITIES */
+/* ============================================= */
+
+.wizard-content__scrollable .text-gray-500 { color: #64748b !important; }
+.wizard-content__scrollable .text-gray-600 { color: #475569 !important; }
+.wizard-content__scrollable .text-gray-700 { color: #334155 !important; }
+.wizard-content__scrollable .text-gray-800 { color: #1e293b !important; }
+.wizard-content__scrollable .text-gray-900 { color: #0f172a !important; }
+
+.wizard-content__scrollable .text-blue-600 { color: #2563eb !important; }
+.wizard-content__scrollable .text-green-600 { color: #059669 !important; }
+.wizard-content__scrollable .text-amber-600 { color: #d97706 !important; }
+.wizard-content__scrollable .text-red-600 { color: #dc2626 !important; }
+
+/* Subtle background colors with compact padding */
+.wizard-content__scrollable .bg-blue-50 { 
+  background-color: #eff6ff !important; 
+  border: 1px solid #e0f2fe !important;
+  border-radius: 8px !important;
+  padding: 0.75rem !important; /* Reduced from typical 1rem+ */
+}
+.wizard-content__scrollable .bg-green-50 { 
+  background-color: #f0fdf4 !important; 
+  border: 1px solid #dcfce7 !important;
+  border-radius: 8px !important;
+  padding: 0.75rem !important; /* Reduced from typical 1rem+ */
+}
+.wizard-content__scrollable .bg-amber-50 { 
+  background-color: #fefbeb !important; 
+  border: 1px solid #fef3c7 !important;
+  border-radius: 8px !important;
+  padding: 0.75rem !important; /* Reduced from typical 1rem+ */
+}
+.wizard-content__scrollable .bg-red-50 { 
+  background-color: #fef2f2 !important; 
+  border: 1px solid #fecaca !important;
+  border-radius: 8px !important;
+  padding: 0.75rem !important; /* Reduced from typical 1rem+ */
+}
+
+/* ============================================= */
+/* 🎯 PROFESSIONAL FOOTER - CLEAN BUTTON LAYOUT */
+/* Account for wizard-footer__nav wrapper from component */
+/* ============================================= */
+
+.wizard-footer {
+  background: #ffffff !important;
+  border-top: 1px solid #f1f5f9 !important;
+  padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom)) 1rem !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.5rem !important;
+}
+
+/* The nav wrapper that contains the buttons */
+.wizard-footer__nav {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 0.75rem !important;
+  align-items: stretch !important;
+  width: 100% !important;
+}
+
+.wizard-footer__button {
+  min-height: 50px !important;
+  border-radius: 12px !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  letter-spacing: -0.005em !important;
+  white-space: nowrap !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* Secondary button (Previous/Back) - Fixed width */
+.wizard-footer__button--secondary {
+  flex: 0 0 auto !important;
+  padding: 0 1.5rem !important;
+  background: #f8fafc !important;
+  color: #475569 !important;
+  border: 1.5px solid #e2e8f0 !important;
+}
+
+.wizard-footer__button--secondary:active:not(:disabled) {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  transform: translateY(1px) !important;
+}
+
+.wizard-footer__button--secondary:disabled {
+  background: #f8fafc !important;
+  color: #cbd5e1 !important;
+  border-color: #f1f5f9 !important;
+  cursor: not-allowed !important;
+}
+
+/* Primary button (Next/Complete) - Takes remaining space */
+.wizard-footer__button--primary {
+  flex: 1 !important;
+  min-width: 0 !important;
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+  border: 1.5px solid #3b82f6 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.wizard-footer__button--primary:active:not(:disabled) {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  transform: translateY(1px) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+.wizard-footer__button--primary:disabled {
+  background: #e2e8f0 !important;
+  color: #9ca3af !important;
+  border-color: #e2e8f0 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+
+/* Loading state for primary button */
+.wizard-footer__button--loading {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.wizard-footer__button--loading::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: 16px !important;
+  height: 16px !important;
+  margin: -8px 0 0 -8px !important;
+  border: 2px solid transparent !important;
+  border-top: 2px solid currentColor !important;
+  border-radius: 50% !important;
+  animation: smooth-spin 1s linear infinite !important;
+}
+
+/* Primary button */
+.wizard-footer__button--primary {
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+.wizard-footer__button--primary:active:not(:disabled) {
+  background: #2563eb !important;
+  transform: scale(0.98) !important;
+}
+
+.wizard-footer__button--primary:disabled {
+  background: #cbd5e1 !important;
+  color: #94a3b8 !important;
+  cursor: not-allowed !important;
+}
+
+/* Secondary button */
+.wizard-footer__button--secondary {
+  background: #f8fafc !important;
+  color: #475569 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.wizard-footer__button--secondary:active:not(:disabled) {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  transform: scale(0.98) !important;
+}
+
+.wizard-footer__button--secondary:disabled {
+  background: #f8fafc !important;
+  color: #cbd5e1 !important;
+  cursor: not-allowed !important;
+}
+
+/* ============================================= */
+/* 📘 ENHANCED TOUCH INTERACTIONS */
+/* ============================================= */
+
+/* Button touch feedback */
+.wizard-content__scrollable button:not(.wizard-footer__button):active {
+  transform: scale(0.98) !important;
+  transition: transform 0.1s ease !important;
+}
+
+/* Clickable card elements */
+.wizard-content__scrollable .clickable:active,
+.wizard-content__scrollable [role="button"]:active {
+  transform: scale(0.99) !important;
+  transition: transform 0.1s ease !important;
+}
+
+/* Prevent text selection on interactive elements */
+.wizard-header,
+.wizard-footer,
+.wizard-content__scrollable button,
+.wizard-content__scrollable .clickable,
+.wizard-content__scrollable [role="button"] {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* ============================================= */
+/* 📱 RESPONSIVE REFINEMENTS */
+/* ============================================= */
+
+/* Landscape optimization for small screens - wider content */
+@media (orientation: landscape) and (max-height: 500px) {
+  .wizard-header {
+    padding: 0.375rem 1rem !important;
+    min-height: 40px !important;
+  }
+  
+  .wizard-content__scrollable {
+    padding: 0.75rem 0.625rem 0 0.625rem !important; /* Consistent wider content */
+  }
+  
+  .wizard-footer {
+    padding: 0.75rem 1rem !important;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)) !important;
+  }
+  
+  .wizard-footer__button {
+    min-height: 40px !important;
+  }
+}
+
+/* Extra small screen adjustments - maintain wider content */
+@media (max-width: 374px) {
+  .wizard-content__scrollable {
+    padding: 0.75rem 0.5rem 0 0.5rem !important; /* Reduced horizontal padding */
+  }
+  
+  .wizard-footer {
+    padding: 0.875rem !important;
+    padding-bottom: calc(0.875rem + env(safe-area-inset-bottom)) !important;
+  }
+  
+  .wizard-footer__button {
+    font-size: 0.875rem !important;
+    min-height: 42px !important;
+  }
+}
+
+/* ============================================= */
+/* ♿ ACCESSIBILITY ENHANCEMENTS */
+/* ============================================= */
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .enhanced-warning-wizard-modal *,
+  .wizard-footer__button,
+  .wizard-content__scrollable input,
+  .wizard-content__scrollable textarea,
+  .wizard-content__scrollable select {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* Enhanced contrast support */
+@media (prefers-contrast: high) {
+  .wizard-content__scrollable input,
+  .wizard-content__scrollable textarea,
+  .wizard-content__scrollable select {
+    border-width: 2px !important;
+  }
+  
+  .wizard-footer__button--primary {
+    border: 2px solid #1d4ed8 !important;
+  }
+  
+  .wizard-footer__button--secondary {
+    border: 2px solid #374151 !important;
+  }
+}
+
+/* Focus visibility for keyboard navigation */
+.wizard-header__close-button:focus-visible,
+.wizard-footer__button:focus-visible,
+.wizard-content__scrollable input:focus-visible,
+.wizard-content__scrollable textarea:focus-visible,
+.wizard-content__scrollable select:focus-visible,
+.wizard-content__scrollable button:focus-visible {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 2px !important;
+}
+
+/* ============================================= */
+/* 🎯 UTILITY CLASSES FOR CONSISTENCY - TIGHTENED */
+/* ============================================= */
+
+/* 🎯 ULTRA-COMPACT SPACING UTILITIES - Eliminate wasted space */
+.wizard-content__scrollable .mb-2 { margin-bottom: 0.375rem !important; } /* Reduced from 0.5rem */
+.wizard-content__scrollable .mb-3 { margin-bottom: 0.5rem !important; }   /* Reduced from 0.75rem */
+.wizard-content__scrollable .mb-4 { margin-bottom: 0.625rem !important; } /* Reduced from 0.75rem */
+.wizard-content__scrollable .mb-6 { margin-bottom: 0.75rem !important; }  /* Reduced from 1rem */
+
+.wizard-content__scrollable .mt-2 { margin-top: 0.375rem !important; }    /* Reduced from 0.5rem */
+.wizard-content__scrollable .mt-3 { margin-top: 0.5rem !important; }      /* Reduced from 0.75rem */
+.wizard-content__scrollable .mt-4 { margin-top: 0.625rem !important; }    /* Reduced from 0.75rem */
+.wizard-content__scrollable .mt-6 { margin-top: 0.75rem !important; }     /* Reduced from 1rem */
+
+/* 🎯 COMPACT PADDING UTILITIES - Optimized for card content */
+.wizard-content__scrollable .p-3 { padding: 0.625rem !important; } /* Reduced from 0.75rem */
+.wizard-content__scrollable .p-4 { padding: 0.75rem !important; }  /* Reduced from 1rem */
+.wizard-content__scrollable .px-3 { padding-left: 0.625rem !important; padding-right: 0.625rem !important; }
+.wizard-content__scrollable .px-4 { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+.wizard-content__scrollable .py-2 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+.wizard-content__scrollable .py-3 { padding-top: 0.625rem !important; padding-bottom: 0.625rem !important; }
+
+/* 🎯 ULTRA-COMPACT SPACE-Y UTILITIES - Fix those huge gaps! */
+.wizard-content__scrollable .space-y-2 > * + * { margin-top: 0.375rem !important; } /* Reduced from 0.5rem */
+.wizard-content__scrollable .space-y-3 > * + * { margin-top: 0.5rem !important; }   /* Reduced from 0.75rem */
+.wizard-content__scrollable .space-y-4 > * + * { margin-top: 0.625rem !important; } /* Reduced from 1rem */
+.wizard-content__scrollable .space-y-6 > * + * { margin-top: 0.75rem !important; }  /* Reduced from 1.5rem */
+
+/* 🎯 FORM SECTION SPACING - Target the main culprits */
+.wizard-content__scrollable .form-section,
+.wizard-content__scrollable > div:not(.space-y-0) {
+  margin-bottom: 1rem !important; /* Much tighter than default */
+}
+
+.wizard-content__scrollable .form-section:last-child,
+.wizard-content__scrollable > div:last-child {
+  margin-bottom: 0.5rem !important; /* Even tighter for last element */
+}
+
+/* Clean border utilities */
+.wizard-content__scrollable .border { border: 1px solid #e2e8f0 !important; }
+.wizard-content__scrollable .border-blue-200 { border-color: #bfdbfe !important; }
+.wizard-content__scrollable .border-green-200 { border-color: #bbf7d0 !important; }
+.wizard-content__scrollable .border-amber-200 { border-color: #fde68a !important; }
+.wizard-content__scrollable .border-red-200 { border-color: #fecaca !important; }
+
+.wizard-content__scrollable .rounded { border-radius: 0.375rem !important; }
+.wizard-content__scrollable .rounded-lg { border-radius: 0.5rem !important; }
+.wizard-content__scrollable .rounded-xl { border-radius: 0.75rem !important; }
+
+/* Text alignment and weights */
+.wizard-content__scrollable .text-center { text-align: center !important; }
+.wizard-content__scrollable .text-left { text-align: left !important; }
+.wizard-content__scrollable .text-right { text-align: right !important; }
+
+.wizard-content__scrollable .font-medium { font-weight: 500 !important; }
+.wizard-content__scrollable .font-semibold { font-weight: 600 !important; }
+.wizard-content__scrollable .font-bold { font-weight: 700 !important; }
+
+/* ============================================= */
+/* 🎭 LOADING STATES & ANIMATIONS */
+/* ============================================= */
+
+@keyframes subtle-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes smooth-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.wizard-loading {
+  animation: subtle-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.wizard-spinner {
+  animation: smooth-spin 1s linear infinite;
+}
+
+/* Loading spinner for buttons */
+.wizard-footer__button .wizard-spinner {
+  width: 16px !important;
+  height: 16px !important;
+  border: 2px solid transparent !important;
+  border-top: 2px solid currentColor !important;
+  border-radius: 50% !important;
+}

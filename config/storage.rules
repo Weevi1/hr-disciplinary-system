@@ -1,0 +1,26 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow authenticated users to upload warning audio files
+    match /warnings/{organizationId}/{warningId}/audio/{audioFile} {
+      allow read, write: if request.auth != null 
+        && request.auth.token.email_verified == true
+        && audioFile.matches('.*\\.(webm|mp3|wav|m4a)$')
+        && resource.size < 2 * 1024 * 1024; // 2MB limit
+    }
+    
+    // Public read access for temporary PDF downloads (1-hour expiry)
+    match /temp-downloads/{organizationId}/{filename} {
+      allow read: if true; // Public read access for QR code downloads
+      allow write: if request.auth != null 
+        && request.auth.token.email_verified == true
+        && filename.matches('.*\\.pdf$')
+        && resource.size < 10 * 1024 * 1024; // 10MB limit for PDFs
+    }
+    
+    // Allow authenticated users for other files
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

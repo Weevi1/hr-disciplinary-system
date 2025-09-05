@@ -1,0 +1,28 @@
+<svg width="200" height="150" viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background folder shapes -->
+  <g fill="none" stroke="#1f2937" stroke-width="3">
+    <!-- Back folder -->
+    <path d="M15 25 L15 120 Q15 130 25 130 L145 130 Q155 130 155 120 L155 25 Q155 15 145 15 L35 15 Q25 15 25 25 Z" 
+          fill="#f8fafc" opacity="0.9"/>
+    
+    <!-- Middle folder -->
+    <path d="M45 35 L185 35 Q195 35 195 45 L195 125 Q195 135 185 135 L65 135 Q55 135 55 125 L55 45 Q55 35 65 35 Z" 
+          fill="#f1f5f9" opacity="0.95"/>
+    
+    <!-- Front folder tab -->
+    <path d="M55 35 L55 25 Q55 15 65 15 L105 15 Q115 15 115 25 L115 35" 
+          fill="none"/>
+  </g>
+  
+  <!-- "File" text -->
+  <g fill="#1f2937" font-family="monospace, 'Courier New'" font-size="24" font-weight="bold">
+    <!-- Pixelated style characters -->
+    <text x="100" y="80" text-anchor="middle">&lt; File &gt;</text>
+  </g>
+  
+  <!-- Subtle highlight effects -->
+  <g fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.3">
+    <path d="M25 25 L135 25"/>
+    <path d="M65 45 L175 45"/>
+  </g>
+</svg>

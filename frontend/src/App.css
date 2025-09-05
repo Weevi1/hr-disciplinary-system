@@ -1,0 +1,69 @@
+#root {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+
+/* 
+  CHANGE 1: Hover effects are now wrapped in a media query.
+  This prevents "sticky hover" effects on touch devices where there is no mouse cursor,
+  providing a much cleaner experience on mobile and tablets.
+*/
+@media (hover: hover) and (pointer: fine) {
+  .logo:hover {
+    filter: drop-shadow(0 0 2em #646cffaa);
+  }
+  .logo.react:hover {
+    filter: drop-shadow(0 0 2em #61dafbaa);
+  }
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* This is excellent for accessibility - no changes needed here. */
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+/*
+  CHANGE 2: Card padding is now responsive (mobile-first).
+  This uses less horizontal space on narrow mobile screens, preventing
+  content from feeling cramped.
+*/
+.card {
+  padding: 1em;
+}
+
+/* The padding is increased for tablets and larger screens. */
+@media (min-width: 768px) {
+  .card {
+    padding: 2em;
+  }
+}
+
+
+/*
+  CHANGE 3: Improved color contrast for better readability.
+  This color now passes WCAG AA accessibility standards for normal text,
+  making it easier to read for all users, especially in bright light.
+*/
+.read-the-docs {
+  color: #767676;
+}

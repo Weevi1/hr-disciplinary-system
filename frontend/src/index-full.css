@@ -1,0 +1,505 @@
+/* 🔧 COMPLETE OPTIMIZED CSS - Clean & Organized */
+
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Import component-specific styles */
+@import "./warning-wizard.css";
+@import "./warning-wizard-desktop.css";
+@import "./main-layout.css";
+
+/* ============================================= */
+/* 🎨 CSS VARIABLES - BRAND & DESIGN SYSTEM */
+/* ============================================= */
+
+:root {
+  /* Brand colors - dynamically updated by organization */
+  --brand-primary: #3b82f6;
+  --brand-secondary: #8b5cf6;
+  --brand-primary-light: #60a5fa;
+  --brand-primary-dark: #1d4ed8;
+  --brand-secondary-light: #a78bfa;
+  --brand-secondary-dark: #7c3aed;
+  
+  /* Semantic colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+  
+  /* Modern neutral palette */
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+  --gray-600: #475569;
+  --gray-700: #334155;
+  --gray-800: #1e293b;
+  --gray-900: #0f172a;
+  
+  /* Layout spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  
+  /* MainLayout specific spacing */
+  --header-height-desktop: 80px;
+  --header-height-mobile: 64px;
+  --sidebar-width: 280px;
+  
+  /* Modern shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  
+  /* Animation timing */
+  --duration-fast: 150ms;
+  --duration: 300ms;
+  --duration-slow: 500ms;
+
+  /* Mobile typography variables */
+  --mobile-text-xs: 0.75rem;
+  --mobile-text-sm: 0.8125rem;
+  --mobile-text-base: 0.9375rem;
+  --mobile-text-lg: 1.0625rem;
+  --mobile-text-xl: 1.1875rem;
+  --mobile-text-2xl: 1.375rem;
+}
+
+/* ============================================= */
+/* 📱 MODERN RESET & BASE STYLES */
+/* ============================================= */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+  color: var(--gray-900);
+  background: var(--gray-50);
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* ============================================= */
+/* 🎯 FOCUS & ACCESSIBILITY */
+/* ============================================= */
+
+.focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+/* ============================================= */
+/* 📱 PWA SUPPORT */
+/* ============================================= */
+
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ============================================= */
+/* 📄 LEGACY COMPATIBILITY - KEEP ALL YOUR EXISTING COMPONENTS */
+/* ============================================= */
+
+@layer components {
+  /* Navigation & Layout Compatibility */
+  .sidebar-nav-item {
+    @apply flex items-center px-4 py-3 text-left transition-all duration-200 rounded-xl;
+    gap: 0.75rem;
+  }
+
+  .sidebar-nav-item:hover {
+    @apply bg-gray-100 text-gray-900;
+  }
+
+  .sidebar-nav-item.active {
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+    @apply text-white shadow-lg;
+  }
+
+  /* Card Components */
+  .hr-card {
+    @apply bg-white rounded-xl border border-gray-200 p-6 shadow-sm;
+    transition: all var(--duration) ease;
+  }
+
+  .hr-card:hover {
+    @apply shadow-md border-gray-300;
+  }
+
+  .hr-card-header {
+    @apply border-b border-gray-200 pb-4 mb-6;
+  }
+
+  .hr-card-title {
+    @apply text-xl font-semibold text-gray-900;
+  }
+
+  .hr-card-subtitle {
+    @apply text-sm text-gray-500 mt-1;
+  }
+
+  /* Button System */
+  .hr-button {
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer border;
+    gap: 0.5rem;
+  }
+
+  .hr-button--primary {
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+    @apply text-white border-transparent shadow-sm;
+  }
+
+  .hr-button--primary:hover {
+    @apply shadow-md;
+    filter: brightness(1.05);
+  }
+
+  .hr-button--secondary {
+    @apply bg-white text-gray-700 border-gray-300;
+  }
+
+  .hr-button--secondary:hover {
+    @apply bg-gray-50 border-gray-400;
+  }
+
+  .hr-button--danger {
+    @apply bg-red-600 text-white border-transparent;
+  }
+
+  .hr-button--danger:hover {
+    @apply bg-red-700;
+  }
+
+  /* Form Elements */
+  .hr-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:border-transparent;
+    focus:ring-color: rgba(var(--brand-primary), 0.2);
+  }
+
+  .hr-label {
+    @apply block text-sm font-medium text-gray-700 mb-2;
+  }
+
+  .hr-select {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:border-transparent;
+    focus:ring-color: rgba(var(--brand-primary), 0.2);
+  }
+
+  /* Status Indicators */
+  .hr-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .hr-badge--success {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .hr-badge--warning {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .hr-badge--error {
+    @apply bg-red-100 text-red-800;
+  }
+
+  .hr-badge--info {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  /* Notification/Alert System */
+  .hr-alert {
+    @apply p-4 rounded-lg border-l-4;
+  }
+
+  .hr-alert--info {
+    @apply bg-blue-50 border-blue-400 text-blue-800;
+  }
+
+  .hr-alert--success {
+    @apply bg-green-50 border-green-400 text-green-800;
+  }
+
+  .hr-alert--warning {
+    @apply bg-yellow-50 border-yellow-400 text-yellow-800;
+  }
+
+  .hr-alert--error {
+    @apply bg-red-50 border-red-400 text-red-800;
+  }
+
+  /* Loading States */
+  .hr-skeleton {
+    @apply animate-pulse bg-gray-200 rounded;
+  }
+
+  .hr-spinner {
+    @apply animate-spin rounded-full border-2 border-gray-300 border-t-current;
+  }
+
+  /* Utility Classes */
+  .hr-divider {
+    @apply border-t border-gray-200 my-6;
+  }
+
+  .hr-text-muted {
+    @apply text-gray-500;
+  }
+
+  .hr-text-brand {
+    color: var(--brand-primary);
+  }
+
+  .hr-bg-brand {
+    background: var(--brand-primary);
+  }
+
+  .hr-gradient-brand {
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+  }
+
+  /* Data Tables */
+  .hr-table {
+    @apply w-full border-collapse bg-white rounded-lg overflow-hidden shadow-sm;
+  }
+
+  .hr-table th {
+    @apply bg-gray-50 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200;
+  }
+
+  .hr-table td {
+    @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b border-gray-100;
+  }
+
+  .hr-table tbody tr:hover {
+    @apply bg-gray-50;
+  }
+
+  /* Modal/Dialog Styles */
+  .hr-modal-overlay {
+    @apply fixed inset-0 flex items-center justify-center z-50;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .hr-modal {
+    @apply bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 max-h-screen overflow-y-auto;
+  }
+
+  .hr-modal-header {
+    @apply px-6 py-4 border-b border-gray-200;
+  }
+
+  .hr-modal-title {
+    @apply text-lg font-semibold text-gray-900;
+  }
+
+  .hr-modal-body {
+    @apply px-6 py-4;
+  }
+
+  .hr-modal-footer {
+    @apply px-6 py-4 border-t border-gray-200 flex justify-end gap-3;
+  }
+
+  /* Responsive Grid System */
+  .hr-grid {
+    @apply grid gap-6;
+  }
+
+  .hr-grid--1 { grid-template-columns: 1fr; }
+  .hr-grid--2 { grid-template-columns: repeat(2, 1fr); }
+  .hr-grid--3 { grid-template-columns: repeat(3, 1fr); }
+  .hr-grid--4 { grid-template-columns: repeat(4, 1fr); }
+
+  @media (max-width: 768px) {
+    .hr-grid--2,
+    .hr-grid--3,
+    .hr-grid--4 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .hr-grid--3,
+    .hr-grid--4 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  /* Spacing Utilities */
+  .hr-stack {
+    @apply flex flex-col;
+  }
+
+  .hr-stack--xs { gap: var(--space-1); }
+  .hr-stack--sm { gap: var(--space-2); }
+  .hr-stack--md { gap: var(--space-4); }
+  .hr-stack--lg { gap: var(--space-6); }
+  .hr-stack--xl { gap: var(--space-8); }
+
+  .hr-inline {
+    @apply flex items-center;
+  }
+
+  .hr-inline--xs { gap: var(--space-1); }
+  .hr-inline--sm { gap: var(--space-2); }
+  .hr-inline--md { gap: var(--space-4); }
+  .hr-inline--lg { gap: var(--space-6); }
+  .hr-inline--xl { gap: var(--space-8); }
+
+  /* Page Layout Helpers */
+  .hr-page-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .hr-page-header {
+    @apply border-b border-gray-200 pb-6 mb-8;
+  }
+
+  .hr-page-title {
+    @apply text-2xl font-bold text-gray-900 mb-2;
+  }
+
+  .hr-page-subtitle {
+    @apply text-gray-600 text-base;
+  }
+
+  .hr-section {
+    @apply mb-8;
+  }
+
+  .hr-section-header {
+    @apply mb-6;
+  }
+
+  .hr-section-title {
+    @apply text-lg font-semibold text-gray-900 mb-2;
+  }
+
+  .hr-section-description {
+    @apply text-gray-600 text-sm;
+  }
+
+  /* Mobile-First Typography Scale */
+  .hr-text-xs { font-size: var(--mobile-text-xs); }
+  .hr-text-sm { font-size: var(--mobile-text-sm); }
+  .hr-text-base { font-size: var(--mobile-text-base); }
+  .hr-text-lg { font-size: var(--mobile-text-lg); }
+  .hr-text-xl { font-size: var(--mobile-text-xl); }
+  .hr-text-2xl { font-size: var(--mobile-text-2xl); }
+
+  @media (min-width: 768px) {
+    .hr-text-xs { font-size: 0.75rem; }
+    .hr-text-sm { font-size: 0.875rem; }
+    .hr-text-base { font-size: 1rem; }
+    .hr-text-lg { font-size: 1.125rem; }
+    .hr-text-xl { font-size: 1.25rem; }
+    .hr-text-2xl { font-size: 1.5rem; }
+  }
+
+  /* Print Styles */
+  @media print {
+    .hr-no-print { display: none !important; }
+    .hr-print-only { display: block !important; }
+    
+    .main-layout__desktop-header,
+    .main-layout__mobile-header { display: none !important; }
+    
+    .hr-card {
+      @apply shadow-none border border-gray-300;
+      break-inside: avoid;
+    }
+  }
+
+  /* Dark Mode Support (Future-ready) */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --gray-50: #0f172a;
+      --gray-100: #1e293b;
+      --gray-200: #334155;
+      --gray-300: #475569;
+      --gray-400: #64748b;
+      --gray-500: #94a3b8;
+      --gray-600: #cbd5e1;
+      --gray-700: #e2e8f0;
+      --gray-800: #f1f5f9;
+      --gray-900: #f8fafc;
+    }
+    
+    body {
+      color: var(--gray-900);
+      background: var(--gray-50);
+    }
+    
+    .hr-card {
+      background: var(--gray-800);
+      border-color: var(--gray-700);
+    }
+    
+    .hr-input,
+    .hr-select {
+      background: var(--gray-800);
+      border-color: var(--gray-600);
+      color: var(--gray-100);
+    }
+  }
+
+  /* High Contrast Mode Support */
+  @media (prefers-contrast: high) {
+    .hr-button--primary {
+      background: #000000 !important;
+      border: 2px solid #ffffff !important;
+    }
+    
+    .hr-button--secondary {
+      background: #ffffff !important;
+      color: #000000 !important;
+      border: 2px solid #000000 !important;
+    }
+    
+    .main-layout__nav-item--active {
+      background: #000000 !important;
+      color: #ffffff !important;
+      border: 2px solid #ffffff !important;
+    }
+  }
+
+  /* Reduced Motion Support */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+    
+    .main-layout__mobile-header {
+      transition: none !important;
+    }
+  }
+}

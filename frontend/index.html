@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    
+    <!-- 📱 ENHANCED MOBILE VIEWPORT -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0" />
+    
+    <!-- 🎨 MOBILE BROWSER THEME -->
+    <meta name="theme-color" content="#3b82f6" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="&lt;File&gt;" />
+    
+    <!-- 📱 PWA MANIFEST -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- 🎯 ICONS -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    
+    <!-- 🔒 MOBILE SECURITY -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <!-- X-Frame-Options must be set via HTTP header, not meta tag -->
+    
+<title>&lt;File&gt; by Fifo - HR Disciplinary System</title>
+  </head>
+  <body>
+    <!-- 📱 LOADING INDICATOR -->
+    <div id="mobile-loading" style="
+      position: fixed; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      z-index: 9999;
+      transition: opacity 0.3s ease-out;
+    ">
+      <div style="text-align: center; color: white;">
+        <div style="
+          width: 50px; 
+          height: 50px; 
+          border: 2px solid rgba(255,255,255,0.3); 
+          border-top: 2px solid white; 
+          border-radius: 50%; 
+          animation: spin 1s linear infinite; 
+          margin: 0 auto 16px;
+        "></div>
+<h3 style="margin: 0; font-family: system-ui, sans-serif; font-size: 16px;">Loading &lt;File&gt;...</h3>
+      </div>
+      <style>
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      </style>
+    </div>
+    
+    <div id="root"></div>
+    
+    <!-- 📱 HIDE LOADING & REGISTER SW -->
+    <script>
+      // Hide loading screen when app loads
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          const loading = document.getElementById('mobile-loading');
+          if (loading) {
+            loading.style.opacity = '0';
+            setTimeout(() => loading.remove(), 300);
+          }
+        }, 1000);
+      });
+      
+      // Register basic service worker (no dependencies)
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(err => {
+            console.log('SW registration failed');
+          });
+        });
+      }
+    </script>
+    
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

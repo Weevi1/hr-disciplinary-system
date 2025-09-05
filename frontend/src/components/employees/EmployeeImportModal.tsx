@@ -1,0 +1,323 @@
+// frontend/src/components/employees/EmployeeImportModal.tsx
+import React, { useState } from 'react';
+import { useAuth } from '../../auth/AuthContext';
+import { useEmployeeImport } from '../../hooks/employees/useEmployeeImport';
+import { generateSampleCSV } from '../../types';
+import type { CSVImportRow, CSVImportResult } from '../../types';
+
+interface EmployeeImportModalProps {
+  onClose: () => void;
+  onImportComplete: () => void;
+}
+
+export const EmployeeImportModal: React.FC<EmployeeImportModalProps> = ({
+  onClose,
+  onImportComplete
+}) => {
+  const { organization } = useAuth();
+  const {
+    csvFile,
+    csvData,
+    importResult,
+    isImporting,
+    importProgress,
+    currentImportStep,
+    handleFileUpload,
+    handleImport,
+    resetImport
+  } = useEmployeeImport();
+  
+  const [currentStep, setCurrentStep] = useState<'upload' | 'preview' | 'importing' | 'result'>('upload');
+
+  const downloadTemplate = () => {
+    const csvContent = generateSampleCSV();
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'employee_import_template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileUpload(file);
+      setCurrentStep('preview');
+    }
+  };
+
+  const handleImportClick = async () => {
+    if (!organization) return;
+    
+    setCurrentStep('importing');
+    const result = await handleImport(organization.id);
+    setCurrentStep('result');
+    
+    if (result.success && result.failed === 0) {
+      setTimeout(() => {
+        onImportComplete();
+        onClose();
+      }, 2000);
+    }
+  };
+
+  const handleClose = () => {
+    resetImport();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">📊 Import Employees from CSV</h2>
+            <p className="text-green-100 mt-1">
+              Bulk import multiple employees at once
+            </p>
+          </div>
+          {!isImporting && (
+            <button
+              onClick={handleClose}
+              className="text-green-100 hover:text-white transition-colors text-2xl leading-none"
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {currentStep === 'upload' && (
+            <div className="space-y-6">
+              {/* Instructions */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-2">
+                  📋 Import Instructions
+                </h3>
+                <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
+                  <li>Download the CSV template below</li>
+                  <li>Fill in employee information following the template format</li>
+                  <li>Save the file as CSV (comma-separated values)</li>
+                  <li>Upload the completed file using the form below</li>
+                </ol>
+              </div>
+
+              {/* Template Download */}
+              <div className="text-center">
+                <button
+                  onClick={downloadTemplate}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Download CSV Template
+                </button>
+              </div>
+
+              {/* File Upload */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="csv-upload"
+                />
+                <label htmlFor="csv-upload" className="cursor-pointer">
+                  <div className="text-6xl mb-4">📁</div>
+                  <p className="text-lg font-medium text-gray-700 mb-2">
+                    Click to upload CSV file
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    or drag and drop your file here
+                  </p>
+                </label>
+              </div>
+
+              {/* Sample Data */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-2">Sample CSV Format:</h4>
+                <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+                  <strong>💡 Tip:</strong> Leave employeeNumber empty to auto-generate next available number
+                </div>
+                <pre className="text-xs bg-white p-3 rounded border overflow-x-auto">
+{`employeeNumber,firstName,lastName,email,phoneNumber,whatsappNumber,department,position,startDate,contractType,preferredDeliveryMethod
+EMP001,John,Doe,john.doe@company.com,+27123456789,+27123456789,Engineering,Software Developer,2024-01-15,permanent,email
+,Jane,Smith,jane.smith@company.com,+27987654321,+27987654321,Human Resources,HR Manager,2023-06-01,permanent,whatsapp`}
+                </pre>
+                <p className="text-xs text-gray-600 mt-2">
+                  Notice: Jane Smith has an empty employee number - the system will auto-generate one
+                </p>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 'preview' && csvData.length > 0 && (
+            <div className="space-y-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-green-800">
+                  ✅ Found <strong>{csvData.length}</strong> employees ready to import
+                </p>
+              </div>
+
+              {/* Preview Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left font-medium text-gray-700">Employee #</th>
+                      <th className="px-4 py-2 text-left font-medium text-gray-700">Name</th>
+                      <th className="px-4 py-2 text-left font-medium text-gray-700">Email</th>
+                      <th className="px-4 py-2 text-left font-medium text-gray-700">Department</th>
+                      <th className="px-4 py-2 text-left font-medium text-gray-700">Position</th>
+                      <th className="px-4 py-2 text-left font-medium text-gray-700">Start Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {csvData.slice(0, 10).map((row, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-4 py-2">{row.employeeNumber}</td>
+                        <td className="px-4 py-2">{row.firstName} {row.lastName}</td>
+                        <td className="px-4 py-2">{row.email}</td>
+                        <td className="px-4 py-2">{row.department}</td>
+                        <td className="px-4 py-2">{row.position}</td>
+                        <td className="px-4 py-2">{row.startDate}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {csvData.length > 10 && (
+                <p className="text-center text-gray-500 text-sm">
+                  ... and {csvData.length - 10} more employees
+                </p>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-4 justify-end">
+                <button
+                  onClick={() => {
+                    setCurrentStep('upload');
+                    resetImport();
+                  }}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Upload Different File
+                </button>
+                <button
+                  onClick={handleImportClick}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                >
+                  Import {csvData.length} Employees
+                </button>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 'importing' && (
+            <div className="space-y-6 text-center">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div className="text-6xl mb-4">⚡</div>
+                <h3 className="text-xl font-bold text-blue-900 mb-2">
+                  Importing Employees
+                </h3>
+                <p className="text-blue-700 mb-4">
+                  Please wait while we create your employees...
+                </p>
+                
+                {/* Progress Bar */}
+                <div className="w-full bg-blue-200 rounded-full h-4 mb-4">
+                  <div 
+                    className="bg-blue-600 h-4 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${importProgress}%` }}
+                  ></div>
+                </div>
+                
+                <div className="space-y-2">
+                  <p className="text-lg font-semibold text-blue-800">
+                    {importProgress}% Complete
+                  </p>
+                  <p className="text-sm text-blue-600 min-h-[1.5rem]">
+                    {currentImportStep}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="text-xs text-gray-500">
+                <p>⏱️ This may take a few moments depending on the number of employees</p>
+                <p>🔄 Please don't close this window during the import process</p>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 'result' && importResult && (
+            <div className="space-y-6">
+              {/* Summary */}
+              <div className={`border rounded-lg p-6 ${
+                importResult.success && importResult.failed === 0
+                  ? 'bg-green-50 border-green-200'
+                  : importResult.imported > 0
+                  ? 'bg-yellow-50 border-yellow-200'
+                  : 'bg-red-50 border-red-200'
+              }`}>
+                <div className="text-center">
+                  <div className="text-6xl mb-4">
+                    {importResult.success && importResult.failed === 0 ? '✅' : 
+                     importResult.imported > 0 ? '⚠️' : '❌'}
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">
+                    {importResult.success && importResult.failed === 0 
+                      ? 'Import Successful!' 
+                      : importResult.imported > 0 
+                      ? 'Partial Import Complete' 
+                      : 'Import Failed'}
+                  </h3>
+                  <div className="space-y-1">
+                    <p className="text-green-700">
+                      ✅ Successfully imported: <strong>{importResult.imported}</strong> employees
+                    </p>
+                    {importResult.failed > 0 && (
+                      <p className="text-red-700">
+                        ❌ Failed to import: <strong>{importResult.failed}</strong> employees
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Errors */}
+              {importResult.errors.length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-red-900 mb-2">Import Errors:</h4>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {importResult.errors.map((error, index) => (
+                      <div key={index} className="text-sm text-red-700">
+                        <strong>Row {error.row}:</strong> {error.message}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex justify-center">
+                <button
+                  onClick={handleClose}
+                  className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
