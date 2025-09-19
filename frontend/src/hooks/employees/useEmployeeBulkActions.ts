@@ -1,6 +1,6 @@
 // frontend/src/hooks/employees/useEmployeeBulkActions.ts
 import { useState } from 'react';
-import { DataService } from '../../services/DataService';
+import { API } from '../../api';
 import type { Employee } from '../../types';
 import type { BulkAction, BulkActionResult } from '../../types';
 
@@ -47,31 +47,27 @@ export const useEmployeeBulkActions = () => {
         try {
           switch (action.type) {
             case 'archive':
-              await DataService.archiveEmployee(
-                organizationId, 
-                employeeId, 
-                action.reason
-              );
+              await API.employees.delete(employeeId, organizationId);
               break;
               
             case 'updateDepartment':
               if (!action.value) throw new Error('Department not specified');
-              await DataService.updateEmployeeField(
-                organizationId,
-                employeeId,
-                'department',
-                action.value
-              );
+              // Get employee, update department field, then save
+              const employeeForDept = await API.employees.getById(employeeId, organizationId);
+              if (employeeForDept) {
+                employeeForDept.profile.department = action.value;
+                await API.employees.update(employeeId, organizationId, employeeForDept);
+              }
               break;
               
             case 'updateDeliveryMethod':
               if (!action.value) throw new Error('Delivery method not specified');
-              await DataService.updateEmployeeField(
-                organizationId,
-                employeeId,
-                'preferredDeliveryMethod',
-                action.value
-              );
+              // Get employee, update delivery method, then save
+              const employeeForDelivery = await API.employees.getById(employeeId, organizationId);
+              if (employeeForDelivery) {
+                employeeForDelivery.profile.preferredDeliveryMethod = action.value as any;
+                await API.employees.update(employeeId, organizationId, employeeForDelivery);
+              }
               break;
               
             default:

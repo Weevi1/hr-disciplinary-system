@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/components/counselling/CounsellingFollowUp.tsx
 // 📋 COUNSELLING FOLLOW-UP COMPONENT
 // Allows managers to conduct follow-up reviews on counselling sessions
@@ -229,7 +230,7 @@ export const CounsellingFollowUp: React.FC<CounsellingFollowUpProps> = ({
       }, 3000);
 
     } catch (err) {
-      console.error('❌ Error submitting follow-up:', err);
+      Logger.error('❌ Error submitting follow-up:', err)
       setError('Failed to submit follow-up. Please try again.');
     } finally {
       setLoading(false);

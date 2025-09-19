@@ -1,0 +1,217 @@
+{
+  "monitoring": {
+    "alerts": {
+      "uptime": {
+        "name": "HR System Uptime",
+        "description": "Monitor application availability",
+        "conditions": [
+          {
+            "displayName": "Website Down",
+            "conditionThreshold": {
+              "filter": "resource.type=\"uptime_check_id\"",
+              "comparison": "COMPARISON_LESS_THAN",
+              "thresholdValue": 1,
+              "duration": "300s"
+            }
+          }
+        ],
+        "notificationChannels": ["email", "slack"],
+        "severity": "CRITICAL"
+      },
+      "errorRate": {
+        "name": "High Error Rate",
+        "description": "Alert when error rate exceeds threshold",
+        "conditions": [
+          {
+            "displayName": "Function Error Rate > 5%",
+            "conditionThreshold": {
+              "filter": "resource.type=\"cloud_function\" AND metric.type=\"cloudfunctions.googleapis.com/function/execution_count\"",
+              "comparison": "COMPARISON_GREATER_THAN",
+              "thresholdValue": 0.05,
+              "duration": "600s"
+            }
+          }
+        ],
+        "notificationChannels": ["email"],
+        "severity": "WARNING"
+      },
+      "performance": {
+        "name": "Slow Response Times",
+        "description": "Alert when response times are too high",
+        "conditions": [
+          {
+            "displayName": "Function Duration > 10s",
+            "conditionThreshold": {
+              "filter": "resource.type=\"cloud_function\" AND metric.type=\"cloudfunctions.googleapis.com/function/execution_times\"",
+              "comparison": "COMPARISON_GREATER_THAN",
+              "thresholdValue": 10000,
+              "duration": "300s"
+            }
+          }
+        ],
+        "notificationChannels": ["email"],
+        "severity": "WARNING"
+      },
+      "firestoreQuota": {
+        "name": "Firestore Usage Alert",
+        "description": "Alert when approaching Firestore limits",
+        "conditions": [
+          {
+            "displayName": "High Read Operations",
+            "conditionThreshold": {
+              "filter": "resource.type=\"firestore_database\" AND metric.type=\"firestore.googleapis.com/document/read_count\"",
+              "comparison": "COMPARISON_GREATER_THAN",
+              "thresholdValue": 500000,
+              "duration": "3600s"
+            }
+          },
+          {
+            "displayName": "High Write Operations",
+            "conditionThreshold": {
+              "filter": "resource.type=\"firestore_database\" AND metric.type=\"firestore.googleapis.com/document/write_count\"",
+              "comparison": "COMPARISON_GREATER_THAN",
+              "thresholdValue": 200000,
+              "duration": "3600s"
+            }
+          }
+        ],
+        "notificationChannels": ["email"],
+        "severity": "WARNING"
+      },
+      "storageUsage": {
+        "name": "Storage Usage Alert",
+        "description": "Alert when storage usage is high",
+        "conditions": [
+          {
+            "displayName": "Storage Usage > 80%",
+            "conditionThreshold": {
+              "filter": "resource.type=\"gcs_bucket\" AND metric.type=\"storage.googleapis.com/storage/total_bytes\"",
+              "comparison": "COMPARISON_GREATER_THAN",
+              "thresholdValue": 8589934592,
+              "duration": "3600s"
+            }
+          }
+        ],
+        "notificationChannels": ["email"],
+        "severity": "WARNING"
+      },
+      "authentication": {
+        "name": "Authentication Issues",
+        "description": "Alert on authentication failures",
+        "conditions": [
+          {
+            "displayName": "High Auth Failure Rate",
+            "conditionThreshold": {
+              "filter": "resource.type=\"firebase_domain\" AND metric.type=\"firebase.googleapis.com/auth/new_signups\"",
+              "comparison": "COMPARISON_LESS_THAN",
+              "thresholdValue": 0.95,
+              "duration": "900s"
+            }
+          }
+        ],
+        "notificationChannels": ["email"],
+        "severity": "WARNING"
+      }
+    },
+    "dashboards": {
+      "main": {
+        "name": "HR System Overview",
+        "widgets": [
+          {
+            "title": "Application Uptime",
+            "type": "scorecard",
+            "metrics": ["uptime_check/check_passed"]
+          },
+          {
+            "title": "Function Executions",
+            "type": "line_chart",
+            "metrics": ["cloudfunctions.googleapis.com/function/execution_count"]
+          },
+          {
+            "title": "Response Times",
+            "type": "line_chart", 
+            "metrics": ["cloudfunctions.googleapis.com/function/execution_times"]
+          },
+          {
+            "title": "Error Rate",
+            "type": "line_chart",
+            "metrics": ["cloudfunctions.googleapis.com/function/user_error_count"]
+          },
+          {
+            "title": "Firestore Operations",
+            "type": "stacked_area",
+            "metrics": [
+              "firestore.googleapis.com/document/read_count",
+              "firestore.googleapis.com/document/write_count"
+            ]
+          },
+          {
+            "title": "Storage Usage",
+            "type": "gauge",
+            "metrics": ["storage.googleapis.com/storage/total_bytes"]
+          },
+          {
+            "title": "Active Users",
+            "type": "line_chart",
+            "metrics": ["firebase.googleapis.com/auth/new_signups"]
+          }
+        ]
+      },
+      "security": {
+        "name": "Security Monitoring",
+        "widgets": [
+          {
+            "title": "Failed Authentication Attempts",
+            "type": "line_chart",
+            "metrics": ["firebase.googleapis.com/auth/failed_signups"]
+          },
+          {
+            "title": "Security Rule Violations",
+            "type": "table",
+            "metrics": ["firestore.googleapis.com/document/rule_evaluation"]
+          },
+          {
+            "title": "Suspicious Activity",
+            "type": "heatmap",
+            "metrics": ["logging.googleapis.com/user/security_events"]
+          }
+        ]
+      }
+    },
+    "logSinks": {
+      "errorSink": {
+        "name": "Error Log Sink",
+        "destination": "bigquery.googleapis.com/projects/PROJECT_ID/datasets/error_logs",
+        "filter": "severity>=ERROR",
+        "includeChildren": true
+      },
+      "auditSink": {
+        "name": "Audit Log Sink", 
+        "destination": "storage.googleapis.com/audit-logs-bucket",
+        "filter": "protoPayload.serviceName=\"firestore.googleapis.com\" OR protoPayload.serviceName=\"firebase.googleapis.com\"",
+        "includeChildren": true
+      }
+    }
+  },
+  "slo": {
+    "availability": {
+      "name": "Application Availability SLO",
+      "target": 99.9,
+      "period": "30d",
+      "metric": "uptime_check/check_passed"
+    },
+    "performance": {
+      "name": "Function Performance SLO",
+      "target": 95.0,
+      "period": "7d", 
+      "metric": "cloudfunctions.googleapis.com/function/execution_times",
+      "threshold": 5000
+    },
+    "errorRate": {
+      "name": "Error Rate SLO",
+      "target": 99.5,
+      "period": "7d",
+      "metric": "cloudfunctions.googleapis.com/function/user_error_count"
+    }
+  }
+}

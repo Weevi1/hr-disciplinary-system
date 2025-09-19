@@ -12,76 +12,13 @@ import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
 // Import components - DIRECT IMPORTS (keeping existing)
 import { SuperAdminDashboard } from '../admin/SuperAdminDashboard';
 import { BusinessDashboard } from '../../pages/business/BusinessDashboard'; // 🏆 Now the unified dashboard
+import { ResellerDashboard } from '../reseller/ResellerDashboard';
+import { WelcomeSection } from './WelcomeSection';
 
 // Import navigation components - DIRECT IMPORTS (keeping existing)
-import { EmployeeManagement } from '../employees/EmployeeManagement';
 import { UserManagement } from '../users/UserManagement';
-import { WarningManagement } from '../warnings/WarningManagement';
 import { Settings, Eye } from 'lucide-react';
 
-// 🏆 ENHANCED: Multi-role welcome message - NOW ONLY FOR SUPER USERS
-export const SuperUserWelcomeMessage: React.FC = () => {
-  const { user } = useAuth();
-  const { getPrimaryRole, getAllRoles } = useMultiRolePermissions();
-  
-  if (!user) return null;
-  
-  const primaryRole = getPrimaryRole();
-  const allRoles = getAllRoles();
-  const hasMultipleRoles = allRoles.length > 1;
-  
-  // Only show for super users - company users get greeting from BusinessDashboard
-  if (primaryRole !== 'super-user') return null;
-  
-  return (
-    <div style={{ 
-      padding: '1rem', 
-      backgroundColor: '#fef3c7', 
-      borderRadius: '8px', 
-      marginBottom: '1rem',
-      border: '1px solid #f59e0b'
-    }}>
-      <h2 style={{ 
-        margin: '0 0 0.5rem 0', 
-        color: '#92400e',
-        fontSize: '1.25rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem'
-      }}>
-        👑 Welcome, System Administrator
-        {hasMultipleRoles && (
-          <span style={{
-            fontSize: '0.75rem',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            color: '#2563eb',
-            padding: '0.25rem 0.5rem',
-            borderRadius: '12px',
-            fontWeight: '500'
-          }}>
-            Multi-Role
-          </span>
-        )}
-      </h2>
-      <p style={{ 
-        margin: '0 0 0.5rem 0', 
-        color: '#a16207',
-        fontSize: '0.875rem' 
-      }}>
-        {user.firstName} {user.lastName} • {user.email}
-      </p>
-      <p style={{ 
-        margin: 0, 
-        color: '#d97706',
-        fontSize: '0.75rem',
-        fontStyle: 'italic'
-      }}>
-        Global system administration and client management
-        {hasMultipleRoles && ` • Additional roles: ${allRoles.filter(r => r !== primaryRole).join(', ')}`}
-      </p>
-    </div>
-  );
-};
 
 // 🏆 ENHANCED: Main Dashboard Router with Unified Experience
 export const DashboardRouter: React.FC = () => {
@@ -129,54 +66,32 @@ export const DashboardRouter: React.FC = () => {
   );
 
   // 🎯 NAVIGATION VIEWS - Keep existing functionality, but no greetings for company users
-  if (currentView === 'employee-management') {
-    return (
-      <div>
-        {/* Only show greeting for super users in sub-views */}
-        {primaryRole === 'super-user' && <SuperUserWelcomeMessage />}
-        <BackButton />
-        <EmployeeManagement />
-      </div>
-    );
-  }
-
   if (currentView === 'user-management') {
     return (
       <div>
-        {/* Only show greeting for super users in sub-views */}
-        {primaryRole === 'super-user' && <SuperUserWelcomeMessage />}
         <BackButton />
         <UserManagement />
       </div>
     );
   }
 
-  if (currentView === 'warning-management') {
-    return (
-      <div>
-        {/* Only show greeting for super users in sub-views */}
-        {primaryRole === 'super-user' && <SuperUserWelcomeMessage />}
-        <BackButton />
-        {/* 🏆 Enhanced Warning System - HOD managers get the new single-form flow */}
-        {primaryRole === 'hod-manager' ? (
-          <EnhancedWarningForm />
-        ) : (
-          <WarningManagement />
-        )}
-      </div>
-    );
-  }
 
   // 🏆 UNIFIED DASHBOARD ROUTING - This is the key change!
   switch (primaryRole) {
     case 'super-user':
-      // 👑 SUPER USERS: Keep separate dashboard with greeting
+      // 👑 SUPER USERS: Now use unified WelcomeSection like everyone else
       return (
         <div>
-          <SuperUserWelcomeMessage />
+          <div className="p-6 max-w-7xl mx-auto pb-0">
+            <WelcomeSection />
+          </div>
           <SuperAdminDashboard />
         </div>
       );
+
+    case 'reseller':
+      // 🤝 RESELLERS: Use dedicated reseller dashboard
+      return <ResellerDashboard />;
 
     case 'business-owner':
     case 'hr-manager':

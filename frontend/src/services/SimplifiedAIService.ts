@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // src/services/simplified/SimplifiedAIService.ts
 // =============================================
 // 🔧 COMPLETE FIXED SIMPLIFIED AI SERVICE - PROPER VALIDITY & TRANSPARENCY
@@ -103,8 +104,8 @@ export class SimplifiedAIService {
   ): Promise<LRACompliantRecommendation> {
     
     try {
-      console.log('🎯 Using simplified LRA-compliant analysis');
-      console.log('📊 Input data:', { employeeId, categoryId, organizationId });
+      Logger.debug(2947)
+      Logger.debug(2973)
       
       // ✅ CRITICAL FIX: FETCH AND FILTER EMPLOYEE WARNING HISTORY PROPERLY
       const { validCategoryWarnings, allValidWarnings, allWarnings } = await this.fetchAndFilterWarningHistory(
@@ -127,7 +128,7 @@ export class SimplifiedAIService {
 
       // Analyze incident severity
       const incidentSeverity = this.analyzeIncidentSeverity(incidentDescription, category);
-      console.log('🔍 Incident severity:', incidentSeverity);
+      Logger.debug('🔍 Incident severity:', incidentSeverity)
       
       // Get employee context
       const lengthOfService = employeeData?.lengthOfService || 0;
@@ -140,8 +141,8 @@ export class SimplifiedAIService {
         lengthOfService
       );
       
-      console.log('🚀 Escalation analysis result:', escalationAnalysis.recommendedLevel);
-      console.log('📊 Based on', validCategoryWarnings.length, 'valid warnings for category', categoryId);
+      Logger.debug('🚀 Escalation analysis result:', escalationAnalysis.recommendedLevel)
+      Logger.debug(4485)
       
       // ✅ NEW: Build escalation justification for transparency
       const escalationJustification = this.buildEscalationJustification(
@@ -179,13 +180,13 @@ export class SimplifiedAIService {
         escalationJustification
       };
 
-      console.log('✅ Generated LRA-compliant recommendation:', recommendation.recommendedLevel);
-      console.log('💡 Justification:', escalationJustification.explanation);
+      Logger.success(6072)
+      Logger.debug('💡 Justification:', escalationJustification.explanation)
       
       return recommendation;
       
     } catch (error) {
-      console.error('❌ Error in simplified AI recommendation:', error);
+      Logger.error('❌ Error in simplified AI recommendation:', error)
       
       // Fallback to safe recommendation
       return this.getFallbackRecommendation(categoryId);
@@ -206,13 +207,13 @@ export class SimplifiedAIService {
     allWarnings: any[];
   }> {
     try {
-      console.log('🔍 Fetching and filtering warning history for employee:', employeeId);
+      Logger.debug('🔍 Fetching and filtering warning history for employee:', employeeId)
       
       // Query all warnings for this employee in this organization
 // Query all warnings for this employee in this organization
 // Add logging for debugging permissions
-console.log('🔧 SimplifiedAI Query params:', { employeeId, organizationId });
-console.log('🔧 Current user organization from auth:', auth.currentUser?.uid);
+Logger.debug('🔧 SimplifiedAI Query params:', { employeeId, organizationId })
+Logger.debug('🔧 Current user organization from auth:', auth.currentUser?.uid)
 
 const warningsQuery = query(
   collection(db, 'warnings'),
@@ -248,7 +249,7 @@ const warningsQuery = query(
         };
       });
       
-      console.log('📊 Raw warnings fetched:', allWarnings.length);
+      Logger.debug(8887)
       
       const now = new Date();
       
@@ -311,7 +312,7 @@ const warningsQuery = query(
       };
       
     } catch (error) {
-      console.error('❌ Error fetching/filtering warning history:', error);
+      Logger.error('❌ Error fetching/filtering warning history:', error)
       return {
         validCategoryWarnings: [],
         allValidWarnings: [],
@@ -983,7 +984,7 @@ export class SimplifiedIntegrationService {
     organization?: any
   ): Promise<LRACompliantRecommendation> {
     
-    console.log('🎯 Using simplified LRA-compliant analysis');
+    Logger.debug(35965)
     
     // Extract employee data
     const employeeData = employee ? {

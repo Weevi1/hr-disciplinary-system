@@ -1,3 +1,4 @@
+import Logger from '../../../../utils/logger';
 // frontend/src/components/warnings/enhanced/steps/CombinedIncidentStep.tsx
 // 🏆 FIXED COMBINED INCIDENT STEP - USES UNIVERSALCATEGORIES
 // ✅ Fixed escalation path display to use actual escalation logic
@@ -137,7 +138,7 @@ export const CombinedIncidentStep: React.FC<CombinedIncidentStepProps> = ({
     
     // Use UniversalCategories as the single source of truth
     const actualPath = getEscalationPath(selectedCategory.id);
-    console.log('🎯 [ESCALATION PATH] Using UniversalCategories path for', selectedCategory.id, ':', actualPath);
+    Logger.debug(4095)
     
     return actualPath;
   }, [selectedCategory?.id]);
@@ -150,18 +151,18 @@ export const CombinedIncidentStep: React.FC<CombinedIncidentStepProps> = ({
     updateFormData({ employeeId: employee.id });
     
     if (loadWarningHistory && !isLoadingWarningHistory) {
-      console.log('🔍 Loading warning history for employee:', employee.id);
+      Logger.debug('🔍 Loading warning history for employee:', employee.id)
       loadWarningHistory(employee.id);
     }
   }, [updateFormData, loadWarningHistory, isLoadingWarningHistory]);
 
   const handleCategorySelect = useCallback((category: Category) => {
     updateFormData({ categoryId: category.id });
-    console.log('📋 Selected category:', category.name, 'ID:', category.id);
+    Logger.debug('📋 Selected category:', category.name, 'ID:', category.id)
     
     // Log the actual escalation path that will be used
     const actualPath = getEscalationPath(category.id);
-    console.log('🎯 Actual escalation path from UniversalCategories:', actualPath);
+    Logger.debug(5092)
   }, [updateFormData]);
 
   const handleDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {

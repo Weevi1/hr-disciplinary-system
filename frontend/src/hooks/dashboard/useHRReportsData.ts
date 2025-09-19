@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/hooks/dashboard/useHRReportsData.ts
 // 🔧 FIXED: Prevents infinite loops and Firebase errors
 // ✅ Stable dependencies and proper cleanup
@@ -55,7 +56,7 @@ export const useHRReportsData = (): HRReportsData => {
   const refreshHRCounts = useCallback(async () => {
     if (!user?.organizationId || !canManageHR()) return;
     
-    console.log('🔄 Manual refresh of HR counts triggered');
+    Logger.debug('🔄 Manual refresh of HR counts triggered')
     setHrCountsError(null);
     setLastUpdated(new Date());
   }, [user?.organizationId, canManageHR]);
@@ -73,7 +74,7 @@ export const useHRReportsData = (): HRReportsData => {
       return;
     }
 
-    console.log('🚀 Initializing real-time HR data listeners');
+    Logger.debug('🚀 Initializing real-time HR data listeners')
     setHrCountsLoading(true);
     setHrCountsError(null);
 
@@ -82,17 +83,16 @@ export const useHRReportsData = (): HRReportsData => {
       try {
         unsub();
       } catch (error) {
-        console.warn('⚠️ Error unsubscribing:', error);
+        Logger.warn('⚠️ Error unsubscribing:', error)
       }
     });
     unsubscribeRefs.current = [];
 
     try {
-      // 📋 ABSENCE REPORTS LISTENER
-      console.log('🔔 Setting up absence reports listener');
+      // 📋 ABSENCE REPORTS LISTENER (SHARDED)
+      Logger.debug('🔔 Setting up absence reports listener')
       const absenceQuery = query(
-        collection(db, 'absence_reports'),
-        where('organizationId', '==', user.organizationId),
+        collection(db, `organizations/${user.organizationId}/reports`),
         orderBy('absenceDate', 'desc')
       );
 
@@ -101,7 +101,9 @@ export const useHRReportsData = (): HRReportsData => {
         (snapshot) => {
           if (!isMountedRef.current) return;
 
-          const reports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const reports = snapshot.docs
+            .filter(doc => doc.id !== '_metadata') // Exclude metadata documents
+            .map(doc => ({ id: doc.id, ...doc.data() }));
           const unreadCount = reports.filter(report => !report.hrReviewed).length;
 
           setHrReportsCount(prev => ({
@@ -113,10 +115,10 @@ export const useHRReportsData = (): HRReportsData => {
           }));
 
           setLastUpdated(new Date());
-          console.log(`🔔 Absence reports updated: ${unreadCount} unread of ${reports.length} total`);
+          Logger.debug(`🔔 Absence reports updated: ${unreadCount} unread of ${reports.length} total`)
         },
         (error) => {
-          console.error('❌ Absence reports listener error:', error);
+          Logger.error('❌ Absence reports listener error:', error)
           if (isMountedRef.current) {
             setHrCountsError('Failed to load absence reports');
           }
@@ -125,11 +127,10 @@ export const useHRReportsData = (): HRReportsData => {
 
       unsubscribeRefs.current.push(absenceUnsubscribe);
 
-      // 💬 HR MEETINGS LISTENER
-      console.log('🔔 Setting up HR meetings listener');
+      // 💬 HR MEETINGS LISTENER (SHARDED)
+      Logger.debug('🔔 Setting up HR meetings listener')
       const meetingsQuery = query(
-        collection(db, 'hr_meeting_requests'),
-        where('organizationId', '==', user.organizationId),
+        collection(db, `organizations/${user.organizationId}/meetings`),
         orderBy('createdAt', 'desc')
       );
 
@@ -138,7 +139,9 @@ export const useHRReportsData = (): HRReportsData => {
         (snapshot) => {
           if (!isMountedRef.current) return;
 
-          const meetings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const meetings = snapshot.docs
+            .filter(doc => doc.id !== '_metadata') // Exclude metadata documents
+            .map(doc => ({ id: doc.id, ...doc.data() }));
           const pendingCount = meetings.filter(meeting => meeting.status === 'pending').length;
 
           setHrReportsCount(prev => ({
@@ -150,10 +153,10 @@ export const useHRReportsData = (): HRReportsData => {
           }));
 
           setLastUpdated(new Date());
-          console.log(`🔔 HR meetings updated: ${pendingCount} pending of ${meetings.length} total`);
+          Logger.debug(`🔔 HR meetings updated: ${pendingCount} pending of ${meetings.length} total`)
         },
         (error) => {
-          console.error('❌ HR meetings listener error:', error);
+          Logger.error('❌ HR meetings listener error:', error)
           if (isMountedRef.current) {
             setHrCountsError('Failed to load HR meetings');
           }
@@ -162,11 +165,10 @@ export const useHRReportsData = (): HRReportsData => {
 
       unsubscribeRefs.current.push(meetingsUnsubscribe);
 
-      // 📋 CORRECTIVE COUNSELLING LISTENER
-      console.log('🔔 Setting up corrective counselling listener');
+      // 📋 CORRECTIVE COUNSELLING LISTENER (SHARDED)
+      Logger.debug('🔔 Setting up corrective counselling listener')
       const counsellingQuery = query(
-        collection(db, 'corrective_counselling'),
-        where('organizationId', '==', user.organizationId),
+        collection(db, `organizations/${user.organizationId}/corrective_counselling`),
         orderBy('dateCreated', 'desc')
       );
 
@@ -175,7 +177,9 @@ export const useHRReportsData = (): HRReportsData => {
         (snapshot) => {
           if (!isMountedRef.current) return;
 
-          const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const records = snapshot.docs
+            .filter(doc => doc.id !== '_metadata') // Exclude metadata documents
+            .map(doc => ({ id: doc.id, ...doc.data() }));
           const recentCount = records.filter(record => {
             // Consider records from the last 7 days as "unread"
             const recordDate = new Date(record.dateCreated);
@@ -192,10 +196,10 @@ export const useHRReportsData = (): HRReportsData => {
           }));
 
           setLastUpdated(new Date());
-          console.log(`🔔 Corrective counselling updated: ${recentCount} recent of ${records.length} total`);
+          Logger.debug(`🔔 Corrective counselling updated: ${recentCount} recent of ${records.length} total`)
         },
         (error) => {
-          console.error('❌ Corrective counselling listener error:', error);
+          Logger.error('❌ Corrective counselling listener error:', error)
           if (isMountedRef.current) {
             setHrCountsError('Failed to load counselling records');
           }
@@ -212,7 +216,7 @@ export const useHRReportsData = (): HRReportsData => {
       }, 1000);
 
     } catch (error) {
-      console.error('❌ Error setting up listeners:', error);
+      Logger.error('❌ Error setting up listeners:', error)
       setHrCountsError('Failed to initialize real-time data');
       setHrCountsLoading(false);
     }
@@ -221,14 +225,14 @@ export const useHRReportsData = (): HRReportsData => {
 
     // ⚠️ CLEANUP FUNCTION
     return () => {
-      console.log('🧹 Cleaning up HR data listeners');
+      Logger.debug('🧹 Cleaning up HR data listeners')
       isMountedRef.current = false;
       
       unsubscribeRefs.current.forEach(unsub => {
         try {
           unsub();
         } catch (error) {
-          console.warn('⚠️ Error during cleanup:', error);
+          Logger.warn('⚠️ Error during cleanup:', error)
         }
       });
       unsubscribeRefs.current = [];

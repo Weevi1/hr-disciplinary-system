@@ -1,23 +1,24 @@
-// frontend/src/components/meetings/BookHRMeeting.tsx - FIXED VERSION
+import Logger from '../../utils/logger';
+// frontend/src/components/meetings/BookHRMeeting.tsx - V2 VERSION
+// ✅ V2 FEATURES: Auto-save, real-time validation, enhanced UX, memory leak prevention
 // ✅ FIXED: Now uses DataService.getEmployeesForWarningCreation to respect HOD manager permissions
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, Calendar, FileText, CheckCircle, AlertCircle, 
-  Clock, ArrowLeft, UserCheck, UserX, Send, X, RotateCcw
+  Clock, ArrowLeft, UserCheck, UserX, Send, X, RotateCcw, Save, Wifi, WifiOff
 } from 'lucide-react';
 
 import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { FirebaseService } from '../../services/FirebaseService';
-import { DataService } from '../../services/DataService';
+import { DataServiceV2 } from '../../services/DataServiceV2';
+import { DatabaseShardingService } from '../../services/DatabaseShardingService';
 import { API } from '../../api';
 import type { Employee } from '../../types/core';
 
-// 🏢 COLLECTIONS
-const COLLECTIONS = {
-  HR_MEETING_REQUESTS: 'hr_meeting_requests'
-};
+// 🏢 SHARDED COLLECTIONS - Use organization-specific paths
+// Meetings should be stored at /organizations/{orgId}/meetings/{meetingId}
 
 // 🌟 TYPES
 interface HRMeetingRequest {
@@ -39,58 +40,114 @@ interface HRMeetingRequest {
   updatedAt: string;
 }
 
-// 🖊️ INLINE SIGNATURE CANVAS COMPONENT
+// 🖊️ PROFESSIONAL SIGNATURE CANVAS COMPONENT - V2 ENHANCED
 interface SignatureCanvasProps {
   onSignatureChange: (signature: string) => void;
   label: string;
   required?: boolean;
+  role?: 'manager' | 'employee';
+  personName?: string;
 }
 
-const InlineSignatureCanvas: React.FC<SignatureCanvasProps> = ({ 
+const ProfessionalSignatureCanvas: React.FC<SignatureCanvasProps> = ({ 
   onSignatureChange, 
   label, 
-  required = false 
+  required = false,
+  role = 'manager',
+  personName = 'User'
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
+  const [strokeCount, setStrokeCount] = useState(0);
+  const [isValid, setIsValid] = useState(false);
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Get coordinate from mouse or touch event
+  const getCoordinates = (e: React.MouseEvent | React.TouchEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    let clientX, clientY;
+    if ('touches' in e) {
+      if (e.touches.length === 0) return { x: 0, y: 0 };
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY
+    };
+  };
+
+  // Start drawing
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const coords = getCoordinates(e);
     setIsDrawing(true);
+    setStrokeCount(prev => prev + 1);
+    
     ctx.beginPath();
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.moveTo(coords.x, coords.y);
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Draw
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
     if (!isDrawing) return;
     
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    const coords = getCoordinates(e);
+    ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
-    setHasSignature(true);
+    
+    if (!hasSignature) {
+      setHasSignature(true);
+    }
   };
 
-  const stopDrawing = () => {
+  // Stop drawing
+  const stopDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
     if (isDrawing && canvasRef.current) {
       setIsDrawing(false);
-      const dataURL = canvasRef.current.toDataURL();
+      
+      // Validate signature (basic check for meaningful content)
+      const isValidSig = strokeCount >= 3; // At least 3 strokes for a valid signature
+      setIsValid(isValidSig);
+      
+      // Don't auto-save - wait for user to click save
+    }
+  };
+
+  // Save signature when user clicks save
+  const saveSignature = () => {
+    if (isValid && canvasRef.current) {
+      const dataURL = canvasRef.current.toDataURL('image/png', 0.8);
       onSignatureChange(dataURL);
     }
   };
 
+  // Clear signature
   const clearSignature = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -99,54 +156,215 @@ const InlineSignatureCanvas: React.FC<SignatureCanvasProps> = ({
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setupCanvas(); // Redraw guidelines
     setHasSignature(false);
+    setStrokeCount(0);
+    setIsValid(false);
     onSignatureChange('');
   };
 
-  useEffect(() => {
+  // Setup canvas with guidelines and styling
+  const setupCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set up canvas
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
+    // Set high DPI scaling
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    
+    ctx.scale(dpr, dpr);
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    
+    // Configure drawing context
+    ctx.strokeStyle = '#1f2937'; // Professional dark gray
+    ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.imageSmoothingEnabled = true;
+    
+    // Draw signature line (subtle guideline)
+    ctx.save();
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(20, rect.height * 0.75);
+    ctx.lineTo(rect.width - 20, rect.height * 0.75);
+    ctx.stroke();
+    ctx.restore();
   }, []);
 
+  // Initialize canvas
+  useEffect(() => {
+    setupCanvas();
+    
+    // Handle window resize
+    const handleResize = () => {
+      setTimeout(setupCanvas, 100);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [setupCanvas]);
+
+  const roleColors = {
+    manager: {
+      primary: 'blue',
+      bg: 'bg-blue-50',
+      border: 'border-blue-200',
+      text: 'text-blue-700',
+      accent: 'text-blue-600'
+    },
+    employee: {
+      primary: 'purple', 
+      bg: 'bg-purple-50',
+      border: 'border-purple-200',
+      text: 'text-purple-700',
+      accent: 'text-purple-600'
+    }
+  };
+  
+  const colors = roleColors[role];
+
   return (
-    <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-700">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      
-      <div className="border-2 border-gray-300 rounded-lg p-4 bg-white">
-        <canvas
-          ref={canvasRef}
-          className="w-full h-32 border border-dashed border-gray-400 rounded cursor-crosshair bg-gray-50"
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-        />
-        
-        <div className="mt-3 flex justify-between items-center">
-          <p className="text-sm text-gray-500">
-            {hasSignature ? 'Signature captured' : 'Click and drag to sign above'}
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <label className="block text-lg font-semibold text-gray-900">
+            {label} {required && <span className="text-red-500">*</span>}
+          </label>
+          <p className="text-sm text-gray-600 mt-1">
+            {role === 'manager' ? 'Please sign below to confirm this meeting request' : `${personName}, please sign below if you agree to this meeting`}
           </p>
-          <button
-            type="button"
-            onClick={clearSignature}
-            className="text-sm text-red-600 hover:text-red-800 flex items-center gap-1"
-            disabled={!hasSignature}
-          >
-            <RotateCcw className="w-4 h-4" />
-            Clear
-          </button>
+        </div>
+        
+        {/* Signature Status Indicator */}
+        <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
+          isValid
+            ? `bg-green-100 text-green-700`
+            : hasSignature
+            ? `bg-amber-100 text-amber-700`
+            : `bg-gray-100 text-gray-500`
+        }`}>
+          {isValid ? (
+            <>
+              <CheckCircle className="w-4 h-4" />
+              Valid Signature
+            </>
+          ) : hasSignature ? (
+            <>
+              <Clock className="w-4 h-4" />
+              Needs More Detail
+            </>
+          ) : (
+            <>
+              <UserCheck className="w-4 h-4" />
+              Signature Required
+            </>
+          )}
+        </div>
+      </div>
+      
+      {/* Signature Canvas Container */}
+      <div className={`${colors.bg} ${colors.border} border-2 rounded-xl p-6 transition-all duration-200 ${
+        isDrawing ? 'shadow-lg scale-[1.01]' : 'shadow-sm'
+      }`}>
+        <div ref={containerRef} className="relative">
+          {/* Canvas */}
+          <canvas
+            ref={canvasRef}
+            className={`w-full h-40 rounded-lg cursor-crosshair transition-all duration-200 ${
+              hasSignature 
+                ? 'bg-white border-2 border-gray-300' 
+                : 'bg-white border-2 border-dashed border-gray-300 hover:border-gray-400'
+            }`}
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+            onTouchStart={startDrawing}
+            onTouchMove={draw}
+            onTouchEnd={stopDrawing}
+            style={{ touchAction: 'none' }} // Prevent scrolling on touch
+          />
+          
+          {/* Instructions Overlay (only when empty) */}
+          {!hasSignature && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="text-center text-gray-400">
+                <UserCheck className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm font-medium">Sign here with mouse or finger</p>
+                <p className="text-xs">Your signature confirms your agreement</p>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Controls */}
+        <div className="mt-4 flex justify-between items-center">
+          <div className={`text-sm ${colors.text}`}>
+            {isValid ? (
+              <span className="flex items-center gap-1">
+                <CheckCircle className="w-4 h-4" />
+                Signature ready to save
+              </span>
+            ) : hasSignature ? (
+              <span className="flex items-center gap-1">
+                <AlertCircle className="w-4 h-4" />
+                Please add more detail to your signature
+              </span>
+            ) : (
+              <span className="flex items-center gap-1">
+                <UserCheck className="w-4 h-4" />
+                Click/tap and drag to create your signature
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={clearSignature}
+              disabled={!hasSignature}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                hasSignature
+                  ? 'text-red-600 hover:text-red-700 hover:bg-red-50'
+                  : 'text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <RotateCcw className="w-4 h-4" />
+              Clear
+            </button>
+            
+            <button
+              type="button"
+              onClick={saveSignature}
+              disabled={!isValid}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isValid
+                  ? `bg-${colors.primary}-600 text-white hover:bg-${colors.primary}-700`
+                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <Save className="w-4 h-4" />
+              Save Signature
+            </button>
+          </div>
+        </div>
+        
+        {/* Professional Note */}
+        <div className={`mt-3 p-3 ${colors.bg} border ${colors.border} rounded-lg`}>
+          <p className={`text-xs ${colors.text}`}>
+            <strong>Note:</strong> Your digital signature has the same legal validity as a handwritten signature and confirms your agreement to this meeting request.
+          </p>
         </div>
       </div>
     </div>
@@ -158,7 +376,7 @@ export const BookHRMeeting: React.FC = () => {
   const { user } = useAuth();
   const { organization } = useOrganization();
 
-  // 📝 FORM STATE
+  // 📝 FORM STATE WITH V2 AUTO-SAVE
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [context, setContext] = useState('');
   const [managerSignature, setManagerSignature] = useState<string>('');
@@ -166,22 +384,112 @@ export const BookHRMeeting: React.FC = () => {
   const [employeeConsent, setEmployeeConsent] = useState<boolean | null>(null);
   const [showEmployeeSignature, setShowEmployeeSignature] = useState(false);
   
+  // 💾 V2: AUTO-SAVE STATE
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
+  
   // 🎯 UI STATE
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [step, setStep] = useState<'form' | 'manager-sign' | 'employee-decision' | 'complete'>('form');
+  
+  // 🔄 V2: REAL-TIME VALIDATION STATE
+  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
 
   // 🔄 DATA STATE
   const [dataLoading, setDataLoading] = useState(true);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  
+  // 💾 V2: AUTO-SAVE KEY FOR LOCAL STORAGE
+  const autoSaveKey = useMemo(() => 
+    `hr_meeting_draft_${user?.id}_${organization?.id}`, 
+    [user?.id, organization?.id]
+  );
 
+  // 💾 V2: AUTO-SAVE FUNCTIONS
+  const saveToLocalStorage = useCallback(() => {
+    if (!autoSaveKey) return;
+    
+    const draftData = {
+      selectedEmployeeId: selectedEmployee?.id || '',
+      context,
+      step,
+      timestamp: Date.now()
+    };
+    
+    try {
+      localStorage.setItem(autoSaveKey, JSON.stringify(draftData));
+      setAutoSaveStatus('saved');
+      setLastSaved(new Date());
+      Logger.debug('💾 Auto-saved HR meeting draft', draftData);
+    } catch (error) {
+      setAutoSaveStatus('error');
+      Logger.error('Failed to auto-save HR meeting draft:', error);
+    }
+  }, [autoSaveKey, selectedEmployee?.id, context, step]);
+  
+  const loadFromLocalStorage = useCallback(() => {
+    if (!autoSaveKey) return;
+    
+    try {
+      const saved = localStorage.getItem(autoSaveKey);
+      if (!saved) return;
+      
+      const draftData = JSON.parse(saved);
+      // Only restore if saved within last 24 hours
+      if (Date.now() - draftData.timestamp > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(autoSaveKey);
+        return;
+      }
+      
+      Logger.debug('📋 Restored HR meeting draft', draftData);
+      if (draftData.context) setContext(draftData.context);
+      // Note: selectedEmployee will be set after employees load
+      return draftData;
+    } catch (error) {
+      Logger.error('Failed to restore HR meeting draft:', error);
+      localStorage.removeItem(autoSaveKey);
+    }
+  }, [autoSaveKey]);
+  
+  const clearAutoSave = useCallback(() => {
+    if (autoSaveKey) {
+      localStorage.removeItem(autoSaveKey);
+      setAutoSaveStatus('idle');
+      setLastSaved(null);
+    }
+  }, [autoSaveKey]);
+  
+  // 📁 V2: REAL-TIME VALIDATION
+  const validateField = useCallback((field: string, value: any) => {
+    const errors: {[key: string]: string} = {};
+    
+    switch (field) {
+      case 'selectedEmployee':
+        if (!value) errors.selectedEmployee = 'Please select an employee';
+        break;
+      case 'context':
+        if (!value?.trim()) {
+          errors.context = 'Context is required';
+        } else if (value.length > 80) {
+          errors.context = 'Context must be 80 characters or less';
+        }
+        break;
+    }
+    
+    setFieldErrors(prev => ({ ...prev, [field]: errors[field] || '' }));
+    return !errors[field];
+  }, []);
+  
   // ✅ FIXED: Load filtered employees using the SAME service as the warning form
   useEffect(() => {
     // Use the same positive condition pattern as HODDashboardSection
     if (organization?.id && user?.id) {
       const loadFilteredEmployees = async () => {
-        console.log('📋 Loading employees for manager:', user.id, 'Role:', user.role?.id, 'Org:', organization.id);
+        Logger.debug('📋 Loading employees for manager:', user.id, 'Role:', user.role?.id, 'Org:', organization.id)
 
         try {
           setDataLoading(true);
@@ -189,13 +497,13 @@ export const BookHRMeeting: React.FC = () => {
           
           // ✅ FIXED: Use the EXACT same approach as HODDashboardSection
           const employeesData = await API.employees.getByManager(user?.id || '', organization.id);
-        console.log('✅ Managed employees loaded:', employeesData.length);
-        
-        // Transform employees to the expected format (same as HODDashboardSection)
-        const transformedEmployees = employeesData.map(emp => ({
-          id: emp.id,
-          firstName: emp.profile?.firstName || emp.firstName || 'Unknown',
-          lastName: emp.profile?.lastName || emp.lastName || 'Employee',
+          Logger.success(6333);
+          
+          // Transform employees to the expected format (same as HODDashboardSection)
+          const transformedEmployees = employeesData.map(emp => ({
+            id: emp.id,
+            firstName: emp.profile?.firstName || emp.firstName || 'Unknown',
+            lastName: emp.profile?.lastName || emp.lastName || 'Employee',
           position: emp.profile?.position || emp.employment?.position || 'Unknown Position',
           department: emp.profile?.department || emp.employment?.department || 'Unknown',
           email: emp.profile?.email || emp.contact?.email || emp.email || '',
@@ -204,11 +512,21 @@ export const BookHRMeeting: React.FC = () => {
           ...emp // Keep all original properties
         }));
         
-          console.log('👥 Employee details:', transformedEmployees.map(e => `${e.firstName} ${e.lastName}`));
+          Logger.debug('👥 Employee details:', transformedEmployees.map(e => `${e.firstName} ${e.lastName}`));
           setEmployees(transformedEmployees);
           
+          // 💾 V2: Restore draft after employees load
+          const draftData = loadFromLocalStorage();
+          if (draftData?.selectedEmployeeId) {
+            const savedEmployee = transformedEmployees.find(emp => emp.id === draftData.selectedEmployeeId);
+            if (savedEmployee) {
+              setSelectedEmployee(savedEmployee);
+              Logger.debug('🔄 Restored selected employee from draft');
+            }
+          }
+          
         } catch (err) {
-          console.error('❌ Error loading managed employees:', err);
+          Logger.error('❌ Error loading managed employees:', err)
           setError('Failed to load your team members. Please try again.');
           setEmployees([]);
         } finally {
@@ -218,10 +536,39 @@ export const BookHRMeeting: React.FC = () => {
 
       loadFilteredEmployees();
     } else {
-      console.log('⏳ Waiting for user or organization to load...', { userId: user?.id, orgId: organization?.id });
+      Logger.debug('⏳ Waiting for user or organization to load...', { userId: user?.id, orgId: organization?.id })
       setDataLoading(false);
     }
-  }, [user?.id, organization?.id]);
+  }, [user?.id, organization?.id, loadFromLocalStorage]);
+  
+  // 💾 V2: AUTO-SAVE TRIGGER
+  useEffect(() => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
+    if (!dataLoading && (selectedEmployee || context.trim())) {
+      setAutoSaveStatus('saving');
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        saveToLocalStorage();
+      }, 1000); // Save after 1 second of inactivity
+    }
+    
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [selectedEmployee, context, dataLoading, saveToLocalStorage]);
+  
+  // 🧼 V2: CLEANUP ON UNMOUNT
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // ✅ VALIDATE FORM
   const isFormValid = () => {
@@ -261,7 +608,7 @@ export const BookHRMeeting: React.FC = () => {
 
     // ===============================================
     // ==== ADD THIS LINE FOR DEBUGGING ====
-    console.log('DEBUG: User object from AuthContext:', user);
+    Logger.debug('DEBUG: User object from AuthContext:', user)
     // ===============================================
 
     try {
@@ -289,7 +636,15 @@ export const BookHRMeeting: React.FC = () => {
         meetingRequestData.employeeSignature = employeeSignature;
       }
 
-      await FirebaseService.createDocument(COLLECTIONS.HR_MEETING_REQUESTS, meetingRequestData);
+      // 🔧 FIXED: Use sharded structure for meetings
+      await DatabaseShardingService.createDocument(
+        organization.id, 
+        'meetings', 
+        meetingRequestData
+      );
+      
+      // 💾 V2: Clear auto-save on successful submission
+      clearAutoSave();
       
       setStep('complete');
       setSuccess(true);
@@ -300,7 +655,7 @@ export const BookHRMeeting: React.FC = () => {
       }, 3000);
 
     } catch (err) {
-      console.error('Failed to submit meeting request:', err);
+      Logger.error('Failed to submit meeting request:', err)
       setError('Failed to submit meeting request. Please try again.');
     } finally {
       setLoading(false);
@@ -381,13 +736,34 @@ export const BookHRMeeting: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
       <div className="max-w-2xl mx-auto">
         
-        {/* 📱 HEADER */}
+        {/* 📱 HEADER WITH V2 AUTO-SAVE INDICATOR */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-700 rounded-2xl p-6 text-white shadow-xl mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <Calendar className="w-8 h-8" />
               <div>
-                <h1 className="text-2xl font-bold">Book HR Meeting</h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-bold">Book HR Meeting</h1>
+                  {/* 💾 V2: AUTO-SAVE INDICATOR */}
+                  {autoSaveStatus === 'saving' && (
+                    <div className="flex items-center gap-1 text-blue-200 text-sm">
+                      <div className="w-3 h-3 border border-blue-200 border-t-white rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </div>
+                  )}
+                  {autoSaveStatus === 'saved' && lastSaved && (
+                    <div className="flex items-center gap-1 text-green-200 text-sm">
+                      <Save className="w-3 h-3" />
+                      <span>Saved {new Date(lastSaved).toLocaleTimeString()}</span>
+                    </div>
+                  )}
+                  {autoSaveStatus === 'error' && (
+                    <div className="flex items-center gap-1 text-red-200 text-sm">
+                      <WifiOff className="w-3 h-3" />
+                      <span>Save failed</span>
+                    </div>
+                  )}
+                </div>
                 <p className="text-blue-100">Request meeting with HR department</p>
               </div>
             </div>
@@ -466,8 +842,18 @@ export const BookHRMeeting: React.FC = () => {
                   onChange={(e) => {
                     const employee = employees.find(emp => emp.id === e.target.value);
                     setSelectedEmployee(employee || null);
+                    setTouchedFields(prev => new Set(prev).add('selectedEmployee'));
+                    validateField('selectedEmployee', employee);
                   }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onBlur={() => {
+                    setTouchedFields(prev => new Set(prev).add('selectedEmployee'));
+                    validateField('selectedEmployee', selectedEmployee);
+                  }}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${
+                    touchedFields.has('selectedEmployee') && fieldErrors.selectedEmployee
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                      : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                  }`}
                 >
                   <option value="">Choose a team member...</option>
                   {employees.map(employee => (
@@ -477,6 +863,12 @@ export const BookHRMeeting: React.FC = () => {
                     </option>
                   ))}
                 </select>
+                {touchedFields.has('selectedEmployee') && fieldErrors.selectedEmployee && (
+                  <p className="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {fieldErrors.selectedEmployee}
+                  </p>
+                )}
               </div>
 
               {/* 📝 CONTEXT */}
@@ -487,10 +879,20 @@ export const BookHRMeeting: React.FC = () => {
                 <div className="relative">
                   <textarea
                     value={context}
-                    onChange={(e) => setContext(e.target.value)}
+                    onChange={(e) => {
+                      setContext(e.target.value);
+                      setTouchedFields(prev => new Set(prev).add('context'));
+                      validateField('context', e.target.value);
+                    }}
+                    onBlur={() => {
+                      setTouchedFields(prev => new Set(prev).add('context'));
+                      validateField('context', context);
+                    }}
                     placeholder="Brief reason for HR meeting (keep it concise)..."
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 resize-none ${
-                      isContextValid ? 'border-gray-300 focus:border-blue-500' : 'border-red-300 focus:border-red-500'
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 resize-none transition-colors ${
+                      touchedFields.has('context') && fieldErrors.context
+                        ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                        : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                     }`}
                     rows={3}
                     maxLength={80}
@@ -501,9 +903,10 @@ export const BookHRMeeting: React.FC = () => {
                     {remainingChars} chars left
                   </div>
                 </div>
-                {!isContextValid && context.length > 0 && (
-                  <p className="text-red-600 text-sm mt-1">
-                    Please keep context between 1-80 characters
+                {touchedFields.has('context') && fieldErrors.context && (
+                  <p className="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {fieldErrors.context}
                   </p>
                 )}
               </div>
@@ -573,10 +976,12 @@ export const BookHRMeeting: React.FC = () => {
               </div>
 
               {/* Manager Signature */}
-              <InlineSignatureCanvas
+              <ProfessionalSignatureCanvas
                 onSignatureChange={handleManagerSignature}
-                label="Manager Signature"
+                label="Manager Authorization Signature"
                 required={true}
+                role="manager"
+                personName={`${user?.firstName} ${user?.lastName}`}
               />
             </div>
 
@@ -651,10 +1056,12 @@ export const BookHRMeeting: React.FC = () => {
               <div className="mt-8 space-y-6">
                 <div className="border-t pt-6">
                   <h3 className="font-semibold text-gray-900 mb-4">Employee Signature Required</h3>
-                  <InlineSignatureCanvas
+                  <ProfessionalSignatureCanvas
                     onSignatureChange={handleEmployeeSignature}
-                    label="Employee Signature"
+                    label="Employee Consent Signature"
                     required={true}
+                    role="employee"
+                    personName={`${selectedEmployee?.profile?.firstName || selectedEmployee?.firstName} ${selectedEmployee?.profile?.lastName || selectedEmployee?.lastName}`}
                   />
                 </div>
               </div>

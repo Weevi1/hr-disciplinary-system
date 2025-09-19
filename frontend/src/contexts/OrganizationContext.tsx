@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // frontend/src/contexts/OrganizationContext.tsx
 // 🎯 WHITE LABEL ORGANIZATION CONTEXT - FIXED FOR UNIVERSAL CATEGORIES
 // ✅ Uses actual DataService.getOrganization() method from project
@@ -5,7 +6,7 @@
 // ✅ Preserves organization and sector info for white label functionality
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { DataService } from '../services/DataService';
+import { DataServiceV2 } from '../services/DataServiceV2';
 import type { Organization } from '../types';
 
 // 🎯 UPDATED: Removed category-related properties
@@ -19,7 +20,7 @@ interface OrganizationContextType {
   initializeSector: (sectorId: string, userId: string) => Promise<void>;
 }
 
-const OrganizationContext = createContext<OrganizationContextType | null>(null);
+export const OrganizationContext = createContext<OrganizationContextType | null>(null);
 
 // 🎯 Custom hook to easily consume the context in other components
 export const useOrganization = () => {
@@ -52,21 +53,21 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
     try {
       setLoading(true);
       setError(null);
-      console.log(`[OrganizationProvider] Loading data for organization ID: ${organizationId}`);
+      Logger.debug(`[OrganizationProvider] Loading data for organization ID: ${organizationId}`)
 
       // 🔥 FIXED: Use actual DataService method with organizationId parameter
-      const orgData = await DataService.getOrganization(organizationId);
+      const orgData = await DataServiceV2.getOrganization(organizationId);
       if (orgData) {
         setOrganization(orgData);
-        console.log(`[OrganizationProvider] ✅ Organization loaded: ${orgData.name}`);
+        Logger.debug(`[OrganizationProvider] ✅ Organization loaded: ${orgData.name}`)
       } else {
-        console.error(`[OrganizationProvider] 🚨 Failed to load organization: ${organizationId}`);
+        Logger.error(`[OrganizationProvider] 🚨 Failed to load organization: ${organizationId}`)
         setError('Failed to load organization');
       }
       
       // No sector info needed - using UniversalCategories
       setSectorInfo(null);
-      console.log(`[OrganizationProvider] ✅ Using UniversalCategories system`);
+      Logger.debug(`[OrganizationProvider] ✅ Using UniversalCategories system`)
       
       // 🔥 REMOVED: Category loading
       // Categories are now loaded directly by components using:
@@ -74,7 +75,7 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
       // This ensures universal categories are used everywhere
       
     } catch (error) {
-      console.error('[OrganizationProvider] 🚨 Failed to load organization data:', error);
+      Logger.error('[OrganizationProvider] 🚨 Failed to load organization data:', error)
       setError(error instanceof Error ? error.message : 'Failed to load organization data');
     } finally {
       setLoading(false);
@@ -93,7 +94,7 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
       await SectorService.initializeSectorCategories(organizationId, sectorId, userId);
       await loadOrganizationData(); // Reload all data after initialization
     } catch (error) {
-      console.error('Failed to initialize sector:', error);
+      Logger.error('Failed to initialize sector:', error)
       throw error;
     }
   };
@@ -103,7 +104,7 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
     if (organizationId) {
       loadOrganizationData();
     } else {
-      console.warn("[OrganizationProvider] No organizationId provided, skipping data load");
+      Logger.warn("[OrganizationProvider] No organizationId provided, skipping data load")
     }
   }, [organizationId]);
 

@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // frontend/src/hooks/useUserManagement.ts
 // 🎯 Enhanced Custom hook for User Management operations
 import { useState, useEffect } from 'react';
@@ -99,7 +100,7 @@ export const useUserManagement = () => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
 
-      console.log('🔍 Loading users for organization:', currentUser.organizationId);
+      Logger.debug('🔍 Loading users for organization:', currentUser.organizationId)
 
       // Get all users from the organization (matching your original approach)
       const allUsers = await FirebaseService.getCollection<any>(COLLECTIONS.USERS);
@@ -120,7 +121,7 @@ export const useUserManagement = () => {
           role: typeof user.role === 'string' ? USER_ROLES[user.role] : user.role
         }));
 
-      console.log('✅ Manageable users:', manageableUsers.length);
+      Logger.success(4262)
 
       setState(prev => ({ 
         ...prev, 
@@ -129,7 +130,7 @@ export const useUserManagement = () => {
       }));
 
     } catch (error) {
-      console.error('❌ Error loading users:', error);
+      Logger.error('❌ Error loading users:', error)
       setState(prev => ({ 
         ...prev, 
         loading: false, 
@@ -151,11 +152,11 @@ export const useUserManagement = () => {
     }
 
     try {
-      console.log('🚀 Creating new user:', userData.email);
+      Logger.debug('🚀 Creating new user:', userData.email)
 
       // Step 1: Create Firebase Auth user
       const authUser = await FirebaseService.signUp(userData.email, userData.password);
-      console.log('✅ Firebase Auth user created:', authUser.uid);
+      Logger.success(5389)
 
       // Step 2: Create Firestore user document with enhanced data structure
       const userDocument: Omit<User, 'permissions'> = {
@@ -177,7 +178,7 @@ export const useUserManagement = () => {
         authUser.uid
       );
 
-      console.log('✅ Firestore user document created');
+      Logger.success(6159)
 
       // Update local state
       setState(prev => ({
@@ -186,7 +187,7 @@ export const useUserManagement = () => {
       }));
 
     } catch (error) {
-      console.error('❌ Error creating user:', error);
+      Logger.error('❌ Error creating user:', error)
       
       // Enhanced error handling matching your original
       if (error instanceof Error) {
@@ -206,7 +207,7 @@ export const useUserManagement = () => {
   // Enhanced update user
   const updateUser = async (userId: string, updates: Partial<User>): Promise<void> => {
     try {
-      console.log('📝 Updating user:', userId);
+      Logger.debug('📝 Updating user:', userId)
 
       await FirebaseService.updateDocument(COLLECTIONS.USERS, userId, {
         ...updates,
@@ -222,10 +223,10 @@ export const useUserManagement = () => {
         )
       }));
 
-      console.log('✅ User updated successfully');
+      Logger.success(7586)
 
     } catch (error) {
-      console.error('❌ Error updating user:', error);
+      Logger.error('❌ Error updating user:', error)
       throw error;
     }
   };
@@ -242,7 +243,7 @@ export const useUserManagement = () => {
     }
 
     try {
-      console.log('🚫 Deactivating user:', userId);
+      Logger.debug('🚫 Deactivating user:', userId)
 
       await FirebaseService.updateDocument(COLLECTIONS.USERS, userId, {
         isActive: false,
@@ -258,10 +259,10 @@ export const useUserManagement = () => {
         )
       }));
 
-      console.log('✅ User deactivated successfully');
+      Logger.success(8612)
 
     } catch (error) {
-      console.error('❌ Error deactivating user:', error);
+      Logger.error('❌ Error deactivating user:', error)
       throw error;
     }
   };
@@ -269,7 +270,7 @@ export const useUserManagement = () => {
   // Enhanced reactivate user
   const reactivateUser = async (userId: string): Promise<void> => {
     try {
-      console.log('✅ Reactivating user:', userId);
+      Logger.success(8897)
 
       await FirebaseService.updateDocument(COLLECTIONS.USERS, userId, {
         isActive: true,
@@ -285,10 +286,10 @@ export const useUserManagement = () => {
         )
       }));
 
-      console.log('✅ User reactivated successfully');
+      Logger.success(9358)
 
     } catch (error) {
-      console.error('❌ Error reactivating user:', error);
+      Logger.error('❌ Error reactivating user:', error)
       throw error;
     }
   };

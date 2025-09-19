@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 /**
  * Modern warnings hook using the API layer
  * 
@@ -34,7 +35,7 @@ export const useWarnings = (options: UseWarningsOptions = {}) => {
   // Load warnings using API layer
   const loadWarnings = useCallback(async () => {
     if (!organization?.id) {
-      console.warn('No organization ID available for loading warnings');
+      Logger.warn('No organization ID available for loading warnings')
       return;
     }
 
@@ -42,18 +43,18 @@ export const useWarnings = (options: UseWarningsOptions = {}) => {
       setLoading(true);
       setError(null);
       
-      console.log('🔄 Loading warnings via API layer');
+      Logger.debug('🔄 Loading warnings via API layer')
       const data = await API.warnings.getAll(organization.id, filters);
       
       setWarnings(data);
-      console.log('✅ Loaded warnings:', data.length);
+      Logger.success(1409)
       
     } catch (err) {
       const errorMessage = err instanceof APIError 
         ? err.message 
         : 'Failed to load warnings';
       
-      console.error('❌ Error loading warnings:', err);
+      Logger.error('❌ Error loading warnings:', err)
       setError(errorMessage);
       setWarnings([]); // Clear stale data
     } finally {
@@ -64,7 +65,7 @@ export const useWarnings = (options: UseWarningsOptions = {}) => {
   // Update warning status
   const updateWarningStatus = useCallback(async (
     warningId: string, 
-    newStatus: 'approved' | 'rejected'
+    newStatus: 'issued' | 'delivered' | 'acknowledged'
   ) => {
     try {
       // Optimistic update
@@ -79,10 +80,10 @@ export const useWarnings = (options: UseWarningsOptions = {}) => {
       // Update via API
       await API.warnings.update(warningId, { status: newStatus });
       
-      console.log('✅ Updated warning status:', warningId, newStatus);
+      Logger.success(2312)
       
     } catch (err) {
-      console.error('❌ Error updating warning status:', err);
+      Logger.error('❌ Error updating warning status:', err)
       
       // Revert optimistic update on error
       setWarnings(prev => 
@@ -110,10 +111,10 @@ export const useWarnings = (options: UseWarningsOptions = {}) => {
       // Delete via API
       await API.warnings.delete(warningId);
       
-      console.log('✅ Deleted warning:', warningId);
+      Logger.success(3211)
       
     } catch (err) {
-      console.error('❌ Error deleting warning:', err);
+      Logger.error('❌ Error deleting warning:', err)
       
       // Revert optimistic removal on error
       setWarnings(warnings);
@@ -145,10 +146,9 @@ export const useWarnings = (options: UseWarningsOptions = {}) => {
   // Computed statistics
   const stats = {
     total: warnings.length,
-    pendingReview: warnings.filter(w => w.status === 'pending_review').length,
-    approved: warnings.filter(w => w.status === 'approved').length,
-    rejected: warnings.filter(w => w.status === 'rejected').length,
-    draft: warnings.filter(w => w.status === 'draft').length,
+    issued: warnings.filter(w => w.status === 'issued').length,
+    delivered: warnings.filter(w => w.status === 'delivered').length,
+    acknowledged: warnings.filter(w => w.status === 'acknowledged').length,
     highRisk: warnings.filter(w => w.priority === 'high' || w.severity === 'high').length
   };
 

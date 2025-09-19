@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/components/admin/OrganizationList.tsx
 import { useState } from 'react';
 
@@ -44,7 +45,7 @@ export const OrganizationList = ({ organizations, onRefresh }: OrganizationListP
   const handleManageOrg = (orgId: string) => {
     setSelectedOrg(orgId);
     // TODO: Navigate to organization management page
-    console.log('Managing organization:', orgId);
+    Logger.debug('Managing organization:', orgId)
   };
 
   return (

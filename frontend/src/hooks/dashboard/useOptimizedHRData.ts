@@ -6,7 +6,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { useMultiRolePermissions } from '../useMultiRolePermissions';
 import { useRealtimeHRReports, useRealtimeHRMeetings } from '../../services/RealtimeService';
-import { useNotifications } from '../../services/RealtimeService';
 
 interface OptimizedHRData {
   absenceReports: {
@@ -28,7 +27,6 @@ interface OptimizedHRData {
 export const useOptimizedHRData = (): OptimizedHRData => {
   const { user } = useAuth();
   const { canManageHR } = useMultiRolePermissions();
-  const { addNotification } = useNotifications();
 
   // 🔥 Real-time subscriptions
   const {
@@ -81,31 +79,13 @@ export const useOptimizedHRData = (): OptimizedHRData => {
     const currentAbsence = hrData.absenceReports.unread;
     const currentMeetings = hrData.hrMeetings.unread;
 
-    // Notify on new absence reports
-    if (prevCounts.absence < currentAbsence) {
-      const newCount = currentAbsence - prevCounts.absence;
-      addNotification(
-        'info',
-        'New Absence Reports',
-        `${newCount} new absence report${newCount > 1 ? 's' : ''} require${newCount === 1 ? 's' : ''} review`
-      );
-    }
-
-    // Notify on new HR meetings
-    if (prevCounts.meetings < currentMeetings) {
-      const newCount = currentMeetings - prevCounts.meetings;
-      addNotification(
-        'info',
-        'New HR Meeting Requests',
-        `${newCount} new meeting request${newCount > 1 ? 's' : ''} pending approval`
-      );
-    }
+    // Note: Dashboard badges provide visual indicators for new items
 
     setPrevCounts({
       absence: currentAbsence,
       meetings: currentMeetings
     });
-  }, [hrData.absenceReports.unread, hrData.hrMeetings.unread, addNotification, prevCounts]);
+  }, [hrData.absenceReports.unread, hrData.hrMeetings.unread, prevCounts]);
 
   // 🔄 Refresh function
   const refresh = useCallback(() => {

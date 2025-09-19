@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/components/admin/OrganizationSwitcher.tsx
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../auth/AuthContext';
@@ -40,7 +41,7 @@ export const OrganizationSwitcher = () => {
       const orgs = await DataService.loadOrganizations();
       setOrganizations(orgs);
     } catch (error) {
-      console.error('Failed to load organizations:', error);
+      Logger.error('Failed to load organizations:', error)
     } finally {
       setLoading(false);
     }
@@ -63,7 +64,7 @@ export const OrganizationSwitcher = () => {
         toOrgName: org.name
       });
     } catch (error) {
-      console.error('Failed to switch organization:', error);
+      Logger.error('Failed to switch organization:', error)
     }
   };
 

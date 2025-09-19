@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/components/counselling/CounsellingDashboard.tsx
 // 📊 COUNSELLING DASHBOARD COMPONENT
 // Shows all counselling sessions for a manager with filtering and follow-up management
@@ -68,9 +69,9 @@ export const CounsellingDashboard: React.FC<CounsellingDashboardProps> = ({ onCl
         setAllCounselling(sessions);
         setFilteredCounselling(sessions);
         
-        console.log('📊 Loaded counselling sessions:', sessions.length);
+        Logger.debug(2790)
       } catch (err) {
-        console.error('❌ Error loading counselling sessions:', err);
+        Logger.error('❌ Error loading counselling sessions:', err)
         setError('Failed to load counselling sessions');
       } finally {
         setLoading(false);

@@ -1,18 +1,18 @@
 // frontend/src/components/dashboard/HRDashboardSection.tsx
-// 🚀 ENHANCED HR DASHBOARD - Desktop Optimized
+// 🚀 ENHANCED HR DASHBOARD - Desktop Optimized with SuperUser Design System
 // ✅ Integrates with existing WarningsReviewDashboard
 // ✅ Enhanced data integration and employee overview
 // 🖥️ Optimized for desktop HR workflow
 
 import React, { memo, useState } from 'react';
-import { Bell, UserX, MessageCircle, AlertTriangle, RefreshCw, Clock, Archive, Settings, BookOpen, Users, TrendingUp, Shield, Building2, Plus, X } from 'lucide-react';
+import { Bell, UserX, MessageCircle, AlertTriangle, RefreshCw, Clock, Archive, Settings, BookOpen, Users, TrendingUp, Shield, Building2, Plus, X, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useHRReportsData } from '../../hooks/dashboard/useHRReportsData';
 import { useEnhancedHRDashboard } from '../../hooks/dashboard/useEnhancedHRDashboard';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
-import { WarningsOverviewCard } from '../warnings/cards/OverviewCard';
 import { CategoryManagement } from '../admin/CategoryManagement';
 import WarningsReviewDashboard from '../warnings/ReviewDashboard';
+import { EmployeeManagement } from '../employees/EmployeeManagement';
 
 interface HRDashboardSectionProps {
   className?: string;
@@ -37,172 +37,131 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
   
   // State management
   const [showCategoryManagement, setShowCategoryManagement] = useState(false);
-  const [activeView, setActiveView] = useState<'overview' | 'warnings' | 'employees'>('overview');
+  const [activeView, setActiveView] = useState<'urgent' | 'actions' | 'warnings' | 'employees'>('urgent');
 
   // 🎨 MOBILE VIEW
   if (isMobile) {
     return (
-      <div className={`space-y-4 ${className}`}>
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-            <Bell className="w-5 h-5 text-blue-600" />
-            HR Review Dashboard
-          </h3>
+      <div className={`space-y-6 ${className}`}>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">HR Command Center</h1>
+            <p className="text-gray-600 mt-1">Employee oversight & disciplinary management</p>
+          </div>
           {lastUpdated && (
-            <span className="text-xs text-gray-500">
-              {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
+            <div className="text-right">
+              <span className="text-xs text-gray-500">Last updated</span>
+              <br />
+              <span className="text-sm font-medium text-gray-700">
+                {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
           )}
         </div>
         
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-6">
           {/* 📋 ABSENCE REPORTS CARD */}
-          <button
+          <div 
             onClick={() => navigate('/hr/absence-reports')}
-            className="bg-white rounded-2xl p-4 shadow-sm border hover:shadow-md transition-all text-left relative"
+            className="bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-6 text-white cursor-pointer hover:from-red-600 hover:to-red-700 transition-all relative"
           >
             {hrCountsLoading && (
-              <div className="absolute top-2 right-2">
-                <div className="w-4 h-4 border-2 border-red-300 border-t-red-600 rounded-full animate-spin"></div>
+              <div className="absolute top-4 right-4">
+                <div className="w-4 h-4 border-2 border-red-200 border-t-white rounded-full animate-spin"></div>
               </div>
             )}
             
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <UserX className="w-5 h-5 text-red-600" />
-                </div>
-                <div>
-                  <div className="font-semibold text-gray-900">Absence Reports</div>
-                  <div className="text-sm text-gray-600">Review employee absences</div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-red-100 text-sm">Pending Reviews</p>
+                <p className="text-2xl font-bold">{hrReportsCount.absenceReports.unread}</p>
+                <div className="mt-2 text-sm text-red-100">
+                  {hrReportsCount.absenceReports.total} total absence reports
                 </div>
               </div>
-              {hrReportsCount.absenceReports.unread > 0 && (
-                <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
-                  {hrReportsCount.absenceReports.unread}
-                </div>
-              )}
+              <UserX className="w-8 h-8 text-red-200" />
             </div>
-            <div className="text-sm text-gray-500">
-              {hrReportsCount.absenceReports.total} total reports
-            </div>
-          </button>
+          </div>
 
           {/* 💬 HR MEETINGS CARD */}
-          <button
+          <div
             onClick={() => navigate('/hr/meeting-requests')}
-            className="bg-white rounded-2xl p-4 shadow-sm border hover:shadow-md transition-all text-left relative"
+            className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white cursor-pointer hover:from-purple-600 hover:to-purple-700 transition-all relative"
           >
             {hrCountsLoading && (
-              <div className="absolute top-2 right-2">
-                <div className="w-4 h-4 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin"></div>
+              <div className="absolute top-4 right-4">
+                <div className="w-4 h-4 border-2 border-purple-200 border-t-white rounded-full animate-spin"></div>
               </div>
             )}
             
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <MessageCircle className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <div className="font-semibold text-gray-900">HR Meetings</div>
-                  <div className="text-sm text-gray-600">Schedule & manage meetings</div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-100 text-sm">Meeting Requests</p>
+                <p className="text-2xl font-bold">{hrReportsCount.hrMeetings.unread}</p>
+                <div className="mt-2 text-sm text-purple-100">
+                  {hrReportsCount.hrMeetings.total} total requests
                 </div>
               </div>
-              {hrReportsCount.hrMeetings.unread > 0 && (
-                <div className="bg-purple-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
-                  {hrReportsCount.hrMeetings.unread}
-                </div>
-              )}
+              <MessageCircle className="w-8 h-8 text-purple-200" />
             </div>
-            <div className="text-sm text-gray-500">
-              {hrReportsCount.hrMeetings.total} total requests
-            </div>
-          </button>
+          </div>
 
           {/* 📋 CORRECTIVE COUNSELLING CARD */}
-          <button
+          <div
             onClick={() => navigate('/hr/corrective-counselling')}
-            className="bg-white rounded-2xl p-4 shadow-sm border hover:shadow-md transition-all text-left relative"
+            className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-all relative"
           >
             {hrCountsLoading && (
-              <div className="absolute top-2 right-2">
-                <div className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>
+              <div className="absolute top-4 right-4">
+                <div className="w-4 h-4 border-2 border-blue-200 border-t-white rounded-full animate-spin"></div>
               </div>
             )}
             
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <BookOpen className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <div className="font-semibold text-gray-900">Counselling Records</div>
-                  <div className="text-sm text-gray-600">Review preventive interventions</div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-100 text-sm">Counselling Sessions</p>
+                <p className="text-2xl font-bold">{hrReportsCount.correctiveCounselling.unread}</p>
+                <div className="mt-2 text-sm text-blue-100">
+                  {hrReportsCount.correctiveCounselling.total} total records
                 </div>
               </div>
-              {hrReportsCount.correctiveCounselling.unread > 0 && (
-                <div className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
-                  {hrReportsCount.correctiveCounselling.unread}
-                </div>
-              )}
+              <BookOpen className="w-8 h-8 text-blue-200" />
             </div>
-            <div className="text-sm text-gray-500">
-              {hrReportsCount.correctiveCounselling.total} total records
-            </div>
-          </button>
+          </div>
 
           {/* ⚠️ WARNINGS OVERVIEW CARD */}
-          <button
+          <div
             onClick={() => setActiveView('warnings')}
-            className="bg-white rounded-2xl p-4 shadow-sm border hover:shadow-md transition-all text-left"
+            className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white cursor-pointer hover:from-orange-600 hover:to-orange-700 transition-all"
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <Shield className="w-5 h-5 text-orange-600" />
-                </div>
-                <div>
-                  <div className="font-semibold text-gray-900">Warnings Management</div>
-                  <div className="text-sm text-gray-600">
-                    {warningStats.undelivered} undelivered, {warningStats.highSeverity} high-severity
-                  </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-orange-100 text-sm">Active Warnings</p>
+                <p className="text-2xl font-bold">{warningStats.totalActive}</p>
+                <div className="mt-2 text-sm text-orange-100">
+                  {warningStats.undelivered} undelivered, {warningStats.highSeverity} high-severity
                 </div>
               </div>
-              <div className="bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                {warningStats.totalActive}
-              </div>
+              <Shield className="w-8 h-8 text-orange-200" />
             </div>
-            <div className="text-sm text-gray-500">
-              Total active warnings: {warningStats.totalActive}
-            </div>
-          </button>
+          </div>
 
           {/* 👥 EMPLOYEE OVERVIEW CARD */}
-          <button
+          <div
             onClick={() => setActiveView('employees')}
-            className="bg-white rounded-2xl p-4 shadow-sm border hover:shadow-md transition-all text-left"
+            className="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-xl p-6 text-white cursor-pointer hover:from-indigo-600 hover:to-indigo-700 transition-all"
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-100 rounded-lg">
-                  <Users className="w-5 h-5 text-indigo-600" />
-                </div>
-                <div>
-                  <div className="font-semibold text-gray-900">Employee Overview</div>
-                  <div className="text-sm text-gray-600">
-                    {employeeStats.activeEmployees} active, {employeeStats.newEmployees} new
-                  </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-indigo-100 text-sm">Employee Network</p>
+                <p className="text-2xl font-bold">{employeeStats.totalEmployees}</p>
+                <div className="mt-2 text-sm text-indigo-100">
+                  {employeeStats.activeEmployees} active, {employeeStats.newEmployees} new this month
                 </div>
               </div>
-              <div className="bg-indigo-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                {employeeStats.totalEmployees}
-              </div>
+              <Users className="w-8 h-8 text-indigo-200" />
             </div>
-            <div className="text-sm text-gray-500">
-              Total employees: {employeeStats.totalEmployees}
-            </div>
-          </button>
+          </div>
 
           {/* 🔧 CATEGORY MANAGEMENT CARD - MOBILE */}
           {canManageCategories && (
@@ -245,7 +204,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
             <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b">
                 <h2 className="text-lg font-bold text-gray-900">Warnings</h2>
-                <button onClick={() => setActiveView('overview')} className="p-1 hover:bg-gray-100 rounded">
+                <button onClick={() => setActiveView('urgent')} className="p-1 hover:bg-gray-100 rounded">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -275,7 +234,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
             <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-hidden">
               <div className="flex items-center justify-between p-4 border-b">
                 <h2 className="text-lg font-bold text-gray-900">Employees</h2>
-                <button onClick={() => setActiveView('overview')} className="p-1 hover:bg-gray-100 rounded">
+                <button onClick={() => setActiveView('urgent')} className="p-1 hover:bg-gray-100 rounded">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -300,326 +259,392 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
     );
   }
 
-  // 🖥️ DESKTOP VIEW
+  // 🖥️ DESKTOP VIEW - Compact, Desktop-First Design
   return (
-    <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${className}`}>
-      {/* 📊 HR REVIEW DASHBOARD */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-emerald-600 flex items-center gap-2">
-            <Bell className="w-6 h-6" />
-            HR Review Dashboard
-          </h3>
-          
-          <div className="flex items-center gap-2">
-            {lastUpdated && (
-              <span className="text-xs text-gray-500">
-                Last updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
-            <button
-              onClick={refreshHRCounts}
-              className="p-1.5 text-gray-400 hover:text-emerald-600 rounded-lg hover:bg-emerald-50 transition-colors"
-              disabled={hrCountsLoading}
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-4 h-4 ${hrCountsLoading ? 'animate-spin' : ''}`} />
-            </button>
+    <div className={`${className}`}>
+      {/* Compact Header - Single Row */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold text-gray-900">HR Dashboard</h1>
+          <div className="text-sm text-gray-500">Employee oversight & disciplinary management</div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          {lastUpdated && (
+            <div className="text-xs text-gray-500">
+              Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          )}
+          <button
+            onClick={refreshHRCounts}
+            className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+            disabled={hrCountsLoading}
+          >
+            <RefreshCw className={`w-3 h-3 ${hrCountsLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+
+        </div>
+      </div>
+
+      {/* Compact Overview Cards - 4 Column Desktop Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-6">
+        {/* Compact Cards - Better space utilization */}
+        <div 
+          onClick={() => navigate('/hr/absence-reports')}
+          className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg p-4 text-white cursor-pointer hover:from-red-600 hover:to-red-700 transition-all shadow hover:shadow-lg"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <UserX className="w-4 h-4" />
+                <p className="text-sm font-medium text-red-100">Absence Reports</p>
+              </div>
+              <p className="text-2xl font-bold">{hrReportsCount.absenceReports.unread}</p>
+              <p className="text-xs text-red-200">of {hrReportsCount.absenceReports.total} total</p>
+            </div>
+            {hrCountsLoading && <div className="w-3 h-3 border border-red-200 border-t-white rounded-full animate-spin"></div>}
           </div>
         </div>
 
-        {hrCountsError && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-            <div className="text-red-700 text-sm font-medium">Failed to load HR data</div>
-            <div className="text-red-600 text-xs mt-1">{hrCountsError}</div>
+        <div
+          onClick={() => navigate('/hr/meeting-requests')}
+          className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-4 text-white cursor-pointer hover:from-purple-600 hover:to-purple-700 transition-all shadow hover:shadow-lg"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <MessageCircle className="w-4 h-4" />
+                <p className="text-sm font-medium text-purple-100">Meeting Requests</p>
+              </div>
+              <p className="text-2xl font-bold">{hrReportsCount.hrMeetings.unread}</p>
+              <p className="text-xs text-purple-200">of {hrReportsCount.hrMeetings.total} total</p>
+            </div>
+            {hrCountsLoading && <div className="w-3 h-3 border border-purple-200 border-t-white rounded-full animate-spin"></div>}
           </div>
-        )}
-        
-        <div className="space-y-4">
-          {/* 📋 ABSENCE REPORTS */}
-          <button 
-            className="group relative bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-xl p-4 hover:shadow-md transition-all duration-200 text-left w-full"
-            onClick={() => navigate('/hr/absence-reports')}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-red-100 rounded-lg group-hover:bg-red-200 transition-colors">
-                  <UserX className="w-6 h-6 text-red-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 text-lg">Absence Reports</h4>
-                  <p className="text-gray-600 text-sm">Review and manage employee absences</p>
-                </div>
+        </div>
+
+        <div
+          onClick={() => navigate('/hr/corrective-counselling')}
+          className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-all shadow hover:shadow-lg"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <BookOpen className="w-4 h-4" />
+                <p className="text-sm font-medium text-blue-100">Counselling</p>
               </div>
-              <div className="flex flex-col items-end gap-2">
-                {hrReportsCount.absenceReports.unread > 0 && (
-                  <div className="bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-full animate-pulse">
-                    {hrReportsCount.absenceReports.unread} unread
-                  </div>
+              <p className="text-2xl font-bold">{hrReportsCount.correctiveCounselling.unread}</p>
+              <p className="text-xs text-blue-200">of {hrReportsCount.correctiveCounselling.total} total</p>
+            </div>
+            {hrCountsLoading && <div className="w-3 h-3 border border-blue-200 border-t-white rounded-full animate-spin"></div>}
+          </div>
+        </div>
+
+        <div
+          onClick={() => setActiveView('warnings')}
+          className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-4 text-white cursor-pointer hover:from-orange-600 hover:to-orange-700 transition-all shadow hover:shadow-lg"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <Shield className="w-4 h-4" />
+                <p className="text-sm font-medium text-orange-100">Active Warnings</p>
+              </div>
+              <p className="text-2xl font-bold">{warningStats.totalActive}</p>
+              <p className="text-xs text-orange-200">{warningStats.undelivered} undelivered</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {hrCountsError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+          <div className="text-red-700 text-sm">Failed to load HR data: {hrCountsError}</div>
+        </div>
+      )}
+
+      {/* Task-Oriented Tab Navigation */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div className="border-b border-gray-200">
+          <nav className="flex space-x-6 px-4">
+            {[
+              { id: 'urgent', label: 'Urgent Tasks', icon: AlertTriangle, count: hrReportsCount.absenceReports.unread + hrReportsCount.hrMeetings.unread + warningStats.undelivered },
+              { id: 'warnings', label: 'Warnings', icon: Shield },
+              { id: 'employees', label: 'Employees', icon: Building2 }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveView(tab.id as any)}
+                className={`flex items-center gap-2 py-3 px-1 border-b-2 text-sm font-medium transition-colors relative ${
+                  activeView === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+                {tab.count > 0 && (
+                  <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ml-1">
+                    {tab.count}
+                  </span>
                 )}
-                <div className="text-xs text-gray-500">
-                  {hrReportsCount.absenceReports.total} total
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Compact Tab Content */}
+        <div className="p-4">
+          {activeView === 'urgent' && (
+            <div className="space-y-4">
+              {/* Priority Tasks List */}
+              <div className="bg-white rounded-lg border border-red-200 shadow-sm">
+                <div className="p-4 border-b border-red-100 bg-red-50">
+                  <h3 className="text-lg font-semibold text-red-900 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5" />
+                    Urgent Tasks Requiring Immediate Attention
+                  </h3>
+                  <p className="text-sm text-red-700 mt-1">These items need your immediate review and action</p>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {/* Unread Absence Reports */}
+                  {hrReportsCount.absenceReports.unread > 0 && (
+                    <div className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => navigate('/hr/absence-reports')}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                          <div>
+                            <div className="font-semibold text-gray-900">{hrReportsCount.absenceReports.unread} Unread Absence Reports</div>
+                            <div className="text-sm text-gray-600">Employees reporting absences requiring approval</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-medium">
+                            {hrReportsCount.absenceReports.unread} pending
+                          </span>
+                          <UserX className="w-4 h-4 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Unread Meeting Requests */}
+                  {hrReportsCount.hrMeetings.unread > 0 && (
+                    <div className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => navigate('/hr/meeting-requests')}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                          <div>
+                            <div className="font-semibold text-gray-900">{hrReportsCount.hrMeetings.unread} New Meeting Requests</div>
+                            <div className="text-sm text-gray-600">Employees requesting HR consultations</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-medium">
+                            {hrReportsCount.hrMeetings.unread} requests
+                          </span>
+                          <MessageCircle className="w-4 h-4 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Undelivered Warnings */}
+                  {warningStats.undelivered > 0 && (
+                    <div className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => setActiveView('warnings')}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                          <div>
+                            <div className="font-semibold text-gray-900">{warningStats.undelivered} Undelivered Warnings</div>
+                            <div className="text-sm text-gray-600">Warning documents pending delivery to employees</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full font-medium">
+                            {warningStats.undelivered} undelivered
+                          </span>
+                          <Shield className="w-4 h-4 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* High Severity Cases */}
+                  {warningStats.highSeverity > 0 && (
+                    <div className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => setActiveView('warnings')}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 bg-red-600 rounded-full"></div>
+                          <div>
+                            <div className="font-semibold text-gray-900">{warningStats.highSeverity} High Priority Cases</div>
+                            <div className="text-sm text-gray-600">Final warnings and dismissal cases requiring oversight</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-medium">
+                            Critical
+                          </span>
+                          <AlertTriangle className="w-4 h-4 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Empty State */}
+                  {hrReportsCount.absenceReports.unread === 0 && hrReportsCount.hrMeetings.unread === 0 && warningStats.undelivered === 0 && warningStats.highSeverity === 0 && (
+                    <div className="p-8 text-center text-gray-500">
+                      <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <Shield className="w-8 h-8 text-green-600" />
+                      </div>
+                      <div className="font-medium text-gray-700">All caught up!</div>
+                      <div className="text-sm">No urgent tasks requiring immediate attention</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Today's Summary */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-gray-600" />
+                    Today's Activity
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">New Reports</span>
+                      <span className="font-medium text-gray-900">{hrReportsCount.absenceReports.unread}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Meetings</span>
+                      <span className="font-medium text-gray-900">{hrReportsCount.hrMeetings.unread}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Counselling</span>
+                      <span className="font-medium text-gray-900">{hrReportsCount.correctiveCounselling.unread}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-blue-600" />
+                    Team Status
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Total Employees</span>
+                      <span className="font-medium text-gray-900">{employeeStats.totalEmployees}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Active</span>
+                      <span className="font-medium text-green-600">{employeeStats.activeEmployees}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">New This Month</span>
+                      <span className="font-medium text-blue-600">{employeeStats.newEmployees}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-orange-600" />
+                    Warning Overview
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Active</span>
+                      <span className="font-medium text-gray-900">{warningStats.totalActive}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Undelivered</span>
+                      <span className="font-medium text-orange-600">{warningStats.undelivered}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">High Priority</span>
+                      <span className="font-medium text-red-600">{warningStats.highSeverity}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-            {hrCountsLoading && (
-              <div className="absolute top-2 right-2">
-                <div className="w-4 h-4 border-2 border-red-300 border-t-red-600 rounded-full animate-spin"></div>
-              </div>
-            )}
-          </button>
+          )}
 
-          {/* 💬 HR MEETINGS */}
-          <button 
-            className="group relative bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-4 hover:shadow-md transition-all duration-200 text-left w-full"
-            onClick={() => navigate('/hr/meeting-requests')}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-                  <MessageCircle className="w-6 h-6 text-purple-600" />
+          {/* Warnings Tab Content */}
+          {activeView === 'warnings' && (
+            <div className="space-y-4">
+              {/* Compact Warnings Overview */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="w-8 h-8 text-orange-600" />
+                    <div>
+                      <div className="text-2xl font-bold text-orange-600">{warningStats.undelivered}</div>
+                      <div className="text-sm text-orange-700">Undelivered Warnings</div>
+                      <div className="text-xs text-orange-600">Require immediate attention</div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 text-lg">HR Meeting Requests</h4>
-                  <p className="text-gray-600 text-sm">Schedule and manage HR meetings</p>
+                
+                <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                  <div className="flex items-center gap-3">
+                    <Shield className="w-8 h-8 text-red-600" />
+                    <div>
+                      <div className="text-2xl font-bold text-red-600">{warningStats.highSeverity}</div>
+                      <div className="text-sm text-red-700">High Severity</div>
+                      <div className="text-xs text-red-600">Final warnings & dismissals</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-8 h-8 text-blue-600" />
+                    <div>
+                      <div className="text-2xl font-bold text-blue-600">{warningStats.totalActive}</div>
+                      <div className="text-sm text-blue-700">Total Active</div>
+                      <div className="text-xs text-blue-600">All current warnings</div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-2">
-                {hrReportsCount.hrMeetings.unread > 0 && (
-                  <div className="bg-purple-500 text-white text-sm font-bold px-3 py-1 rounded-full animate-pulse">
-                    {hrReportsCount.hrMeetings.unread} pending
-                  </div>
-                )}
-                <div className="text-xs text-gray-500">
-                  {hrReportsCount.hrMeetings.total} total
-                </div>
+
+              {/* Full Warnings Dashboard - Inline */}
+              <div className="bg-white rounded-lg border border-gray-200">
+                <WarningsReviewDashboard />
               </div>
             </div>
-            {hrCountsLoading && (
-              <div className="absolute top-2 right-2">
-                <div className="w-4 h-4 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin"></div>
-              </div>
-            )}
-          </button>
+          )}
+          
 
-          {/* 📋 CORRECTIVE COUNSELLING */}
-          <button 
-            className="group relative bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 hover:shadow-md transition-all duration-200 text-left w-full"
-            onClick={() => navigate('/hr/corrective-counselling')}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-                  <BookOpen className="w-6 h-6 text-blue-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 text-lg">Counselling Records</h4>
-                  <p className="text-gray-600 text-sm">Review preventive interventions and training sessions</p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                {hrReportsCount.correctiveCounselling.unread > 0 && (
-                  <div className="bg-blue-500 text-white text-sm font-bold px-3 py-1 rounded-full animate-pulse">
-                    {hrReportsCount.correctiveCounselling.unread} recent
-                  </div>
-                )}
-                <div className="text-xs text-gray-500">
-                  {hrReportsCount.correctiveCounselling.total} total
-                </div>
-              </div>
+          {/* Employees Tab Content */}
+          {activeView === 'employees' && (
+            <div className="space-y-4">
+              <EmployeeManagement />
             </div>
-            {hrCountsLoading && (
-              <div className="absolute top-2 right-2">
-                <div className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin"></div>
-              </div>
-            )}
-          </button>
-
-          {/* ⚠️ WARNINGS MANAGEMENT */}
-          <button 
-            className="group relative bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-xl p-4 hover:shadow-md transition-all duration-200 text-left w-full"
-            onClick={() => setActiveView('warnings')}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-orange-100 rounded-lg group-hover:bg-orange-200 transition-colors">
-                  <Shield className="w-6 h-6 text-orange-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 text-lg">Warnings Management</h4>
-                  <p className="text-gray-600 text-sm">
-                    {warningStats.undelivered} undelivered • {warningStats.highSeverity} high-priority
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                {warningStats.undelivered > 0 && (
-                  <div className="bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-full animate-pulse">
-                    {warningStats.undelivered} pending
-                  </div>
-                )}
-                <div className="text-xs text-gray-500">
-                  {warningStats.totalActive} total active
-                </div>
-              </div>
-            </div>
-          </button>
-
-          {/* 👥 EMPLOYEE OVERVIEW */}
-          <button 
-            className="group relative bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-xl p-4 hover:shadow-md transition-all duration-200 text-left w-full"
-            onClick={() => setActiveView('employees')}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-indigo-100 rounded-lg group-hover:bg-indigo-200 transition-colors">
-                  <Users className="w-6 h-6 text-indigo-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 text-lg">Employee Overview</h4>
-                  <p className="text-gray-600 text-sm">
-                    {employeeStats.activeEmployees} active • {employeeStats.newEmployees} new this month
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-2">
-                <div className="bg-indigo-500 text-white text-sm font-bold px-3 py-1 rounded-full">
-                  {employeeStats.totalEmployees} total
-                </div>
-                <div className="text-xs text-gray-500">
-                  {Object.keys(employeeStats.departmentBreakdown).length} departments
-                </div>
-              </div>
-            </div>
-          </button>
-
-          {/* 🔧 CATEGORY MANAGEMENT - DESKTOP */}
-          {canManageCategories && (
-            <button 
-              className="group relative bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 hover:shadow-md transition-all duration-200 text-left w-full"
-              onClick={() => setShowCategoryManagement(true)}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-                    <Settings className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 text-lg">Warning Categories</h4>
-                    <p className="text-gray-600 text-sm">Configure universal and custom categories</p>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <div className="bg-blue-500 text-white text-sm font-bold px-3 py-1 rounded-full">
-                    Configure
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    System settings
-                  </div>
-                </div>
-              </div>
-            </button>
           )}
         </div>
       </div>
 
-      {/* ⚠️ WARNINGS OVERVIEW INTEGRATION */}
-      <WarningsOverviewCard
-        userRole="hr-manager"
-        variant="detailed"
-        gradientColors="from-emerald-500 to-teal-600"
-      />
-
-      {/* Category Management Modal - Desktop */}
+      {/* Category Management Modal */}
       {showCategoryManagement && (
-        <CategoryManagement
-          onClose={() => setShowCategoryManagement(false)}
-          initialTab="overview"
-        />
-      )}
-
-      {/* Enhanced Views */}
-      {activeView === 'warnings' && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-2xl font-bold text-gray-900">Warnings Management Center</h2>
-              <button 
-                onClick={() => setActiveView('overview')}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-gray-50 to-gray-100">
+              <h2 className="text-xl font-semibold text-gray-900">Warning Categories Management</h2>
+              <button
+                onClick={() => setShowCategoryManagement(false)}
+                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 text-gray-600" />
               </button>
             </div>
-            <div className="overflow-auto max-h-[calc(90vh-80px)]">
-              <WarningsReviewDashboard 
-                onClose={() => setActiveView('overview')}
-                canTakeAction={true}
-                userRole="hr-manager"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeView === 'employees' && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-2xl font-bold text-gray-900">Employee Overview</h2>
-              <button 
-                onClick={() => setActiveView('overview')}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6 overflow-auto max-h-[calc(90vh-80px)]">
-              {/* Department Breakdown */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                {Object.entries(employeeStats.departmentBreakdown).map(([department, count]) => (
-                  <div key={department} className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium text-gray-900">{department}</h3>
-                        <p className="text-sm text-gray-600">{count} employees</p>
-                      </div>
-                      <Building2 className="w-8 h-8 text-gray-400" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Employee Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-blue-600 text-sm font-medium">Total Employees</p>
-                      <p className="text-2xl font-bold text-blue-900">{employeeStats.totalEmployees}</p>
-                    </div>
-                    <Users className="w-8 h-8 text-blue-500" />
-                  </div>
-                </div>
-                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-green-600 text-sm font-medium">Active</p>
-                      <p className="text-2xl font-bold text-green-900">{employeeStats.activeEmployees}</p>
-                    </div>
-                    <TrendingUp className="w-8 h-8 text-green-500" />
-                  </div>
-                </div>
-                <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-indigo-600 text-sm font-medium">New (30 days)</p>
-                      <p className="text-2xl font-bold text-indigo-900">{employeeStats.newEmployees}</p>
-                    </div>
-                    <Plus className="w-8 h-8 text-indigo-500" />
-                  </div>
-                </div>
-              </div>
+            <div className="p-6">
+              <CategoryManagement onClose={() => setShowCategoryManagement(false)} />
             </div>
           </div>
         </div>
@@ -627,5 +652,3 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
     </div>
   );
 });
-
-HRDashboardSection.displayName = 'HRDashboardSection';

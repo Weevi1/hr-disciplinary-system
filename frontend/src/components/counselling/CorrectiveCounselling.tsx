@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/components/counselling/CorrectiveCounselling.tsx
 // 📋 CORRECTIVE COUNSELLING COMPONENT
 // Preventive discipline system for training/discussions with staff members
@@ -12,7 +13,8 @@ import {
 import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { FirebaseService } from '../../services/FirebaseService';
-import { DataService } from '../../services/DataService';
+import { DatabaseShardingService } from '../../services/DatabaseShardingService';
+import { DataServiceV2 } from '../../services/DataServiceV2';
 import { CounsellingService } from '../../services/CounsellingService';
 import { API } from '../../api';
 import type { Employee, WarningCategory } from '../../types/core';
@@ -24,10 +26,8 @@ import type {
 } from '../../types/counselling';
 import { COUNSELLING_TYPES } from '../../types/counselling';
 
-// 🏢 COLLECTIONS
-const COLLECTIONS = {
-  CORRECTIVE_COUNSELLING: 'corrective_counselling'
-};
+// 🏢 SHARDED COLLECTIONS - Counselling stored at /organizations/{orgId}/reports/{reportId}
+// (Counselling is a type of report in the sharded structure)
 
 // 🖊️ INLINE SIGNATURE CANVAS COMPONENT
 interface SignatureCanvasProps {
@@ -257,7 +257,7 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
   useEffect(() => {
     if (organization?.id && user?.id) {
       const loadData = async () => {
-        console.log('📋 Loading counselling data for manager:', user.id, 'Role:', user.role?.id, 'Org:', organization.id);
+        Logger.debug('📋 Loading counselling data for manager:', user.id, 'Role:', user.role?.id, 'Org:', organization.id)
 
         try {
           setDataLoading(true);
@@ -265,7 +265,7 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
           
           // Load employees using same pattern as BookHRMeeting
           const employeesData = await API.employees.getByManager(user?.id || '', organization.id);
-          console.log('✅ Managed employees loaded:', employeesData.length);
+          Logger.success(9847)
         
           // Transform employees to the expected format
           const transformedEmployees = employeesData.map(emp => ({
@@ -287,7 +287,7 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
           
           // 🔥 FALLBACK: If no categories from service, use manufacturing defaults (same as HODDashboardSection)
           if (!categoriesData || categoriesData.length === 0) {
-            console.log('⚠️ No categories from service, using manufacturing defaults for counselling');
+            Logger.debug('⚠️ No categories from service, using manufacturing defaults for counselling')
             categoriesData = [
               { id: 'attendance_punctuality', name: 'Attendance & Punctuality', severity: 'minor' },
               { id: 'performance_issues', name: 'Performance Issues', severity: 'moderate' },
@@ -302,7 +302,7 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
           
           setCategories(categoriesData);
           
-          console.log('✅ Data loaded - Employees:', transformedEmployees.length, 'Categories:', categoriesData.length);
+          Logger.success(12168)
           console.log('🔍 DEBUG Employee data:', transformedEmployees.map(emp => ({ 
             id: emp.id, 
             firstName: emp.firstName, 
@@ -312,7 +312,7 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
           })));
           
         } catch (err) {
-          console.error('❌ Error loading counselling data:', err);
+          Logger.error('❌ Error loading counselling data:', err)
           setError('Failed to load data. Please try again.');
           setEmployees([]);
           setCategories([]);
@@ -323,7 +323,7 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
 
       loadData();
     } else {
-      console.log('⏳ Waiting for user or organization to load...', { userId: user?.id, orgId: organization?.id });
+      Logger.debug('⏳ Waiting for user or organization to load...', { userId: user?.id, orgId: organization?.id })
       setDataLoading(false);
     }
   }, [user?.id, organization?.id]);
@@ -333,15 +333,15 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
     if (!organization?.id) return;
     
     try {
-      console.log('🔍 Checking active counselling for:', employee.firstName, employee.lastName);
+      Logger.debug('🔍 Checking active counselling for:', employee.firstName, employee.lastName)
       const activeSessions = await CounsellingService.getActiveCounsellingForEmployee(
         employee.id, 
         organization.id
       );
       setActiveCounselling(activeSessions);
-      console.log('✅ Active counselling sessions found:', activeSessions.length);
+      Logger.success(13519)
     } catch (error) {
-      console.error('❌ Error checking active counselling:', error);
+      Logger.error('❌ Error checking active counselling:', error)
       setActiveCounselling([]);
     }
   };
@@ -471,7 +471,12 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
         documentVersion: 1
       };
 
-      await FirebaseService.createDocument(COLLECTIONS.CORRECTIVE_COUNSELLING, counsellingData);
+      // 🔧 FIXED: Use sharded structure for counselling reports
+      await DatabaseShardingService.createDocument(
+        organization.id, 
+        'reports', 
+        counsellingData
+      );
       
       setStep('complete');
       setSuccess(true);
@@ -486,7 +491,7 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
       }, 5000);
 
     } catch (err) {
-      console.error('❌ Error submitting counselling record:', err);
+      Logger.error('❌ Error submitting counselling record:', err)
       setError('Failed to submit counselling record. Please try again.');
     } finally {
       setLoading(false);

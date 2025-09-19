@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/hooks/counselling/useCounsellingFollowUps.ts
 // 📅 COUNSELLING FOLLOW-UP HOOK
 // Manages follow-up notifications and due reviews
@@ -33,7 +34,7 @@ export const useCounsellingFollowUps = () => {
       setLoading(true);
       setError(null);
       
-      console.log('📅 Loading due follow-ups for manager:', user.id);
+      Logger.debug('📅 Loading due follow-ups for manager:', user.id)
       
       const followUps = await CounsellingService.getDueFollowUps(user.id, organization.id);
       setDueFollowUps(followUps);
@@ -69,7 +70,7 @@ export const useCounsellingFollowUps = () => {
       });
       
     } catch (err) {
-      console.error('❌ Error loading follow-ups:', err);
+      Logger.error('❌ Error loading follow-ups:', err)
       setError('Failed to load follow-up data');
       setDueFollowUps([]);
       setCounts({ overdue: 0, dueSoon: 0, total: 0 });

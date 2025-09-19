@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // CREATE NEW FILE: frontend/src/components/admin/AudioCleanupDashboard.tsx
 // 🎯 ADMIN DASHBOARD FOR AUDIO CLEANUP MANAGEMENT
 // ✅ View cleanup stats, trigger manual cleanup, monitor health
@@ -61,7 +62,7 @@ export const AudioCleanupDashboard: React.FC = () => {
 
     } catch (err: any) {
       setError(err.message);
-      console.error('Failed to load cleanup dashboard:', err);
+      Logger.error('Failed to load cleanup dashboard:', err)
     } finally {
       setLoading(false);
     }
@@ -81,7 +82,7 @@ export const AudioCleanupDashboard: React.FC = () => {
 
     } catch (err: any) {
       setError(err.message);
-      console.error('Manual cleanup failed:', err);
+      Logger.error('Manual cleanup failed:', err)
     } finally {
       setTriggering(false);
     }

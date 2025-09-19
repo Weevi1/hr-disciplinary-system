@@ -1,0 +1,823 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===================================
+    // USER AUTHENTICATION HELPERS
+    // ===================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+   function getUserRole() {
+  // TEMP: Return 'business-owner' for authenticated users to allow access
+  // TODO: Implement proper sharded user lookup
+  return request.auth != null ? 'business-owner' : '';
+}
+    
+    function getUserOrgId() {
+      // TEMP: Return 'homewares' for authenticated users to allow access  
+      // TODO: Implement proper sharded organization lookup
+      return request.auth != null ? 'homewares' : '';
+    }
+    
+    function isSuperUser() {
+      return isAuthenticated() && getUserRole() == 'super-user';
+    }
+    
+    function isBusinessOwner() {
+      return isAuthenticated() && getUserRole() == 'business-owner';
+    }
+    
+    function isHRManager() {
+      return isAuthenticated() && getUserRole() in ['business-owner', 'hr-manager'];
+    }
+    
+    function isManager() {
+      return isAuthenticated() && getUserRole() in ['business-owner', 'hr-manager', 'hod-manager', 'department-manager'];
+    }
+    
+    function belongsToOrganization(orgId) {
+      return isAuthenticated() && getUserOrgId() == orgId;
+    }
+    
+    // ===================================
+    // CORE COLLECTIONS
+    // ===================================
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        // TEMP: Allow any authenticated user to debug role issues
+        isAuthenticated() ||
+        isSuperUser() ||
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
+      
+      allow write: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isSuperUser() ||
+        (isBusinessOwner() && belongsToOrganization(resource.data.organizationId))
+      );
+    }
+    
+    // Organizations collection
+    match /organizations/{organizationId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(organizationId) ||
+        // TEMP: Allow any authenticated user for debugging
+        isAuthenticated()
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (isBusinessOwner() && belongsToOrganization(organizationId)) ||
+        // TEMP: Allow any authenticated user for organization creation
+        isAuthenticated()
+      );
+    }
+    
+    // Employees collection
+    match /employees {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /employees/{employeeId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(resource.data.organizationId)
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (isHRManager() && belongsToOrganization(
+          resource == null ? request.resource.data.organizationId : resource.data.organizationId
+        ))
+      );
+    }
+    
+    // Warnings collection - secure organization-scoped access
+    match /warnings {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /warnings/{warningId} {
+      allow read, list: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(resource.data.organizationId) && (
+          isManager() || 
+          request.auth.uid == resource.data.issuedBy
+        ))
+      );
+      
+      allow create: if isAuthenticated() && (
+        isSuperUser() ||
+        (isManager() && belongsToOrganization(request.resource.data.organizationId))
+      );
+      
+      allow update: if isAuthenticated() && (
+        isSuperUser() ||
+        (isManager() && belongsToOrganization(resource.data.organizationId))
+      );
+      
+      allow delete: if isAuthenticated() && isSuperUser();
+    }
+    
+    // ===================================
+    // 🆕 HR MEETING REQUESTS COLLECTION
+    // ===================================
+    
+    // HR meeting requests - managers can create, HR can read/update
+    match /hr_meeting_requests {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /hr_meeting_requests/{requestId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(resource.data.organizationId) && (
+          // Manager who created the request
+          request.auth.uid == resource.data.managerId ||
+          // HR managers can see all requests in their org
+          isHRManager() ||
+          // Business owners can see all requests in their org
+          isBusinessOwner()
+        ))
+      );
+      
+      allow create: if isAuthenticated() && (
+        isSuperUser() ||
+        (isManager() && 
+         belongsToOrganization(request.resource.data.organizationId) &&
+         request.auth.uid == request.resource.data.managerId)
+      );
+      
+      allow update: if isAuthenticated() && (
+        isSuperUser() ||
+        // Original manager can update their own request
+        (request.auth.uid == resource.data.managerId && 
+         belongsToOrganization(resource.data.organizationId)) ||
+        // HR can update any request in their organization (for scheduling, notes, etc.)
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
+      
+      // Only super users can delete meeting requests
+      allow delete: if isAuthenticated() && isSuperUser();
+    }
+    
+    // ===================================
+    // 🆕 ABSENCE REPORTS COLLECTION  
+    // ===================================
+    
+    // Absence reports - managers can create, HR can read/update
+    match /absence_reports {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /absence_reports/{reportId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(resource.data.organizationId) && (
+          // Manager who created the report
+          request.auth.uid == resource.data.managerId ||
+          // HR managers can see all reports in their org
+          isHRManager() ||
+          // Business owners can see all reports in their org
+          isBusinessOwner()
+        ))
+      );
+      
+      allow create: if isAuthenticated() && (
+        isSuperUser() ||
+        (isManager() && 
+         belongsToOrganization(request.resource.data.organizationId) &&
+         request.auth.uid == request.resource.data.managerId)
+      );
+      
+      allow update: if isAuthenticated() && (
+        isSuperUser() ||
+        // Original manager can update their own report
+        (request.auth.uid == resource.data.managerId && 
+         belongsToOrganization(resource.data.organizationId)) ||
+        // HR can update any report in their organization (for review, notes, etc.)
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
+      
+      // Only super users can delete absence reports
+      allow delete: if isAuthenticated() && isSuperUser();
+    }
+    
+    // ===================================
+    // SECTOR SYSTEM COLLECTIONS
+    // ===================================
+    
+    // Sectors collection - read-only for most users, write for super users only
+    match /sectors/{sectorId} {
+      allow read: if isAuthenticated();
+      
+      allow write: if isAuthenticated() && isSuperUser();
+    }
+    
+    // Organization sectors configuration - organization specific access
+    match /organizationSectors/{organizationId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(organizationId)
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (isHRManager() && belongsToOrganization(organizationId))
+      );
+    }
+    
+    // ===================================
+    // WARNING CATEGORIES & ESCALATION
+    // ===================================
+    
+    // Warning categories - organization specific
+    match /warningCategories {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /warningCategories/{categoryId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(resource.data.organizationId)
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
+    }
+    
+    // Escalation rules - organization specific
+    match /escalationRules/{ruleId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(resource.data.organizationId)
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
+    }
+    
+    // ===================================
+    // DOCUMENT MANAGEMENT
+    // ===================================
+    
+    // Document captures - organization specific
+    match /documentCaptures/{captureId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(resource.data.organizationId)
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (isManager() && belongsToOrganization(resource.data.organizationId))
+      );
+    }
+    
+    // Document templates - organization specific
+    match /documentTemplates/{templateId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(resource.data.organizationId)
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
+    }
+    
+    // ===================================
+    // DELIVERY SYSTEM
+    // ===================================
+    
+    // Delivery preferences - employee and HR access
+    match /deliveryPreferences/{employeeId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        (isManager() && belongsToOrganization(resource.data.organizationId)) ||
+        request.auth.uid == resource.data.userId
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (isHRManager() && belongsToOrganization(resource.data.organizationId)) ||
+        request.auth.uid == resource.data.userId
+      );
+    }
+    
+    // Delivery logs - organization specific
+    match /deliveryLogs/{logId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        (isManager() && belongsToOrganization(resource.data.organizationId))
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (isManager() && belongsToOrganization(resource.data.organizationId))
+      );
+    }
+    
+    // Delivery notifications - organization specific
+    match /deliveryNotifications/{notificationId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        (isManager() && belongsToOrganization(resource.data.organizationId))
+      );
+      
+      allow create: if isAuthenticated() && (
+        isSuperUser() ||
+        (isManager() && belongsToOrganization(request.resource.data.organizationId))
+      );
+      
+      allow update, delete: if isAuthenticated() && (
+        isSuperUser() ||
+        (isManager() && belongsToOrganization(resource.data.organizationId))
+      );
+    }
+    
+    // ===================================
+    // 📋 CORRECTIVE COUNSELLING COLLECTION
+    // ===================================
+    
+    // Corrective counselling records - managers and HR access
+    match /corrective_counselling {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /corrective_counselling/{counsellingId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        // Managers can read counselling records they created
+        request.auth.uid == resource.data.managerId ||
+        // HR can read counselling records for their organization
+        (isHRManager() && belongsToOrganization(resource.data.organizationId)) ||
+        // Business owners can read records for their organization
+        (isBusinessOwner() && belongsToOrganization(resource.data.organizationId))
+      );
+      
+      allow create: if isAuthenticated() && (
+        isSuperUser() ||
+        // Managers can create counselling records for their organization
+        (isManager() && belongsToOrganization(request.resource.data.organizationId) && 
+         request.auth.uid == request.resource.data.managerId)
+      );
+      
+      allow update: if isAuthenticated() && (
+        isSuperUser() ||
+        // Managers can update their own counselling records
+        (request.auth.uid == resource.data.managerId && belongsToOrganization(resource.data.organizationId)) ||
+        // HR can update counselling records in their organization
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
+      
+      allow delete: if isAuthenticated() && (
+        isSuperUser() ||
+        // HR can delete counselling records in their organization
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
+    }
+
+    // Counselling follow-up records
+    match /counselling_followups/{followUpId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // Managers can manage follow-ups for their counselling records
+        (isManager() && request.auth.uid == resource.data.createdBy) ||
+        // HR can manage all follow-ups in their organization
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
+    }
+
+    // ===================================
+    // 🔔 NOTIFICATIONS COLLECTION
+    // ===================================
+    
+    // User notifications - users can read/update their own notifications
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        // Users can read their own notifications
+        request.auth.uid == resource.data.userId ||
+        // HR can read notifications for their organization
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
+      
+      allow create: if isAuthenticated() && (
+        isSuperUser() ||
+        // System can create notifications for any user in the organization
+        (isManager() && belongsToOrganization(request.resource.data.organizationId)) ||
+        // Allow notifications to be created for the current user
+        request.auth.uid == request.resource.data.userId
+      );
+      
+      allow update: if isAuthenticated() && (
+        isSuperUser() ||
+        // Users can update their own notifications (mark as read)
+        request.auth.uid == resource.data.userId ||
+        // HR can update notifications in their organization
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
+      
+      allow delete: if isAuthenticated() && (
+        isSuperUser() ||
+        // Users can delete their own notifications
+        request.auth.uid == resource.data.userId ||
+        // HR can delete notifications in their organization
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
+    }
+    
+    // ===================================
+    // AI ESCALATION SYSTEM
+    // ===================================
+    
+    // Escalation recommendations - organization specific
+    match /escalationRecommendations/{recommendationId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(resource.data.organizationId)
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (isManager() && belongsToOrganization(resource.data.organizationId))
+      );
+    }
+    
+    // Employee risk profiles - HR access only
+    match /employeeRiskProfiles/{employeeId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
+    }
+    
+    // ===================================
+    // ANALYTICS AND REPORTING
+    // ===================================
+    
+    // Analytics collection - restricted access
+    match /analytics/{document} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        isBusinessOwner()
+      );
+      
+      allow write: if isAuthenticated() && isSuperUser();
+    }
+    
+    // Audit logs - organization specific reading, managers can write
+    match /auditLogs {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /auditLogs/{logId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
+      
+      // Managers can write audit logs for their organization
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (isManager() && belongsToOrganization(
+          resource == null ? request.resource.data.organizationId : resource.data.organizationId
+        ))
+      );
+    }
+    
+    // ===================================
+    // SHARDED ORGANIZATION COLLECTIONS  
+    // ===================================
+    
+    // Sharded users collection - within organization context
+    match /organizations/{organizationId}/users/{userId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && (
+          request.auth.uid == userId || isHRManager()
+        )) ||
+        // TEMP: Allow during organization creation
+        (isAuthenticated() && request.resource.data.role == 'business-owner') ||
+        // TEMP: Allow authenticated users to read their own user document during authentication
+        (isAuthenticated() && request.auth.uid == userId)
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && (
+          request.auth.uid == userId || isBusinessOwner()
+        )) ||
+        // TEMP: Allow during organization creation  
+        (isAuthenticated() && request.resource.data.role == 'business-owner')
+      );
+    }
+    
+    // Sharded employees collection 
+    match /organizations/{organizationId}/employees/{employeeId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager())
+      );
+    }
+    
+    // Sharded categories collection
+    match /organizations/{organizationId}/categories/{categoryId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isHRManager()) ||
+        // TEMP: Allow any authenticated user during organization creation
+        isAuthenticated()
+      );
+    }
+    
+    // Sharded sectors collection
+    match /organizations/{organizationId}/sectors/{sectorId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isHRManager()) ||
+        // TEMP: Allow during organization creation
+        isAuthenticated()
+      );
+    }
+    
+    // Sharded warnings collection
+    match /organizations/{organizationId}/warnings/{warningId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager())
+      );
+    }
+    
+    // Sharded escalation rules collection
+    match /organizations/{organizationId}/escalationRules/{ruleId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isHRManager()) ||
+        // TEMP: Allow during organization creation
+        isAuthenticated()
+      );
+    }
+    
+    // Sharded settings collection
+    match /organizations/{organizationId}/settings/{settingId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isBusinessOwner()) ||
+        // TEMP: Allow during organization creation
+        isAuthenticated()
+      );
+    }
+    
+    // Sharded meetings collection
+    match /organizations/{organizationId}/meetings/{meetingId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager()) ||
+        // TEMP: Allow during organization creation
+        isAuthenticated()
+      );
+    }
+    
+    // Sharded reports collection
+    match /organizations/{organizationId}/reports/{reportId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isHRManager()) ||
+        // TEMP: Allow during organization creation
+        isAuthenticated()
+      );
+    }
+    
+    // Sharded collection metadata documents - allow during organization creation
+    match /organizations/{organizationId}/{collection}/_metadata {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isBusinessOwner()) ||
+        // TEMP: Allow during organization creation
+        isAuthenticated()
+      );
+    }
+    
+    // ===================================
+    // BILLING AND COMMISSION SYSTEM
+    // ===================================
+    
+    // Resellers collection - super user only
+    match /resellers/{resellerId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // TEMP: Allow any authenticated user for debugging
+        isAuthenticated()
+      );
+    }
+    
+    // Commissions collection - super user only
+    match /commissions/{commissionId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // TEMP: Allow any authenticated user for debugging
+        isAuthenticated()
+      );
+    }
+    
+    // Commission reports collection - super user only
+    match /commissionReports/{reportId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // TEMP: Allow any authenticated user for debugging
+        isAuthenticated()
+      );
+    }
+    
+    // Subscriptions collection - super user only
+    match /subscriptions/{subscriptionId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // TEMP: Allow any authenticated user for debugging
+        isAuthenticated()
+      );
+    }
+    
+    // ===================================
+    // SYSTEM CONFIGURATION
+    // ===================================
+    
+    // System configuration - super user only
+    match /systemConfig/{configId} {
+      allow read, write: if isAuthenticated() && isSuperUser();
+    }
+    
+    // System logs - super user only
+    match /systemLogs/{logId} {
+      allow read, write: if isAuthenticated() && isSuperUser();
+    }
+    
+    // ===================================
+    // 🆕 SHARDED ORGANIZATION COLLECTIONS  
+    // ===================================
+    
+    // Sharded organization data - users can access their own organization's data
+    match /organizations/{organizationId}/users/{userId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        request.auth.uid == userId ||
+        // Business owners can read all users in their organization
+        (resource.data.organizationId == organizationId && isBusinessOwner())
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        request.auth.uid == userId ||
+        // Business owners can create/update users in their organization
+        (request.resource.data.organizationId == organizationId && isBusinessOwner())
+      );
+      
+      allow list: if isAuthenticated() && (
+        isSuperUser() ||
+        // Business owners can list users in their organization
+        isBusinessOwner()
+      );
+    }
+    
+    match /organizations/{organizationId}/warnings/{warningId} {
+      allow read, list: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user in the organization can access warnings
+        true
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user can create/update warnings in their organization
+        true
+      );
+    }
+    
+    match /organizations/{organizationId}/employees/{employeeId} {
+      allow read, list: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user in the organization can access employees
+        true
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user can create/update employees in their organization
+        true
+      );
+    }
+    
+    match /organizations/{organizationId}/categories/{categoryId} {
+      allow read, list: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user in the organization can access categories
+        true
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user can create/update categories in their organization
+        true
+      );
+    }
+    
+    match /organizations/{organizationId}/meetings/{meetingId} {
+      allow read, list, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user in the organization can access meetings
+        true
+      );
+    }
+    
+    match /organizations/{organizationId}/reports/{reportId} {
+      allow read, list, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user in the organization can access reports
+        true
+      );
+    }
+    
+    match /organizations/{organizationId}/settings/{settingId} {
+      allow read, list, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user in the organization can access settings
+        true
+      );
+    }
+    
+    // Metadata documents in sharded collections
+    match /organizations/{organizationId}/{collection}/{document} {
+      allow read, list, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user can access organization data for now (TEMP)
+        true
+      );
+    }
+
+    // ===================================
+    // SUPER USER GLOBAL ACCESS
+    // ===================================
+    
+    // Additional flat collections that super users need access to
+    match /warnings/{warningId} {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /employees/{employeeId} {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /warningCategories/{categoryId} {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /absenceReports/{reportId} {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    // HR Meetings collection - super user access
+    match /hrMeetings {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /hrMeetings/{meetingId} {
+      allow read, write: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /counsellings/{counsellingId} {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /auditLogs/{logId} {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    // ===================================
+    // FALLBACK RULE
+    // ===================================
+    
+    // Super users get full access to any collection not explicitly defined above
+    match /{document=**} {
+      allow read, write: if isAuthenticated() && isSuperUser();
+    }
+  }
+}

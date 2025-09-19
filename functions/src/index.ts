@@ -3,7 +3,8 @@
 import { 
   createOrganizationAdmin, 
   createOrganizationUsers, 
-  resetUserPassword 
+  resetUserPassword,
+  createResellerUser 
 } from './Auth/userCreationService';
 
 // 🎯 ADD AUDIO CLEANUP FUNCTIONS
@@ -18,17 +19,58 @@ import {
 // 🔗 ADD TEMPORARY DOWNLOAD FUNCTIONS
 export { generateTemporaryDownloadLink, downloadTempFile, validateTemporaryToken, revokeTemporaryToken, cleanupExpiredTokens } from './temporaryDownload';
 
+// 💰 ADD BILLING FUNCTIONS
+import {
+  createCheckoutSession,
+  stripeWebhook,
+  processMonthlyCommissions,
+  createPortalSession
+} from './billing';
+
+// 🔐 ADD CUSTOM CLAIMS FUNCTIONS
+import {
+  setCustomClaimsOnSignIn,
+  refreshUserClaims,
+  getUserClaims,
+  refreshOrganizationUserClaims
+} from './customClaims';
+
+// 🔒 ADD SUPER USER MANAGEMENT FUNCTIONS
+import {
+  manageSuperUser,
+  getSuperUserInfo,
+  initializeSuperUser
+} from './superUserManagement';
+
 // Export all cloud functions
 export {
   // User/Auth functions
   createOrganizationAdmin,
   createOrganizationUsers,
   resetUserPassword,
+  createResellerUser,
   
   // Audio cleanup functions
   cleanupExpiredAudio,
   manualAudioCleanup,
   getCleanupStats,
   getGlobalAudioStats,
-  previewAudioCleanup
+  previewAudioCleanup,
+  
+  // Billing & subscription functions
+  createCheckoutSession,
+  stripeWebhook,
+  processMonthlyCommissions,
+  createPortalSession,
+  
+  // Custom claims & sharded auth functions
+  setCustomClaimsOnSignIn,
+  refreshUserClaims,
+  getUserClaims,
+  refreshOrganizationUserClaims,
+  
+  // Super-user management functions
+  manageSuperUser,
+  getSuperUserInfo,
+  initializeSuperUser
 };

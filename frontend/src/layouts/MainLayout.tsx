@@ -4,32 +4,30 @@
 // 📱 Headers stay, but content area is completely flexible
 // 🎨 Uses CSS variables for all styling - no conflicts with index.css
 
-import React, { useState, useRef, useEffect, Fragment } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, Fragment } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useOrganization, OrganizationProvider } from '../contexts/OrganizationContext';
 import { 
   Menu, 
   X, 
-  Search, 
-  Settings, 
-  User, 
-  LogOut, 
-  Building2, 
-  Users, 
-  AlertTriangle, 
-  FileText, 
-  Camera, 
-  Plus, 
-  BarChart3, 
-  Shield 
+  LogOut,
+  Home,
+  Users,
+  Settings,
+  FileText,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Dialog, Transition } from '@headlessui/react';
-import { NotificationCenter } from '../components/dashboard/NotificationCenter';
 import { Logo } from '../components/common/Logo';
+import { BrandedLogo } from '../components/common/BrandedLogo';
+import { BrandingProvider } from '../contexts/BrandingContext';
 
 interface MainLayoutProps {
   children: React.ReactNode;
+  onNavigate?: (view: string) => void; // Optional navigation callback
+  currentView?: string; // Current active view
 }
 
 // 🎨 BRAND COLORS UTILITY - Updates CSS Variables
@@ -71,21 +69,16 @@ const darkenColor = (color: string, percent: number): string => {
     (G > 255 ? 255 : G < 0 ? 0 : G)).toString(16).slice(1);
 };
 
-// Main component that orchestrates the layout
-const MainLayoutContent = ({ children }: MainLayoutProps) => {
-  const { user, role, logout } = useAuth();
-  const organization = user?.role?.id === 'super-user' ? null : useOrganization()?.organization;
-  const location = useLocation();
+// Main component that orchestrates the layout  
+const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: MainLayoutProps) => {
+  const { user, logout } = useAuth();
+  const organization = user?.role?.id === 'super-user' || user?.role?.id === 'reseller' ? null : useOrganization()?.organization;
   const navigate = useNavigate();
 
   // State Management
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // WordPress-style sidebar - collapsed by default
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Refs for smooth mobile header scroll
-  const mobileHeaderRef = useRef<HTMLElement>(null);
-  const lastScrollY = useRef(0);
-  const headerTransformY = useRef(0);
 
   // 🎨 Effect to update CSS variables when organization branding changes
   useEffect(() => {
@@ -97,207 +90,149 @@ const MainLayoutContent = ({ children }: MainLayoutProps) => {
     }
   }, [organization?.branding]);
   
-  // Effect for smooth hiding/showing mobile header on scroll
-  useEffect(() => {
-    const controlMobileHeader = () => {
-      const headerEl = mobileHeaderRef.current;
-      if (!headerEl) return;
+  // No scroll handling needed with sticky headers
 
-      const currentScrollY = window.scrollY;
-      const headerHeight = headerEl.offsetHeight;
-      const scrollDelta = currentScrollY - lastScrollY.current;
-      let newTransformY = headerTransformY.current - scrollDelta;
-      
-      newTransformY = Math.max(-headerHeight, Math.min(0, newTransformY));
-      if (currentScrollY <= headerHeight) {
-        newTransformY = 0;
-      }
+  // No navigation items needed - dashboard-centric approach
 
-      // Only CSS variable update - no inline style
-      headerEl.style.transform = `translateY(${newTransformY}px)`;
-      headerTransformY.current = newTransformY;
-      lastScrollY.current = currentScrollY;
-    };
-
-    const handleScroll = () => {
-      window.requestAnimationFrame(controlMobileHeader);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
-
-  // Navigation Logic
+  // Navigation items based on user role
   const getNavigationItems = () => {
-    const baseItems = [
-      { path: '/employees', label: 'Employees', icon: Users },
-      { path: '/warnings', label: 'Warnings', icon: AlertTriangle },
-    ];
-
-    // Add role-specific items
-    if (role === 'admin' || role === 'super-admin') {
-      baseItems.push({ path: '/users', label: 'Users', icon: User });
+    // Add role-specific navigation (no dashboard button)
+    if (user?.role?.id === 'super-user') {
+      return [
+        { id: 'user-management', label: 'User Management', icon: Users },
+        { id: 'settings', label: 'Settings', icon: Settings }
+      ];
+    } else if (user?.role?.id === 'reseller') {
+      return [
+        { id: 'client-management', label: 'My Clients', icon: Users }
+      ];
+    } else {
+      return [];
     }
-
-    if (role === 'super-admin') {
-      baseItems.push({ path: '/settings', label: 'Settings', icon: Settings });
-    }
-
-    return baseItems;
   };
 
-  const isActivePage = (path: string) => location.pathname === path;
-
-  // Desktop Header Component
-  const DesktopHeader = () => (
-    <header className="main-layout__desktop-header">
-      <div className="main-layout__desktop-header-content">
-        {/* Left Side - Logo & Navigation */}
-        <div className="main-layout__desktop-header-left">
-          {/* Logo */}
-          <div className="main-layout__logo">
-            <Logo size="medium" showText={true} />
-            <div className="main-layout__logo-content">
-              <span className="main-layout__logo-title">
-                {organization?.name || '<File>'}
-              </span>
-              <span className="main-layout__logo-subtitle">by Fifo - Fully Integrated, Fully Online</span>
-            </div>
+  // Compact Top Navigation Component
+  const TopNavigation = () => (
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
+      <div className="max-w-7xl mx-auto px-6 py-3">
+        <div className="flex items-center justify-between">
+          
+          {/* Left Side - Logo & Navigation */}
+          <div className="flex items-center space-x-6">
+            {/* Clickable Logo */}
+            <button 
+              onClick={() => onNavigate?.('dashboard')}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            >
+              <BrandedLogo size="small" showText={true} />
+            </button>
+            
+            {/* Compact Navigation Pills */}
+            <nav className="hidden md:flex items-center space-x-1">
+              {getNavigationItems().map((item) => {
+                const isActive = currentView === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onNavigate?.(item.id)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                  >
+                    <item.icon className="w-3 h-3" />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
           </div>
 
-          {/* Navigation */}
-          <nav className="main-layout__desktop-nav">
-            {getNavigationItems().map((item) => {
-              const IconComponent = item.icon;
-              const isActive = isActivePage(item.path);
-              return (
-                <button
-                  key={item.path}
-                  onClick={() => navigate(item.path)}
-                  className={`main-layout__nav-item ${isActive ? 'main-layout__nav-item--active' : ''}`}
-                >
-                  <IconComponent className="main-layout__nav-icon" />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Right Side - Actions & User Menu */}
-        <div className="main-layout__desktop-header-right">
-          {/* Search Button */}
-          <button className="main-layout__action-button">
-            <Search className="main-layout__action-icon" />
-          </button>
-
-          {/* Notifications */}
-          <NotificationCenter className="main-layout__action-button" />
-
-          {/* User Menu */}
-          <div className="main-layout__user-menu">
-            <button 
-              onClick={() => setUserMenuOpen(!userMenuOpen)} 
-              className="main-layout__user-menu-trigger"
+          {/* Right Side - User Menu */}
+          <div className="flex items-center gap-3">
+            
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-1.5 rounded-lg hover:bg-gray-100 md:hidden"
             >
-              <div className="main-layout__user-avatar">
-                {user?.firstName?.charAt(0) || 'U'}
-              </div>
+              <Menu className="w-4 h-4 text-gray-600" />
             </button>
+            
+            {/* Compact User Menu */}
+            <div className="relative">
+              <button 
+                onClick={() => setUserMenuOpen(!userMenuOpen)} 
+                className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <div className="w-7 h-7 bg-gradient-to-r from-slate-500 to-slate-600 rounded-full flex items-center justify-center text-xs font-medium text-white">
+                  {user?.firstName?.charAt(0) || 'U'}
+                </div>
+                <div className="hidden sm:block text-left">
+                  <div className="text-sm font-medium text-gray-900">
+                    {user?.firstName} {user?.lastName}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {user?.role?.name || user?.role?.id?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </div>
+                </div>
+              </button>
 
-            {/* User Dropdown */}
-            {userMenuOpen && (
-              <div className="main-layout__user-dropdown">
-                <div className="main-layout__user-dropdown-content">
-                  <div className="main-layout__user-info">
-                    <div className="main-layout__user-avatar main-layout__user-avatar--large">
-                      {user?.firstName?.charAt(0) || 'U'}
-                    </div>
-                    <div>
-                      <div className="main-layout__user-name">
-                        {user?.firstName} {user?.lastName}
+              {/* User Dropdown */}
+              {userMenuOpen && (
+                <div className="absolute right-0 top-12 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-r from-slate-500 to-slate-600 rounded-full flex items-center justify-center text-sm font-medium text-white">
+                        {user?.firstName?.charAt(0) || 'U'}
                       </div>
-                      <div className="main-layout__user-role">
-                        {role?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {user?.firstName} {user?.lastName}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {user?.email}
+                        </div>
                       </div>
                     </div>
                   </div>
                   
-                  <div className="main-layout__user-dropdown-nav">
-                    {getNavigationItems().map((item) => {
-                      const IconComponent = item.icon;
-                      const isActive = isActivePage(item.path);
-                      return (
-                        <button
-                          key={item.path}
-                          onClick={() => {
-                            navigate(item.path);
-                            setUserMenuOpen(false);
-                          }}
-                          className={`main-layout__dropdown-nav-item ${isActive ? 'main-layout__dropdown-nav-item--active' : ''}`}
-                        >
-                          <IconComponent className="main-layout__dropdown-nav-icon" />
-                          <span>{item.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="main-layout__user-dropdown-footer">
+                  <div className="py-2">
                     <button 
                       onClick={logout} 
-                      className="main-layout__logout-button"
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
                     >
-                      <LogOut className="main-layout__logout-icon" />
+                      <LogOut className="w-4 h-4" />
                       <span>Sign out</span>
                     </button>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
     </header>
   );
 
-  // Mobile Header Component
-  const MobileHeader = React.forwardRef<HTMLElement>((props, ref) => (
-    <header ref={ref} className="main-layout__mobile-header">
-      <div className="main-layout__mobile-header-content">
-        {/* Left Side - Menu & Logo */}
-        <div className="main-layout__mobile-header-left">
-          <button 
-            onClick={() => setMobileMenuOpen(true)}
-            className="main-layout__mobile-menu-button"
-          >
-            <Menu className="main-layout__mobile-menu-icon" />
-          </button>
-          
-          <div className="main-layout__mobile-logo">
-            <Logo size="small" showText={false} />
-          </div>
-        </div>
-
-        {/* Right Side - Actions */}
-        <div className="main-layout__mobile-header-right">
-          <NotificationCenter className="main-layout__mobile-action-button" />
-          
-          <div className="main-layout__mobile-user-avatar">
-            {user?.firstName?.charAt(0) || 'U'}
-          </div>
-        </div>
-      </div>
-    </header>
-  ));
-
-  // Mobile Menu Sheet Component
-  const MobileMenuSheet = () => (
+  // Mobile Sidebar Component
+  const MobileSidebar = () => (
     <Transition.Root show={mobileMenuOpen} as={Fragment}>
-      <Dialog as="div" className="main-layout__mobile-menu-dialog" onClose={setMobileMenuOpen}>
-        <div className="main-layout__mobile-menu-backdrop">
+      <Dialog as="div" className="fixed inset-0 z-50 lg:hidden" onClose={setMobileMenuOpen}>
+        <Transition.Child
+          as={Fragment}
+          enter="transition-opacity ease-linear duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="transition-opacity ease-linear duration-300"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-slate-900/80" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 flex">
           <Transition.Child
             as={Fragment}
             enter="transition ease-in-out duration-300 transform"
@@ -307,65 +242,72 @@ const MainLayoutContent = ({ children }: MainLayoutProps) => {
             leaveFrom="translate-x-0"
             leaveTo="-translate-x-full"
           >
-            <Dialog.Panel className="main-layout__mobile-menu-panel">
-              {/* Header */}
-              <div className="main-layout__mobile-menu-header">
-                <div className="main-layout__mobile-menu-logo">
-                  <Logo size="medium" showText={true} />
-                </div>
-                
-                <button 
+            <Dialog.Panel className="relative flex w-full max-w-xs flex-1 flex-col bg-slate-900">
+              {/* Close Button */}
+              <div className="absolute top-0 right-0 -mr-12 pt-2">
+                <button
+                  type="button"
+                  className="ml-1 flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="main-layout__mobile-menu-close"
                 >
-                  <X className="main-layout__mobile-menu-close-icon" />
+                  <X className="h-6 w-6 text-white" />
                 </button>
               </div>
 
-              {/* User Info */}
-              <div className="main-layout__mobile-menu-user">
-                <div className="main-layout__mobile-menu-user-avatar">
-                  {user?.firstName?.charAt(0) || 'U'}
-                </div>
-                <div className="main-layout__mobile-menu-user-content">
-                  <div className="main-layout__mobile-menu-user-name">
-                    {user?.firstName} {user?.lastName}
-                  </div>
-                  <div className="main-layout__mobile-menu-user-role">
-                    {role?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </div>
-                </div>
-              </div>
-
-              {/* Navigation */}
-              <div className="main-layout__mobile-menu-nav">
-                <div className="main-layout__mobile-menu-nav-section">
+              {/* Mobile Sidebar Content */}
+              <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+                <button 
+                  onClick={() => {
+                    onNavigate?.('dashboard');
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex-shrink-0 flex items-center px-4 hover:opacity-80 transition-opacity"
+                >
+                  <BrandedLogo size="small" showText={false} />
+                  <span className="ml-3 text-white font-semibold text-lg">&lt;File&gt;</span>
+                </button>
+                <nav className="mt-5 px-2 space-y-1">
                   {getNavigationItems().map((item) => {
-                    const IconComponent = item.icon;
-                    const isActive = isActivePage(item.path);
+                    const isActive = currentView === item.id;
                     return (
                       <button
-                        key={item.path}
+                        key={item.id}
                         onClick={() => {
-                          navigate(item.path);
+                          onNavigate?.(item.id);
                           setMobileMenuOpen(false);
                         }}
-                        className={`main-layout__mobile-nav-item ${isActive ? 'main-layout__mobile-nav-item--active' : ''}`}
+                        className={`w-full group flex items-center px-2 py-2 text-base font-medium rounded-md transition-colors ${
+                          isActive
+                            ? 'bg-slate-700 text-white'
+                            : 'text-slate-300 hover:text-white hover:bg-slate-700'
+                        }`}
                       >
-                        <IconComponent className="main-layout__mobile-nav-icon" />
-                        <span>{item.label}</span>
+                        <item.icon className="mr-4 h-6 w-6" />
+                        {item.label}
                       </button>
                     );
                   })}
+                </nav>
+              </div>
+              
+              {/* Mobile User Section */}
+              <div className="flex-shrink-0 flex border-t border-slate-700 p-4">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-slate-600 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-medium text-white">
+                      {user?.firstName?.charAt(0) || 'U'}
+                    </span>
+                  </div>
                 </div>
-
-                <div className="main-layout__mobile-menu-nav-footer">
-                  <button 
-                    onClick={logout} 
-                    className="main-layout__mobile-logout-button"
+                <div className="ml-3">
+                  <p className="text-base font-medium text-white">
+                    {user?.firstName} {user?.lastName}
+                  </p>
+                  <button
+                    onClick={logout}
+                    className="text-sm font-medium text-slate-400 hover:text-white"
                   >
-                    <LogOut className="main-layout__mobile-logout-icon" />
-                    <span>Sign out</span>
+                    Sign out
                   </button>
                 </div>
               </div>
@@ -376,38 +318,47 @@ const MainLayoutContent = ({ children }: MainLayoutProps) => {
     </Transition.Root>
   );
 
+
   return (
-    <div className="main-layout">
-      <DesktopHeader />
-      <MobileHeader ref={mobileHeaderRef} />
-      
-      <main className="main-layout__content">
+    <div className="min-h-screen bg-gray-50">
+      {/* Modern Top Navigation */}
+      <TopNavigation />
+
+      {/* Mobile Sidebar */}
+      <MobileSidebar />
+
+      {/* Main Content Area - Full width */}
+      <main 
+        id="main-content" 
+        className="min-h-screen"
+        role="main"
+      >
         {children}
       </main>
-
-      <MobileMenuSheet />
     </div>
   );
 };
 
-export const MainLayout = ({ children }: MainLayoutProps) => {
+export const MainLayout = ({ children, onNavigate, currentView }: MainLayoutProps) => {
   const { user } = useAuth();
   
-  // Super users don't have organizations, so we need to handle this case
-  if (user?.role?.id === 'super-user' || !user?.organizationId) {
+  // Super users and resellers don't have organizations, so we need to handle this case
+  if (user?.role?.id === 'super-user' || user?.role?.id === 'reseller' || !user?.organizationId) {
     return (
-      <MainLayoutContent>
+      <MainLayoutContent onNavigate={onNavigate} currentView={currentView}>
         {children}
       </MainLayoutContent>
     );
   }
 
-  // For regular users with organizations, use OrganizationProvider
+  // For regular users with organizations, use OrganizationProvider + BrandingProvider
   return (
     <OrganizationProvider organizationId={user.organizationId}>
-      <MainLayoutContent>
-        {children}
-      </MainLayoutContent>
+      <BrandingProvider>
+        <MainLayoutContent onNavigate={onNavigate} currentView={currentView}>
+          {children}
+        </MainLayoutContent>
+      </BrandingProvider>
     </OrganizationProvider>
   );
 };

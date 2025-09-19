@@ -5,7 +5,7 @@
 // ✅ Cannot bypass audio recording requirement
 // 🔥 FIXED: Categories loading issue - now properly loads categories when needed
 
-import React, { memo, useState, useEffect, useCallback } from 'react';
+import React, { memo, useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   AlertTriangle, 
@@ -20,8 +20,7 @@ import {
   BookOpen // NEW: Corrective Counselling icon
 } from 'lucide-react';
 
-// Import audio consent modal and wizard
-import { AudioConsentModal } from '../warnings/enhanced/modals/AudioConsentModal';
+// Import enhanced warning wizard (now includes audio consent)
 import { EnhancedWarningWizard } from '../warnings/enhanced/EnhancedWarningWizard';
 
 // Import corrective counselling modal
@@ -34,7 +33,11 @@ import { useOrganization } from '../../contexts/OrganizationContext';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
 import { useCounsellingFollowUps } from '../../hooks/counselling/useCounsellingFollowUps';
 import { API } from '../../api';
-import { DataService } from '../../services/DataService';
+import { DataServiceV2 } from '../../services/DataServiceV2';
+import { UNIVERSAL_SA_CATEGORIES } from '../../services/UniversalCategories';
+
+// Import employee management
+import { EmployeeManagement } from '../employees/EmployeeManagement';
 
 // --- A Reusable Breakpoint Hook (for responsive rendering) ---
 const useBreakpoint = (breakpoint: number) => {
@@ -66,14 +69,47 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
   // NEW: AUDIO CONSENT & WIZARD STATE
   // ============================================
   
-  const [showAudioConsentModal, setShowAudioConsentModal] = useState(false);
   const [showWarningWizard, setShowWarningWizard] = useState(false);
+
   const [showCorrectiveCounselling, setShowCorrectiveCounselling] = useState(false);
+  const [showEmployeeManagement, setShowEmployeeManagement] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [selectedFollowUpSession, setSelectedFollowUpSession] = useState<any>(null);
   const [employees, setEmployees] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [isLoadingWizardData, setIsLoadingWizardData] = useState(false);
+
+  // Debug showWarningWizard changes
+  useEffect(() => {
+    console.log(`🔍 showWarningWizard changed to: ${showWarningWizard}`);
+  }, [showWarningWizard]);
+
+  // Debug employees array changes
+  useEffect(() => {
+    console.log(`🔍 employees array changed:`, {
+      count: employees.length,
+      employees: employees.map(e => `${e.firstName} ${e.lastName}`),
+      timestamp: Date.now()
+    });
+  }, [employees]);
+
+  // Debug categories array changes
+  useEffect(() => {
+    console.log(`🔍 categories array changed:`, {
+      count: categories.length,
+      categories: categories.map(c => c.name),
+      timestamp: Date.now()
+    });
+  }, [categories]);
+
+  // 🔥 PERFORMANCE: Memoize computed props to prevent wizard unmount/remount
+  const currentManagerName = useMemo(() => {
+    return `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Manager';
+  }, [user?.firstName, user?.lastName]);
+
+  const organizationName = useMemo(() => {
+    return organization?.name || 'Your Organization';
+  }, [organization?.name]);
 
   // ============================================
   // 🔥 FIXED: IMPROVED WIZARD DATA LOADING
@@ -118,7 +154,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
         } else {
           // Fallback 1: Load categories directly from DataService
           console.log('⚠️ Organization categories not available, loading directly...');
-          const categoriesFromService = await DataService.getWarningCategories(organization.id);
+          const categoriesFromService = await DataServiceV2.getWarningCategories(organization.id);
           
           if (categoriesFromService && categoriesFromService.length > 0) {
             console.log('✅ Loaded categories from DataService:', categoriesFromService.length);
@@ -165,120 +201,37 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
     }
   }, [organization?.id, user?.id]); // Remove loadWizardData dependency to prevent loop
 
-  // 🔥 FIXED: Complete 8-category fallback using UniversalCategories
+  // 🔥 FIXED: Use UniversalCategories as the single source of truth for fallback
   const getDefaultManufacturingCategories = () => {
-    return [
-      // 1. Attendance & Punctuality
-      {
-        id: 'attendance_punctuality',
-        name: 'Attendance & Punctuality',
-        severity: 'minor',
-        description: 'Late coming, unauthorized absence, early departure without permission',
-        lraSection: 'LRA Section 188(1)(a) - Incapacity or poor work performance',
-        schedule8Reference: 'Schedule 8, Item 10 - Incapacity/poor performance procedures',
-        escalationPath: ['counselling', 'verbal', 'first_written', 'second_written', 'final_written', 'dismissal']
-      },
-      // 2. Performance Issues
-      {
-        id: 'performance_issues',
-        name: 'Performance Issues',
-        severity: 'minor',
-        description: 'Poor work quality, failure to meet targets, lack of productivity',
-        lraSection: 'LRA Section 188(1)(a) - Incapacity or poor work performance',
-        schedule8Reference: 'Schedule 8, Item 10 - Incapacity procedures',
-        escalationPath: ['counselling', 'verbal', 'first_written', 'second_written', 'final_written', 'dismissal']
-      },
-      // 3. Safety Violations
-      {
-        id: 'safety_violations',
-        name: 'Safety Violations',
-        severity: 'serious',
-        description: 'Failure to follow safety protocols, endangering self or others',
-        lraSection: 'LRA Section 188(1)(b) - Misconduct',
-        schedule8Reference: 'Schedule 8, Item 1 - Dismissible offences',
-        escalationPath: ['first_written', 'final_written', 'dismissal']
-      },
-      // 4. Insubordination & Disrespect
-      {
-        id: 'insubordination_disrespect',
-        name: 'Insubordination & Disrespect',
-        severity: 'serious',
-        description: 'Refusal to obey lawful instructions, disrespectful behavior to supervisors',
-        lraSection: 'LRA Section 188(1)(b) - Misconduct',
-        schedule8Reference: 'Schedule 8, Item 3 - Willful disobedience',
-        escalationPath: ['first_written', 'final_written', 'dismissal']
-      },
-      // 5. Policy Violations
-      {
-        id: 'policy_violations',
-        name: 'Policy Violations',
-        severity: 'serious',
-        description: 'Breach of company policies, procedures, or code of conduct',
-        lraSection: 'LRA Section 188(1)(b) - Misconduct',
-        schedule8Reference: 'Schedule 8, Item 4 - Willful negligence',
-        escalationPath: ['verbal', 'first_written', 'final_written', 'dismissal']
-      },
-      // 6. Dishonesty & Theft
-      {
-        id: 'dishonesty_theft',
-        name: 'Dishonesty & Theft',
-        severity: 'gross_misconduct',
-        description: 'Theft, fraud, falsification of records, dishonest conduct',
-        lraSection: 'LRA Section 188(1)(b) - Misconduct',
-        schedule8Reference: 'Schedule 8, Item 6 - Dishonesty',
-        escalationPath: ['dismissal']
-      },
-      // 7. Substance Abuse
-      {
-        id: 'substance_abuse',
-        name: 'Substance Abuse',
-        severity: 'gross_misconduct',
-        description: 'Use of alcohol or drugs during work hours, reporting to work intoxicated',
-        lraSection: 'LRA Section 188(1)(b) - Misconduct',
-        schedule8Reference: 'Schedule 8, Item 10 - Being under influence',
-        escalationPath: ['final_written', 'dismissal']
-      },
-      // 8. Harassment & Discrimination
-      {
-        id: 'harassment_discrimination',
-        name: 'Harassment & Discrimination',
-        severity: 'gross_misconduct',
-        description: 'Sexual harassment, discrimination, creating hostile work environment',
-        lraSection: 'LRA Section 188(1)(b) - Misconduct',
-        schedule8Reference: 'Schedule 8, Item 12 - Assault/harassment',
-        escalationPath: ['final_written', 'dismissal']
-      }
-    ];
+    // Transform UniversalCategories to the expected format
+    return UNIVERSAL_SA_CATEGORIES.map(cat => ({
+      id: cat.id,
+      name: cat.name,
+      severity: cat.severity,
+      description: cat.description,
+      lraSection: cat.lraSection,
+      schedule8Reference: cat.schedule8Reference,
+      escalationPath: cat.escalationPath
+    }));
   };
 
   // ============================================
   // AUDIO CONSENT & WIZARD HANDLERS
   // ============================================
-  
+
   const handleIssueWarning = useCallback(async () => {
     if (!canCreateWarnings()) return;
-    
-    console.log('🎯 Opening warning creation with mandatory audio recording...');
-    
-    // Always load fresh wizard data to ensure we have the latest categories
+
+    console.log('🎯 Opening warning wizard with integrated audio consent...');
+
+    // FIXED: Load data FIRST, then show wizard with stable props
     await loadWizardData();
-    
-    // Show consent modal
-    setShowAudioConsentModal(true);
+
+    // Only show wizard after data is loaded to ensure stable props
+    setShowWarningWizard(true);
   }, [canCreateWarnings, loadWizardData]);
 
-  const handleAudioConsentGiven = useCallback(() => {
-    console.log('✅ Audio recording consent given - opening wizard');
-    console.log('📊 Categories available for wizard:', categories.length);
-    console.log('👥 Employees available for wizard:', employees.length);
-    setShowAudioConsentModal(false);
-    setShowWarningWizard(true);
-  }, [categories.length, employees.length]);
-
-  const handleAudioConsentDeclined = useCallback(() => {
-    console.log('❌ Audio recording consent declined');
-    setShowAudioConsentModal(false);
-  }, []);
+  // Audio consent handling is now integrated into the wizard
 
   const handleWarningWizardComplete = useCallback(() => {
     console.log('✅ Warning wizard completed');
@@ -398,14 +351,14 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
     }
   ].filter(action => action.enabled);
 
-  // 🎨 Custom color function for the tool grid
+  // 🎨 SuperUser design system gradient colors for tool buttons
   const getToolButtonColorClasses = (color: string) => {
     const colorMap = {
-      orange: 'bg-orange-50 text-orange-700 hover:bg-orange-100 border-orange-200',
-      purple: 'bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200',
-      red: 'bg-red-50 text-red-700 hover:bg-red-100 border-red-200',
-      blue: 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200',
-      indigo: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-200',
+      orange: 'bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700 hover:from-orange-600 hover:to-orange-800 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1',
+      purple: 'bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 hover:from-purple-600 hover:to-purple-800 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1',
+      red: 'bg-gradient-to-br from-red-500 via-red-600 to-red-700 hover:from-red-600 hover:to-red-800 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1',
+      blue: 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1',
+      indigo: 'bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-700 hover:from-indigo-600 hover:to-indigo-800 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-1',
     };
     return colorMap[color as keyof typeof colorMap] || colorMap.purple;
   };
@@ -418,206 +371,101 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
   
   return (
     <>
-      <div className={`${cardClasses} p-4 md:p-6 ${className}`}>
-        {/* --- Section Title --- */}
+      <div className={`space-y-4 ${className}`}>
+        {/* --- Compact Section Header --- */}
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base md:text-lg font-semibold text-gray-800 flex items-center gap-2">
-            Quick Tools
-          </h3>
-          <span className="text-xs bg-gray-100 text-gray-800 px-3 py-1 rounded-full font-semibold">
-              HOD
+          <div className="flex items-center gap-3">
+            <h3 className="text-xl font-bold text-gray-900">HOD Dashboard</h3>
+            <div className="text-sm text-gray-500">Department management tools</div>
+          </div>
+          <span className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
+            Head of Department
           </span>
         </div>
 
-        {/* 🎯 NEW: Audio Recording Notice (only shows if warning creation is enabled) */}
+        {/* 🎯 Compact Audio Notice */}
         {canCreateWarnings() && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
             <div className="flex items-center gap-2">
               <Mic className="w-4 h-4 text-blue-600" />
-              <span className="text-sm text-blue-800 font-medium">
-                Warning processes are automatically recorded
-              </span>
+              <span className="text-sm text-blue-900 font-medium">Warning processes include audio recording</span>
+              <span className="text-xs text-blue-700">(consent required)</span>
             </div>
-            <p className="text-xs text-blue-700 mt-1">
-              Consent required before proceeding with warning creation
-            </p>
           </div>
         )}
 
-        {/* --- Primary Tools Flexbox --- */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4 mb-5 md:mb-6">
+        {/* --- Compact Tools Grid --- */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           {toolActions.map((tool) => (
             <button 
               key={tool.id} 
               onClick={tool.action}
               disabled={tool.id === 'create-warning' && isLoadingWizardData}
-              className={`group text-center p-3 md:p-4 rounded-xl md:rounded-2xl border transition-all duration-200 min-h-[90px] md:min-h-[100px] flex flex-col justify-center ${getToolButtonColorClasses(tool.color)} ${
+              className={`p-3 rounded-lg cursor-pointer transition-all duration-200 flex flex-col items-center gap-2 ${getToolButtonColorClasses(tool.color)} ${
                 isLoadingWizardData && tool.id === 'create-warning' ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              } hover:shadow-md`}
             >
-              <tool.icon className="w-6 h-6 md:w-7 md:h-7 mx-auto mb-1.5 md:mb-2 group-hover:scale-110 transition-transform" />
-              <span className="font-semibold text-xs md:text-sm text-center block">
-                {tool.title}
-              </span>
-              {/* 🎯 NEW: Audio recording indicator */}
-              {tool.hasAudioRecording && (
-                <div className="flex items-center justify-center gap-1 mt-1">
-                  <Mic className="w-3 h-3 opacity-60" />
-                  <span className="text-xs opacity-75">Auto-recorded</span>
-                </div>
-              )}
-              {/* Loading indicator */}
+              <tool.icon className="w-4 h-4" />
+              <span className="font-medium text-sm">{tool.title}</span>
+              {tool.hasAudioRecording && <Mic className="w-3 h-3 opacity-60" />}
               {isLoadingWizardData && tool.id === 'create-warning' && (
-                <div className="flex justify-center mt-1">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-                </div>
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
               )}
             </button>
           ))}
         </div>
 
-        {/* --- Team Snapshot --- */}
-        <div className="bg-gradient-to-r from-green-50 to-emerald-100 border border-green-200/80 rounded-xl flex justify-between items-center p-4 mb-5 md:mb-6">
-          <div className="flex items-center gap-3">
-            <div className="bg-white/80 p-2 rounded-full">
-              <Users className="w-5 h-5 text-green-700" />
-            </div>
-            <span className="text-sm md:text-base font-semibold text-green-800">Your Team Members</span>
-          </div>
-          <span className="text-2xl md:text-3xl font-bold text-green-700">
-            {isLoadingWizardData ? (
-              <div className="animate-pulse bg-green-200 h-8 w-8 rounded"></div>
-            ) : (
-              employees.length
-            )}
-          </span>
-        </div>
-
-        {/* --- Follow-up Notifications --- */}
+        {/* --- Follow-up Section --- */}
         {followUpCounts.total > 0 && (
-          <div className="bg-gradient-to-r from-orange-50 to-amber-100 border border-orange-200/80 rounded-xl p-4 mb-5 md:mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="bg-white/80 p-2 rounded-full">
-                  <Calendar className="w-5 h-5 text-orange-700" />
-                </div>
-                <span className="text-sm md:text-base font-semibold text-orange-800">Counselling Follow-ups</span>
-              </div>
-              <div className="flex items-center gap-2">
-                {followUpCounts.overdue > 0 && (
-                  <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">
-                    {followUpCounts.overdue} Overdue
-                  </span>
-                )}
-                {followUpCounts.dueSoon > 0 && (
-                  <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-xs font-medium">
-                    {followUpCounts.dueSoon} Due Soon
-                  </span>
-                )}
-              </div>
-            </div>
-            
-            <div className="space-y-2 max-h-32 overflow-y-auto">
-              {dueFollowUps.slice(0, 3).map((session) => {
-                const followUpDate = new Date(session.followUpDate);
-                const isOverdue = followUpDate < new Date();
-                const daysDiff = Math.ceil((followUpDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                
-                return (
-                  <button
-                    key={session.id}
-                    onClick={() => handleOpenFollowUp(session)}
-                    className="w-full text-left p-3 bg-white/60 hover:bg-white/80 rounded-lg border border-orange-200/50 transition-all duration-200 group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-orange-900 text-sm">
-                          {session.employeeName}
-                        </div>
-                        <div className="text-xs text-orange-700">
-                          {session.category} • {new Date(session.dateCreated).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className={`text-xs font-medium ${
-                          isOverdue ? 'text-red-600' : daysDiff <= 1 ? 'text-amber-600' : 'text-orange-600'
-                        }`}>
-                          {isOverdue 
-                            ? `Overdue ${Math.abs(daysDiff)} day${Math.abs(daysDiff) !== 1 ? 's' : ''}`
-                            : daysDiff === 0 
-                              ? 'Due Today'
-                              : `Due in ${daysDiff} day${daysDiff !== 1 ? 's' : ''}`
-                          }
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-orange-500 group-hover:text-orange-700 transition-colors mt-1" />
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            
-            {dueFollowUps.length > 3 && (
-              <div className="mt-3 text-center">
-                <span className="text-xs text-orange-700">
-                  +{dueFollowUps.length - 3} more follow-ups pending
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* --- Secondary Management Actions --- */}
-        {managementActions.length > 0 && (
-          <div>
-            <h4 className="text-base font-semibold text-gray-800 mb-3">Team Management & Planning</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
-              {managementActions.map((action) => (
-                <button 
-                  key={action.id}
-                  onClick={action.action}
-                  className="group w-full flex items-center gap-4 p-3 text-left rounded-lg bg-gray-50/70 hover:bg-gray-100 transition-colors duration-200"
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-3">
+              <Calendar className="w-4 h-4 text-orange-600" />
+              Follow-ups Due ({followUpCounts.due})
+            </h4>
+            <div className="space-y-2">
+              {dueFollowUps.slice(0, 3).map((session) => (
+                <button
+                  key={session.id}
+                  onClick={() => handleOpenFollowUp(session)}
+                  className="w-full text-left p-2 bg-orange-50 hover:bg-orange-100 rounded-lg transition-all text-sm"
                 >
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-${action.color}-100/80`}>
-                    <action.icon className={`w-4 h-4 text-${action.color}-600`} />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-700 text-sm">{action.title}</div>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                  <div className="font-medium text-gray-900">{session.employeeName}</div>
+                  <div className="text-xs text-gray-600">{session.sessionType}</div>
                 </button>
               ))}
             </div>
           </div>
         )}
 
+        {/* --- Team Overview --- */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <button 
+            onClick={() => setShowEmployeeManagement(true)}
+            className="w-full flex items-center justify-between p-3 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all"
+          >
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-emerald-600" />
+              <span className="text-sm font-medium text-gray-900">Team Members</span>
+            </div>
+            <span className="text-lg font-bold text-emerald-600">
+              {isLoadingWizardData ? '...' : employees.length}
+            </span>
+          </button>
+        </div>
       </div>
 
-      {/* ============================================ */}
-      {/* MODALS */}
-      {/* ============================================ */}
-      
-      {/* 🎯 NEW: Audio Consent Modal */}
-      {showAudioConsentModal && (
-        <AudioConsentModal
-          isOpen={showAudioConsentModal}
-          organizationName={organization?.name || 'Organization'}
-          managerName={user?.displayName || user?.firstName || 'Manager'}
-          onConsent={handleAudioConsentGiven}
-          onCancel={handleAudioConsentDeclined}
-        />
-      )}
+      {/* Audio consent is now integrated into the wizard as first step */}
 
       {/* Enhanced Warning Wizard */}
       {showWarningWizard && (
         <EnhancedWarningWizard
+          key="warning-wizard" // Add stable key
           employees={employees}
           categories={categories}
-          currentManagerName={user?.displayName || user?.firstName || 'Manager'}
-          organizationName={organization?.name || 'Organization'}
+          currentManagerName={currentManagerName}
+          organizationName={organizationName}
           onComplete={handleWarningWizardComplete}
           onCancel={handleWarningWizardCancel}
-            isFullScreen={true}  // ← ADD THIS LINE
         />
       )}
 
@@ -635,8 +483,29 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
         />
       )}
 
+      {/* Employee Management Modal */}
+      {showEmployeeManagement && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-7xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-slate-200">
+              <h2 className="text-xl font-bold text-slate-800">Team Management</h2>
+              <button
+                onClick={() => setShowEmployeeManagement(false)}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                ×
+              </button>
+            </div>
+            <div className="overflow-y-auto">
+              <EmployeeManagement />
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 });
 
 HODDashboardSection.displayName = 'HODDashboardSection';
+

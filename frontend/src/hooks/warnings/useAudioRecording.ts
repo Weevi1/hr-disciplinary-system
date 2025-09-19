@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/hooks/warnings/useAudioRecording.ts
 // 🎯 AUDIO RECORDING HOOK FOR WARNING PROCESS
 // ✅ Ultra-efficient 16kbps Opus compression
@@ -50,6 +51,7 @@ export interface AudioRecordingActions {
   pauseRecording: () => void;
   resumeRecording: () => void;
   cancelRecording: () => void;
+  forceCleanup: () => void; // NEW: Force immediate cleanup
   uploadToFirebase: (organizationId: string, warningId: string) => Promise<string | null>;
   uploadToFirebaseFromUrl: (audioUrl: string, recordingId: string, organizationId: string, warningId: string) => Promise<string | null>;
 }
@@ -60,6 +62,126 @@ export interface UseAudioRecordingReturn extends AudioRecordingState, AudioRecor
   isNearLimit: boolean;
   canRecord: boolean;
 }
+
+// ============================================
+// SINGLETON PATTERN TO PREVENT MULTIPLE RECORDINGS
+// ============================================
+
+class AudioRecordingSingleton {
+  private static instance: AudioRecordingSingleton | null = null;
+  public mediaStream: MediaStream | null = null;
+  public isRecording: boolean = false;
+  public isStarting: boolean = false;
+  private startedAt: number = 0;
+  // Track ALL active streams globally to prevent orphaned streams
+  private allActiveStreams: Set<MediaStream> = new Set();
+  private allActiveTracks: Set<MediaStreamTrack> = new Set();
+
+  static getInstance(): AudioRecordingSingleton {
+    if (!AudioRecordingSingleton.instance) {
+      AudioRecordingSingleton.instance = new AudioRecordingSingleton();
+    }
+    return AudioRecordingSingleton.instance;
+  }
+
+  canStart(): boolean {
+    const now = Date.now();
+    // If a recording was started very recently (within 500ms), block new attempts
+    if (this.startedAt > 0 && (now - this.startedAt) < 500) {
+      Logger.debug('🔄 Blocking duplicate recording attempt - too recent');
+      return false;
+    }
+    // Also check if any streams are active
+    if (this.allActiveStreams.size > 0 || this.allActiveTracks.size > 0) {
+      Logger.debug(`🔄 Blocking recording - ${this.allActiveStreams.size} active streams, ${this.allActiveTracks.size} active tracks exist`);
+      return false;
+    }
+    return !this.isRecording && !this.isStarting;
+  }
+
+  startRecording(): void {
+    this.isStarting = true;
+    this.isRecording = true;
+    this.startedAt = Date.now();
+    Logger.debug('🎤 Singleton: Recording slot reserved');
+  }
+
+  stopRecording(): void {
+    this.isRecording = false;
+    this.isStarting = false;
+    this.startedAt = 0;
+    if (this.mediaStream) {
+      this.mediaStream.getTracks().forEach(track => {
+        try {
+          track.stop();
+          Logger.debug('🔴 Singleton: Stopped microphone track');
+        } catch (error) {
+          Logger.debug('Track already stopped');
+        }
+      });
+      this.allActiveStreams.delete(this.mediaStream);
+      this.mediaStream = null;
+    }
+    Logger.debug('🧹 Singleton: Recording stopped and cleaned up');
+  }
+
+  setStream(stream: MediaStream): void {
+    // Track this stream globally
+    this.allActiveStreams.add(stream);
+    stream.getTracks().forEach(track => {
+      this.allActiveTracks.add(track);
+      // Add listener to remove track when it ends
+      track.addEventListener('ended', () => {
+        this.allActiveTracks.delete(track);
+      });
+    });
+
+    this.mediaStream = stream;
+    this.isStarting = false; // Recording setup complete
+    Logger.debug(`🎤 Singleton: Stream set, recording active. Total streams: ${this.allActiveStreams.size}`);
+  }
+
+  // New method to forcefully stop ALL streams
+  stopAllStreams(): void {
+    Logger.debug(`🛑 Stopping ALL streams: ${this.allActiveStreams.size} streams, ${this.allActiveTracks.size} tracks`);
+
+    // Stop all tracked streams
+    this.allActiveStreams.forEach(stream => {
+      stream.getTracks().forEach(track => {
+        try {
+          track.stop();
+          Logger.debug('🔴 Stopped tracked stream track');
+        } catch (error) {
+          // Track already stopped
+        }
+      });
+    });
+
+    // Stop all tracked individual tracks
+    this.allActiveTracks.forEach(track => {
+      try {
+        if (track.readyState === 'live') {
+          track.stop();
+          Logger.debug('🔴 Stopped orphaned track');
+        }
+      } catch (error) {
+        // Track already stopped
+      }
+    });
+
+    // Clear all tracking
+    this.allActiveStreams.clear();
+    this.allActiveTracks.clear();
+    this.mediaStream = null;
+    this.isRecording = false;
+    this.isStarting = false;
+    this.startedAt = 0;
+
+    Logger.debug('✅ All streams and tracks stopped and cleared');
+  }
+}
+
+const audioSingleton = AudioRecordingSingleton.getInstance();
 
 // ============================================
 // HOOK IMPLEMENTATION
@@ -132,7 +254,7 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
     
     // Auto-stop at max duration
     if (elapsedMs >= AUDIO_CONFIG.MAX_DURATION_MS) {
-      console.log('🔴 Auto-stopping recording: Max duration reached');
+      Logger.debug('🔴 Auto-stopping recording: Max duration reached')
       // Use a timeout to avoid circular dependency
       setTimeout(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
@@ -144,24 +266,111 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
     
     // Warning at 4 minutes
     if (elapsedMs >= AUDIO_CONFIG.WARNING_THRESHOLD_MS && !warningShownRef.current) {
-      console.log('⚠️ Recording will auto-stop in 1 minute');
+      Logger.debug('⚠️ Recording will auto-stop in 1 minute')
       warningShownRef.current = true;
     }
   }, []); // Remove all dependencies to avoid circular reference
 
   // ============================================
+  // CLEANUP FUNCTION - DEFINED FIRST TO AVOID CIRCULAR DEPS
+  // ============================================
+
+  const forceCleanup = useCallback(() => {
+    try {
+      Logger.debug('🚨 FORCE CLEANUP: Stopping all audio recording immediately');
+
+      // Stop media recorder immediately
+      if (mediaRecorderRef.current) {
+        try {
+          if (mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+            Logger.debug('🔴 Force stopped MediaRecorder');
+          }
+        } catch (error) {
+          Logger.debug('MediaRecorder already stopped or errored');
+        }
+        mediaRecorderRef.current = null;
+      }
+
+      // Stop all microphone tracks immediately (both local and singleton)
+      const streamsToStop = [streamRef.current, audioSingleton.mediaStream].filter(Boolean);
+      streamsToStop.forEach(stream => {
+        if (stream) {
+          stream.getTracks().forEach(track => {
+            try {
+              track.stop();
+              Logger.debug('🔴 Force stopped microphone track');
+            } catch (error) {
+              Logger.debug('Track already stopped');
+            }
+          });
+        }
+      });
+
+      // Clear both local and singleton stream refs
+      streamRef.current = null;
+      // Use stopAllStreams to ensure ALL streams are stopped
+      audioSingleton.stopAllStreams();
+
+      // Clear all intervals
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
+        durationIntervalRef.current = null;
+      }
+
+      // Clean up all refs and state
+      audioChunksRef.current = [];
+      warningShownRef.current = false;
+      startTimeRef.current = 0;
+
+      // Reset state completely
+      setState({
+        isRecording: false,
+        isProcessing: false,
+        duration: 0,
+        size: 0,
+        error: null,
+        audioUrl: null,
+        recordingId: null
+      });
+
+      Logger.debug('🧹 Force cleanup completed - all audio resources released');
+
+    } catch (error) {
+      Logger.error('❌ Error during force cleanup:', error);
+    }
+  }, []);
+
+  // ============================================
   // RECORDING FUNCTIONS
   // ============================================
-  
+
   const startRecording = useCallback(async (): Promise<void> => {
+    // SINGLETON: Check if we can start recording
+    if (!audioSingleton.canStart()) {
+      Logger.debug('🔄 Recording already active via singleton, skipping new recording start');
+      return;
+    }
+
+    // SINGLETON: Reserve recording slot immediately
+    audioSingleton.startRecording();
+
     try {
+      // Force cleanup any previous recording before starting new one
+      if (streamRef.current || mediaRecorderRef.current || audioSingleton.mediaStream) {
+        Logger.debug('🧹 Cleaning up previous recording before starting new one');
+        forceCleanup();
+        // Wait a moment for cleanup to complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
       setState(prev => ({ ...prev, isProcessing: true, error: null }));
-      
+
       // Check browser support
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error('Audio recording not supported in this browser');
       }
-      
+
       // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -172,8 +381,10 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
           autoGainControl: AUDIO_CONFIG.AUTO_GAIN_CONTROL
         }
       });
-      
+
+      // Store stream both locally and in singleton
       streamRef.current = stream;
+      audioSingleton.setStream(stream);
       audioChunksRef.current = [];
       
       // Create MediaRecorder with optimal settings
@@ -195,7 +406,7 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
           
           // Safety check for size
           if (totalSize >= AUDIO_CONFIG.MAX_SIZE_BYTES) {
-            console.log('🔴 Auto-stopping recording: Max size reached');
+            Logger.debug('🔴 Auto-stopping recording: Max size reached')
             stopRecording();
           }
         }
@@ -203,7 +414,7 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
       
       // Handle recording stop
       mediaRecorder.onstop = () => {
-        console.log('🎤 Recording stopped');
+        Logger.debug('🎤 Recording stopped')
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
@@ -229,10 +440,14 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
         size: 0
       }));
       
-      console.log('🎤 Recording started:', recordingId);
-      
+      Logger.debug('🎤 Recording started:', recordingId)
+
+      // Clear the start-in-progress flag since we're done (handled by singleton)
+
     } catch (error: any) {
-      console.error('❌ Error starting recording:', error);
+      Logger.error('❌ Error starting recording:', error)
+      // Reset singleton on error
+      audioSingleton.stopRecording();
       setState(prev => ({
         ...prev,
         isRecording: false,
@@ -240,7 +455,7 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
         error: error.message || 'Failed to start recording'
       }));
     }
-  }, [updateDuration, generateRecordingId]);
+  }, [updateDuration, generateRecordingId]); // Note: forceCleanup is called directly, not in dependencies
 
   const stopRecording = useCallback(async (): Promise<string | null> => {
     try {
@@ -286,7 +501,7 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
             resolve(audioUrl);
             
           } catch (error) {
-            console.error('❌ Error processing recording:', error);
+            Logger.error('❌ Error processing recording:', error)
             setState(prev => ({
               ...prev,
               isRecording: false,
@@ -302,7 +517,7 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
       });
       
     } catch (error: any) {
-      console.error('❌ Error stopping recording:', error);
+      Logger.error('❌ Error stopping recording:', error)
       setState(prev => ({
         ...prev,
         isRecording: false,
@@ -320,7 +535,7 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
         clearInterval(durationIntervalRef.current);
         durationIntervalRef.current = null;
       }
-      console.log('⏸️ Recording paused');
+      Logger.debug('⏸️ Recording paused')
     }
   }, [state.isRecording]);
 
@@ -329,7 +544,7 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
       mediaRecorderRef.current.resume();
       startTimeRef.current = Date.now() - (state.duration * 1000);
       durationIntervalRef.current = setInterval(updateDuration, 100);
-      console.log('▶️ Recording resumed');
+      Logger.debug('▶️ Recording resumed')
     }
   }, [state.isRecording, state.duration, updateDuration]);
 
@@ -338,24 +553,24 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
       if (mediaRecorderRef.current) {
         mediaRecorderRef.current.stop();
       }
-      
+
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
       }
-      
+
       if (durationIntervalRef.current) {
         clearInterval(durationIntervalRef.current);
         durationIntervalRef.current = null;
       }
-      
+
       if (state.audioUrl) {
         URL.revokeObjectURL(state.audioUrl);
       }
-      
+
       audioChunksRef.current = [];
       warningShownRef.current = false;
-      
+
       setState({
         isRecording: false,
         isProcessing: false,
@@ -365,11 +580,11 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
         audioUrl: null,
         recordingId: null
       });
-      
-      console.log('🗑️ Recording cancelled');
-      
+
+      Logger.debug('🗑️ Recording cancelled')
+
     } catch (error) {
-      console.error('❌ Error cancelling recording:', error);
+      Logger.error('❌ Error cancelling recording:', error)
     }
   }, [state.audioUrl]);
 
@@ -410,18 +625,18 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
         }
       };
       
-      console.log('☁️ Uploading audio to Firebase:', storagePath);
+      Logger.debug('☁️ Uploading audio to Firebase:', storagePath)
       
       await uploadBytes(storageRef, audioBlob, metadata);
       const downloadUrl = await getDownloadURL(storageRef);
       
       setState(prev => ({ ...prev, isProcessing: false }));
       
-      console.log('✅ Audio uploaded successfully:', downloadUrl);
+      Logger.success(13735)
       return downloadUrl;
       
     } catch (error: any) {
-      console.error('❌ Error uploading audio:', error);
+      Logger.error('❌ Error uploading audio:', error)
       setState(prev => ({
         ...prev,
         isProcessing: false,
@@ -467,18 +682,18 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
         }
       };
       
-      console.log('☁️ Uploading audio to Firebase from URL:', storagePath);
+      Logger.debug('☁️ Uploading audio to Firebase from URL:', storagePath)
       
       await uploadBytes(storageRef, audioBlob, metadata);
       const downloadUrl = await getDownloadURL(storageRef);
       
       setState(prev => ({ ...prev, isProcessing: false }));
       
-      console.log('✅ Audio uploaded successfully from URL:', downloadUrl);
+      Logger.success(15712)
       return downloadUrl;
       
     } catch (error: any) {
-      console.error('❌ Error uploading audio from URL:', error);
+      Logger.error('❌ Error uploading audio from URL:', error)
       setState(prev => ({
         ...prev,
         isProcessing: false,
@@ -491,23 +706,46 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
   // ============================================
   // CLEANUP
   // ============================================
-  
+
   useEffect(() => {
     return () => {
-      // Cleanup on unmount
+      // Cleanup on unmount - use refs instead of state to avoid dependency issues
       if (durationIntervalRef.current) {
         clearInterval(durationIntervalRef.current);
+        durationIntervalRef.current = null;
       }
-      
+
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current.getTracks().forEach(track => {
+          track.stop();
+          Logger.debug('🔴 Stopped microphone track on cleanup');
+        });
+        streamRef.current = null;
       }
-      
-      if (state.audioUrl) {
-        URL.revokeObjectURL(state.audioUrl);
+
+      if (mediaRecorderRef.current) {
+        try {
+          if (mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+            Logger.debug('🔴 Stopped recording on cleanup');
+          }
+        } catch (error) {
+          Logger.debug('Recording already stopped');
+        }
+        mediaRecorderRef.current = null;
       }
+
+      // Clean up audio URLs that might exist
+      audioChunksRef.current = [];
+      warningShownRef.current = false;
+      startTimeRef.current = 0;
+
+      // CRITICAL: Stop ALL streams tracked by singleton
+      audioSingleton.stopAllStreams();
+
+      Logger.debug('🧹 Audio recording hook cleaned up completely');
     };
-  }, [state.audioUrl]);
+  }, []); // No dependencies - only cleanup on unmount
 
   // ============================================
   // DERIVED STATE
@@ -523,20 +761,21 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
   return {
     // State
     ...state,
-    
+
     // Actions
     startRecording,
     stopRecording,
     pauseRecording,
     resumeRecording,
     cancelRecording,
+    forceCleanup,
     uploadToFirebase,
     uploadToFirebaseFromUrl,
-    
+
     // Utilities
     formatDuration,
     formatSize,
-    
+
     // Derived state
     isNearLimit,
     canRecord

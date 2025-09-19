@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // ===================================
 // ESCALATION AI SERVICE - Intelligent Recommendations
 // Analyzes incidents and provides escalation recommendations
@@ -37,12 +38,12 @@ export class EscalationAIService {
     incidentDetails: string
   ): Promise<EscalationRecommendation | null> {
     try {
-      console.log(`🤖 Analyzing escalation for employee ${employeeId}, category ${categoryId}`);
+      Logger.debug(`🤖 Analyzing escalation for employee ${employeeId}, category ${categoryId}`)
       
       // Get the category details
       const category = await SectorService.findCategoryForOrganization(organizationId, categoryId);
       if (!category) {
-        console.error(`❌ Category ${categoryId} not found for organization ${organizationId}`);
+        Logger.error(`❌ Category ${categoryId} not found for organization ${organizationId}`)
         return null;
       }
       
@@ -64,11 +65,11 @@ export class EscalationAIService {
         incidentDetails
       }, category, history);
       
-      console.log(`✅ Generated recommendation: ${recommendation.recommendedLevel.label} (Risk: ${recommendation.riskScore})`);
+      Logger.success(2008)
       return recommendation;
       
     } catch (error) {
-      console.error('❌ Error analyzing escalation:', error);
+      Logger.error('❌ Error analyzing escalation:', error)
       return null;
     }
   }
@@ -104,7 +105,7 @@ export class EscalationAIService {
       });
       
     } catch (error) {
-      console.error('❌ Error fetching warning history:', error);
+      Logger.error('❌ Error fetching warning history:', error)
       return [];
     }
   }
@@ -306,7 +307,7 @@ export class EscalationAIService {
       const history = await this.getEmployeeWarningHistory(employeeId);
       return this.calculateEmployeeRisk(history);
     } catch (error) {
-      console.error('❌ Error getting employee risk assessment:', error);
+      Logger.error('❌ Error getting employee risk assessment:', error)
       return null;
     }
   }

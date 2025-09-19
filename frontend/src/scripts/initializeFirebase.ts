@@ -1,4 +1,6 @@
 import { FirebaseService, COLLECTIONS } from '../services/FirebaseService';
+import Logger from '../utils/logger';
+import { UNIVERSAL_SA_CATEGORIES } from '../services/UniversalCategories';
 import { Timestamp } from 'firebase/firestore';
 // Fix: Use type-only imports
 import type { Organization, User, Employee, Warning, WarningCategory } from '../types';
@@ -14,40 +16,40 @@ export class FirebaseInitializer {
    * Initialize all demo data
    */
   static async initializeAll(): Promise<InitializationResult> {
-    console.log('🚀 Starting Firebase initialization...');
-    
+    Logger.debug('🚀 Starting Firebase initialization...')
+
     try {
       // Step 1: Create demo organization
       const orgId = await this.createDemoOrganization();
-      console.log('✅ Demo organization created:', orgId);
-      
+      Logger.success(673)
+
       // Step 2: Create demo users
       const userIds = await this.createDemoUsers(orgId);
-      console.log('✅ Demo users created:', userIds.length);
-      
+      Logger.success(834)
+
       // Step 3: Create warning categories
       await this.createWarningCategories(orgId);
-      console.log('✅ Warning categories created');
-      
+      Logger.success(997)
+
       // Step 4: Create demo employees
       const employeeIds = await this.createDemoEmployees(orgId);
-      console.log('✅ Demo employees created:', employeeIds.length);
-      
+      Logger.success(1163)
+
       // Step 5: Create demo warnings
       await this.createDemoWarnings(orgId, employeeIds[0], userIds.hod);
-      console.log('✅ Demo warnings created');
-      
+      Logger.success(1353)
+
       // Step 6: Create templates
       await this.createDemoTemplates(orgId);
-      console.log('✅ Templates created');
-      
+      Logger.success(1489)
+
       return {
         success: true,
         message: 'Firebase initialized successfully!',
         data: { orgId, userIds, employeeIds }
       };
     } catch (error) {
-      console.error('❌ Initialization failed:', error);
+      Logger.error('❌ Initialization failed:', error)
       const message = error instanceof Error ? error.message : 'Unknown error';
       return {
         success: false,
@@ -83,8 +85,8 @@ export class FirebaseInitializer {
     };
 
     return await FirebaseService.createDocument(
-      COLLECTIONS.ORGANIZATIONS, 
-      orgData, 
+      COLLECTIONS.ORGANIZATIONS,
+      orgData,
       'demo-corp'
     );
   }
@@ -137,70 +139,39 @@ export class FirebaseInitializer {
     ];
 
 const userIds: Record<string, string> = {};
-    
+
     for (const user of users) {
       await FirebaseService.createDocument(
-        COLLECTIONS.USERS, 
+        COLLECTIONS.USERS,
         { ...user, id: undefined }, // Remove id from data, pass as separate param
         user.id
       );
       userIds[user.role.split('-')[0]] = user.id;
     }
-    
+
     return userIds;
   }
 
   /**
-   * Create warning categories
+   * Create warning categories using UniversalCategories
    */
   private static async createWarningCategories(orgId: string) {
-    const categories = [
-      {
-        organizationId: orgId,
-        name: 'Absenteeism',
-        description: 'Unauthorized absence from work',
-        severity: 'medium' as const,
-        escalationPath: ['verbal', 'written', 'final'],
-        requiredDocuments: ['absence_record'],
-        isActive: true
-      },
-      {
-        organizationId: orgId,
-        name: 'Safety Violation',
-        description: 'Violation of safety protocols',
-        severity: 'high' as const,
-        escalationPath: ['written', 'final', 'dismissal'],
-        requiredDocuments: ['incident_report', 'photo_evidence'],
-        isActive: true
-      },
-      {
-        organizationId: orgId,
-        name: 'Poor Performance',
-        description: 'Failure to meet performance standards',
-        severity: 'medium' as const,
-        escalationPath: ['verbal', 'written', 'final'],
-        requiredDocuments: ['performance_review'],
-        isActive: true
-      },
-      {
-        organizationId: orgId,
-        name: 'Insubordination',
-        description: 'Refusal to follow instructions',
-        severity: 'high' as const,
-        escalationPath: ['written', 'final', 'dismissal'],
-        requiredDocuments: ['witness_statement'],
-        isActive: true
-      },
-      {
-        organizationId: orgId,
-        name: 'Time Keeping',
-        description: 'Late arrival or early departure',
-        severity: 'low' as const,
-        escalationPath: ['verbal', 'written', 'final'],
-        requiredDocuments: ['time_record'],
-        isActive: true
-      }
-    ];
+    // Use the comprehensive SA-compliant categories from UniversalCategories
+    const categories = UNIVERSAL_SA_CATEGORIES.map(cat => ({
+      organizationId: orgId,
+      id: cat.id,
+      name: cat.name,
+      description: cat.description,
+      severity: cat.severity === 'minor' ? 'low' : cat.severity === 'serious' ? 'medium' : 'high' as const,
+      escalationPath: cat.escalationPath,
+      requiredDocuments: cat.evidenceRequired?.slice(0, 3) || [],
+      isActive: true,
+      isDefault: true,
+      // Additional metadata from UniversalCategories
+      lraSection: cat.lraSection,
+      schedule8Reference: cat.schedule8Reference,
+      defaultValidityPeriod: cat.defaultValidityPeriod
+    }));
 
     await FirebaseService.batchCreate(COLLECTIONS.WARNING_CATEGORIES, categories);
   }
@@ -269,12 +240,12 @@ const userIds: Record<string, string> = {};
     const ids = [];
     for (const employee of employees) {
       const id = await FirebaseService.createDocument(
-        COLLECTIONS.EMPLOYEES, 
+        COLLECTIONS.EMPLOYEES,
         employee
       );
       ids.push(id);
     }
-    
+
     return ids;
   }
 
@@ -282,8 +253,8 @@ const userIds: Record<string, string> = {};
    * Create demo warnings
    */
   private static async createDemoWarnings(
-    orgId: string, 
-    employeeId: string, 
+    orgId: string,
+    employeeId: string,
     issuedBy: string
   ) {
     const warnings = [
@@ -292,7 +263,7 @@ const userIds: Record<string, string> = {};
         employeeId: employeeId,
         issuedBy: issuedBy,
         approvedBy: 'hr-manager-demo',
-        category: 'Time Keeping',
+        category: 'attendance_punctuality', // Using UniversalCategories ID
         severity: 'verbal' as const,
         description: 'Employee arrived 30 minutes late without prior notice',
         incidentDate: Timestamp.fromDate(new Date('2025-01-20')),
@@ -337,13 +308,13 @@ Please acknowledge receipt of this warning.
 {{managerName}}
 {{companyName}}`,
         variables: [
-          'employeeName', 
-          'severity', 
-          'category', 
-          'incidentDate', 
-          'description', 
-          'followUpActions', 
-          'managerName', 
+          'employeeName',
+          'severity',
+          'category',
+          'incidentDate',
+          'description',
+          'followUpActions',
+          'managerName',
           'companyName'
         ],
         isActive: true
@@ -395,21 +366,20 @@ Reply ACKNOWLEDGE to confirm receipt.
    * Clear all data (use with caution!)
    */
   static async clearAllData(): Promise<void> {
-    console.warn('⚠️ Clearing all Firebase data...');
-    
+    Logger.warn('⚠️ Clearing all Firebase data...')
+
     const collections = Object.values(COLLECTIONS);
-    
+
     for (const collectionName of collections) {
       try {
         const docs = await FirebaseService.getCollection(collectionName);
         for (const doc of docs) {
           await FirebaseService.deleteDocument(collectionName, (doc as { id: string }).id);
         }
-        console.log(`✅ Cleared ${collectionName}`);
+        Logger.success(12006)
       } catch (error) {
-        console.error(`❌ Failed to clear ${collectionName}:`, error);
+        Logger.error(`❌ Failed to clear ${collectionName}:`, error)
       }
     }
   }
 }
-

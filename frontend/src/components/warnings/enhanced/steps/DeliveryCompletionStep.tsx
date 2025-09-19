@@ -1,3 +1,4 @@
+import Logger from '../../../../utils/logger';
 // frontend/src/components/warnings/enhanced/steps/DeliveryCompletionStep.tsx
 // 🏆 COMPLETE DELIVERY COMPLETION STEP WITH AUDIO URL FIX
 // ✅ Proper audio URL storage after Firebase upload
@@ -214,7 +215,7 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
       return { blob, filename: fileName };
       
     } catch (error) {
-      console.error('❌ PDF generation failed:', error);
+      Logger.error('❌ PDF generation failed:', error)
       throw error;
     } finally {
       setIsGeneratingPDF(false);
@@ -227,7 +228,7 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
 
   const handlePreviewPDF = useCallback(async () => {
     try {
-      console.log('🔄 Opening PDF preview modal...');
+      Logger.debug('🔄 Opening PDF preview modal...')
       
       if (!pdfBlob) {
         await generatePDF();
@@ -235,7 +236,7 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
       
       setShowPDFPreview(true);
     } catch (error) {
-      console.error('❌ Error opening PDF preview:', error);
+      Logger.error('❌ Error opening PDF preview:', error)
       setAudioUploadError('Failed to generate PDF preview');
     }
   }, [pdfBlob, generatePDF]);
@@ -254,12 +255,12 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
     setIsCreatingWarning(true);
     setAudioUploadError(null);
 
-    console.log('📬 Creating HR delivery notification for warning:', warningId);
+    Logger.debug('📬 Creating HR delivery notification for warning:', warningId)
     
     // 🔔 Create delivery notification for HR
     try {
       setIsCreatingDeliveryNotification(true);
-      console.log('📬 Creating delivery notification for HR...');
+      Logger.debug('📬 Creating delivery notification for HR...')
       
       const deliveryNotificationId = await DeliveryNotificationService.createDeliveryNotification({
         warningId,
@@ -286,22 +287,22 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
       });
       
       setDeliveryNotificationId(deliveryNotificationId);
-      console.log('✅ Delivery notification created:', deliveryNotificationId);
+      Logger.success(9578)
       
       // Mark as completed
       setWarningCreated(true);
       
     } catch (deliveryError: any) {
-      console.error('❌ Failed to create delivery notification:', deliveryError);
+      Logger.error('❌ Failed to create delivery notification:', deliveryError)
       setAudioUploadError(deliveryError.message || 'Failed to notify HR about delivery');
     } finally {
       setIsCreatingDeliveryNotification(false);
     }
 
-    console.log('✅ HR notification process completed for warning ID:', warningId);
+    Logger.success(10016)
 
   } catch (error: any) {
-    console.error('❌ Error creating HR notification:', error);
+    Logger.error('❌ Error creating HR notification:', error)
     setAudioUploadError(error.message || 'Failed to create HR notification');
   } finally {
     setIsCreatingWarning(false);
@@ -721,7 +722,7 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
             organization: organization
           }}
           onPDFGenerated={(blob, filename) => {
-            console.log('PDF generated for preview:', filename);
+            Logger.debug('PDF generated for preview:', filename)
             // Don't trigger HR notification on preview - user needs to explicitly click "Notify HR"
           }}
           isCompleted={false}

@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // ===================================
 // SECTOR ASSIGNMENT COMPONENT
 // Super-admin interface for assigning sectors to organizations
@@ -37,7 +38,7 @@ export const SectorAssignment: React.FC<SectorAssignmentProps> = ({
         setSectors(availableSectors);
         setError(null);
       } catch (err) {
-        console.error('Error loading sectors:', err);
+        Logger.error('Error loading sectors:', err)
         setError('Failed to load sectors. Please try again.');
       } finally {
         setIsLoading(false);
@@ -70,7 +71,7 @@ export const SectorAssignment: React.FC<SectorAssignmentProps> = ({
         setError('Failed to assign sector. Please try again.');
       }
     } catch (err) {
-      console.error('Error assigning sector:', err);
+      Logger.error('Error assigning sector:', err)
       setError('Failed to assign sector. Please try again.');
     } finally {
       setIsAssigning(false);

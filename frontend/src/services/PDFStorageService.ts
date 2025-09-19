@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // frontend/src/services/PDFStorageService.ts
 // 🎯 PDF STORAGE SERVICE - Using the WORKING audio upload pattern
 // ✅ Direct Firebase Storage upload like audio clips
@@ -37,7 +38,7 @@ export class PDFStorageService {
     warningId?: string
   ): Promise<PDFUploadResult> {
     try {
-      console.log('📄 Starting PDF upload using audio upload pattern...');
+      Logger.debug(1127)
       console.log('📄 File details:', {
         filename,
         size: pdfBlob.size,
@@ -52,7 +53,7 @@ export class PDFStorageService {
       const randomId = Math.random().toString(36).substr(2, 12);
       const storagePath = `temp-downloads/${organizationId}/${timestamp}_${randomId}_${filename}`;
       
-      console.log('📄 Storage path:', storagePath);
+      Logger.debug(1675)
 
       // Create Firebase Storage reference
       const storageRef = ref(storage, storagePath);
@@ -71,13 +72,13 @@ export class PDFStorageService {
         }
       };
       
-      console.log('☁️ Uploading PDF to Firebase Storage...');
+      Logger.debug('☁️ Uploading PDF to Firebase Storage...')
       
       // Upload using the SAME pattern as audio
       await uploadBytes(storageRef, pdfBlob, metadata);
       const downloadUrl = await getDownloadURL(storageRef);
       
-      console.log('✅ PDF uploaded successfully:', downloadUrl);
+      Logger.success(2419)
 
       // Generate QR code for the download URL
       const qrCodeData = await this.generateQRCode(downloadUrl);
@@ -86,7 +87,7 @@ export class PDFStorageService {
       const expiresAt = new Date(Date.now() + (60 * 60 * 1000));
 
       // 🗑️ TODO: Register for cleanup when Firestore permissions are fixed
-      console.log('📝 PDF upload complete, cleanup will be manual for now');
+      Logger.debug('📝 PDF upload complete, cleanup will be manual for now')
 
       return {
         downloadUrl,
@@ -97,7 +98,7 @@ export class PDFStorageService {
       };
 
     } catch (error) {
-      console.error('❌ Error uploading PDF:', error);
+      Logger.error('❌ Error uploading PDF:', error)
       throw new Error(`Failed to upload PDF: ${error.message}`);
     }
   }
@@ -107,7 +108,7 @@ export class PDFStorageService {
    */
   private static async generateQRCode(url: string): Promise<string> {
     try {
-      console.log('🎯 Generating QR code for URL:', url);
+      Logger.debug(3389)
       
       // Use QR Server API (same as original design)
       const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/`;
@@ -137,7 +138,7 @@ export class PDFStorageService {
       });
 
     } catch (error) {
-      console.error('❌ QR Code generation failed:', error);
+      Logger.error('❌ QR Code generation failed:', error)
       // Fallback: return a text-based placeholder
       return `data:text/plain;base64,${btoa(url)}`;
     }
@@ -150,10 +151,10 @@ export class PDFStorageService {
     try {
       const storageRef = ref(storage, storagePath);
       await deleteObject(storageRef);
-      console.log('✅ PDF deleted successfully:', storagePath);
+      Logger.success(4548)
       return true;
     } catch (error) {
-      console.error('❌ Error deleting PDF:', error);
+      Logger.error('❌ Error deleting PDF:', error)
       return false;
     }
   }

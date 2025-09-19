@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/hooks/warnings/useSimpleWarnings.ts
 // 🔧 SIMPLE VERSION - Directly query Firebase for warnings
 import { useState, useEffect } from 'react';
@@ -20,7 +21,7 @@ interface SimpleWarning {
   category: string;
   severity: string;
   description: string;
-  status: 'pending_review' | 'approved' | 'rejected' | 'draft';
+  status: 'issued' | 'delivered' | 'acknowledged';
   submittedBy: string;
   submittedDate: any; // Firestore timestamp
   incidentDate: any;
@@ -43,7 +44,7 @@ export const useSimpleWarnings = () => {
       setLoading(true);
       setError(null);
       
-      console.log('🔍 Loading warnings for organization:', organization.id);
+      Logger.debug('🔍 Loading warnings for organization:', organization.id)
       
       // Query warnings collection
       const warningsRef = collection(db, 'warnings');
@@ -54,11 +55,11 @@ export const useSimpleWarnings = () => {
       );
       
       const snapshot = await getDocs(q);
-      console.log('📊 Found warnings:', snapshot.docs.length);
+      Logger.debug(1610)
       
       const warningData = snapshot.docs.map(doc => {
         const data = doc.data();
-        console.log('📄 Warning data:', doc.id, data);
+        Logger.debug(1734)
         
         return {
           id: doc.id,
@@ -69,26 +70,26 @@ export const useSimpleWarnings = () => {
       setWarnings(warningData);
       
     } catch (err) {
-      console.error('❌ Error loading warnings:', err);
+      Logger.error('❌ Error loading warnings:', err)
       setError('Failed to load warnings');
     } finally {
       setLoading(false);
     }
   };
 
-  // Update warning status (approve/reject)
-  const updateWarningStatus = async (warningId: string, newStatus: 'approved' | 'rejected') => {
+  // Update warning status
+  const updateWarningStatus = async (warningId: string, newStatus: 'issued' | 'delivered' | 'acknowledged') => {
     try {
       // For now, just update local state
       setWarnings(warnings.map(w => 
         w.id === warningId ? { ...w, status: newStatus } : w
       ));
       
-      console.log('✅ Updated warning status:', warningId, newStatus);
+      Logger.success(2413)
       // TODO: Update in Firebase
       
     } catch (err) {
-      console.error('❌ Error updating warning status:', err);
+      Logger.error('❌ Error updating warning status:', err)
     }
   };
 
@@ -96,9 +97,9 @@ export const useSimpleWarnings = () => {
   const getStats = () => {
     return {
       total: warnings.length,
-      pending: warnings.filter(w => w.status === 'pending_review').length,
-      approved: warnings.filter(w => w.status === 'approved').length,
-      rejected: warnings.filter(w => w.status === 'rejected').length
+      issued: warnings.filter(w => w.status === 'issued').length,
+      delivered: warnings.filter(w => w.status === 'delivered').length,
+      acknowledged: warnings.filter(w => w.status === 'acknowledged').length
     };
   };
 

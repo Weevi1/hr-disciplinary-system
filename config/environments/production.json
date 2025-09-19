@@ -1,0 +1,40 @@
+{
+  "name": "production",
+  "firebase": {
+    "projectId": "hr-disciplinary-system",
+    "databaseURL": "https://hr-disciplinary-system-default-rtdb.firebaseio.com",
+    "storageBucket": "hr-disciplinary-system.appspot.com",
+    "functionsRegion": "us-central1"
+  },
+  "features": {
+    "enableAnalytics": true,
+    "enablePerformanceMonitoring": true,
+    "enableCrashlytics": true,
+    "enableDebugMode": false,
+    "enableTestData": false,
+    "maxFileUploadSize": 10485760,
+    "sessionTimeout": 3600000,
+    "enableAuditLogging": true
+  },
+  "security": {
+    "enforceHTTPS": true,
+    "enableCSP": true,
+    "sessionCookieSecure": true,
+    "requireEmailVerification": true,
+    "maxLoginAttempts": 5,
+    "lockoutDuration": 900000
+  },
+  "monitoring": {
+    "enableErrorTracking": true,
+    "enablePerformanceTracking": true,
+    "enableUserAnalytics": true,
+    "logLevel": "info",
+    "enableRealTimeAlerts": true
+  },
+  "backup": {
+    "enableAutomaticBackup": true,
+    "backupSchedule": "0 2 * * *",
+    "retentionDays": 30,
+    "enablePointInTimeRecovery": true
+  }
+}

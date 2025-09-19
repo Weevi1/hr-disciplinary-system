@@ -1,3 +1,4 @@
+import Logger from '../../../utils/logger';
 // frontend/src/components/warnings/PDFViewerModal.tsx
 // 📄 FIXED PDF VIEWER MODAL FOR WARNING DOCUMENTS - PART 1
 // ✅ CRITICAL FIX: Proper null safety for warning.pdfFilename access
@@ -135,12 +136,12 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
         // Construct Firebase Storage URL
         const storagePath = `warnings/${organizationId}/${warningId}/pdfs/${pdfFilename}`;
         pdfUrl = `https://firebasestorage.googleapis.com/v0/b/${process.env.VITE_FIREBASE_PROJECT_ID}.appspot.com/o/${encodeURIComponent(storagePath)}?alt=media`;
-        console.log('📄 Using existing PDF from storage:', pdfFilename);
+        Logger.debug(4082)
       }
 
       // If no existing PDF, generate one on-the-fly
       if (!pdfUrl) {
-        console.log('🔄 Generating PDF on-the-fly for warning:', warningId);
+        Logger.debug('🔄 Generating PDF on-the-fly for warning:', warningId)
         
         try {
           // Import PDFGenerationService dynamically
@@ -151,9 +152,9 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
           
           // Create object URL
           pdfUrl = URL.createObjectURL(pdfBlob);
-          console.log('✅ PDF generated successfully');
+          Logger.success(4674)
         } catch (genError) {
-          console.error('❌ PDF generation failed:', genError);
+          Logger.error('❌ PDF generation failed:', genError)
           throw new Error('Failed to generate PDF document');
         }
       }
@@ -165,7 +166,7 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
       }));
 
     } catch (error) {
-      console.error('❌ PDF generation/loading failed:', error);
+      Logger.error('❌ PDF generation/loading failed:', error)
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -274,7 +275,7 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Download failed:', error);
+      Logger.error('Download failed:', error)
       setState(prev => ({ 
         ...prev, 
         error: 'Download failed. Please try again.' 
@@ -504,7 +505,7 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
                 className="w-full h-full border-0"
                 title={`Warning PDF - ${employeeName}`}
                 onLoad={() => {
-                  console.log('✅ PDF loaded successfully');
+                  Logger.success(17223)
                 }}
                 onError={() => {
                   setState(prev => ({
@@ -524,7 +525,7 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${
                   safeWarning.status === 'approved' ? 'bg-green-500' : 
-                  safeWarning.status === 'pending_review' ? 'bg-yellow-500' : 
+                  safeWarning.status === 'delivered' ? 'bg-blue-500' : 
                   'bg-gray-400'
                 }`} />
                 <span className="text-gray-600">

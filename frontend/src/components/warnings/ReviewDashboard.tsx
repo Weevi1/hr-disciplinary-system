@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/components/warnings/ReviewDashboard.tsx
 // 🏆 CLEAN VERSION - Fixed syntax errors
 // ✅ All original functionality restored
@@ -20,6 +21,9 @@ import type { Warning } from '../../types/warning';
 
 // Import the working modal
 import WarningDetailsModal from './modals/WarningDetailsModal';
+import { ProofOfDeliveryModal } from './modals/ProofOfDeliveryModal';
+import { AppealModal } from './modals/AppealModal';
+import { WarningArchive } from './WarningArchive';
 
 // Warning interface imported from API layer types
 
@@ -30,8 +34,6 @@ interface WarningsReviewProps {
   DataService?: any;
   canTakeAction?: boolean;
   userRole?: string;
-  onApprove?: (warningId: string) => void;
-  onReject?: (warningId: string, reason?: string) => void;
 }
 
 // 🔧 SAFE RENDERING HELPER - Prevents React Error #31
@@ -50,6 +52,26 @@ const safeRenderText = (value: any, fallback: string = 'Unknown'): string => {
   return String(value);
 };
 
+// Helper function to check if warning is within appeal period
+const isWithinAppealPeriod = (warning: Warning): boolean => {
+  if (!warning.issueDate) return false;
+  
+  // Handle Firestore timestamp format
+  const issueDate = warning.issueDate.seconds 
+    ? new Date(warning.issueDate.seconds * 1000)
+    : new Date(warning.issueDate);
+  
+  // Appeal period starts from when warning was issued, not delivered
+  const appealDeadline = new Date(issueDate);
+  
+  // Add appeal period (typically 30 days for warnings)
+  appealDeadline.setDate(appealDeadline.getDate() + 30);
+  
+  const now = new Date();
+  
+  return now <= appealDeadline;
+};
+
 export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
   organizationId: propOrganizationId,
   onClose,
@@ -57,13 +79,11 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
   DataService: DataServiceProp,
   canTakeAction = false,
   userRole = 'viewer',
-  onApprove,
-  onReject
 }) => {
-  const { organization } = useAuth();
+  const { user, organization } = useAuth();
   const organizationId = propOrganizationId || organization?.id;
   
-  console.log('🔧 [WarningsReviewDashboard] Using API layer version');
+  Logger.debug('🔧 [WarningsReviewDashboard] Using API layer version')
 
   // State management
   const [warnings, setWarnings] = useState<Warning[]>([]);
@@ -80,6 +100,15 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
   const [selectedWarning, setSelectedWarning] = useState<Warning | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showProofOfDelivery, setShowProofOfDelivery] = useState(false);
+  const [deliveryWarning, setDeliveryWarning] = useState<Warning | null>(null);
+  
+  // Appeal modal state
+  const [showAppealModal, setShowAppealModal] = useState(false);
+  const [appealWarning, setAppealWarning] = useState<Warning | null>(null);
+
+  // View mode state - archive or main warnings
+  const [viewMode, setViewMode] = useState<'warnings' | 'archive'>('warnings');
 
   const itemsPerPage = 10;
 
@@ -95,7 +124,7 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
 
 const loadWarnings = useCallback(async () => {
   if (!organizationId) {
-    console.warn('No organization ID available for loading warnings');
+    Logger.warn('No organization ID available for loading warnings')
     setLoading(false);
     return;
   }
@@ -104,7 +133,7 @@ const loadWarnings = useCallback(async () => {
     setLoading(true);
     setError(null);
     
-    console.log('🔄 Loading warnings via API layer for org:', organizationId);
+    Logger.debug('🔄 Loading warnings via API layer for org:', organizationId)
     const data = await API.warnings.getAll(organizationId);
     
     // Sort by creation date (newest first)
@@ -114,10 +143,10 @@ const loadWarnings = useCallback(async () => {
     
     setWarnings(sortedWarnings);
     setFilteredWarnings(sortedWarnings);
-    console.log('✅ Loaded warnings:', sortedWarnings.length);
+    Logger.success(4367)
     
   } catch (error) {
-    console.error('❌ Failed to load warnings:', error);
+    Logger.error('❌ Failed to load warnings:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     setError(`Failed to load warnings: ${errorMessage}`);
   } finally {
@@ -210,91 +239,96 @@ const loadWarnings = useCallback(async () => {
 
   // Modal handlers
   const handleViewDetails = useCallback((warning: Warning) => {
-    console.log('Opening warning details for:', warning.id);
+    Logger.debug('Opening warning details for:', warning.id)
     setSelectedWarning(warning);
     setShowDetails(true);
   }, []);
 
   const handleCloseModal = useCallback(() => {
-    console.log('Closing warning details modal');
+    Logger.debug('Closing warning details modal')
     setShowDetails(false);
     setSelectedWarning(null);
   }, []);
 
-  // Warning action handlers
-  const handleApproveWarning = useCallback(async (warningId: string) => {
+  // Enhanced appeal submission with legal compliance
+  const handleAppealSubmission = useCallback(async (appealData: {
+    warningId: string;
+    grounds: string;
+    additionalDetails: string;
+    requestedOutcome: string;
+  }) => {
     try {
-      console.log('Approving warning:', warningId);
+      setLoading(true);
       
-      // Optimistic update
-      setWarnings(prev => prev.map(w => 
-        w.id === warningId ? { ...w, status: 'approved', updatedAt: new Date() } : w
-      ));
-      
-      // Update via API layer
-      await API.warnings.update(warningId, { 
-        status: 'approved',
-        organizationId,
-        updatedAt: new Date()
+      // Submit appeal with complete legal documentation
+      await API.warnings.update(appealData.warningId, {
+        appealSubmitted: true,
+        appealDate: new Date(),
+        status: 'appealed',
+        appealDetails: {
+          grounds: appealData.grounds,
+          details: appealData.additionalDetails,
+          requestedOutcome: appealData.requestedOutcome,
+          submittedAt: new Date(),
+          submittedBy: user?.email || 'Employee'
+        }
       });
       
-      if (onApprove) {
-        await onApprove(warningId);
-      }
+      Logger.success(`Legal appeal submitted for warning ${appealData.warningId}`)
+      await loadWarnings(); // Refresh the list
       
-      console.log('✅ Warning approved successfully');
+      // Close modal and show success
+      setShowAppealModal(false);
+      setAppealWarning(null);
+      
+      // Success notification
+      alert('Appeal submitted successfully. HR will review your appeal within 5 working days as per company policy.');
       
     } catch (error) {
-      console.error('❌ Failed to approve warning:', error);
-      // Revert optimistic update
-      loadWarnings();
+      Logger.error('Failed to submit appeal:', error)
+      throw new Error('Failed to submit appeal. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  }, [onApprove, loadWarnings]);
+  }, [loadWarnings, user]);
 
-  const handleRejectWarning = useCallback(async (warningId: string, reason?: string) => {
+  // Appeal management functions - HR Only
+  const handleAppealOutcome = useCallback(async (warningId: string, outcome: 'upheld' | 'overturned' | 'modified') => {
     try {
-      console.log('Rejecting warning:', warningId, 'Reason:', reason);
+      setLoading(true);
       
-      const rejectionNote = reason ? `\n\nRejection Reason: ${reason}` : '';
-      
-      // Optimistic update
-      setWarnings(prev => prev.map(w => 
-        w.id === warningId ? { 
-          ...w, 
-          status: 'rejected', 
-          updatedAt: new Date(),
-          additionalNotes: (w.additionalNotes || '') + rejectionNote
-        } : w
-      ));
-      
-      // Update via API layer
-      await API.warnings.update(warningId, { 
-        status: 'rejected',
-        organizationId,
-        updatedAt: new Date()
+      // Update warning with appeal outcome
+      await API.warnings.update(warningId, {
+        status: outcome === 'overturned' ? 'expired' : 'acknowledged',
+        appealOutcome: outcome,
+        appealDate: new Date()
       });
       
-      if (onReject) {
-        await onReject(warningId, reason);
-      }
-      
-      console.log('✅ Warning rejected successfully');
-      
+      Logger.success(`Appeal ${outcome} for warning ${warningId}`)
+      await loadWarnings(); // Refresh the list
     } catch (error) {
-      console.error('❌ Failed to reject warning:', error);
-      // Revert optimistic update
-      loadWarnings();
+      Logger.error('Failed to process appeal:', error)
+      setError('Failed to process appeal');
+    } finally {
+      setLoading(false);
     }
-  }, [warnings, onReject, loadWarnings]);
+  }, [loadWarnings]);
+
+  // View warning details handler
+  const handleViewWarning = useCallback((warning: any) => {
+    Logger.debug('Opening warning details:', warning.id)
+    setSelectedWarning(warning);
+    setShowDetails(true);
+  }, []);
 
   // Loading state
   if (loading) {
     return (
-      <div className="hr-card">
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="w-8 h-8 border-4 border-blue-300 border-t-blue-600 rounded-full animate-spin mb-4"></div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Warnings</h3>
-          <p className="text-gray-600">Please wait...</p>
+      <div className="p-4">
+        <div className="flex flex-col items-center justify-center py-8">
+          <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mb-3"></div>
+          <h3 className="text-md font-medium text-gray-900 mb-1">Loading Warnings</h3>
+          <p className="text-sm text-gray-600">Please wait...</p>
         </div>
       </div>
     );
@@ -303,14 +337,14 @@ const loadWarnings = useCallback(async () => {
   // Error state
   if (error) {
     return (
-      <div className="hr-card">
-        <div className="flex flex-col items-center justify-center py-12">
-          <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Warnings</h3>
-          <p className="text-red-600 mb-4">{error}</p>
+      <div className="p-4">
+        <div className="flex flex-col items-center justify-center py-8">
+          <AlertTriangle className="w-8 h-8 text-red-500 mb-3" />
+          <h3 className="text-md font-medium text-gray-900 mb-1">Error Loading Warnings</h3>
+          <p className="text-sm text-red-600 mb-3">{error}</p>
           <button 
             onClick={loadWarnings}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center gap-2"
+            className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 text-sm"
           >
             <RefreshCw className="w-4 h-4" />
             Retry Loading
@@ -322,30 +356,50 @@ const loadWarnings = useCallback(async () => {
 
   // Main render
   return (
-    <div className="hr-card">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Shield className="text-orange-600" />
-            Warnings Review Dashboard
-          </h2>
-          <p className="text-gray-600 mt-1">
-            Review and manage disciplinary warnings ({warnings.length} total)
-          </p>
+    <div className="p-4">
+      {/* Compact Header - Desktop Optimized */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center gap-4">
+          <h3 className="text-lg font-semibold text-gray-900">Warning Management</h3>
+          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+            {warnings.length} total
+          </span>
         </div>
-        {onClose && (
-          <button onClick={onClose} className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 flex items-center gap-2">
-            <X className="w-4 h-4" />
-            Close
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setViewMode('archive')}
+            className="flex items-center gap-2 px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors text-sm"
+          >
+            <Archive className="w-4 h-4" />
+            <span>Archive</span>
           </button>
-        )}
+          <button
+            onClick={loadWarnings}
+            disabled={loading}
+            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="mb-6 space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
+      {/* Conditional rendering based on view mode */}
+      {viewMode === 'archive' ? (
+        <WarningArchive onBack={() => setViewMode('warnings')} />
+      ) : (
+        <>
+      {/* Compact Search and Filters Bar */}
+      <div className="mb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 max-w-md">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
@@ -353,220 +407,299 @@ const loadWarnings = useCallback(async () => {
                 placeholder="Search warnings..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
             </div>
           </div>
+          
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Status</option>
+            <option value="issued">Issued</option>
+            <option value="acknowledged">Acknowledged</option>
+            <option value="appealed">Under Appeal</option>
+            <option value="expired">Expired</option>
+          </select>
+          
+          <select
+            value={filterLevel}
+            onChange={(e) => setFilterLevel(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Levels</option>
+            <option value="verbal">Verbal</option>
+            <option value="written">Written</option>
+            <option value="final">Final</option>
+            <option value="dismissal">Dismissal</option>
+          </select>
+          
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center gap-2"
+            className="px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors text-sm flex items-center gap-2"
           >
             <Filter className="w-4 h-4" />
-            Filters
+            More
             {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
         </div>
 
         {showFilters && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="pending_review">Pending Review</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="issued">Issued</option>
-            </select>
+          <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <select
+                value={filterDepartment}
+                onChange={(e) => setFilterDepartment(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All Departments</option>
+                {departments.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
 
-            <select
-              value={filterLevel}
-              onChange={(e) => setFilterLevel(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Levels</option>
-              <option value="verbal">Verbal</option>
-              <option value="first_written">First Written</option>
-              <option value="second_written">Second Written</option>
-              <option value="final_written">Final Written</option>
-              <option value="suspension">Suspension</option>
-              <option value="dismissal">Dismissal</option>
-            </select>
-
-            <select
-              value={filterDepartment}
-              onChange={(e) => setFilterDepartment(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Departments</option>
-              {departments.map(dept => (
-                <option key={dept} value={dept}>{dept}</option>
-              ))}
-            </select>
-
-            <select
-              value={`${sortBy}-${sortOrder}`}
-              onChange={(e) => {
-                const [newSortBy, newSortOrder] = e.target.value.split('-');
-                setSortBy(newSortBy as 'date' | 'employee' | 'level' | 'status');
-                setSortOrder(newSortOrder as 'asc' | 'desc');
-              }}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="date-desc">Newest First</option>
-              <option value="date-asc">Oldest First</option>
-              <option value="employee-asc">Employee A-Z</option>
-              <option value="employee-desc">Employee Z-A</option>
-              <option value="level-asc">Level (Low to High)</option>
-              <option value="level-desc">Level (High to Low)</option>
-            </select>
+              <select
+                value={`${sortBy}-${sortOrder}`}
+                onChange={(e) => {
+                  const [newSortBy, newSortOrder] = e.target.value.split('-');
+                  setSortBy(newSortBy as 'date' | 'employee' | 'level' | 'status');
+                  setSortOrder(newSortOrder as 'asc' | 'desc');
+                }}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="date-desc">Newest First</option>
+                <option value="date-asc">Oldest First</option>
+                <option value="employee-asc">Employee A-Z</option>
+                <option value="employee-desc">Employee Z-A</option>
+                <option value="level-asc">Level (Low to High)</option>
+                <option value="level-desc">Level (High to Low)</option>
+              </select>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Show:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                  className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+      {/* Compact Stats Bar */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-4">
+        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-blue-600 text-sm font-medium">Total Warnings</p>
-              <p className="text-2xl font-bold text-blue-900">{warnings.length}</p>
+              <p className="text-gray-600 text-xs font-medium">Total</p>
+              <p className="text-lg font-bold text-gray-900">{warnings.length}</p>
             </div>
-            <FileText className="w-8 h-8 text-blue-500" />
+            <FileText className="w-5 h-5 text-gray-500" />
           </div>
         </div>
 
-        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+        <div className="bg-green-50 p-3 rounded-lg border border-green-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-green-600 text-sm font-medium">Active Warnings</p>
-              <p className="text-2xl font-bold text-green-900">
+              <p className="text-green-600 text-xs font-medium">Active</p>
+              <p className="text-lg font-bold text-green-900">
                 {warnings.filter(w => w.isActive).length}
               </p>
             </div>
-            <CheckCircle className="w-8 h-8 text-green-500" />
+            <CheckCircle className="w-5 h-5 text-green-500" />
           </div>
         </div>
 
-        <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+        <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-orange-600 text-sm font-medium">Pending Review</p>
-              <p className="text-2xl font-bold text-orange-900">
-                {warnings.filter(w => w.status === 'pending_review').length}
+              <p className="text-orange-600 text-xs font-medium">Undelivered</p>
+              <p className="text-lg font-bold text-orange-900">
+                {warnings.filter(w => w.deliveryStatus !== 'delivered').length}
               </p>
             </div>
-            <Clock className="w-8 h-8 text-orange-500" />
+            <Clock className="w-5 h-5 text-orange-500" />
           </div>
         </div>
 
-        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+        <div className="bg-red-50 p-3 rounded-lg border border-red-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-red-600 text-sm font-medium">High Risk</p>
-              <p className="text-2xl font-bold text-red-900">
-                {warnings.filter(w => w.level === 'final_written' || w.level === 'dismissal').length}
+              <p className="text-red-600 text-xs font-medium">Critical</p>
+              <p className="text-lg font-bold text-red-900">
+                {warnings.filter(w => w.level === 'final' || w.level === 'dismissal').length}
               </p>
             </div>
-            <AlertTriangle className="w-8 h-8 text-red-500" />
+            <AlertTriangle className="w-5 h-5 text-red-500" />
           </div>
         </div>
       </div>
 
-      {/* Results Summary */}
-      <div className="flex justify-between items-center mb-4">
-        <p className="text-gray-600">
-          Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredWarnings.length)} of {filteredWarnings.length} warnings
+      {/* Compact Results Bar */}
+      <div className="flex justify-between items-center mb-3">
+        <p className="text-sm text-gray-600">
+          {filteredWarnings.length} warnings {filteredWarnings.length !== warnings.length && `(filtered from ${warnings.length})`}
         </p>
-        <div className="text-sm text-gray-500">
-          Organization: {organizationId}
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-gray-500">
+            Page {currentPage} of {totalPages}
+          </span>
         </div>
       </div>
 
-      {/* Warnings Table */}
+      {/* Modern Compact Table */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
                   Employee
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Level
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
+                  Warning
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
                   Category
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wide">
                   Status
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wide">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedWarnings.map((warning) => (
-                <tr key={warning.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {safeRenderText(warning.employeeName)}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {safeRenderText(warning.employeeNumber)} • {safeRenderText(warning.department)}
-                        </div>
+            <tbody className="bg-white divide-y divide-gray-100">
+              {paginatedWarnings.map((warning, index) => (
+                <tr key={warning.id || `warning-${index}`} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {safeRenderText(warning.employeeName)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {safeRenderText(warning.employeeNumber)} • {safeRenderText(warning.department)}
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                       warning.level === 'verbal' ? 'bg-blue-100 text-blue-800' :
-                      warning.level === 'first_written' ? 'bg-yellow-100 text-yellow-800' :
-                      warning.level === 'second_written' ? 'bg-orange-100 text-orange-800' :
-                      warning.level === 'final_written' ? 'bg-red-100 text-red-800' :
-                      warning.level === 'suspension' ? 'bg-purple-100 text-purple-800' :
+                      warning.level === 'written' ? 'bg-yellow-100 text-yellow-800' :
+                      warning.level === 'final' ? 'bg-red-100 text-red-800' :
                       warning.level === 'dismissal' ? 'bg-red-100 text-red-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {safeRenderText(warning.level, 'Unknown').replace('_', ' ').toUpperCase()}
+                      {warning.level === 'verbal' ? 'Verbal' :
+                       warning.level === 'written' ? 'Written' :
+                       warning.level === 'final' ? 'Final' :
+                       warning.level === 'dismissal' ? 'Dismissal' : 'Unknown'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-4 py-3 text-sm text-gray-900">
                     {safeRenderText(warning.category)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {warning.incidentDate instanceof Date 
-                      ? warning.incidentDate.toLocaleDateString()
-                      : new Date(warning.incidentDate).toLocaleDateString()
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {warning.issueDate ? 
+                      new Date(warning.issueDate.seconds ? warning.issueDate.seconds * 1000 : warning.issueDate).toLocaleDateString()
+                      : 'N/A'
                     }
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      warning.status === 'approved' ? 'bg-green-100 text-green-800' :
-                      warning.status === 'pending_review' ? 'bg-orange-100 text-orange-800' :
-                      warning.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                       warning.status === 'issued' ? 'bg-blue-100 text-blue-800' :
-                      'bg-gray-100 text-gray-800'
+                      warning.status === 'acknowledged' ? 'bg-green-100 text-green-800' :
+                      warning.status === 'appealed' ? 'bg-orange-100 text-orange-800' :
+                      warning.status === 'expired' ? 'bg-gray-100 text-gray-800' :
+                      'bg-gray-100 text-gray-600'
                     }`}>
-                      {safeRenderText(warning.status, 'Unknown').replace('_', ' ').toUpperCase()}
+                      {warning.status === 'issued' ? 'Issued' :
+                       warning.status === 'acknowledged' ? 'Acknowledged' :
+                       warning.status === 'appealed' ? 'Under Appeal' :
+                       warning.status === 'expired' ? 'Expired' :
+                       safeRenderText(warning.status, 'Pending')}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => handleViewDetails(warning)}
-                      className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
-                    >
-                      <Eye className="w-4 h-4" />
-                      View
-                    </button>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleViewDetails(warning)}
+                        className="text-blue-600 hover:text-blue-800 text-xs px-2 py-1 hover:bg-blue-50 rounded transition-colors"
+                      >
+                        View
+                      </button>
+                      
+                      {/* Appeal Management - HR Only */}
+                      {warning.status === 'appealed' && (
+                        <>
+                          <button
+                            onClick={() => handleAppealOutcome(warning.id, 'upheld')}
+                            className="text-green-600 hover:text-green-800 text-xs px-2 py-1 hover:bg-green-50 rounded transition-colors"
+                            title="Uphold Warning"
+                          >
+                            Uphold
+                          </button>
+                          <button
+                            onClick={() => handleAppealOutcome(warning.id, 'overturned')}
+                            className="text-red-600 hover:text-red-800 text-xs px-2 py-1 hover:bg-red-50 rounded transition-colors"
+                            title="Overturn Warning"
+                          >
+                            Overturn
+                          </button>
+                        </>
+                      )}
+                      
+                      {warning.deliveryStatus !== 'delivered' && warning.status !== 'appealed' && (
+                        <button
+                          onClick={() => {
+                            setDeliveryWarning(warning);
+                            setShowProofOfDelivery(true);
+                          }}
+                          className="text-orange-600 hover:text-orange-800 text-xs px-2 py-1 hover:bg-orange-50 rounded transition-colors"
+                        >
+                          Deliver
+                        </button>
+                      )}
+                      
+                      {warning.status !== 'appealed' && isWithinAppealPeriod(warning) && (
+                        <button
+                          onClick={() => {
+                            setAppealWarning(warning);
+                            setShowAppealModal(true);
+                          }}
+                          className="text-amber-600 hover:text-amber-800 text-xs px-2 py-1 hover:bg-amber-50 rounded transition-colors"
+                          title={(() => {
+                            const issueDate = warning.issueDate.seconds 
+                              ? new Date(warning.issueDate.seconds * 1000)
+                              : new Date(warning.issueDate);
+                            const appealDeadline = new Date(issueDate);
+                            appealDeadline.setDate(appealDeadline.getDate() + 30);
+                            return `Appeal this warning (deadline: ${appealDeadline.toLocaleDateString()})`;
+                          })()}
+                        >
+                          Appeal
+                        </button>
+                      )}
+                      
+                      {warning.status !== 'appealed' && !isWithinAppealPeriod(warning) && (
+                        <span className="text-gray-500 text-xs px-2 py-1" title="Appeal period has expired">
+                          Appeal Expired
+                        </span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -575,12 +708,12 @@ const loadWarnings = useCallback(async () => {
         </div>
       </div>
 
-      {/* Empty state */}
+      {/* Compact Empty State */}
       {filteredWarnings.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No warnings found</h3>
-          <p className="text-gray-600 mb-4">
+        <div className="text-center py-8">
+          <Shield className="w-8 h-8 text-gray-400 mx-auto mb-3" />
+          <h3 className="text-md font-medium text-gray-900 mb-1">No warnings found</h3>
+          <p className="text-sm text-gray-600 mb-3">
             {searchTerm || filterStatus !== 'all' || filterLevel !== 'all' || filterDepartment !== 'all'
               ? 'Try adjusting your search criteria or filters.'
               : 'No warnings have been created yet.'}
@@ -593,7 +726,7 @@ const loadWarnings = useCallback(async () => {
                 setFilterLevel('all');
                 setFilterDepartment('all');
               }}
-              className="text-blue-600 hover:text-blue-700 font-medium"
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
             >
               Clear all filters
             </button>
@@ -601,31 +734,26 @@ const loadWarnings = useCallback(async () => {
         </div>
       )}
 
-      {/* Pagination */}
+      {/* Compact Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-6">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <span className="px-3 py-2 text-sm text-gray-700">
-              Page {currentPage} of {totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        <div className="flex items-center justify-center mt-4 gap-2">
+          <button
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Previous
+          </button>
+          <span className="px-3 py-2 text-sm text-gray-600 bg-gray-50 rounded-lg">
+            {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Next
             </button>
-          </div>
-          <div className="text-sm text-gray-500">
-            {filteredWarnings.length} total warnings
-          </div>
         </div>
       )}
 
@@ -634,11 +762,67 @@ const loadWarnings = useCallback(async () => {
         warning={selectedWarning}
         isOpen={showDetails}
         onClose={handleCloseModal}
-        onApprove={handleApproveWarning}
-        onReject={handleRejectWarning}
         canTakeAction={canTakeAction}
         userRole={userRole}
       />
+
+      {/* Proof of Delivery Modal */}
+      {deliveryWarning && (
+        <ProofOfDeliveryModal
+          isOpen={showProofOfDelivery}
+          onClose={() => {
+            setShowProofOfDelivery(false);
+            setDeliveryWarning(null);
+          }}
+          warningId={deliveryWarning.id || ''}
+          employeeName={safeRenderText(deliveryWarning.employee)}
+          deliveryMethod={deliveryWarning.deliveryMethod || 'email'}
+          onDeliveryConfirmed={async (proofData) => {
+            try {
+              // Upload proof and update warning status
+              await API.warnings.updateDeliveryStatus(proofData.warningId, {
+                status: 'delivered',
+                deliveredAt: proofData.deliveredAt,
+                deliveryMethod: proofData.deliveryMethod,
+                proofImage: proofData.proofImage
+              });
+
+              // Refresh warnings list
+              await loadWarnings();
+              
+              // Close modal
+              setShowProofOfDelivery(false);
+              setDeliveryWarning(null);
+            } catch (error) {
+              console.error('Failed to confirm delivery:', error);
+              throw error;
+            }
+          }}
+        />
+      )}
+
+      {/* Appeal Modal - Legal SA Compliant */}
+      {showAppealModal && appealWarning && (
+        <AppealModal
+          isOpen={showAppealModal}
+          onClose={() => {
+            setShowAppealModal(false);
+            setAppealWarning(null);
+          }}
+          warning={{
+            id: appealWarning.id,
+            employeeName: appealWarning.employeeName,
+            category: appealWarning.category,
+            level: appealWarning.level,
+            issueDate: appealWarning.issueDate,
+            description: appealWarning.description || 'No description provided'
+          }}
+          onAppealSubmit={handleAppealSubmission}
+        />
+      )}
+        </>
+      )}
+
     </div>
   );
 };

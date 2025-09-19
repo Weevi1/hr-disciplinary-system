@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // FIXED FILE: frontend/src/components/warnings/AudioPlaybackWidget.tsx
 // 🎯 ENHANCED AUDIO PLAYBACK WITH PROPER ERROR HANDLING
 // ✅ Fixed audio status functions and URL handling
@@ -32,7 +33,7 @@ import type { AudioRecordingData } from '../../services/WarningService';
 // ============================================
 
 interface AudioPlaybackWidgetProps {
-  audioRecording: AudioRecordingData;
+  audioRecording?: AudioRecordingData;
   warningId?: string;
   showDownload?: boolean;
   showMetadata?: boolean;
@@ -63,7 +64,16 @@ interface AudioStatus {
 // AUDIO STATUS UTILITY FUNCTIONS
 // ============================================
 
-const getAudioStatus = (audioRecording: AudioRecordingData): AudioStatus => {
+const getAudioStatus = (audioRecording: AudioRecordingData | undefined): AudioStatus => {
+  // Check if audioRecording exists
+  if (!audioRecording) {
+    return {
+      status: 'not-available',
+      message: 'Audio recording not available.',
+      canPlay: false
+    };
+  }
+
   // Check if audio was explicitly deleted
   if (audioRecording.deleted) {
     return {
@@ -116,15 +126,15 @@ const getAudioStatus = (audioRecording: AudioRecordingData): AudioStatus => {
   };
 };
 
-const canPlayAudio = (audioRecording: AudioRecordingData): boolean => {
+const canPlayAudio = (audioRecording: AudioRecordingData | undefined): boolean => {
   return getAudioStatus(audioRecording).canPlay;
 };
 
-const isAudioDeleted = (audioRecording: AudioRecordingData): boolean => {
+const isAudioDeleted = (audioRecording: AudioRecordingData | undefined): boolean => {
   return getAudioStatus(audioRecording).status === 'deleted';
 };
 
-const isAudioExpired = (audioRecording: AudioRecordingData): boolean => {
+const isAudioExpired = (audioRecording: AudioRecordingData | undefined): boolean => {
   return getAudioStatus(audioRecording).status === 'expired';
 };
 
@@ -142,6 +152,23 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
   autoPlay = false,
   className = ''
 }) => {
+
+  // Early return if no audio recording provided
+  if (!audioRecording) {
+    return (
+      <div className={`bg-gray-50 border border-gray-200 rounded-lg p-4 ${className}`}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
+            <FileAudio className="w-5 h-5 text-gray-400" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-600">No audio recording available</p>
+            <p className="text-xs text-gray-500">Audio recording not found or not provided</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ============================================
   // REFS & STATE
@@ -168,7 +195,7 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
   const isExpired = isAudioExpired(audioRecording);
 
   // Get the best available audio URL
-  const audioUrl = audioRecording.storageUrl || audioRecording.url;
+  const audioUrl = audioRecording?.storageUrl || audioRecording?.url;
 
   // ============================================
   // AUDIO SETUP & CLEANUP
@@ -228,7 +255,7 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
     };
 
     const handleError = (e: Event) => {
-      console.error('Audio loading error:', e);
+      Logger.error('Audio loading error:', e)
       setState(prev => ({ 
         ...prev, 
         isLoading: false,
@@ -296,7 +323,7 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
         await audio.play();
       }
     } catch (error) {
-      console.error('Playback error:', error);
+      Logger.error('Playback error:', error)
       setState(prev => ({ 
         ...prev, 
         error: 'Playback failed. Please try again.'

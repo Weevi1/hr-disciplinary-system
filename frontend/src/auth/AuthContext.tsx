@@ -1,9 +1,12 @@
+import Logger from '../utils/logger';
 // frontend/src/auth/AuthContext.tsx - PRODUCTION VERSION (Backwards Compatible Role Handling)
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { FirebaseService } from '../services/FirebaseService';
+import { DatabaseShardingService } from '../services/DatabaseShardingService';
+import { userCreationManager } from '../utils/userCreationContext';
 import type { User, Organization } from '../types';
 
 // ✅ FIX: Define collections here since they're not exported from DataService
@@ -56,7 +59,7 @@ const normalizeUserRole = (rawRole: any) => {
   }
   
   // Fallback for completely invalid roles
-  console.warn('⚠️ Invalid role format detected:', rawRole);
+  Logger.warn('⚠️ Invalid role format detected:', rawRole)
   return {
     id: 'unknown',
     name: 'Unknown Role',
@@ -141,32 +144,104 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // 🔥 Firebase Auth State Listener - Production Ready with Role Normalization
   useEffect(() => {
-    console.log('🔐 Initializing Firebase authentication...');
+    Logger.debug('🔐 Initializing Firebase authentication...')
     
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       try {
         if (firebaseUser) {
-          console.log('👤 Firebase user authenticated:', firebaseUser.email);
+          Logger.debug('👤 Firebase user authenticated:', firebaseUser.email)
           
-          // Load user profile from Firestore
-          const userData = await FirebaseService.getDocument<User>(
+          // Load user profile from Firestore - try flat structure first for super users/resellers, then sharded
+          let userData = await FirebaseService.getDocument<User>(
             COLLECTIONS.USERS,
             firebaseUser.uid
           );
           
+          // If not found in flat structure, try to find in sharded structure
+          if (!userData) {
+            // Check if this user is currently being created
+            if (userCreationManager.isPendingUser(firebaseUser.uid)) {
+              Logger.debug('⏳ User creation in progress, waiting for completion...')
+              // Set a temporary loading state and wait for user creation to complete
+              dispatch({ type: 'SET_LOADING', payload: true });
+
+              // Try again after a short delay to allow creation to complete
+              setTimeout(async () => {
+                // Re-attempt to find the user
+                const retryUserData = await FirebaseService.getDocument<User>(
+                  COLLECTIONS.USERS,
+                  firebaseUser.uid
+                );
+
+                if (!retryUserData) {
+                  // Search in sharded organizations
+                  const organizations = await FirebaseService.getCollection<Organization>(COLLECTIONS.ORGANIZATIONS);
+                  for (const org of organizations) {
+                    try {
+                      const shardedUser = await DatabaseShardingService.getDocument(org.id, 'users', firebaseUser.uid);
+                      if (shardedUser) {
+                        const normalizedRole = normalizeUserRole(shardedUser.role);
+                        dispatch({
+                          type: 'SET_USER',
+                          payload: { ...shardedUser, role: normalizedRole } as User
+                        });
+
+                        // Load organization
+                        if (shardedUser.organizationId) {
+                          const organization = await FirebaseService.getDocument<Organization>(
+                            COLLECTIONS.ORGANIZATIONS,
+                            shardedUser.organizationId
+                          );
+                          if (organization) {
+                            dispatch({ type: 'SET_ORGANIZATION', payload: organization });
+                          }
+                        }
+                        return;
+                      }
+                    } catch (error) {
+                      Logger.debug(`User not found in organization: ${org.id}`);
+                    }
+                  }
+                }
+              }, 2000); // Wait 2 seconds for creation to complete
+              return;
+            }
+
+            Logger.debug('👤 User not found in flat structure, searching sharded organizations...')
+
+            // Get all organizations to search for the user
+            const organizations = await FirebaseService.getCollection<Organization>(COLLECTIONS.ORGANIZATIONS);
+
+            for (const org of organizations) {
+              try {
+                const shardedUser = await DatabaseShardingService.getDocument(org.id, 'users', firebaseUser.uid);
+                if (shardedUser) {
+                  userData = shardedUser as User;
+                  Logger.success(`✅ Found user in sharded organization: ${org.id}`);
+                  break;
+                }
+              } catch (error) {
+                // Continue searching other organizations
+                Logger.debug(`User not found in organization: ${org.id}`);
+              }
+            }
+          } else {
+            Logger.success(`✅ Found user in flat structure (super user/reseller)`);
+          }
+
           if (!userData) {
             // User exists in Firebase Auth but not in Firestore
-            console.error('❌ User profile not found in Firestore for:', firebaseUser.email);
-            dispatch({ 
-              type: 'SET_ERROR', 
-              payload: 'User profile not found. Please contact administrator.' 
+            Logger.error('❌ User profile not found in Firestore for:', firebaseUser.email)
+            dispatch({
+              type: 'SET_ERROR',
+              payload: 'User profile not found. Please contact administrator.'
             });
             return;
           }
 
           // 🔧 BACKWARDS COMPATIBLE: Normalize role format
           const normalizedRole = normalizeUserRole(userData.role);
-          console.log('✅ User profile loaded:', userData.email, 'Role:', normalizedRole.id);
+          Logger.success(5534)
           
           // Create user object with normalized role
           const userWithNormalizedRole = {
@@ -178,7 +253,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           // Load organization if user belongs to one
           if (userData.organizationId) {
-            console.log('🏢 Loading organization:', userData.organizationId);
+            Logger.debug('🏢 Loading organization:', userData.organizationId)
             
             try {
               const organization = await FirebaseService.getDocument<Organization>(
@@ -187,17 +262,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               );
               
               if (organization) {
-                console.log('✅ Organization loaded:', organization.name);
+                Logger.success(6366)
                 dispatch({ type: 'SET_ORGANIZATION', payload: organization });
               } else {
-                console.warn('⚠️ Organization not found:', userData.organizationId);
+                Logger.warn('⚠️ Organization not found:', userData.organizationId)
                 dispatch({ 
                   type: 'SET_ERROR', 
                   payload: 'Organization not found. Please contact administrator.' 
                 });
               }
             } catch (orgError) {
-              console.error('❌ Failed to load organization:', orgError);
+              Logger.error('❌ Failed to load organization:', orgError)
               dispatch({ 
                 type: 'SET_ERROR', 
                 payload: 'Failed to load organization data.' 
@@ -205,17 +280,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
           } else {
             // Super user or user without organization
-            console.log('ℹ️ User has no organization (likely super-user)');
+            Logger.debug('ℹ️ User has no organization (likely super-user)');
             dispatch({ type: 'SET_ORGANIZATION', payload: null });
           }
           
         } else {
           // No authenticated user
-          console.log('🚪 No authenticated user found');
+          Logger.debug('🚪 No authenticated user found')
           dispatch({ type: 'LOGOUT' });
         }
       } catch (error) {
-        console.error('❌ Error in authentication flow:', error);
+        Logger.error('❌ Error in authentication flow:', error)
         dispatch({ 
           type: 'SET_ERROR', 
           payload: 'Authentication error occurred. Please try again.' 
@@ -231,7 +306,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // 🔥 Production Login - Pure Firebase with Enhanced Error Handling
   const login = async (email: string, password: string) => {
-    console.log('🚀 Login attempt for:', email);
+    Logger.debug('🚀 Login attempt for:', email)
     
     try {
       // Validate input
@@ -247,14 +322,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       dispatch({ type: 'SET_ERROR', payload: null });
       
       // Firebase authentication
-      console.log('🔐 Authenticating with Firebase...');
+      Logger.debug('🔐 Authenticating with Firebase...')
       const firebaseUser = await FirebaseService.signIn(email, password);
       
       if (!firebaseUser) {
         throw new Error('Authentication failed');
       }
 
-      console.log('✅ Firebase authentication successful');
+      Logger.success(8714)
       
       // User data will be loaded automatically by the auth state listener
       // No need to manually load here - let the listener handle it with role normalization
@@ -279,7 +354,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
       
-      console.error('❌ Login failed:', message);
+      Logger.error('❌ Login failed:', message)
       dispatch({ type: 'SET_ERROR', payload: message });
       throw new Error(message);
     }
@@ -288,14 +363,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // 🔥 Production Logout
   const logout = async () => {
-    console.log('🚪 Logging out...');
+    Logger.debug('🚪 Logging out...')
     
     try {
       await FirebaseService.signOut();
-      console.log('✅ Logout successful');
+      Logger.success(10222)
       // State will be cleared by the auth listener
     } catch (error) {
-      console.error('⚠️ Logout error:', error);
+      Logger.error('⚠️ Logout error:', error)
       // Force clear state even if Firebase logout fails
       dispatch({ type: 'LOGOUT' });
     }
@@ -318,11 +393,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       if (orgId === 'all' || orgId === '') {
         // View all organizations (super user global view)
-        console.log('🌐 Switching to global view');
+        Logger.debug('🌐 Switching to global view')
         dispatch({ type: 'SET_ORGANIZATION', payload: null });
       } else {
         // Load specific organization
-        console.log('🔄 Switching to organization:', orgId);
+        Logger.debug('🔄 Switching to organization:', orgId)
         
         const organization = await FirebaseService.getDocument<Organization>(
           COLLECTIONS.ORGANIZATIONS,
@@ -333,12 +408,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           throw new Error(`Organization '${orgId}' not found`);
         }
         
-        console.log('✅ Switched to organization:', organization.name);
+        Logger.success(11662)
         dispatch({ type: 'SET_ORGANIZATION', payload: organization });
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to switch organization';
-      console.error('❌ Organization switch failed:', message);
+      Logger.error('❌ Organization switch failed:', message)
       dispatch({ type: 'SET_ERROR', payload: message });
       throw error;
     } finally {

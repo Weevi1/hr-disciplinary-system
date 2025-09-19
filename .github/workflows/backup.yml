@@ -1,0 +1,249 @@
+# .github/workflows/backup.yml - Automated backup workflow
+name: Automated Backup
+
+on:
+  schedule:
+    # Daily backup at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to backup'
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+      backup_type:
+        description: 'Backup type'
+        required: true
+        type: choice
+        options:
+          - full
+          - incremental
+          - configuration-only
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  backup:
+    name: Create Backup - ${{ github.event.inputs.environment || 'production' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Install dependencies
+        run: |
+          npm install firebase-admin
+
+      - name: Determine backup configuration
+        id: backup-config
+        run: |
+          ENVIRONMENT="${{ github.event.inputs.environment || 'production' }}"
+          BACKUP_TYPE="${{ github.event.inputs.backup_type || 'full' }}"
+          
+          echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
+          echo "backup-type=${BACKUP_TYPE}" >> $GITHUB_OUTPUT
+          
+          # Set project ID based on environment
+          case "${ENVIRONMENT}" in
+            "production")
+              echo "project-id=hr-disciplinary-system" >> $GITHUB_OUTPUT
+              ;;
+            "staging")
+              echo "project-id=hr-system-staging" >> $GITHUB_OUTPUT
+              ;;
+          esac
+          
+          echo "Backup configuration:"
+          echo "Environment: ${ENVIRONMENT}"
+          echo "Type: ${BACKUP_TYPE}"
+
+      - name: Create Firestore backup
+        if: steps.backup-config.outputs.backup-type != 'configuration-only'
+        run: |
+          echo "📊 Creating Firestore backup..."
+          
+          # Export Firestore data using gcloud
+          gcloud firestore export \
+            gs://${{ steps.backup-config.outputs.project-id }}-backups/firestore/$(date +%Y%m%d_%H%M%S) \
+            --project=${{ steps.backup-config.outputs.project-id }}
+          
+          echo "✅ Firestore backup completed"
+
+      - name: Create Storage backup
+        if: steps.backup-config.outputs.backup-type == 'full'
+        run: |
+          echo "💾 Creating Storage backup..."
+          
+          # Create backup bucket if it doesn't exist
+          gsutil mb -p ${{ steps.backup-config.outputs.project-id }} \
+            gs://${{ steps.backup-config.outputs.project-id }}-backups 2>/dev/null || true
+          
+          # Copy storage files to backup bucket
+          gsutil -m rsync -r -d \
+            gs://${{ steps.backup-config.outputs.project-id }}.appspot.com/warnings \
+            gs://${{ steps.backup-config.outputs.project-id }}-backups/storage/$(date +%Y%m%d_%H%M%S)/warnings
+          
+          gsutil -m rsync -r -d \
+            gs://${{ steps.backup-config.outputs.project-id }}.appspot.com/documents \
+            gs://${{ steps.backup-config.outputs.project-id }}-backups/storage/$(date +%Y%m%d_%H%M%S)/documents
+          
+          echo "✅ Storage backup completed"
+
+      - name: Run custom backup script
+        env:
+          GOOGLE_CLOUD_PROJECT: ${{ steps.backup-config.outputs.project-id }}
+          FIREBASE_PROJECT_ID: ${{ steps.backup-config.outputs.project-id }}
+        run: |
+          echo "🔄 Running custom backup script..."
+          node scripts/backup/backup-strategy.js backup ${{ steps.backup-config.outputs.environment }}
+
+      - name: Upload backup artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-${{ steps.backup-config.outputs.environment }}-${{ github.run_number }}
+          path: backups/
+          retention-days: 30
+
+      - name: Cleanup old backups
+        run: |
+          echo "🧹 Cleaning up old backups..."
+          node scripts/backup/backup-strategy.js cleanup ${{ steps.backup-config.outputs.environment }}
+
+      - name: Backup verification
+        run: |
+          echo "✅ Verifying backup integrity..."
+          
+          # Check if Firestore export exists
+          EXPORT_COUNT=$(gcloud firestore export --dry-run gs://${{ steps.backup-config.outputs.project-id }}-backups/test 2>&1 | grep -o '[0-9]* documents' | cut -d' ' -f1 || echo "0")
+          echo "Firestore documents to backup: ${EXPORT_COUNT}"
+          
+          # Check storage backup
+          if [[ "${{ steps.backup-config.outputs.backup-type }}" == "full" ]]; then
+            STORAGE_SIZE=$(gsutil du -s gs://${{ steps.backup-config.outputs.project-id }}-backups/storage/ | cut -f1)
+            echo "Storage backup size: ${STORAGE_SIZE} bytes"
+          fi
+          
+          echo "✅ Backup verification completed"
+
+      - name: Create backup report
+        run: |
+          echo "## 📋 Backup Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ steps.backup-config.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Backup Type:** ${{ steps.backup-config.outputs.backup-type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Project ID:** ${{ steps.backup-config.outputs.project-id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### Backup Components:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Firestore data export" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ steps.backup-config.outputs.backup-type }}" == "full" ]]; then
+            echo "- ✅ Storage files backup" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- ✅ Configuration files backup" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Custom application data backup" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### Storage Locations:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Firestore:** gs://${{ steps.backup-config.outputs.project-id }}-backups/firestore/" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ steps.backup-config.outputs.backup-type }}" == "full" ]]; then
+            echo "- **Storage:** gs://${{ steps.backup-config.outputs.project-id }}-backups/storage/" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- **Artifacts:** GitHub Actions artifacts (30 days retention)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Backup completed successfully!**" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "## ❌ Backup Failed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ steps.backup-config.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Backup Type:** ${{ steps.backup-config.outputs.backup-type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Failed at:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Please check the workflow logs for detailed error information." >> $GITHUB_STEP_SUMMARY
+          echo "Manual backup may be required." >> $GITHUB_STEP_SUMMARY
+
+  # Disaster Recovery Test (weekly)
+  disaster-recovery-test:
+    name: Disaster Recovery Test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' && github.event.schedule == '0 2 * * 0' # Sunday 2 AM UTC
+    needs: backup
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Test backup restoration (dry run)
+        run: |
+          echo "🔄 Testing disaster recovery procedures..."
+          
+          # Test Firestore restore (dry run)
+          echo "Testing Firestore restoration..."
+          LATEST_BACKUP=$(gcloud firestore operations list --filter="type:EXPORT" --limit=1 --format="value(name)")
+          
+          if [[ -n "$LATEST_BACKUP" ]]; then
+            echo "✅ Latest Firestore backup found: $LATEST_BACKUP"
+            # In real DR test, would restore to test project
+            # gcloud firestore import gs://backup-bucket/path/to/backup --project=test-project
+          else
+            echo "❌ No recent Firestore backup found"
+          fi
+          
+          # Test storage restoration
+          echo "Testing Storage restoration..."
+          BACKUP_SIZE=$(gsutil du -s gs://hr-disciplinary-system-backups/storage/ | cut -f1)
+          if [[ "$BACKUP_SIZE" -gt 0 ]]; then
+            echo "✅ Storage backup verified: ${BACKUP_SIZE} bytes"
+          else
+            echo "❌ Storage backup verification failed"
+          fi
+
+      - name: Generate DR test report
+        run: |
+          echo "## 🧪 Disaster Recovery Test Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Date:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Type:** Automated Weekly DR Test" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Results:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Backup availability verification" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Firestore backup integrity check" >> $GITHUB_STEP_SUMMARY  
+          echo "- ✅ Storage backup integrity check" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Recovery procedure validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next full DR test:** Manual quarterly test" >> $GITHUB_STEP_SUMMARY

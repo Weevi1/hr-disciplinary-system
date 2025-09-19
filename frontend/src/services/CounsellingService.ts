@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // frontend/src/services/CounsellingService.ts
 // 📋 COUNSELLING MANAGEMENT SERVICE
 // Handles counselling lifecycle, follow-ups, and notifications
@@ -26,7 +27,7 @@ export class CounsellingService {
     organizationId: string
   ): Promise<CorrectiveCounselling[]> {
     try {
-      console.log('🔍 Checking active counselling for employee:', employeeId);
+      Logger.debug('🔍 Checking active counselling for employee:', employeeId)
       
       const counsellingQuery = query(
         collection(db, COLLECTIONS.CORRECTIVE_COUNSELLING),
@@ -56,10 +57,10 @@ export class CounsellingService {
         }
       });
       
-      console.log('✅ Found active counselling sessions:', activeSessions.length);
+      Logger.success(2097)
       return activeSessions;
     } catch (error) {
-      console.error('❌ Error getting active counselling:', error);
+      Logger.error('❌ Error getting active counselling:', error)
       return [];
     }
   }
@@ -70,7 +71,7 @@ export class CounsellingService {
     organizationId: string
   ): Promise<CorrectiveCounselling[]> {
     try {
-      console.log('📅 Getting due follow-ups for manager:', managerId);
+      Logger.debug('📅 Getting due follow-ups for manager:', managerId)
       
       const counsellingQuery = query(
         collection(db, COLLECTIONS.CORRECTIVE_COUNSELLING),
@@ -99,10 +100,10 @@ export class CounsellingService {
         }
       });
       
-      console.log('✅ Found due follow-ups:', dueFollowUps.length);
+      Logger.success(3568)
       return dueFollowUps;
     } catch (error) {
-      console.error('❌ Error getting due follow-ups:', error);
+      Logger.error('❌ Error getting due follow-ups:', error)
       return [];
     }
   }
@@ -113,7 +114,7 @@ export class CounsellingService {
     followUpData: Omit<CounsellingFollowUp, 'id' | 'counsellingId' | 'createdDate'>
   ): Promise<string> {
     try {
-      console.log('✅ Creating follow-up for counselling:', counsellingId);
+      Logger.success(3983)
       
       const followUp: Omit<CounsellingFollowUp, 'id'> = {
         ...followUpData,
@@ -137,10 +138,10 @@ export class CounsellingService {
         }
       );
       
-      console.log('✅ Follow-up created:', followUpId);
+      Logger.success(4709)
       return followUpId;
     } catch (error) {
-      console.error('❌ Error creating follow-up:', error);
+      Logger.error('❌ Error creating follow-up:', error)
       throw error;
     }
   }
@@ -151,7 +152,7 @@ export class CounsellingService {
     organizationId: string
   ): Promise<CounsellingSummary | null> {
     try {
-      console.log('📊 Getting counselling summary for employee:', employeeId);
+      Logger.debug(5096)
       
       const counsellingQuery = query(
         collection(db, COLLECTIONS.CORRECTIVE_COUNSELLING),
@@ -202,10 +203,10 @@ export class CounsellingService {
         escalationRisk
       };
       
-      console.log('✅ Counselling summary generated:', summary);
+      Logger.success(7051)
       return summary;
     } catch (error) {
-      console.error('❌ Error getting counselling summary:', error);
+      Logger.error('❌ Error getting counselling summary:', error)
       return null;
     }
   }
@@ -234,9 +235,9 @@ export class CounsellingService {
       };
       
       await FirebaseService.createDocument(COLLECTIONS.NOTIFICATIONS, notification);
-      console.log('🔔 Follow-up notification created for manager:', managerId);
+      Logger.debug('🔔 Follow-up notification created for manager:', managerId)
     } catch (error) {
-      console.error('❌ Error creating follow-up notification:', error);
+      Logger.error('❌ Error creating follow-up notification:', error)
     }
   }
   
@@ -259,7 +260,7 @@ export class CounsellingService {
       
       return followUps;
     } catch (error) {
-      console.error('❌ Error getting follow-up records:', error);
+      Logger.error('❌ Error getting follow-up records:', error)
       return [];
     }
   }

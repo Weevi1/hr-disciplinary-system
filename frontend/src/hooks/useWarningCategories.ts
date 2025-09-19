@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { DataService } from '../services/DataService';
+import { useState, useEffect, useCallback } from 'react';import Logger from '../utils/logger';
+
+import { DataServiceV2 } from '../services/DataServiceV2';
 import type { WarningCategory } from '../types';
 
 interface UseCategoriesState {
@@ -21,7 +22,7 @@ export const useWarningCategories = (organizationId: string): UseCategoriesState
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
-      const categories = await DataService.loadWarningCategories(organizationId);
+      const categories = await DataServiceV2.getWarningCategories(organizationId);
       
       setState(prev => ({ 
         ...prev, 
@@ -29,7 +30,7 @@ export const useWarningCategories = (organizationId: string): UseCategoriesState
         loading: false 
       }));
     } catch (error) {
-      console.error('Failed to load warning categories:', error);
+      Logger.error('Failed to load warning categories:', error)
       setState(prev => ({ 
         ...prev, 
         loading: false, 

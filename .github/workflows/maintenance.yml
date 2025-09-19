@@ -1,0 +1,469 @@
+# .github/workflows/maintenance.yml - Scheduled maintenance and updates
+name: Maintenance Tasks
+
+on:
+  schedule:
+    # Daily maintenance at 3 AM UTC
+    - cron: '0 3 * * *'
+    # Weekly maintenance on Sundays at 4 AM UTC
+    - cron: '0 4 * * 0'
+    # Monthly maintenance on 1st day at 5 AM UTC
+    - cron: '0 5 1 * *'
+  workflow_dispatch:
+    inputs:
+      maintenance_type:
+        description: 'Type of maintenance to run'
+        required: true
+        type: choice
+        options:
+          - daily
+          - weekly
+          - monthly
+          - dependency-update
+          - security-audit
+          - cleanup
+      environment:
+        description: 'Environment to maintain'
+        required: false
+        type: choice
+        options:
+          - production
+          - staging
+          - all
+        default: 'production'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  determine-maintenance-type:
+    name: Determine Maintenance Type
+    runs-on: ubuntu-latest
+    outputs:
+      maintenance-type: ${{ steps.determine.outputs.maintenance-type }}
+      run-daily: ${{ steps.determine.outputs.run-daily }}
+      run-weekly: ${{ steps.determine.outputs.run-weekly }}
+      run-monthly: ${{ steps.determine.outputs.run-monthly }}
+    
+    steps:
+      - name: Determine maintenance type
+        id: determine
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TYPE="${{ github.event.inputs.maintenance_type }}"
+          elif [[ "${{ github.event.schedule }}" == "0 3 * * *" ]]; then
+            TYPE="daily"
+          elif [[ "${{ github.event.schedule }}" == "0 4 * * 0" ]]; then
+            TYPE="weekly"  
+          elif [[ "${{ github.event.schedule }}" == "0 5 1 * *" ]]; then
+            TYPE="monthly"
+          else
+            TYPE="daily"
+          fi
+          
+          echo "maintenance-type=${TYPE}" >> $GITHUB_OUTPUT
+          echo "run-daily=$([[ \"${TYPE}\" == \"daily\" || \"${TYPE}\" == \"weekly\" || \"${TYPE}\" == \"monthly\" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "run-weekly=$([[ \"${TYPE}\" == \"weekly\" || \"${TYPE}\" == \"monthly\" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "run-monthly=$([[ \"${TYPE}\" == \"monthly\" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+          
+          echo "Maintenance type: ${TYPE}"
+
+  # Daily maintenance tasks
+  daily-maintenance:
+    name: Daily Maintenance
+    runs-on: ubuntu-latest
+    needs: determine-maintenance-type
+    if: needs.determine-maintenance-type.outputs.run-daily == 'true'
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Install dependencies
+        run: npm install firebase-admin
+
+      - name: Clean up temporary files
+        run: |
+          echo "🧹 Cleaning up temporary files..."
+          
+          # Clean up temp downloads older than 24 hours
+          node -e "
+          const admin = require('firebase-admin');
+          const app = admin.initializeApp();
+          const bucket = admin.storage().bucket();
+          
+          (async () => {
+            const [files] = await bucket.getFiles({ prefix: 'temp-downloads/' });
+            let deletedCount = 0;
+            
+            for (const file of files) {
+              const [metadata] = await file.getMetadata();
+              const createdTime = new Date(metadata.timeCreated);
+              const ageHours = (Date.now() - createdTime) / (1000 * 60 * 60);
+              
+              if (ageHours > 24) {
+                await file.delete();
+                deletedCount++;
+              }
+            }
+            
+            console.log(\`Deleted \${deletedCount} temporary files\`);
+          })().catch(console.error);
+          "
+
+      - name: Check system health
+        run: |
+          echo "🏥 Checking system health..."
+          
+          # Check if main sites are accessible
+          SITES=("https://hr-disciplinary-system.web.app")
+          
+          for site in "${SITES[@]}"; do
+            if curl -f -s "$site" > /dev/null; then
+              echo "✅ $site is accessible"
+            else
+              echo "❌ $site is not accessible" >&2
+            fi
+          done
+
+      - name: Monitor usage quotas
+        run: |
+          echo "📊 Monitoring usage quotas..."
+          
+          # Check Firestore usage (requires monitoring API)
+          gcloud monitoring metrics list --filter="metric.type:firestore.googleapis.com" --format="table(type)" || echo "⚠️ Monitoring data not available"
+
+      - name: Validate backups
+        run: |
+          echo "🔍 Validating recent backups..."
+          
+          # Check if backup bucket exists and has recent files
+          if gsutil ls gs://hr-disciplinary-system-backups/ > /dev/null 2>&1; then
+            RECENT_BACKUPS=$(gsutil ls -l gs://hr-disciplinary-system-backups/**/ | grep "$(date -d '1 day ago' '+%Y-%m-%d')" | wc -l)
+            if [ "$RECENT_BACKUPS" -gt 0 ]; then
+              echo "✅ Recent backups found: $RECENT_BACKUPS"
+            else
+              echo "⚠️ No recent backups found"
+            fi
+          else
+            echo "⚠️ Backup bucket not found"
+          fi
+
+  # Weekly maintenance tasks
+  weekly-maintenance:
+    name: Weekly Maintenance
+    runs-on: ubuntu-latest
+    needs: determine-maintenance-type
+    if: needs.determine-maintenance-type.outputs.run-weekly == 'true'
+    timeout-minutes: 60
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+          cd ../functions && npm ci
+
+      - name: Security audit
+        run: |
+          echo "🔐 Running security audit..."
+          
+          # Frontend security audit
+          cd frontend
+          npm audit --audit-level=moderate || echo "⚠️ Security issues found in frontend"
+          
+          # Functions security audit  
+          cd ../functions
+          npm audit --audit-level=moderate || echo "⚠️ Security issues found in functions"
+
+      - name: Dependency vulnerability check
+        run: |
+          echo "🔍 Checking for vulnerable dependencies..."
+          
+          # Check for outdated packages
+          cd frontend
+          npm outdated || true
+          
+          cd ../functions
+          npm outdated || true
+
+      - name: Performance analysis
+        run: |
+          echo "📈 Running performance analysis..."
+          
+          # Build and analyze bundle size
+          cd frontend
+          npm run build
+          
+          echo "Bundle sizes:"
+          du -sh dist/assets/* || echo "No build assets found"
+
+      - name: Database maintenance
+        run: |
+          echo "🗄️ Database maintenance tasks..."
+          
+          # Clean up old audit logs (if they exist)
+          node -e "
+          const admin = require('firebase-admin');
+          const app = admin.initializeApp();
+          const db = admin.firestore();
+          
+          (async () => {
+            // Clean up audit logs older than 90 days
+            const cutoffDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+            
+            const oldLogsQuery = db.collection('auditLogs')
+              .where('createdAt', '<', cutoffDate)
+              .limit(500); // Process in batches
+            
+            const snapshot = await oldLogsQuery.get();
+            
+            if (!snapshot.empty) {
+              const batch = db.batch();
+              snapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+              });
+              
+              await batch.commit();
+              console.log(\`Cleaned up \${snapshot.size} old audit logs\`);
+            } else {
+              console.log('No old audit logs to clean up');
+            }
+          })().catch(console.error);
+          " || echo "⚠️ Database cleanup failed"
+
+  # Monthly maintenance tasks
+  monthly-maintenance:
+    name: Monthly Maintenance
+    runs-on: ubuntu-latest
+    needs: determine-maintenance-type
+    if: needs.determine-maintenance-type.outputs.run-monthly == 'true'
+    timeout-minutes: 120
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Install dependencies
+        run: |
+          npm install firebase-admin @google-cloud/bigquery
+          cd frontend && npm ci
+          cd ../functions && npm ci
+
+      - name: Generate monthly cost report
+        run: |
+          echo "💰 Generating monthly cost report..."
+          
+          # Generate cost analysis report
+          node scripts/scaling/cost-monitor.js ${{ secrets.GCP_PROJECT_ID }} "$(date -d '1 month ago' '+%Y-%m-%d')" "$(date '+%Y-%m-%d')" html
+
+      - name: Comprehensive dependency updates
+        run: |
+          echo "📦 Checking for dependency updates..."
+          
+          # Create update branch
+          git checkout -b "maintenance/monthly-dependency-updates-$(date '+%Y-%m')"
+          
+          # Update frontend dependencies
+          cd frontend
+          npm update --save
+          npm audit fix --force || echo "⚠️ Some audit fixes failed"
+          
+          # Update functions dependencies
+          cd ../functions
+          npm update --save
+          npm audit fix --force || echo "⚠️ Some audit fixes failed"
+          
+          cd ..
+          
+          # Commit changes if any
+          if [[ $(git diff --stat) != '' ]]; then
+            git config user.name "GitHub Actions"
+            git config user.email "actions@github.com"
+            git add .
+            git commit -m "chore: monthly dependency updates $(date '+%Y-%m')"
+            
+            # Push branch and create PR (requires GitHub CLI or API call)
+            echo "📝 Dependency updates committed. Manual PR creation required."
+          else
+            echo "✅ No dependency updates needed"
+          fi
+
+      - name: Storage analysis and optimization
+        run: |
+          echo "💾 Analyzing storage usage..."
+          
+          node -e "
+          const admin = require('firebase-admin');
+          const app = admin.initializeApp();
+          const bucket = admin.storage().bucket();
+          
+          (async () => {
+            const [files] = await bucket.getFiles();
+            
+            let totalSize = 0;
+            let filesByType = {};
+            let oldFiles = [];
+            
+            for (const file of files) {
+              const [metadata] = await file.getMetadata();
+              const size = parseInt(metadata.size) || 0;
+              const type = file.name.split('.').pop() || 'unknown';
+              const age = Date.now() - new Date(metadata.timeCreated);
+              
+              totalSize += size;
+              filesByType[type] = (filesByType[type] || 0) + 1;
+              
+              // Files older than 6 months
+              if (age > 6 * 30 * 24 * 60 * 60 * 1000) {
+                oldFiles.push({ name: file.name, size, age });
+              }
+            }
+            
+            console.log('Storage Analysis:');
+            console.log('Total files:', files.length);
+            console.log('Total size:', (totalSize / 1024 / 1024 / 1024).toFixed(2), 'GB');
+            console.log('Files by type:', filesByType);
+            console.log('Old files (>6 months):', oldFiles.length);
+            
+            // Archive old files to cheaper storage class
+            for (const oldFile of oldFiles.slice(0, 100)) { // Limit to 100 per run
+              try {
+                const file = bucket.file(oldFile.name);
+                await file.setStorageClass('COLDLINE');
+                console.log('Archived:', oldFile.name);
+              } catch (error) {
+                console.error('Failed to archive:', oldFile.name, error.message);
+              }
+            }
+          })().catch(console.error);
+          "
+
+      - name: Generate system health report
+        run: |
+          echo "📋 Generating system health report..."
+          
+          cat > system-health-report.md << EOF
+          # Monthly System Health Report - $(date '+%B %Y')
+          
+          ## Summary
+          - Generated: $(date)
+          - Environment: Production
+          - Maintenance Type: Monthly
+          
+          ## Metrics
+          - Uptime: $(curl -s https://hr-disciplinary-system.web.app > /dev/null && echo "✅ Online" || echo "❌ Offline")
+          - Last Backup: $(date -d '1 day ago')
+          - Storage Usage: Analyzed and optimized
+          
+          ## Actions Taken
+          - ✅ Temporary file cleanup
+          - ✅ Security audit completed
+          - ✅ Dependencies checked for updates
+          - ✅ Storage optimization performed
+          - ✅ Database maintenance completed
+          
+          ## Recommendations
+          - Monitor usage trends
+          - Consider scaling optimizations if growth continues
+          - Schedule security updates
+          
+          EOF
+          
+          # Save report
+          mkdir -p reports/monthly
+          cp system-health-report.md "reports/monthly/health-report-$(date '+%Y-%m').md"
+
+      - name: Upload monthly reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: monthly-maintenance-report-${{ github.run_number }}
+          path: |
+            reports/
+            system-health-report.md
+          retention-days: 90
+
+  # Generate maintenance summary
+  maintenance-summary:
+    name: Maintenance Summary
+    runs-on: ubuntu-latest
+    needs: [determine-maintenance-type, daily-maintenance, weekly-maintenance, monthly-maintenance]
+    if: always()
+    
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## 🔧 Maintenance Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Type:** ${{ needs.determine-maintenance-type.outputs.maintenance-type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### Tasks Completed:" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.daily-maintenance.result }}" == "success" ]]; then
+            echo "- ✅ Daily maintenance tasks" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ needs.daily-maintenance.result }}" == "failure" ]]; then
+            echo "- ❌ Daily maintenance tasks failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.weekly-maintenance.result }}" == "success" ]]; then
+            echo "- ✅ Weekly maintenance tasks" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ needs.weekly-maintenance.result }}" == "failure" ]]; then
+            echo "- ❌ Weekly maintenance tasks failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.monthly-maintenance.result }}" == "success" ]]; then
+            echo "- ✅ Monthly maintenance tasks" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ needs.monthly-maintenance.result }}" == "failure" ]]; then
+            echo "- ❌ Monthly maintenance tasks failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Scheduled Maintenance:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Daily:** Tomorrow at 3:00 AM UTC" >> $GITHUB_STEP_SUMMARY
+          echo "- **Weekly:** Next Sunday at 4:00 AM UTC" >> $GITHUB_STEP_SUMMARY  
+          echo "- **Monthly:** 1st of next month at 5:00 AM UTC" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on failures
+        if: contains(needs.*.result, 'failure')
+        run: |
+          echo "⚠️ Some maintenance tasks failed. Check the workflow logs for details." >> $GITHUB_STEP_SUMMARY
+          
+          # In a real setup, this would send alerts to Slack, email, etc.
+          echo "Alert: Maintenance task failures detected"

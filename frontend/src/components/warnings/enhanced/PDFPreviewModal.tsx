@@ -1,9 +1,9 @@
+import Logger from '../../../utils/logger';
 // frontend/src/components/warnings/enhanced/PDFPreviewModal.tsx
-// 🏆 ENHANCED PDF PREVIEW MODAL WITH QR CODE DOWNLOAD
-// ✅ Built on your existing working PDFPreviewModal
-// ✅ Added QR code download functionality without breaking existing features
-// ✅ Maintains all existing UI, data handling, and generation logic
-// ✅ PART 1: Imports, Interfaces, and Data Extraction
+// ✨ PRODUCTION-READY PDF PREVIEW MODAL V2
+// 🎯 Clean, professional design language consistent with v2 system
+// 📱 Enhanced QR code download functionality with modern UX
+// 🏢 Enterprise-ready PDF generation and management
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
@@ -309,7 +309,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
         } : undefined
       };
 
-      console.log('🎯 Generating PDF with data:', pdfData);
+      Logger.debug(10791)
 
       const blob = await PDFGenerationService.generateWarningPDF(pdfData);
       
@@ -332,7 +332,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
       }
 
     } catch (error) {
-      console.error('❌ PDF generation failed:', error);
+      Logger.error('❌ PDF generation failed:', error)
       setError(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsGenerating(false);
@@ -359,7 +359,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
 
   // NEW: QR Code download handler
   const handleQRDownload = useCallback(() => {
-    console.log('📱 [PDFPreviewModal] QR download button clicked');
+    Logger.debug('📱 [PDFPreviewModal] QR download button clicked')
     console.log('📱 [PDFPreviewModal] Current state:', {
       pdfBlob: pdfBlob ? `${(pdfBlob.size / 1024).toFixed(1)} KB` : 'null',
       filename: filename,
@@ -367,10 +367,10 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
       organizationId: extractedData?.organization?.id
     });
     if (!pdfBlob) {
-      console.error('❌ [PDFPreviewModal] No PDF blob available for QR generation');
+      Logger.error('❌ [PDFPreviewModal] No PDF blob available for QR generation')
       return;
     }
-    console.log('✅ [PDFPreviewModal] Opening QR modal...');
+    Logger.success(12914)
     setShowQRModal(true);
   }, [pdfBlob, filename, extractedData?.id, extractedData?.organization?.id]);
 
@@ -404,18 +404,20 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full h-[90vh] overflow-hidden flex flex-col">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full h-[90vh] overflow-hidden flex flex-col border border-gray-200">
           
-          {/* Fixed Header (unchanged) */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 flex-shrink-0">
+          {/* Clean Header - V2 Design */}
+          <div className="bg-white border-b border-gray-200 p-6 flex-shrink-0">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <FileWarning className="w-8 h-8" />
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
+                  <FileWarning className="w-5 h-5 text-white" />
+                </div>
                 <div>
-                  <h2 className="text-2xl font-bold">{title}</h2>
+                  <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
                   {extractedData && (
-                    <p className="text-blue-100">
+                    <p className="text-gray-600 text-sm">
                       {extractedData.employee.firstName} {extractedData.employee.lastName} - {extractedData.category.name}
                     </p>
                   )}
@@ -423,9 +425,9 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
               </div>
               <button
                 onClick={onClose}
-                className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-full transition-colors"
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -541,27 +543,29 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
                 </div>
               )}
 
-              {/* Success State with Preview and Actions (ENHANCED WITH QR) */}
+              {/* Success State with Preview and Actions - V2 Design */}
               {pdfBlob && pdfUrl && !isGenerating && (
                 <div className="space-y-6">
-                  {/* Success Banner with Enhanced Actions */}
-                  <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                  {/* Clean Success Banner */}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        </div>
                         <div>
-                          <h3 className="text-green-800 font-medium">PDF Generated Successfully</h3>
-                          <p className="text-green-700 text-sm">
-                            {filename} ({(pdfBlob.size / 1024).toFixed(1)} KB)
+                          <h3 className="text-gray-900 font-medium">PDF Generated Successfully</h3>
+                          <p className="text-gray-600 text-sm">
+                            {filename} • {(pdfBlob.size / 1024).toFixed(1)} KB
                           </p>
                         </div>
                       </div>
                       
-                      {/* Enhanced Quick Action Buttons with QR */}
-                      <div className="flex space-x-2">
+                      {/* Clean Action Buttons */}
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={downloadPDF}
-                          className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
+                          className="flex items-center gap-2 px-3 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
                         >
                           <Download className="w-4 h-4" />
                           <span>Download</span>
@@ -569,7 +573,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
                         
                         <button
                           onClick={handleQRDownload}
-                          className="flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm"
+                          className="flex items-center gap-2 px-3 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
                         >
                           <QrCode className="w-4 h-4" />
                           <span>QR Code</span>
@@ -577,7 +581,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
                         
                         <button
                           onClick={() => window.open(pdfUrl, '_blank')}
-                          className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+                          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                         >
                           <Eye className="w-4 h-4" />
                           <span>Open</span>
@@ -650,19 +654,23 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
             </div>
           </div>
 
-          {/* Fixed Footer with Enhanced Action Buttons */}
-          <div className="bg-gray-50 px-6 py-4 flex-shrink-0 border-t">
+          {/* Clean Footer - V2 Design */}
+          <div className="bg-white border-t border-gray-200 px-6 py-4 flex-shrink-0">
             <div className="flex items-center justify-between">
-              {/* Footer Info (unchanged) */}
-              <div className="flex items-center text-sm text-gray-500">
-                <Heart className="w-4 h-4 text-red-400 mr-2" />
-                <span>Generated by &lt;File&gt; • </span>
-                <Scale className="w-4 h-4 text-blue-400 ml-2 mr-1" />
-                <span>LRA Compliant</span>
+              {/* Footer Info - Clean */}
+              <div className="flex items-center text-sm text-gray-500 gap-4">
+                <div className="flex items-center gap-2">
+                  <Heart className="w-4 h-4 text-red-500" />
+                  <span>Generated by HR System</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Scale className="w-4 h-4 text-blue-500" />
+                  <span>LRA Compliant</span>
+                </div>
               </div>
 
-              {/* Enhanced Action Buttons with QR Support */}
-              <div className="flex space-x-3">
+              {/* Clean Action Buttons */}
+              <div className="flex items-center gap-3 flex-wrap">
                 <button
                   onClick={onClose}
                   className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
@@ -670,77 +678,42 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
                   Close
                 </button>
 
-                {/* Generate/Regenerate Button (unchanged) */}
+                {/* Generate/Regenerate Button */}
                 {!pdfBlob && !isGenerating && extractedData && (
                   <button
                     onClick={generatePDF}
-                    className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
                   >
                     <FileText className="w-4 h-4" />
                     <span>Generate PDF</span>
                   </button>
                 )}
 
-                {/* Enhanced Download Options (when PDF ready) */}
+                {/* Action Buttons Row - Only show when PDF is ready */}
                 {pdfBlob && (
                   <>
-                    {/* Standard Download Button */}
+                    {/* Primary Download Button */}
                     <button
                       onClick={downloadPDF}
-                      className="flex items-center space-x-2 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium"
+                      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
                     >
                       <Download className="w-4 h-4" />
-                      <span>Download PDF</span>
+                      <span>Download</span>
                     </button>
 
-                    {/* NEW: Mobile/QR Download Button */}
+                    {/* QR Code Download Button */}
                     <button
                       onClick={handleQRDownload}
-                      className="flex items-center space-x-2 bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium"
-                      title="Generate QR code for mobile download"
+                      className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium"
                     >
-                      <Smartphone className="w-4 h-4" />
-                      <span>Mobile Download</span>
+                      <QrCode className="w-4 h-4" />
+                      <span>QR Code</span>
                     </button>
-                  </>
-                )}
 
-                {/* Print Button (unchanged) */}
-                {pdfBlob && pdfUrl && (
-                  <button
-                    onClick={() => {
-                      const printWindow = window.open(pdfUrl, '_blank');
-                      if (printWindow) {
-                        printWindow.addEventListener('load', () => {
-                          printWindow.print();
-                        });
-                      }
-                    }}
-                    className="flex items-center space-x-2 bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors font-medium"
-                  >
-                    <FileText className="w-4 h-4" />
-                    <span>Print</span>
-                  </button>
+                  </>
                 )}
               </div>
             </div>
-
-            {/* NEW: Download Options Info Panel */}
-            {pdfBlob && (
-              <div className="mt-4 bg-blue-50 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-blue-800 font-medium text-sm">Download Options Available</h4>
-                    <ul className="text-blue-700 text-xs mt-1 space-y-1">
-                      <li>• <strong>Download PDF:</strong> Save directly to this device</li>
-                      <li>• <strong>Mobile Download:</strong> Generate secure QR code for phone access (expires in 1 hour)</li>
-                      <li>• <strong>Print:</strong> Open in new tab for printing or sharing</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
         </div>
@@ -761,7 +734,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
             `${extractedData.employee.firstName} ${extractedData.employee.lastName}`.trim()
           }
           onLinkGenerated={(linkData) => {
-            console.log('🔗 QR download link generated:', linkData);
+            Logger.debug('🔗 QR download link generated:', linkData)
           }}
         />
       )}
@@ -790,7 +763,7 @@ Replace your existing PDFPreviewModal usage with:
   deliveryChoice={deliveryChoice}
   onPDFGenerated={(blob, filename) => {
     // Your existing PDF handling logic
-    console.log('PDF generated with QR support:', filename);
+    Logger.debug('PDF generated with QR support:', filename)
   }}
   showPreview={true}
   title="Warning Document Preview"

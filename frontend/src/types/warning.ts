@@ -72,7 +72,7 @@ export interface Warning {
   updatedAt?: Date;
   
   // Workflow status
-  status?: 'draft' | 'issued' | 'acknowledged' | 'appealed' | 'expired';
+  status?: 'issued' | 'acknowledged' | 'appealed' | 'expired';
   acknowledgedAt?: Date;
   acknowledgedBy?: string;
   
@@ -287,7 +287,7 @@ export interface WarningFormData {
   additionalNotes: string;
   deliveryMethod: DeliveryMethod;
   severity: SeverityLevel;
-  isDraft: boolean;
+  isIssued: boolean;
   
   // 🎯 NEW: Audio recording data
   audioRecording?: Partial<AudioRecordingData>;

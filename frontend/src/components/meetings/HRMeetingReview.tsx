@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/components/hr/HRMeetingReview.tsx - HR MANAGER INTERFACE
 // ✅ LEARNS FROM: BookHRMeeting patterns, FirebaseService usage, proper filtering
 import React, { useState, useEffect } from 'react';
@@ -84,7 +85,7 @@ export const HRMeetingReview: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        console.log('📋 Loading HR meeting requests for organization:', user.organizationId);
+        Logger.debug('📋 Loading HR meeting requests for organization:', user.organizationId)
 
         // ✅ PATTERN: Use FirebaseService.queryDocuments like other components
         const requests = await FirebaseService.queryDocuments<HRMeetingRequest>(
@@ -96,12 +97,12 @@ export const HRMeetingReview: React.FC = () => {
           50 // Limit results
         );
 
-        console.log('✅ Meeting requests loaded:', requests.length);
+        Logger.success(3346)
         setMeetingRequests(requests);
         setFilteredRequests(requests);
 
       } catch (err) {
-        console.error('❌ Error loading meeting requests:', err);
+        Logger.error('❌ Error loading meeting requests:', err)
         setError('Failed to load meeting requests. Please try again.');
         setMeetingRequests([]);
         setFilteredRequests([]);
@@ -184,10 +185,10 @@ export const HRMeetingReview: React.FC = () => {
       setShowUpdateModal(false);
       setSelectedRequest(null);
 
-      console.log('✅ Meeting request updated successfully');
+      Logger.success(5953)
 
     } catch (err) {
-      console.error('❌ Error updating meeting request:', err);
+      Logger.error('❌ Error updating meeting request:', err)
       setError('Failed to update meeting request. Please try again.');
     } finally {
       setUpdating(false);
