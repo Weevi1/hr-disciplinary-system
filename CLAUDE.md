@@ -17,6 +17,12 @@ firebase emulators:start
 
 # Deploy to production
 firebase deploy
+
+# Create system backup (protects against accidental code deletion)
+TIMESTAMP=$(date +"%Y%m%d_%H%M%S") && cp -r /home/aiguy/projects/hr-disciplinary-system "$HOME/hr-system-backups/hr-system-$TIMESTAMP" && echo "✅ Backup created: hr-system-$TIMESTAMP"
+
+# Git-based incremental auto-backup (Claude runs after every edit)
+git add . && git commit -m "Auto-backup: $(date +'%Y-%m-%d %H:%M:%S') - File edit protection" && echo "🔄 Incremental backup completed"
 ```
 
 ### Current System Status
