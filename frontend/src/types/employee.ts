@@ -257,6 +257,44 @@ export const createEmployeeFromForm = (
 
 // REPLACE the existing createFormFromEmployee function in types/employee.ts with this:
 
+// Helper function to safely convert various date formats to YYYY-MM-DD string
+const safeDateToString = (date: any): string => {
+  if (!date) return '';
+  
+  try {
+    // Handle Firestore Timestamp objects
+    if (date && typeof date.toDate === 'function') {
+      return date.toDate().toISOString().split('T')[0];
+    }
+    
+    // Handle Date objects
+    if (date instanceof Date) {
+      return date.toISOString().split('T')[0];
+    }
+    
+    // Handle date strings
+    if (typeof date === 'string') {
+      const parsed = new Date(date);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toISOString().split('T')[0];
+      }
+    }
+    
+    // Handle timestamp numbers
+    if (typeof date === 'number') {
+      const parsed = new Date(date);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toISOString().split('T')[0];
+      }
+    }
+    
+    return '';
+  } catch (error) {
+    console.warn('Failed to convert date:', date, error);
+    return '';
+  }
+};
+
 export const createFormFromEmployee = (employee: Employee): EmployeeFormData => {
   return {
     employeeNumber: employee.profile.employeeNumber,
@@ -267,17 +305,11 @@ export const createFormFromEmployee = (employee: Employee): EmployeeFormData => 
     whatsappNumber: employee.profile.whatsappNumber || '',
     department: employee.profile.department,
     position: employee.profile.position,
-    startDate: employee.profile.startDate instanceof Date 
-      ? employee.profile.startDate.toISOString().split('T')[0]
-      : employee.profile.startDate.toString().split('T')[0],
+    startDate: safeDateToString(employee.profile.startDate),
     contractType: employee.employment.contractType,
-    probationEndDate: employee.employment.probationEndDate
-      ? (employee.employment.probationEndDate instanceof Date 
-        ? employee.employment.probationEndDate.toISOString().split('T')[0]
-        : employee.employment.probationEndDate.toString().split('T')[0])
-      : '',
+    probationEndDate: safeDateToString(employee.employment.probationEndDate),
     preferredDeliveryMethod: employee.profile.preferredDeliveryMethod || 'email',
-    managerId: employee.employment.managerId || '', // 🔧 ADD THIS LINE
+    managerId: employee.employment.managerId || '',
     isActive: employee.isActive
   };
 };
@@ -350,8 +382,8 @@ export const calculateEmployeePermissions = (
       
     case 'hod-manager':
       return {
-        canCreate: false,
-        canEdit: false,
+        canCreate: true, // Allow HOD managers to add team members
+        canEdit: true,   // Allow HOD managers to edit their team members
         canArchive: false,
         canRestore: false,
         canViewAll: false,
@@ -395,7 +427,7 @@ export const filterEmployees = (
     if (filters.isActive && !employee.isActive) {
       return false;
     }
-    
+
     if (!filters.isActive && !employee.isActive && !permissions.canViewArchived) {
       return false;
     }
@@ -489,7 +521,8 @@ export const generateSampleCSV = (): string => {
     'position',
     'startDate',
     'contractType',
-    'preferredDeliveryMethod'
+    'preferredDeliveryMethod',
+    'probationEndDate'
   ];
   
   const sampleRows = [
@@ -504,20 +537,36 @@ export const generateSampleCSV = (): string => {
       'Software Developer',
       '2024-01-15',
       'permanent',
-      'email'
+      'email',
+      '' // No probation for permanent employee
     ],
     [
-      '', // Empty employee number - will be auto-generated
-      'Jane',
-      'Smith',
-      'jane.smith@company.com',
+      'EMP002',
+      'Sarah',
+      'Johnson',
+      'sarah.johnson@company.com',
       '+27987654321',
       '+27987654321',
       'Human Resources',
       'HR Manager',
       '2023-06-01',
       'permanent',
-      'whatsapp'
+      'whatsapp',
+      '' // No probation for permanent employee
+    ],
+    [
+      'EMP003',
+      'Michael',
+      'Smith',
+      'michael.smith@company.com',
+      '+27555123456',
+      '', // No WhatsApp number
+      'Operations',
+      'Operations Coordinator',
+      '2024-11-01',
+      'contract',
+      'printed',
+      '2025-02-01' // 3-month probation period
     ]
   ];
   

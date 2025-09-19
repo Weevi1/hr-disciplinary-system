@@ -1,3 +1,4 @@
+import Logger from '../logger';
 // frontend/src/utils/dashboard/performanceUtils.ts
 // 🚀 PERFORMANCE OPTIMIZATION UTILITIES
 // ✅ Caching, debouncing, memoization helpers
@@ -56,7 +57,7 @@ export class CacheManager {
         JSON.stringify(cacheItem)
       );
     } catch (error) {
-      console.warn('⚠️ Cache write failed:', error);
+      Logger.warn('⚠️ Cache write failed:', error)
     }
   }
 
@@ -75,7 +76,7 @@ export class CacheManager {
 
       return data;
     } catch (error) {
-      console.warn('⚠️ Cache read failed:', error);
+      Logger.warn('⚠️ Cache read failed:', error)
       CacheManager.remove(key);
       return null;
     }
@@ -85,7 +86,7 @@ export class CacheManager {
     try {
       localStorage.removeItem(`${CacheManager.PREFIX}${key}`);
     } catch (error) {
-      console.warn('⚠️ Cache remove failed:', error);
+      Logger.warn('⚠️ Cache remove failed:', error)
     }
   }
 
@@ -98,7 +99,7 @@ export class CacheManager {
         }
       });
     } catch (error) {
-      console.warn('⚠️ Cache clear failed:', error);
+      Logger.warn('⚠️ Cache clear failed:', error)
     }
   }
 
@@ -152,14 +153,14 @@ export class PerformanceMonitor {
   static end(label: string): number {
     const startTime = this.measurements.get(label);
     if (!startTime) {
-      console.warn(`⚠️ No start time found for: ${label}`);
+      Logger.warn(`⚠️ No start time found for: ${label}`)
       return 0;
     }
 
     const duration = performance.now() - startTime;
     this.measurements.delete(label);
     
-    console.log(`⏱️ ${label}: ${duration.toFixed(2)}ms`);
+    Logger.debug(`⏱️ ${label}: ${duration.toFixed(2)}ms`);
     return duration;
   }
 
@@ -196,7 +197,7 @@ export class MemoryManager {
       try {
         task();
       } catch (error) {
-        console.warn('⚠️ Cleanup task failed:', error);
+        Logger.warn('⚠️ Cleanup task failed:', error)
       }
     });
     this.cleanupTasks.clear();
@@ -215,7 +216,7 @@ export class MemoryManager {
       try {
         observer();
       } catch (error) {
-        console.warn('⚠️ Memory observer failed:', error);
+        Logger.warn('⚠️ Memory observer failed:', error)
       }
     });
   }

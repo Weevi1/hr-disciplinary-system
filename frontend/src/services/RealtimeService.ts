@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // frontend/src/services/RealtimeService.ts
 // 🔔 REAL-TIME NOTIFICATION SERVICE
 // ✅ Complete notification system with Firebase integration
@@ -95,7 +96,7 @@ export const useNotifications = () => {
           setLoading(false);
         },
         (err) => {
-          console.error('Error fetching notifications:', err);
+          Logger.error('Error fetching notifications:', err)
           setError(err.message);
           setLoading(false);
         }
@@ -104,7 +105,7 @@ export const useNotifications = () => {
       unsubscribeRef.current = unsubscribe;
       return unsubscribe;
     } catch (err: any) {
-      console.error('Error setting up notifications subscription:', err);
+      Logger.error('Error setting up notifications subscription:', err)
       setError(err.message);
       setLoading(false);
     }
@@ -147,7 +148,7 @@ export const useNotifications = () => {
 
       await addDoc(collection(db, 'notifications'), notificationData);
     } catch (err: any) {
-      console.error('Error adding notification:', err);
+      Logger.error('Error adding notification:', err)
       setError(err.message);
     }
   }, [user?.uid, user?.organizationId]);
@@ -158,7 +159,7 @@ export const useNotifications = () => {
       const notificationRef = doc(db, 'notifications', notificationId);
       await updateDoc(notificationRef, { read: true });
     } catch (err: any) {
-      console.error('Error marking notification as read:', err);
+      Logger.error('Error marking notification as read:', err)
       setError(err.message);
     }
   }, []);
@@ -175,7 +176,7 @@ export const useNotifications = () => {
 
       await Promise.all(promises);
     } catch (err: any) {
-      console.error('Error marking all notifications as read:', err);
+      Logger.error('Error marking all notifications as read:', err)
       setError(err.message);
     }
   }, [notifications]);
@@ -260,7 +261,7 @@ export const createBulkNotification = async (
     await Promise.all(promises);
     return notifications.length;
   } catch (error) {
-    console.error('Error creating bulk notifications:', error);
+    Logger.error('Error creating bulk notifications:', error)
     throw error;
   }
 };

@@ -272,7 +272,7 @@ export const BrandingStep = ({ formData, setFormData }: StepProps) => {
 
       <div style={{ 
         display: 'grid',
-        gridTemplateColumns: window.innerWidth > 768 ? 'repeat(2, 1fr)' : '1fr',
+        gridTemplateColumns: window.innerWidth > 768 ? 'repeat(3, 1fr)' : '1fr',
         gap: '1.5rem',
         marginBottom: '2rem'
       }}>
@@ -286,6 +286,14 @@ export const BrandingStep = ({ formData, setFormData }: StepProps) => {
           }}>
             Primary Color
           </label>
+          <p style={{ 
+            fontSize: '0.75rem',
+            color: '#64748b',
+            marginBottom: '0.75rem',
+            margin: '0 0 0.75rem 0'
+          }}>
+            Main buttons, headers, key UI elements
+          </p>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <input
               type="color"
@@ -328,6 +336,14 @@ export const BrandingStep = ({ formData, setFormData }: StepProps) => {
           }}>
             Secondary Color
           </label>
+          <p style={{ 
+            fontSize: '0.75rem',
+            color: '#64748b',
+            marginBottom: '0.75rem',
+            margin: '0 0 0.75rem 0'
+          }}>
+            Secondary buttons, backgrounds
+          </p>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <input
               type="color"
@@ -345,6 +361,56 @@ export const BrandingStep = ({ formData, setFormData }: StepProps) => {
               type="text"
               value={formData.secondaryColor}
               onChange={(e) => setFormData({ ...formData, secondaryColor: e.target.value })}
+              style={{
+                flex: 1,
+                padding: '0.5rem 0.75rem',
+                border: '1px solid #e2e8f0',
+                borderRadius: '0.375rem',
+                fontSize: '0.875rem',
+                outline: 'none',
+                color: '#1f2937'
+              }}
+              onFocus={(e) => e.target.style.borderColor = '#8b5cf6'}
+              onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label style={{ 
+            display: 'block',
+            fontSize: '0.875rem',
+            fontWeight: '500',
+            color: '#374151',
+            marginBottom: '0.5rem'
+          }}>
+            Accent Color
+          </label>
+          <p style={{ 
+            fontSize: '0.75rem',
+            color: '#64748b',
+            marginBottom: '0.75rem',
+            margin: '0 0 0.75rem 0'
+          }}>
+            Badges, highlights, notifications
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <input
+              type="color"
+              value={formData.accentColor || '#10b981'}
+              onChange={(e) => setFormData({ ...formData, accentColor: e.target.value })}
+              style={{
+                width: '5rem',
+                height: '2.5rem',
+                border: '1px solid #e2e8f0',
+                borderRadius: '0.375rem',
+                cursor: 'pointer'
+              }}
+            />
+            <input
+              type="text"
+              value={formData.accentColor || '#10b981'}
+              onChange={(e) => setFormData({ ...formData, accentColor: e.target.value })}
               style={{
                 flex: 1,
                 padding: '0.5rem 0.75rem',
@@ -460,6 +526,30 @@ export const BrandingStep = ({ formData, setFormData }: StepProps) => {
                 >
                   Secondary Button
                 </button>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '0.375rem',
+                  fontSize: '0.875rem'
+                }}>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      padding: '0.25rem 0.5rem',
+                      backgroundColor: formData.accentColor || '#10b981',
+                      color: 'white',
+                      borderRadius: '0.25rem',
+                      fontSize: '0.75rem',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Badge
+                  </span>
+                  <span style={{ color: '#64748b' }}>Accent Color Preview</span>
+                </div>
               </div>
             </div>
           </div>

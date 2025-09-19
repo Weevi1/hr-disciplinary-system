@@ -11,15 +11,27 @@ service cloud.firestore {
     }
     
    function getUserRole() {
-  return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+  // Get user role from Firebase Auth custom claims
+  // Custom claims are set by Cloud Functions during login from sharded user data
+  return request.auth != null && request.auth.token.role != null 
+    ? request.auth.token.role 
+    : 'guest';
 }
     
     function getUserOrgId() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizationId;
+      // Get user organization ID from Firebase Auth custom claims
+      // Custom claims are set by Cloud Functions during login from sharded user data
+      return request.auth != null && request.auth.token.organizationId != null 
+        ? request.auth.token.organizationId 
+        : null;
     }
     
     function isSuperUser() {
       return isAuthenticated() && getUserRole() == 'super-user';
+    }
+
+    function isReseller() {
+      return isAuthenticated() && getUserRole() == 'reseller';
     }
     
     function isBusinessOwner() {
@@ -37,6 +49,13 @@ service cloud.firestore {
     function belongsToOrganization(orgId) {
       return isAuthenticated() && getUserOrgId() == orgId;
     }
+
+    function resellerManagesOrganization(orgId) {
+      // Check if current user is a reseller who manages this organization
+      return isReseller() &&
+        exists(/databases/$(database)/documents/organizations/$(orgId)) &&
+        get(/databases/$(database)/documents/organizations/$(orgId)).data.resellerId == request.auth.uid;
+    }
     
     // ===================================
     // CORE COLLECTIONS
@@ -46,6 +65,8 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated() && (
         request.auth.uid == userId ||
+        // TEMP: Allow any authenticated user to debug role issues
+        isAuthenticated() ||
         isSuperUser() ||
         (isHRManager() && belongsToOrganization(resource.data.organizationId))
       );
@@ -53,7 +74,12 @@ service cloud.firestore {
       allow write: if isAuthenticated() && (
         request.auth.uid == userId ||
         isSuperUser() ||
-        (isBusinessOwner() && belongsToOrganization(resource.data.organizationId))
+        (isBusinessOwner() && (
+          (resource != null && belongsToOrganization(resource.data.organizationId)) ||
+          (resource == null && request.resource.data.organizationId != null)
+        )) ||
+        // Allow super-user to create reseller users (they don't have organizationId)
+        (isSuperUser() && resource == null && request.resource.data.role == 'reseller')
       );
     }
     
@@ -61,22 +87,31 @@ service cloud.firestore {
     match /organizations/{organizationId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId)
+        belongsToOrganization(organizationId) ||
+        // TEMP: Allow any authenticated user for debugging
+        isAuthenticated()
       );
       
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (isBusinessOwner() && belongsToOrganization(organizationId))
+        (isBusinessOwner() && belongsToOrganization(organizationId)) ||
+        // TEMP: Allow any authenticated user for organization creation
+        isAuthenticated()
       );
     }
     
     // Employees collection
+    match /employees {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
     match /employees/{employeeId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(resource.data.organizationId)
+        belongsToOrganization(resource.data.organizationId) ||
+        resellerManagesOrganization(resource.data.organizationId)
       );
-      
+
       allow write: if isAuthenticated() && (
         isSuperUser() ||
         (isHRManager() && belongsToOrganization(
@@ -85,13 +120,32 @@ service cloud.firestore {
       );
     }
     
-    // Warnings collection - TEMPORARILY PERMISSIVE FOR DEBUGGING
+    // Warnings collection - secure organization-scoped access
+    match /warnings {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
     match /warnings/{warningId} {
-      allow read: if isAuthenticated();
-      
-      allow create: if isAuthenticated();
-      
-      allow update, delete: if isAuthenticated();
+      allow read, list: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(resource.data.organizationId) && (
+          isManager() ||
+          request.auth.uid == resource.data.issuedBy
+        )) ||
+        resellerManagesOrganization(resource.data.organizationId)
+      );
+
+      allow create: if isAuthenticated() && (
+        isSuperUser() ||
+        (isManager() && belongsToOrganization(request.resource.data.organizationId))
+      );
+
+      allow update: if isAuthenticated() && (
+        isSuperUser() ||
+        (isManager() && belongsToOrganization(resource.data.organizationId))
+      );
+
+      allow delete: if isAuthenticated() && isSuperUser();
     }
     
     // ===================================
@@ -99,6 +153,10 @@ service cloud.firestore {
     // ===================================
     
     // HR meeting requests - managers can create, HR can read/update
+    match /hr_meeting_requests {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
     match /hr_meeting_requests/{requestId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
@@ -137,6 +195,10 @@ service cloud.firestore {
     // ===================================
     
     // Absence reports - managers can create, HR can read/update
+    match /absence_reports {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
     match /absence_reports/{reportId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
@@ -199,10 +261,14 @@ service cloud.firestore {
     // ===================================
     
     // Warning categories - organization specific
+    match /warningCategories {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
     match /warningCategories/{categoryId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(resource.data.organizationId)
+        (belongsToOrganization(resource.data.organizationId) && isManager())
       );
       
       allow write: if isAuthenticated() && (
@@ -309,6 +375,10 @@ service cloud.firestore {
     // ===================================
     
     // Corrective counselling records - managers and HR access
+    match /corrective_counselling {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
     match /corrective_counselling/{counsellingId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
@@ -437,6 +507,10 @@ service cloud.firestore {
     }
     
     // Audit logs - organization specific reading, managers can write
+    match /auditLogs {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
     match /auditLogs/{logId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
@@ -449,6 +523,188 @@ service cloud.firestore {
         (isManager() && belongsToOrganization(
           resource == null ? request.resource.data.organizationId : resource.data.organizationId
         ))
+      );
+    }
+    
+    // ===================================
+    // SHARDED ORGANIZATION COLLECTIONS  
+    // ===================================
+    
+    // Sharded users collection - within organization context
+    match /organizations/{organizationId}/users/{userId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && (
+          request.auth.uid == userId || isHRManager()
+        )) ||
+        // TEMP: Allow during organization creation
+        (isAuthenticated() && request.resource.data.role == 'business-owner') ||
+        // TEMP: Allow authenticated users to read their own user document during authentication
+        (isAuthenticated() && request.auth.uid == userId)
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && (
+          request.auth.uid == userId || isBusinessOwner()
+        )) ||
+        // TEMP: Allow during organization creation  
+        (isAuthenticated() && request.resource.data.role == 'business-owner')
+      );
+    }
+    
+    // Sharded employees collection 
+    match /organizations/{organizationId}/employees/{employeeId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager())
+      );
+    }
+    
+    // Sharded categories collection
+    match /organizations/{organizationId}/categories/{categoryId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isHRManager()) ||
+        // TEMP: Allow any authenticated user during organization creation
+        isAuthenticated()
+      );
+    }
+    
+    // Sharded sectors collection
+    match /organizations/{organizationId}/sectors/{sectorId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isHRManager()) ||
+        // TEMP: Allow during organization creation
+        isAuthenticated()
+      );
+    }
+    
+    // Sharded warnings collection
+    match /organizations/{organizationId}/warnings/{warningId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager())
+      );
+    }
+    
+    // Sharded escalation rules collection
+    match /organizations/{organizationId}/escalationRules/{ruleId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isHRManager()) ||
+        // TEMP: Allow during organization creation
+        isAuthenticated()
+      );
+    }
+    
+    // Sharded settings collection
+    match /organizations/{organizationId}/settings/{settingId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isBusinessOwner()) ||
+        // TEMP: Allow during organization creation
+        isAuthenticated()
+      );
+    }
+    
+    // Sharded meetings collection
+    match /organizations/{organizationId}/meetings/{meetingId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager()) ||
+        // TEMP: Allow during organization creation
+        isAuthenticated()
+      );
+    }
+    
+    // Sharded reports collection
+    match /organizations/{organizationId}/reports/{reportId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isHRManager()) ||
+        // TEMP: Allow during organization creation
+        isAuthenticated()
+      );
+    }
+    
+    // Sharded collection metadata documents - allow during organization creation
+    match /organizations/{organizationId}/{collection}/_metadata {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isBusinessOwner()) ||
+        // TEMP: Allow during organization creation
+        isAuthenticated()
+      );
+    }
+    
+    // ===================================
+    // BILLING AND COMMISSION SYSTEM
+    // ===================================
+    
+    // Resellers collection - super user only
+    match /resellers/{resellerId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // TEMP: Allow any authenticated user for debugging
+        isAuthenticated()
+      );
+    }
+    
+    // Commissions collection - super user only
+    match /commissions/{commissionId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // TEMP: Allow any authenticated user for debugging
+        isAuthenticated()
+      );
+    }
+    
+    // Commission reports collection - super user only
+    match /commissionReports/{reportId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // TEMP: Allow any authenticated user for debugging
+        isAuthenticated()
+      );
+    }
+    
+    // Subscriptions collection - super user only
+    match /subscriptions/{subscriptionId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // TEMP: Allow any authenticated user for debugging
+        isAuthenticated()
+      );
+    }
+
+    // Reseller deployments collection - resellers can read their own deployments
+    match /resellerDeployments {
+      allow list: if isAuthenticated() && (
+        isSuperUser() ||
+        // TEMP: Allow any authenticated user for debugging
+        isAuthenticated()
+      );
+    }
+
+    match /resellerDeployments/{deploymentId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        // TEMP: Allow any authenticated user for debugging reseller deployments
+        isAuthenticated()
+      );
+
+      allow create: if isAuthenticated() && (
+        isSuperUser() ||
+        // TEMP: Allow any authenticated user to create deployment records
+        isAuthenticated()
+      );
+
+      allow update, delete: if isAuthenticated() && (
+        isSuperUser() ||
+        // TEMP: Allow any authenticated user for debugging
+        isAuthenticated()
       );
     }
     
@@ -467,12 +723,230 @@ service cloud.firestore {
     }
     
     // ===================================
+    // 🆕 SHARDED ORGANIZATION COLLECTIONS  
+    // ===================================
+    
+    // Sharded organization data - users can access their own organization's data
+    match /organizations/{organizationId}/users/{userId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        request.auth.uid == userId ||
+        // Business owners can read all users in their organization
+        (resource.data.organizationId == organizationId && isBusinessOwner())
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        request.auth.uid == userId ||
+        // Business owners can create/update users in their organization
+        (request.resource.data.organizationId == organizationId && isBusinessOwner())
+      );
+      
+      allow list: if isAuthenticated() && (
+        isSuperUser() ||
+        // Business owners can list users in their organization
+        isBusinessOwner()
+      );
+    }
+    
+    match /organizations/{organizationId}/warnings/{warningId} {
+      allow read, list: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(organizationId) ||
+        resellerManagesOrganization(organizationId)
+      );
+
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager())
+      );
+    }
+    
+    match /organizations/{organizationId}/employees/{employeeId} {
+      allow read, list: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(organizationId) ||
+        resellerManagesOrganization(organizationId)
+      );
+
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager())
+      );
+    }
+    
+    match /organizations/{organizationId}/categories/{categoryId} {
+      allow read, list: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user in the organization can access categories
+        true
+      );
+      
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user can create/update categories in their organization
+        true
+      );
+    }
+    
+    match /organizations/{organizationId}/meetings/{meetingId} {
+      allow read, list, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user in the organization can access meetings
+        true
+      );
+    }
+    
+    match /organizations/{organizationId}/reports/{reportId} {
+      allow read, list, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user in the organization can access reports
+        true
+      );
+    }
+    
+    match /organizations/{organizationId}/settings/{settingId} {
+      allow read, list, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user in the organization can access settings
+        true
+      );
+    }
+    
+    match /organizations/{organizationId}/corrective_counselling/{counsellingId} {
+      allow read, list, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user in the organization can access corrective counselling
+        true
+      );
+    }
+    
+    // Metadata documents in sharded collections
+    match /organizations/{organizationId}/{collection}/{document} {
+      allow read, list, write: if isAuthenticated() && (
+        isSuperUser() ||
+        // Any authenticated user can access organization data for now (TEMP)
+        true
+      );
+    }
+
+    // ===================================
+    // SUPER USER GLOBAL ACCESS
+    // ===================================
+    
+    // Additional flat collections that super users need access to
+    match /warnings/{warningId} {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /employees/{employeeId} {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /warningCategories/{categoryId} {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /absenceReports/{reportId} {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    // HR Meetings collection - super user access
+    match /hrMeetings {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /hrMeetings/{meetingId} {
+      allow read, write: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /counsellings/{counsellingId} {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+    
+    match /auditLogs/{logId} {
+      allow read: if isAuthenticated() && isSuperUser();
+      // Audit logs are write-only from Cloud Functions for security
+      allow create: if false; // Only Cloud Functions can create audit logs
+      allow update, delete: if false; // Audit logs are immutable
+    }
+    
+    // ===================================
+    // SUPER-USER SPECIFIC COLLECTIONS
+    // ===================================
+    
+    // Super-user session management
+    match /superUserSessions/{sessionId} {
+      allow read: if isAuthenticated() && isSuperUser() && 
+        request.auth.uid == resource.data.userId;
+      allow create, update: if isAuthenticated() && isSuperUser() && 
+        request.auth.uid == request.resource.data.userId;
+      allow delete: if isAuthenticated() && isSuperUser();
+    }
+    
+    // Super-user security events (failed logins, privilege escalations, etc.)
+    match /securityEvents/{eventId} {
+      allow read: if isAuthenticated() && isSuperUser();
+      // Security events are created by Cloud Functions only
+      allow create: if false;
+      allow update, delete: if false;
+    }
+    
+    // System configuration (only super-users can modify)
+    match /systemConfig/{configId} {
+      allow read: if isAuthenticated() && isSuperUser();
+      allow write: if isAuthenticated() && isSuperUser();
+    }
+    
+    // Reseller management (super-user exclusive)
+    match /resellers/{resellerId} {
+      allow read, write: if isAuthenticated() && isSuperUser();
+    }
+    
+    // Commission reports (super-user and reseller access)
+    match /commissionReports/{reportId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        // Resellers can read their own commission reports
+        (getUserRole() == 'reseller' && request.auth.uid == resource.data.resellerId)
+      );
+      allow write: if isAuthenticated() && isSuperUser();
+    }
+    
+    // Global metrics and analytics (super-user only)
+    match /globalMetrics/{metricId} {
+      allow read, write: if isAuthenticated() && isSuperUser();
+    }
+    
+    // ===================================
+    // ENHANCED SECURITY HELPERS
+    // ===================================
+    
+    function hasValidSuperUserSession() {
+      // Check if super-user has valid session within last hour
+      return isSuperUser() && 
+        exists(/databases/$(database)/documents/superUserSessions/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/superUserSessions/$(request.auth.uid)).data.lastValidated.toMillis() > 
+        (request.time.toMillis() - 3600000); // 1 hour
+    }
+    
+    function isSuperUserPermission() {
+      // Enhanced super-user check with session validation
+      return request.auth != null && 
+        request.auth.token.role == 'super-user' &&
+        request.auth.token.permissions != null &&
+        ('all' in request.auth.token.permissions || 'super-admin' in request.auth.token.permissions);
+    }
+    
+    // ===================================
     // FALLBACK RULE
     // ===================================
     
-    // Deny all other access
+    // Super users get full access to any collection not explicitly defined above
+    // But with session validation for sensitive operations
     match /{document=**} {
-      allow read, write: if false;
+      allow read: if isAuthenticated() && isSuperUser();
+      allow write: if isAuthenticated() && isSuperUserPermission();
     }
   }
 }

@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/hooks/dashboard/useEnhancedHRDashboard.ts
 // 🚀 ENHANCED HR DASHBOARD DATA HOOK
 // ✅ Integrates warnings, employees, and reports data
@@ -110,16 +111,147 @@ export const useEnhancedHRDashboard = (): EnhancedHRDashboardData => {
   const refreshAllData = useCallback(async () => {
     if (!user?.organizationId || !canManageHR()) return;
     
-    console.log('🔄 Manual refresh of enhanced HR dashboard data');
+    Logger.debug('🔄 Manual refresh of enhanced HR dashboard data')
     setError(null);
     setLastUpdated(new Date());
   }, [user?.organizationId, canManageHR]);
   
   // 📊 EXPORT FUNCTIONALITY
   const exportData = useCallback((type: 'warnings' | 'employees' | 'reports') => {
-    console.log(`📁 Exporting ${type} data`);
-    // TODO: Implement export functionality
-  }, []);
+    Logger.debug(`📁 Exporting ${type} data`)
+    
+    try {
+      let csvContent = '';
+      let filename = '';
+      const timestamp = new Date().toISOString().split('T')[0];
+      
+      switch (type) {
+        case 'warnings':
+          filename = `warnings-export-${timestamp}.csv`;
+          csvContent = generateWarningsCSV();
+          break;
+        case 'employees':
+          filename = `employees-export-${timestamp}.csv`;
+          csvContent = generateEmployeesCSV();
+          break;
+        case 'reports':
+          filename = `reports-export-${timestamp}.csv`;
+          csvContent = generateReportsCSV();
+          break;
+        default:
+          Logger.warn(`Unknown export type: ${type}`);
+          return;
+      }
+      
+      // Create and download CSV file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      Logger.success(`✅ Successfully exported ${type} data to ${filename}`);
+    } catch (error) {
+      Logger.error(`❌ Error exporting ${type} data:`, error);
+    }
+  }, [warningStats, employeeStats, reportStats, trendData]);
+  
+  // Helper function to generate warnings CSV
+  const generateWarningsCSV = useCallback(() => {
+    const headers = [
+      'Metric',
+      'Value',
+      'Description'
+    ];
+    
+    const rows = [
+      ['Total Active Warnings', warningStats.totalActive.toString(), 'Total number of active warnings'],
+      ['Undelivered Warnings', warningStats.undelivered.toString(), 'Warnings not yet delivered to employees'],
+      ['High Severity Warnings', warningStats.highSeverity.toString(), 'Final written warnings and dismissal warnings'],
+      ['Recent Warnings (30 days)', warningStats.recentCount.toString(), 'Warnings issued in the last 30 days'],
+      ['Department Breakdown', '', 'Warning distribution by department:'],
+      ...trendData.departmentWarnings.map(dept => [
+        `  ${dept.department}`,
+        dept.count.toString(),
+        'Warnings count for this department'
+      ]),
+      ['Severity Distribution', '', 'Warning distribution by severity:'],
+      ...trendData.severityDistribution.map(sev => [
+        `  ${sev.severity}`,
+        sev.count.toString(),
+        'Count of warnings at this severity level'
+      ])
+    ];
+    
+    return [headers.join(','), ...rows.map(row => 
+      row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')
+    )].join('\n');
+  }, [warningStats, trendData]);
+  
+  // Helper function to generate employees CSV
+  const generateEmployeesCSV = useCallback(() => {
+    const headers = [
+      'Metric',
+      'Value',
+      'Description'
+    ];
+    
+    const rows = [
+      ['Total Employees', employeeStats.totalEmployees.toString(), 'Total number of employees in organization'],
+      ['Active Employees', employeeStats.activeEmployees.toString(), 'Currently active employees'],
+      ['New Employees (30 days)', employeeStats.newEmployees.toString(), 'Employees added in the last 30 days'],
+      ['Department Breakdown', '', 'Employee distribution by department:'],
+      ...Object.entries(employeeStats.departmentBreakdown).map(([dept, count]) => [
+        `  ${dept}`,
+        count.toString(),
+        'Number of employees in this department'
+      ])
+    ];
+    
+    return [headers.join(','), ...rows.map(row => 
+      row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')
+    )].join('\n');
+  }, [employeeStats]);
+  
+  // Helper function to generate reports CSV
+  const generateReportsCSV = useCallback(() => {
+    const headers = [
+      'Report Type',
+      'Unread/Pending',
+      'Total',
+      'Description'
+    ];
+    
+    const rows = [
+      [
+        'Absence Reports',
+        reportStats.absenceReports.unread.toString(),
+        reportStats.absenceReports.total.toString(),
+        'Employee absence reports requiring HR review'
+      ],
+      [
+        'HR Meeting Requests',
+        reportStats.hrMeetings.unread.toString(),
+        reportStats.hrMeetings.total.toString(),
+        'Pending HR meeting requests from employees'
+      ],
+      [
+        'Corrective Counselling',
+        reportStats.correctiveCounselling.unread.toString(),
+        reportStats.correctiveCounselling.total.toString(),
+        'Recent corrective counselling records for HR review'
+      ]
+    ];
+    
+    return [headers.join(','), ...rows.map(row => 
+      row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')
+    )].join('\n');
+  }, [reportStats]);
   
   // 🚀 MAIN EFFECT - SETUP ALL LISTENERS
   useEffect(() => {
@@ -133,7 +265,7 @@ export const useEnhancedHRDashboard = (): EnhancedHRDashboardData => {
       return;
     }
     
-    console.log('🚀 Initializing enhanced HR dashboard listeners');
+    Logger.debug('🚀 Initializing enhanced HR dashboard listeners')
     setIsLoading(true);
     setError(null);
     
@@ -142,7 +274,7 @@ export const useEnhancedHRDashboard = (): EnhancedHRDashboardData => {
       try {
         unsub();
       } catch (error) {
-        console.warn('⚠️ Error unsubscribing:', error);
+        Logger.warn('⚠️ Error unsubscribing:', error)
       }
     });
     unsubscribeRefs.current = [];
@@ -150,7 +282,7 @@ export const useEnhancedHRDashboard = (): EnhancedHRDashboardData => {
     try {
       setupListeners();
     } catch (error) {
-      console.error('❌ Error setting up enhanced HR listeners:', error);
+      Logger.error('❌ Error setting up enhanced HR listeners:', error)
       setError('Failed to initialize dashboard data');
       setIsLoading(false);
     }
@@ -158,14 +290,14 @@ export const useEnhancedHRDashboard = (): EnhancedHRDashboardData => {
     hasInitialized.current = true;
     
     return () => {
-      console.log('🧹 Cleaning up enhanced HR dashboard listeners');
+      Logger.debug('🧹 Cleaning up enhanced HR dashboard listeners')
       isMountedRef.current = false;
       
       unsubscribeRefs.current.forEach(unsub => {
         try {
           unsub();
         } catch (error) {
-          console.warn('⚠️ Error during cleanup:', error);
+          Logger.warn('⚠️ Error during cleanup:', error)
         }
       });
       unsubscribeRefs.current = [];
@@ -178,10 +310,9 @@ export const useEnhancedHRDashboard = (): EnhancedHRDashboardData => {
     if (!user?.organizationId) return;
     
     // 📋 1. WARNINGS LISTENER
-    console.log('🔔 Setting up warnings listener');
+    Logger.debug('🔔 Setting up warnings listener')
     const warningsQuery = query(
-      collection(db, 'warnings'),
-      where('organizationId', '==', user.organizationId),
+      collection(db, 'organizations', user.organizationId, 'warnings'),
       orderBy('createdAt', 'desc')
     );
     
@@ -189,8 +320,10 @@ export const useEnhancedHRDashboard = (): EnhancedHRDashboardData => {
       warningsQuery,
       (snapshot) => {
         if (!isMountedRef.current) return;
-        
-        const warnings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const warnings = snapshot.docs
+          .filter(doc => doc.id !== '_metadata') // Exclude metadata documents
+          .map(doc => ({ id: doc.id, ...doc.data() }));
         
         // Calculate warning stats
         const now = new Date();
@@ -240,10 +373,10 @@ export const useEnhancedHRDashboard = (): EnhancedHRDashboardData => {
         }));
         
         setLastUpdated(new Date());
-        console.log(`🔔 Warnings updated: ${warnings.length} total, ${undelivered} undelivered`);
+        Logger.debug(`🔔 Warnings updated: ${warnings.length} total, ${undelivered} undelivered`)
       },
       (error) => {
-        console.error('❌ Warnings listener error:', error);
+        Logger.error('❌ Warnings listener error:', error)
         if (isMountedRef.current) {
           setError('Failed to load warnings data');
         }
@@ -253,18 +386,19 @@ export const useEnhancedHRDashboard = (): EnhancedHRDashboardData => {
     unsubscribeRefs.current.push(warningsUnsubscribe);
     
     // 👥 2. EMPLOYEES LISTENER  
-    console.log('🔔 Setting up employees listener');
+    Logger.debug('🔔 Setting up employees listener')
     const employeesQuery = query(
-      collection(db, 'employees'),
-      where('organizationId', '==', user.organizationId)
+      collection(db, 'organizations', user.organizationId, 'employees')
     );
     
     const employeesUnsubscribe = onSnapshot(
       employeesQuery,
       (snapshot) => {
         if (!isMountedRef.current) return;
-        
-        const employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const employees = snapshot.docs
+          .filter(doc => doc.id !== '_metadata') // Exclude metadata documents
+          .map(doc => ({ id: doc.id, ...doc.data() }));
         
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         
@@ -290,10 +424,10 @@ export const useEnhancedHRDashboard = (): EnhancedHRDashboardData => {
         });
         
         setLastUpdated(new Date());
-        console.log(`🔔 Employees updated: ${employees.length} total, ${activeEmployees} active`);
+        Logger.debug(`🔔 Employees updated: ${employees.length} total, ${activeEmployees} active`)
       },
       (error) => {
-        console.error('❌ Employees listener error:', error);
+        Logger.error('❌ Employees listener error:', error)
         if (isMountedRef.current) {
           setError('Failed to load employees data');
         }
@@ -306,8 +440,7 @@ export const useEnhancedHRDashboard = (): EnhancedHRDashboardData => {
     const setupReportsListeners = () => {
       // Absence Reports
       const absenceQuery = query(
-        collection(db, 'absence_reports'),
-        where('organizationId', '==', user.organizationId),
+        collection(db, 'organizations', user.organizationId, 'reports'),
         orderBy('absenceDate', 'desc')
       );
       
@@ -325,8 +458,7 @@ export const useEnhancedHRDashboard = (): EnhancedHRDashboardData => {
       
       // HR Meetings  
       const meetingsQuery = query(
-        collection(db, 'hr_meeting_requests'),
-        where('organizationId', '==', user.organizationId),
+        collection(db, 'organizations', user.organizationId, 'meetings'),
         orderBy('createdAt', 'desc')
       );
       
@@ -344,8 +476,7 @@ export const useEnhancedHRDashboard = (): EnhancedHRDashboardData => {
       
       // Corrective Counselling
       const counsellingQuery = query(
-        collection(db, 'corrective_counselling'),
-        where('organizationId', '==', user.organizationId),
+        collection(db, 'organizations', user.organizationId, 'corrective_counselling'),
         orderBy('dateCreated', 'desc')
       );
       

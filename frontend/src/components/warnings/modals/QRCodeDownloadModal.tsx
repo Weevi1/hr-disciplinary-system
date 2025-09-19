@@ -1,3 +1,4 @@
+import Logger from '../../../utils/logger';
 // frontend/src/components/warnings/QRCodeDownloadModal.tsx
 // 📱 QR CODE DOWNLOAD MODAL FOR PDF ACCESS
 // ✅ Displays QR code for mobile device scanning
@@ -82,16 +83,16 @@ export const QRCodeDownloadModal: React.FC<QRCodeDownloadModalProps> = ({
   // ============================================
 
   const generateQRLink = useCallback(async () => {
-    console.log('🔧 [QRCodeDownloadModal] generateQRLink called');
-    console.log('🔧 [QRCodeDownloadModal] pdfBlob:', pdfBlob ? `${(pdfBlob.size / 1024).toFixed(1)} KB` : 'null');
+    Logger.debug('🔧 [QRCodeDownloadModal] generateQRLink called')
+    Logger.debug('🔧 [QRCodeDownloadModal] pdfBlob:', pdfBlob ? `${(pdfBlob.size / 1024).toFixed(1)} KB` : 'null');
     
     if (!pdfBlob) {
-      console.error('❌ [QRCodeDownloadModal] No PDF blob provided');
+      Logger.error('❌ [QRCodeDownloadModal] No PDF blob provided')
       return;
     }
 
     try {
-      console.log('🔧 [QRCodeDownloadModal] Starting QR link generation...');
+      Logger.debug('🔧 [QRCodeDownloadModal] Starting QR link generation...')
       setIsGenerating(true);
       setError(null);
 
@@ -103,12 +104,12 @@ export const QRCodeDownloadModal: React.FC<QRCodeDownloadModalProps> = ({
         organizationId
       });
 
-      console.log('✅ [QRCodeDownloadModal] Link generated successfully:', linkData);
+      Logger.success(2764)
       setLinkData(linkData);
       onLinkGenerated?.(linkData);
 
     } catch (error: any) {
-      console.error('❌ QR link generation failed:', error);
+      Logger.error('❌ QR link generation failed:', error)
       setError(error.message || 'Failed to generate QR code');
     } finally {
       setIsGenerating(false);
@@ -157,7 +158,7 @@ export const QRCodeDownloadModal: React.FC<QRCodeDownloadModalProps> = ({
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (error) {
-      console.error('❌ Failed to copy link:', error);
+      Logger.error('❌ Failed to copy link:', error)
     }
   }, [linkData?.downloadUrl]);
 
@@ -169,7 +170,7 @@ export const QRCodeDownloadModal: React.FC<QRCodeDownloadModalProps> = ({
       setLinkData(null);
       setCountdown({ hours: 0, minutes: 0, seconds: 0, expired: false });
     } catch (error) {
-      console.error('❌ Failed to revoke link:', error);
+      Logger.error('❌ Failed to revoke link:', error)
     }
   }, [linkData?.tokenId]);
 

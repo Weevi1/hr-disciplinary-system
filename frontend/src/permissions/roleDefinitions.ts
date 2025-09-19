@@ -8,6 +8,12 @@ export const USER_ROLES: Record<string, UserRole> = {
     description: 'System administrator with global access',
     level: 1
   },
+  'reseller': {
+    id: 'reseller',
+    name: 'Reseller',
+    description: 'Provincial sales partner with client management',
+    level: 1.5
+  },
   'business-owner': {
     id: 'business-owner',
     name: 'Business Owner',
@@ -34,10 +40,22 @@ export const ROLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
     users: ['create', 'read', 'update', 'delete'],
     system: ['configure', 'deploy', 'monitor'],
     employees: ['create', 'read', 'update', 'delete'],
-    warnings: ['create', 'read', 'update', 'delete', 'approve'],
-    documents: ['create', 'read', 'update', 'delete', 'approve'],
+    warnings: ['create', 'read', 'update', 'delete'],
+    documents: ['create', 'read', 'update', 'delete'],
     analytics: ['read', 'export'],
+    resellers: ['create', 'read', 'update', 'delete'],
     scope: ['global']
+  },
+  'reseller': {
+    clients: ['read', 'update'], // Can view and edit limited client info
+    organizations: ['create', 'read'], // Can deploy and view their client organizations
+    commissions: ['read', 'export'], // View their earnings and statements
+    analytics: ['read'], // View their performance metrics
+    reports: ['read', 'export'], // Generate commission reports
+    contacts: ['update'], // Can update client contact details
+    billing: ['read', 'update'], // Can view and update billing preferences
+    deployment: ['create'], // Can deploy new client organizations
+    scope: ['assigned-clients'] // Limited to assigned client organizations
   },
   'business-owner': {
     organization: ['read'],
@@ -52,8 +70,8 @@ export const ROLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
   'hr-manager': {
     employees: ['create', 'read', 'update', 'delete'],
     users: ['read', 'update'], // ✅ NEW: Limited user management (profile updates only)
-    warnings: ['read', 'update', 'approve'],
-    documents: ['read', 'approve'],
+    warnings: ['read', 'update'],
+    documents: ['read'],
     categories: ['configure'],
     analytics: ['read'],
     reports: ['read', 'export'],
@@ -71,10 +89,23 @@ export const ROLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
 // ✅ NEW: User Management Constraints
 export const USER_MANAGEMENT_RULES = {
   'super-user': {
-    canManage: ['super-user', 'business-owner', 'hr-manager', 'hod-manager'],
-    canCreate: ['business-owner', 'hr-manager', 'hod-manager'],
-    canDelete: ['business-owner', 'hr-manager', 'hod-manager'],
+    canManage: ['super-user', 'reseller', 'business-owner', 'hr-manager', 'hod-manager'],
+    canCreate: ['reseller', 'business-owner', 'hr-manager', 'hod-manager'],
+    canDelete: ['reseller', 'business-owner', 'hr-manager', 'hod-manager'],
     scope: 'global'
+  },
+  'reseller': {
+    canManage: [], // Cannot manage user accounts
+    canCreate: false,
+    canDelete: false,
+    canUpdate: false,
+    scope: 'assigned-clients',
+    restrictions: [
+      'Cannot create or manage user accounts',
+      'Cannot access employee data or warnings',
+      'Can only view and update assigned client organizations',
+      'Limited to commission and billing information'
+    ]
   },
   'business-owner': {
     canManage: ['hr-manager', 'hod-manager'], // Cannot manage other business owners
@@ -177,15 +208,23 @@ export const getCreatableRoles = (currentUserRole: string): UserRole[] => {
 // Navigation items based on role
 export const getRoleNavigation = (roleId: string) => {
   const baseItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: '📊', roles: ['super-user', 'business-owner', 'hr-manager', 'hod-manager'] }
+    { path: '/dashboard', label: 'Dashboard', icon: '📊', roles: ['super-user', 'reseller', 'business-owner', 'hr-manager', 'hod-manager'] }
   ];
 
   const allNavItems = [
     // Super User Navigation
     { path: '/organizations', label: 'Organizations', icon: '🏢', roles: ['super-user'] },
+    { path: '/resellers', label: 'Reseller Network', icon: '🤝', roles: ['super-user'] },
     { path: '/deploy', label: 'Deploy Client', icon: '🚀', roles: ['super-user'] },
     { path: '/system-analytics', label: 'Global Analytics', icon: '📈', roles: ['super-user'] },
     { path: '/system-settings', label: 'System Settings', icon: '⚙️', roles: ['super-user'] },
+    
+    // Reseller Navigation
+    { path: '/my-clients', label: 'My Clients', icon: '🏢', roles: ['reseller'] },
+    { path: '/deploy-client', label: 'Deploy Client', icon: '🚀', roles: ['reseller'] },
+    { path: '/commissions', label: 'Commissions', icon: '💰', roles: ['reseller'] },
+    { path: '/performance', label: 'Performance', icon: '📈', roles: ['reseller'] },
+    { path: '/client-support', label: 'Client Support', icon: '🎯', roles: ['reseller'] },
     
     // Business Owner Navigation
     { path: '/business-overview', label: 'Business Overview', icon: '📊', roles: ['business-owner'] },

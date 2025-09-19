@@ -174,7 +174,23 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
 
       {/* Quick Stats Bar */}
       <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between text-xs text-gray-500">
-        <span>Started: {new Date(employee.profile.startDate).toLocaleDateString()}</span>
+        <span>Started: {(() => {
+          const startDate = employee.profile?.startDate || employee.employment?.startDate;
+          if (!startDate) return 'Not set';
+          
+          try {
+            if (startDate && typeof startDate.toDate === 'function') {
+              return startDate.toDate().toLocaleDateString();
+            }
+            if (startDate instanceof Date) {
+              return startDate.toLocaleDateString();
+            }
+            const parsed = new Date(startDate);
+            return !isNaN(parsed.getTime()) ? parsed.toLocaleDateString() : 'Invalid date';
+          } catch (error) {
+            return 'Invalid date';
+          }
+        })()}</span>
         {employee.disciplinaryRecord.lastWarningDate && (
           <span>Last warning: {new Date(employee.disciplinaryRecord.lastWarningDate).toLocaleDateString()}</span>
         )}

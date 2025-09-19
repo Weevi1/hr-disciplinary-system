@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/components/common/ErrorBoundary.tsx
 import React, { Component, useState, useCallback } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
@@ -38,7 +39,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log error to console in development
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    Logger.error('ErrorBoundary caught an error:', error, errorInfo)
     
     // Update state with error info
     this.setState({
@@ -74,7 +75,7 @@ export class ErrorBoundary extends Component<Props, State> {
         });
       }
     } catch (auditError) {
-      console.error('Failed to log error to audit:', auditError);
+      Logger.error('Failed to log error to audit:', auditError)
     }
   }
 

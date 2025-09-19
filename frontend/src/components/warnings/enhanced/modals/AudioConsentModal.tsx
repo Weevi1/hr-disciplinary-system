@@ -1,3 +1,4 @@
+import Logger from '../../../../utils/logger';
 // frontend/src/components/warnings/enhanced/modals/AudioConsentModal.tsx
 // 🎯 MANDATORY AUDIO CONSENT MODAL
 // ✅ Appears before warning wizard opens
@@ -50,15 +51,15 @@ export const AudioConsentModal: React.FC<AudioConsentModalProps> = ({
   const handleConsent = () => {
     if (isAcknowledged) {
       // Log consent for audit trail
-      console.log('🎤 Audio recording consent given by:', managerName);
-      console.log('🕐 Consent timestamp:', new Date().toISOString());
+      Logger.debug('🎤 Audio recording consent given by:', managerName)
+      Logger.debug('🕐 Consent timestamp:', new Date().toISOString());
       
       onConsent();
     }
   };
 
   const handleCancel = () => {
-    console.log('❌ Audio recording consent declined by:', managerName);
+    Logger.debug('❌ Audio recording consent declined by:', managerName)
     onCancel();
   };
 

@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // frontend/src/services/TemporaryLinkService.ts
 // 🔗 TEMPORARY LINK SERVICE FOR SECURE PDF DOWNLOADS
 // ✅ Uses Firebase Storage directly (same pattern as audio clips)
@@ -53,7 +54,7 @@ export class TemporaryLinkService {
    * (Same pattern as audio uploads - no cloud functions needed!)
    */
   static async generateTemporaryLink(request: LinkGenerationRequest): Promise<TemporaryLinkData> {
-    console.log('🔧 [TemporaryLinkService] Starting PDF upload using Firebase Storage...');
+    Logger.debug('🔧 [TemporaryLinkService] Starting PDF upload using Firebase Storage...')
     console.log('🔧 [TemporaryLinkService] Request:', {
       filename: request.filename,
       blobSize: request.pdfBlob.size,
@@ -65,14 +66,14 @@ export class TemporaryLinkService {
     try {
       const user = auth.currentUser;
       if (!user) {
-        console.error('❌ [TemporaryLinkService] User not authenticated');
+        Logger.error('❌ [TemporaryLinkService] User not authenticated')
         throw new Error('User not authenticated');
       }
-      console.log('✅ [TemporaryLinkService] User authenticated:', user.uid);
+      Logger.success(2228)
 
       // Generate unique token ID for the file
       const tokenId = this.generateTokenId();
-      console.log('🔧 [TemporaryLinkService] Generated tokenId:', tokenId);
+      Logger.debug('🔧 [TemporaryLinkService] Generated tokenId:', tokenId)
       
       // Create storage path (same pattern as audio: temp-downloads/orgId/filename)
       const timestamp = Date.now();
@@ -80,7 +81,7 @@ export class TemporaryLinkService {
       const cleanFilename = request.filename.replace(/[^a-zA-Z0-9.-]/g, '_');
       const storagePath = `temp-downloads/${request.organizationId || 'default'}/${timestamp}_${randomId}_${cleanFilename}`;
       
-      console.log('🔧 [TemporaryLinkService] Storage path:', storagePath);
+      Logger.debug('🔧 [TemporaryLinkService] Storage path:', storagePath)
 
       // Create Firebase Storage reference (same as audio uploads)
       const storageRef = ref(storage, storagePath);
@@ -101,14 +102,14 @@ export class TemporaryLinkService {
         }
       };
       
-      console.log('☁️ [TemporaryLinkService] Uploading PDF to Firebase Storage...');
+      Logger.debug('☁️ [TemporaryLinkService] Uploading PDF to Firebase Storage...')
       
       // Upload using the SAME pattern as audio uploads
       await uploadBytes(storageRef, request.pdfBlob, metadata);
       const downloadUrl = await getDownloadURL(storageRef);
       
       // Track this temporary file for cleanup
-      console.log('📝 [TemporaryLinkService] Tracking temporary file for cleanup...');
+      Logger.debug('📝 [TemporaryLinkService] Tracking temporary file for cleanup...')
       const expiryDate = new Date(Date.now() + (this.EXPIRY_HOURS * 60 * 60 * 1000));
       
       await this.trackTemporaryFile({
@@ -124,10 +125,10 @@ export class TemporaryLinkService {
         createdAt: new Date()
       });
       
-      console.log('✅ [TemporaryLinkService] PDF uploaded successfully:', downloadUrl);
+      Logger.success(4558)
 
       // Generate QR code for the download URL
-      console.log('🎯 [TemporaryLinkService] Generating QR code...');
+      Logger.debug(4696)
       const qrCodeData = await this.generateQRCode(downloadUrl);
       
       // Set expiry time (1 hour from now)
@@ -148,7 +149,7 @@ export class TemporaryLinkService {
       };
 
     } catch (error) {
-      console.error('❌ [TemporaryLinkService] Failed to generate temporary link:', error);
+      Logger.error('❌ [TemporaryLinkService] Failed to generate temporary link:', error)
       throw new Error(`Failed to generate temporary link: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -159,7 +160,7 @@ export class TemporaryLinkService {
   static async validateTemporaryToken(token: string): Promise<boolean> {
     // With Firebase Storage URLs, validation is handled by Firebase itself
     // The URLs contain built-in authentication tokens
-    console.log('🔧 [TemporaryLinkService] Token validation (Firebase handles this automatically)');
+    Logger.debug('🔧 [TemporaryLinkService] Token validation (Firebase handles this automatically)');
     return true; // Firebase URLs are self-validating
   }
 
@@ -169,9 +170,9 @@ export class TemporaryLinkService {
    * This would need a cleanup job to delete the files from storage
    */
   static async revokeTemporaryToken(tokenId: string): Promise<boolean> {
-    console.log('🗑️ [TemporaryLinkService] Token revocation requested for:', tokenId);
-    console.log('⚠️ Note: With Firebase Storage URLs, revocation requires file deletion from storage');
-    console.log('📝 This would be handled by a cleanup job in a production system');
+    Logger.debug('🗑️ [TemporaryLinkService] Token revocation requested for:', tokenId)
+    Logger.debug('⚠️ Note: With Firebase Storage URLs, revocation requires file deletion from storage')
+    Logger.debug('📝 This would be handled by a cleanup job in a production system')
     
     // For now, just return success - the files will expire naturally
     // In production, you'd add this tokenId to a "revoked" list in Firestore
@@ -233,7 +234,7 @@ export class TemporaryLinkService {
       });
 
     } catch (error) {
-      console.error('❌ QR Code generation failed:', error);
+      Logger.error('❌ QR Code generation failed:', error)
       // Fallback: return the URL as text-based QR placeholder
       return `data:text/plain;base64,${btoa(url)}`;
     }
@@ -301,9 +302,9 @@ export class TemporaryLinkService {
         fileSize: 0 // Will be populated by metadata if available
       });
       
-      console.log('✅ [TemporaryLinkService] Temporary file tracked for cleanup:', fileData.tokenId);
+      Logger.success(10578)
     } catch (error) {
-      console.error('❌ [TemporaryLinkService] Failed to track temporary file:', error);
+      Logger.error('❌ [TemporaryLinkService] Failed to track temporary file:', error)
       // Don't throw error - file upload should still succeed even if tracking fails
     }
   }

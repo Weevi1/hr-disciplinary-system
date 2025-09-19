@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // frontend/src/services/WarningService.ts
 // 🏆 CLEANED WARNING SERVICE - DEPENDS ON UNIVERSALCATEGORIES
 // ✅ Removed duplicate escalation path logic
@@ -23,6 +24,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { DataService } from './DataService';
+import { TimeService } from './TimeService';
 
 // Import from UniversalCategories - our single source of truth
 import type { 
@@ -79,7 +81,7 @@ export interface Warning {
   isActive: boolean;
   isSigned: boolean;
   isDelivered: boolean;
-  status?: 'draft' | 'pending_review' | 'approved' | 'rejected' | 'issued';
+  status?: 'issued' | 'delivered' | 'acknowledged' | 'expired';
   
   // Delivery
   deliveryMethod: DeliveryMethod;
@@ -165,6 +167,11 @@ export interface EscalationRecommendation {
   recommendedLevel: string;
   reason: string;
   
+  // HR Intervention System
+  requiresHRIntervention: boolean;
+  interventionReason?: string;
+  interventionLevel?: 'urgent' | 'standard';
+  
   // Context
   activeWarnings: Warning[];
   escalationPath: WarningLevel[];
@@ -206,7 +213,7 @@ export class WarningService {
     organizationId?: string
   ): Promise<EscalationRecommendation> {
     try {
-      console.log('🎯 [ESCALATION] Getting recommendation...', { employeeId, categoryId });
+      Logger.debug(5184)
       
       // Get all active warnings for employee
       const allActiveWarnings = await this.getActiveWarnings(employeeId, organizationId);
@@ -214,7 +221,7 @@ export class WarningService {
       // Get category from UniversalCategories
       const universalCategory = getCategoryById(categoryId);
       if (!universalCategory) {
-        console.warn('⚠️ [ESCALATION] Category not found in UniversalCategories, using fallback');
+        Logger.warn('⚠️ [ESCALATION] Category not found in UniversalCategories, using fallback')
         return this.getFallbackRecommendation(categoryId, organizationId);
       }
       
@@ -223,23 +230,36 @@ export class WarningService {
         warning.categoryId === categoryId
       );
       
-      console.log('📋 [ESCALATION] All active warnings:', allActiveWarnings.length);
-      console.log('📋 [ESCALATION] Category-specific warnings:', categorySpecificWarnings.length);
-      console.log('📋 [ESCALATION] Category ID filter:', categoryId);
+      Logger.debug('📋 [ESCALATION] All active warnings:', allActiveWarnings.length)
+      Logger.debug('📋 [ESCALATION] Category-specific warnings:', categorySpecificWarnings.length)
+      Logger.debug('📋 [ESCALATION] Category ID filter:', categoryId)
       
       // Get escalation path from UniversalCategories
       const escalationPath = getEscalationPath(categoryId);
-      console.log('📋 [ESCALATION] Using escalation path:', escalationPath);
+      Logger.debug('📋 [ESCALATION] Using escalation path:', escalationPath)
       
       // Determine suggested level based ONLY on category-specific warnings
       const suggestedLevel = this.determineSuggestedLevel(categorySpecificWarnings, escalationPath);
       
+      // Check if HR intervention is required
+      const requiresHRIntervention = suggestedLevel === 'hr_intervention';
+      const finalLevel = requiresHRIntervention ? 'final_written' : suggestedLevel as WarningLevel;
+      
       // Build comprehensive recommendation
       const recommendation: EscalationRecommendation = {
         // Core recommendation
-        suggestedLevel,
-        recommendedLevel: getLevelLabel(suggestedLevel),
-        reason: this.generateEscalationReason(categorySpecificWarnings, suggestedLevel, universalCategory),
+        suggestedLevel: finalLevel,
+        recommendedLevel: requiresHRIntervention ? 'HR INTERVENTION REQUIRED' : getLevelLabel(finalLevel),
+        reason: requiresHRIntervention 
+          ? this.generateHRInterventionReason(categorySpecificWarnings, universalCategory)
+          : this.generateEscalationReason(categorySpecificWarnings, finalLevel, universalCategory),
+        
+        // HR Intervention System
+        requiresHRIntervention,
+        interventionReason: requiresHRIntervention 
+          ? `Employee has active final written warning for ${universalCategory.name}. Next offense requires manual HR decision (suspension, hearing, or dismissal).`
+          : undefined,
+        interventionLevel: requiresHRIntervention ? 'urgent' : undefined,
         
         // Context - 🔥 FIXED: Now shows category-specific warnings only
         activeWarnings: categorySpecificWarnings,
@@ -262,27 +282,35 @@ export class WarningService {
         
       };
       
-      console.log('✅ [ESCALATION] Generated recommendation:', recommendation);
+      Logger.success(7929)
       return recommendation;
       
     } catch (error) {
-      console.error('❌ [ESCALATION] Error generating recommendation:', error);
+      Logger.error('❌ [ESCALATION] Error generating recommendation:', error)
       return this.getFallbackRecommendation(categoryId, organizationId);
     }
   }
 
   /**
    * Determine suggested warning level based on active warnings and escalation path
+   * Returns 'hr_intervention' when employee has final written warning
    */
   private static determineSuggestedLevel(
     activeWarnings: Warning[],
     escalationPath: WarningLevel[]
-  ): WarningLevel {
+  ): WarningLevel | 'hr_intervention' {
     // If no active warnings, start with first level in path
     if (activeWarnings.length === 0) {
       const firstLevel = escalationPath[0] || 'counselling';
-      console.log('🆕 [ESCALATION] No active warnings - starting with:', firstLevel);
+      Logger.debug('🆕 [ESCALATION] No active warnings - starting with:', firstLevel)
       return firstLevel;
+    }
+    
+    // Check if employee already has final written warning
+    const hasFinalWritten = activeWarnings.some(warning => warning.level === 'final_written');
+    if (hasFinalWritten) {
+      Logger.warn('🚨 [HR INTERVENTION] Employee has final written warning - HR intervention required')
+      return 'hr_intervention' as any; // Signal for HR intervention
     }
     
     // Find highest level in active warnings
@@ -297,13 +325,21 @@ export class WarningService {
       }
     }
     
-    console.log('🎯 [ESCALATION] Highest current level:', highestCurrentLevel, 'at index:', highestIndex);
+    Logger.debug(9224)
     
-    // Escalate to next level
-    const nextLevel = getNextEscalationLevel('', highestCurrentLevel) || 
-                     escalationPath[escalationPath.length - 1];
+    // Get next level in escalation path
+    const currentIndex = escalationPath.indexOf(highestCurrentLevel);
+    const nextIndex = currentIndex + 1;
     
-    console.log('⬆️ [ESCALATION] Suggested next level:', nextLevel);
+    // If we're at or beyond the last step in path, cap at final_written
+    if (nextIndex >= escalationPath.length || escalationPath[nextIndex] === 'suspension' || escalationPath[nextIndex] === 'dismissal') {
+      const finalLevel = 'final_written';
+      Logger.debug('⚠️ [ESCALATION] Capping at final written warning:', finalLevel)
+      return finalLevel;
+    }
+    
+    const nextLevel = escalationPath[nextIndex];
+    Logger.debug('⬆️ [ESCALATION] Suggested next level:', nextLevel)
     return nextLevel;
   }
 
@@ -324,6 +360,24 @@ export class WarningService {
     const daysSince = Math.floor((Date.now() - lastWarning.issueDate.getTime()) / (1000 * 60 * 60 * 24));
 
     return `Employee has ${warningCount} active warning${warningCount > 1 ? 's' : ''} on record. Most recent warning was issued ${daysSince} days ago. Progressive discipline policy requires escalation to ${getLevelLabel(suggestedLevel)}.`;
+  }
+
+  /**
+   * Generate HR intervention reason when employee has final written warning
+   */
+  private static generateHRInterventionReason(
+    activeWarnings: Warning[],
+    category: UniversalCategory
+  ): string {
+    const finalWarning = activeWarnings.find(w => w.level === 'final_written');
+    if (!finalWarning) {
+      return `🚨 URGENT: Employee requires HR intervention for ${category.name} violation.`;
+    }
+
+    const daysSinceFinal = Math.floor((Date.now() - finalWarning.issueDate.getTime()) / (1000 * 60 * 60 * 24));
+    const warningCount = activeWarnings.length;
+
+    return `🚨 URGENT HR INTERVENTION REQUIRED: Employee has active final written warning for ${category.name} (issued ${daysSinceFinal} days ago) and has committed another offense. Total active warnings: ${warningCount}. HR must decide: suspension, disciplinary hearing, or dismissal. System cannot escalate beyond final written warning.`;
   }
 
   /**
@@ -371,18 +425,18 @@ export class WarningService {
    */
   static async getActiveWarnings(employeeId: string, organizationId?: string): Promise<Warning[]> {
     try {
-      console.log('📋 [WARNINGS] Getting active warnings for employee:', employeeId);
+      Logger.debug('📋 [WARNINGS] Getting active warnings for employee:', employeeId)
       
       if (!organizationId) {
-        console.warn('⚠️ [WARNINGS] No organizationId provided, using DataService fallback');
+        Logger.warn('⚠️ [WARNINGS] No organizationId provided, using DataService fallback')
         return await DataService.getActiveWarningsForEmployee(employeeId);
       }
       
-      const warningsRef = collection(db, 'warnings');
+      // Use sharded collection path
+      const warningsRef = collection(db, 'organizations', organizationId, 'warnings');
       const q = query(
         warningsRef,
         where('employeeId', '==', employeeId),
-        where('organizationId', '==', organizationId),
         where('isActive', '==', true),
         orderBy('issueDate', 'desc')
       );
@@ -398,11 +452,11 @@ export class WarningService {
         updatedAt: doc.data().updatedAt?.toDate() || new Date()
       })) as Warning[];
       
-      console.log('✅ [WARNINGS] Found active warnings:', warnings.length);
+      Logger.success(12879)
       return warnings;
       
     } catch (error) {
-      console.error('❌ [WARNINGS] Error getting active warnings:', error);
+      Logger.error('❌ [WARNINGS] Error getting active warnings:', error)
       return [];
     }
   }
@@ -481,7 +535,7 @@ export class WarningService {
    */
   static async saveWarning(warningData: Partial<Warning>, organizationId: string): Promise<string> {
     try {
-      console.log('💾 [SAVE] Saving warning to database...');
+      Logger.debug('💾 [SAVE] Saving warning to database...')
       
       const warningRef = warningData.id ? 
         doc(db, 'warnings', warningData.id) : 
@@ -490,8 +544,8 @@ export class WarningService {
       const dataToSave = {
         ...warningData,
         organizationId,
-        updatedAt: new Date(),
-        ...(warningData.id ? {} : { createdAt: new Date() })
+        updatedAt: TimeService.getServerTimestamp(),
+        ...(warningData.id ? {} : { createdAt: TimeService.getServerTimestamp() })
       };
 
       if (warningData.id) {
@@ -502,11 +556,11 @@ export class WarningService {
         await setDoc(warningRef, dataToSave as any);
       }
       
-      console.log('✅ [SAVE] Warning saved successfully:', warningRef.id);
+      Logger.success(16339)
       return warningRef.id;
       
     } catch (error) {
-      console.error('❌ [SAVE] Error saving warning:', error);
+      Logger.error('❌ [SAVE] Error saving warning:', error)
       throw error;
     }
   }
@@ -534,7 +588,7 @@ export class WarningService {
       } as Warning;
       
     } catch (error) {
-      console.error('❌ [GET] Error getting warning by ID:', error);
+      Logger.error('❌ [GET] Error getting warning by ID:', error)
       return null;
     }
   }

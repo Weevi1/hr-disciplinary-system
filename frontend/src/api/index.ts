@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 /**
  * API Layer - Single point of access for all data operations
  * 
@@ -9,9 +10,10 @@
  * - Future-proof for potential backend changes
  */
 
-import { DataService } from '../services/DataService';
+import { DataServiceV2 } from '../services/DataServiceV2';
+import { ShardedDataService } from '../services/ShardedDataService';
 import { WarningService } from '../services/WarningService';
-// import * as UniversalCategories from '../services/UniversalCategories'; // TODO: Fix import
+import * as UniversalCategories from '../services/UniversalCategories';
 import type { 
   Warning,
   WarningLevel,
@@ -32,7 +34,7 @@ class APIError extends Error {
 }
 
 const handleError = (operation: string, error: unknown): never => {
-  console.error(`API Error in ${operation}:`, error);
+  Logger.error(`API Error in ${operation}:`, error)
   
   if (error instanceof Error) {
     throw new APIError(`${operation} failed: ${error.message}`, 'OPERATION_FAILED', error);
@@ -47,7 +49,7 @@ const handleError = (operation: string, error: unknown): never => {
 
 export const warnings = {
   /**
-   * Get all warnings with optional filters
+   * Get all warnings with optional filters (SHARDED - excludes draft/incomplete warnings)
    */
   async getAll(organizationId: string, filters?: { 
     status?: string;
@@ -55,18 +57,41 @@ export const warnings = {
     level?: WarningLevel;
   }): Promise<Warning[]> {
     try {
-      return await DataService.getWarningsByOrganization(organizationId);
+      const result = await ShardedDataService.loadWarnings(organizationId);
+      const allWarnings = result.documents;
+      
+      // Filter out incomplete warnings only (remove draft concept)
+      const completedWarnings = allWarnings.filter(warning => {        
+        // Must have required core fields for a complete warning
+        if (!warning.employeeName || !warning.level || !warning.description) {
+          return false;
+        }
+        
+        // Filter out obvious placeholders for employee data
+        if (warning.employeeName === 'Unknown Employee' ||
+            warning.employeeName === 'Employee Not Selected') {
+          return false;
+        }
+        
+        // Allow warnings even if category shows as "Unknown" - this might be due to
+        // category loading issues, but the warning itself is still valid
+        return true;
+      });
+      
+      Logger.debug(`Filtered ${allWarnings.length - completedWarnings.length} incomplete warnings from display`)
+      
+      return completedWarnings;
     } catch (error) {
       handleError('warnings.getAll', error);
     }
   },
 
   /**
-   * Get warning by ID
+   * Get warning by ID (SHARDED)
    */
-  async getById(warningId: string): Promise<Warning | null> {
+  async getById(warningId: string, organizationId: string): Promise<Warning | null> {
     try {
-      return await WarningService.getWarningById(warningId);
+      return await ShardedDataService.getWarning(organizationId, warningId);
     } catch (error) {
       handleError('warnings.getById', error);
     }
@@ -78,7 +103,7 @@ export const warnings = {
   async create(warningData: EnhancedWarningFormData): Promise<string> {
     try {
       // Use DataService to save the warning directly
-      console.log('💾 Creating warning via DataService:', warningData);
+      Logger.debug('💾 Creating warning via DataService:', warningData)
       
       // Transform the enhanced form data to warning format
       const warning: Warning = {
@@ -114,7 +139,7 @@ export const warnings = {
         
         // Status and flags
         isActive: true,
-        status: 'draft',
+        status: 'issued',
         
         // Optional fields - handle undefined values for Firestore
         ...(warningData.additionalNotes && { additionalNotes: warningData.additionalNotes }),
@@ -135,7 +160,7 @@ export const warnings = {
       
       // Save using WarningService (the original working method)
       const warningId = await WarningService.saveWarning(warning, warningData.organizationId);
-      console.log('✅ Warning created successfully via DataService:', warningId);
+      Logger.success(5010)
       
       return warningId;
     } catch (error) {
@@ -150,10 +175,10 @@ export const warnings = {
     try {
       // Use DataService for status updates
       if (updates.status && updates.organizationId) {
-        await DataService.updateWarningStatus(warningId, updates.status, updates.organizationId);
+        await DataServiceV2.updateWarningStatus(warningId, updates.status, updates.organizationId);
       } else {
         // TODO: Implement general updates when WarningService is integrated
-        console.warn('warnings.update only supports status updates for now');
+        Logger.warn('warnings.update only supports status updates for now')
       }
     } catch (error) {
       handleError('warnings.update', error);
@@ -166,7 +191,7 @@ export const warnings = {
   async delete(warningId: string): Promise<void> {
     try {
       // TODO: Implement when WarningService is integrated
-      console.warn('warnings.delete not implemented - needs WarningService integration');
+      Logger.warn('warnings.delete not implemented - needs WarningService integration')
     } catch (error) {
       handleError('warnings.delete', error);
     }
@@ -176,12 +201,13 @@ export const warnings = {
    * Get escalation recommendation for employee
    */
   async getEscalationRecommendation(
-    employeeId: string, 
-    categoryId: string
+    employeeId: string,
+    categoryId: string,
+    organizationId?: string
   ): Promise<EscalationRecommendation> {
     try {
-      // Use WarningService for escalation recommendations
-      return await WarningService.getEscalationRecommendation(employeeId, categoryId);
+      // Use WarningService for escalation recommendations with organizationId
+      return await WarningService.getEscalationRecommendation(employeeId, categoryId, organizationId);
     } catch (error) {
       handleError('warnings.getEscalationRecommendation', error);
     }
@@ -198,12 +224,12 @@ export const warnings = {
   }> {
     try {
       // Get all warnings and calculate stats
-      const allWarnings = await DataService.getWarningsByOrganization(organizationId);
+      const allWarnings = await DataServiceV2.getWarningsByOrganization(organizationId);
       
       const stats = {
         total: allWarnings.length,
-        pendingReview: allWarnings.filter(w => w.status === 'pending_review').length,
-        approved: allWarnings.filter(w => w.status === 'approved').length,
+        issued: allWarnings.filter(w => w.status === 'issued').length,
+        delivered: allWarnings.filter(w => w.status === 'delivered').length,
         byLevel: {
           counselling: allWarnings.filter(w => w.warningLevel === 'counselling').length,
           written_warning_1: allWarnings.filter(w => w.warningLevel === 'written_warning_1').length,
@@ -217,6 +243,21 @@ export const warnings = {
     } catch (error) {
       handleError('warnings.getStats', error);
     }
+  },
+
+  /**
+   * Get archived warnings (for archived employees and expired warnings)
+   */
+  async getArchived(organizationId: string): Promise<Warning[]> {
+    try {
+      // This method combines warnings from archived employees and expired warnings
+      // The WarningArchive component handles the logic for loading these
+      // For now, return empty array - the component loads data directly
+      return [];
+    } catch (error) {
+      handleError('warnings.getArchived', error);
+      return [];
+    }
   }
 };
 
@@ -226,82 +267,84 @@ export const warnings = {
 
 export const employees = {
   /**
-   * Get all employees for organization
+   * Get all employees for organization (SHARDED)
    */
   async getAll(organizationId: string): Promise<Employee[]> {
     try {
-      return await DataService.getEmployeesByOrganization(organizationId);
+      const result = await ShardedDataService.loadEmployees(organizationId);
+      return result.documents;
     } catch (error) {
       handleError('employees.getAll', error);
     }
   },
 
   /**
-   * Get employee by ID
+   * Get employee by ID (SHARDED)
    */
-  async getById(employeeId: string): Promise<Employee | null> {
+  async getById(employeeId: string, organizationId: string): Promise<Employee | null> {
     try {
-      return await DataService.getEmployee(employeeId);
+      return await ShardedDataService.getEmployeeById(employeeId, organizationId);
     } catch (error) {
       handleError('employees.getById', error);
     }
   },
 
   /**
-   * Create new employee
+   * Create new employee (SHARDED)
    */
   async create(employeeData: Omit<Employee, 'id'>): Promise<string> {
     try {
-      return await DataService.saveEmployee(employeeData, employeeData.organizationId);
+      const employee = await ShardedDataService.saveEmployee(employeeData, employeeData.organizationId);
+      return employee.id;
     } catch (error) {
       handleError('employees.create', error);
     }
   },
 
   /**
-   * Update employee
+   * Update employee (SHARDED)
    */
-  async update(employeeId: string, updates: Partial<Employee>): Promise<void> {
+  async update(employeeId: string, organizationId: string, updates: Partial<Employee>): Promise<void> {
     try {
-      const employee = await DataService.getEmployee(employeeId);
+      const employee = await ShardedDataService.getEmployeeById(employeeId, organizationId);
       if (!employee) throw new Error('Employee not found');
       const updatedEmployee = { ...employee, ...updates };
-      await DataService.saveEmployee(updatedEmployee, employee.organizationId);
+      await ShardedDataService.saveEmployee(updatedEmployee, organizationId);
     } catch (error) {
       handleError('employees.update', error);
     }
   },
 
   /**
-   * Delete employee (archive)
+   * Delete employee (archive) (SHARDED)
    */
-  async delete(employeeId: string): Promise<void> {
+  async delete(employeeId: string, organizationId: string): Promise<void> {
     try {
-      const employee = await DataService.getEmployee(employeeId);
-      if (!employee) throw new Error('Employee not found');
-      await DataService.archiveEmployee(employeeId, employee.organizationId);
+      await ShardedDataService.archiveEmployee(employeeId, organizationId);
     } catch (error) {
       handleError('employees.delete', error);
     }
   },
 
   /**
-   * Bulk create employees (for CSV import)
+   * Bulk create employees (SHARDED - for CSV import)
    */
   async bulkCreate(employeesData: Partial<Employee>[], organizationId: string): Promise<string[]> {
     try {
-      return await DataService.bulkCreateEmployees(employeesData, organizationId);
+      const result = await ShardedDataService.bulkCreateEmployees(employeesData, organizationId);
+      return result.success > 0 ? ['bulk-success'] : [];
     } catch (error) {
       handleError('employees.bulkCreate', error);
     }
   },
 
   /**
-   * Search employees
+   * Search employees (SHARDED)
    */
   async search(organizationId: string, searchTerm: string): Promise<Employee[]> {
     try {
-      const employees = await DataService.getEmployeesByOrganization(organizationId);
+      const result = await ShardedDataService.loadEmployees(organizationId);
+      const employees = result.documents;
       const searchLower = searchTerm.toLowerCase();
       return employees.filter(employee => 
         employee.profile.firstName.toLowerCase().includes(searchLower) ||
@@ -315,13 +358,194 @@ export const employees = {
   },
 
   /**
-   * Get employees by manager ID
+   * Get employees by manager ID (SHARDED)
    */
   async getByManager(managerId: string, organizationId: string): Promise<Employee[]> {
     try {
-      return await DataService.getEmployeesByManager(managerId, organizationId);
+      const result = await ShardedDataService.loadEmployees(organizationId);
+      return result.documents.filter(employee => 
+        employee.employment?.managerId === managerId
+      );
     } catch (error) {
       handleError('employees.getByManager', error);
+    }
+  },
+
+  /**
+   * Generate next available employee number (SHARDED)
+   */
+  async generateNextEmployeeNumber(
+    organizationId: string, 
+    format: 'EMP001' | 'E001' | '001' | 'custom' = 'EMP001',
+    customPrefix: string = '',
+    startingNumber: number = 1
+  ): Promise<string> {
+    try {
+      const result = await ShardedDataService.loadEmployees(organizationId);
+      const employees = result.documents;
+      
+      // Get all employee numbers
+      const existingNumbers = employees
+        .map(emp => emp.profile?.employeeNumber)
+        .filter(num => num && typeof num === 'string') as string[];
+      
+      // Extract numeric parts and find the highest
+      let highestNumber = startingNumber - 1;
+      
+      existingNumbers.forEach(empNum => {
+        const numMatch = empNum.match(/(\d+)$/);
+        if (numMatch) {
+          const num = parseInt(numMatch[1], 10);
+          if (num > highestNumber) {
+            highestNumber = num;
+          }
+        }
+      });
+      
+      const nextNumber = highestNumber + 1;
+      
+      // Generate formatted number based on format
+      switch (format) {
+        case 'EMP001':
+          return `EMP${nextNumber.toString().padStart(3, '0')}`;
+        case 'E001':
+          return `E${nextNumber.toString().padStart(3, '0')}`;
+        case '001':
+          return nextNumber.toString().padStart(3, '0');
+        case 'custom':
+          return `${customPrefix}${nextNumber.toString().padStart(3, '0')}`;
+        default:
+          return `EMP${nextNumber.toString().padStart(3, '0')}`;
+      }
+    } catch (error) {
+      handleError('employees.generateNextEmployeeNumber', error);
+    }
+  },
+
+  /**
+   * Validate employee number availability (SHARDED)
+   */
+  async validateEmployeeNumber(
+    organizationId: string,
+    employeeNumber: string,
+    excludeEmployeeId?: string
+  ): Promise<{
+    isAvailable: boolean;
+    suggestions?: string[];
+  }> {
+    try {
+      const result = await ShardedDataService.loadEmployees(organizationId);
+      const employees = result.documents;
+      
+      // Check if employee number is already taken
+      const existingEmployee = employees.find(emp => 
+        emp.profile?.employeeNumber === employeeNumber && 
+        emp.id !== excludeEmployeeId
+      );
+      
+      if (!existingEmployee) {
+        return { isAvailable: true };
+      }
+      
+      // Generate suggestions if not available
+      const suggestions: string[] = [];
+      const baseNumber = employeeNumber.match(/(\d+)$/);
+      const prefix = employeeNumber.replace(/(\d+)$/, '');
+      
+      if (baseNumber) {
+        const num = parseInt(baseNumber[1], 10);
+        for (let i = 1; i <= 3; i++) {
+          const suggestion = `${prefix}${(num + i).toString().padStart(baseNumber[1].length, '0')}`;
+          const suggestionExists = employees.some(emp => 
+            emp.profile?.employeeNumber === suggestion
+          );
+          if (!suggestionExists) {
+            suggestions.push(suggestion);
+          }
+        }
+      }
+      
+      return {
+        isAvailable: false,
+        suggestions: suggestions.slice(0, 3) // Return max 3 suggestions
+      };
+    } catch (error) {
+      handleError('employees.validateEmployeeNumber', error);
+    }
+  },
+
+  /**
+   * Archive employee (lifecycle management)
+   */
+  async archive(
+    employeeId: string,
+    organizationId: string,
+    options: { reason: string; archivedBy: string }
+  ): Promise<void> {
+    try {
+      const { EmployeeLifecycleService } = await import('../services/EmployeeLifecycleService');
+      await EmployeeLifecycleService.archiveEmployee(employeeId, organizationId, options);
+    } catch (error) {
+      handleError('employees.archive', error);
+    }
+  },
+
+  /**
+   * Restore archived employee
+   */
+  async restore(employeeId: string, organizationId: string, restoredBy: string): Promise<void> {
+    try {
+      const { EmployeeLifecycleService } = await import('../services/EmployeeLifecycleService');
+      await EmployeeLifecycleService.restoreEmployee(employeeId, organizationId, restoredBy);
+    } catch (error) {
+      handleError('employees.restore', error);
+    }
+  },
+
+  /**
+   * Get employees eligible for deletion (5+ years archived)
+   */
+  async getEligibleForDeletion(organizationId: string): Promise<Employee[]> {
+    try {
+      const { EmployeeLifecycleService } = await import('../services/EmployeeLifecycleService');
+      return await EmployeeLifecycleService.getEmployeesEligibleForDeletion(organizationId);
+    } catch (error) {
+      handleError('employees.getEligibleForDeletion', error);
+    }
+  },
+
+  /**
+   * Get employee lifecycle statistics
+   */
+  async getLifecycleStats(organizationId: string): Promise<any> {
+    try {
+      const { EmployeeLifecycleService } = await import('../services/EmployeeLifecycleService');
+      return await EmployeeLifecycleService.getLifecycleStats(organizationId);
+    } catch (error) {
+      handleError('employees.getLifecycleStats', error);
+    }
+  },
+
+  /**
+   * Get archived employees (separate from main list)
+   */
+  async getArchived(organizationId: string): Promise<Employee[]> {
+    try {
+      const result = await ShardedDataService.loadArchivedEmployees(organizationId);
+      return result.documents;
+    } catch (error) {
+      handleError('employees.getArchived', error);
+    }
+  },
+
+  /**
+   * Get all warnings for an employee (including archived employees)
+   */
+  async getAllWarningsForEmployee(employeeId: string, organizationId: string): Promise<any[]> {
+    try {
+      return await ShardedDataService.getAllWarningsForEmployee(employeeId, organizationId);
+    } catch (error) {
+      handleError('employees.getAllWarningsForEmployee', error);
     }
   }
 };
@@ -336,7 +560,7 @@ export const organizations = {
    */
   async getById(organizationId: string) {
     try {
-      return await DataService.getOrganization(organizationId);
+      return await DataServiceV2.getOrganization(organizationId);
     } catch (error) {
       handleError('organizations.getById', error);
     }
@@ -347,18 +571,19 @@ export const organizations = {
    */
   async update(organizationId: string, updates: any) {
     try {
-      return await DataService.updateOrganization(organizationId, updates);
+      // Organization updates need to be handled differently for sharded architecture
+      throw new Error('Organization updates not implemented in DataServiceV2');
     } catch (error) {
       handleError('organizations.update', error);
     }
   },
 
   /**
-   * Get organization categories
+   * Get organization categories (SHARDED)
    */
   async getCategories(organizationId: string) {
     try {
-      return await DataService.getWarningCategories(organizationId);
+      return await ShardedDataService.getWarningCategories(organizationId);
     } catch (error) {
       handleError('organizations.getCategories', error);
     }
@@ -374,28 +599,28 @@ export const categories = {
    * Get all universal categories
    */
   getUniversal() {
-    return []; // TODO: Fix UniversalCategories import
+    return UniversalCategories.UNIVERSAL_SA_CATEGORIES;
   },
 
   /**
    * Get category by ID
    */
   getById(categoryId: string) {
-    return null; // TODO: Fix UniversalCategories import
+    return UniversalCategories.getCategoryById(categoryId) || null;
   },
 
   /**
    * Get escalation path for category
    */
   getEscalationPath(categoryId: string) {
-    return []; // TODO: Fix UniversalCategories import
+    return UniversalCategories.getEscalationPath(categoryId);
   },
 
   /**
    * Get next escalation level
    */
   getNextLevel(categoryId: string, currentLevel: WarningLevel) {
-    return 'verbal'; // TODO: Fix UniversalCategories import
+    return UniversalCategories.getNextEscalationLevel(categoryId, currentLevel) || 'verbal';
   }
 };
 

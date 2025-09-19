@@ -1,0 +1,48 @@
+{
+  "name": "development",
+  "firebase": {
+    "projectId": "hr-system-dev",
+    "databaseURL": "https://hr-system-dev-default-rtdb.firebaseio.com",
+    "storageBucket": "hr-system-dev.appspot.com",
+    "functionsRegion": "us-central1"
+  },
+  "features": {
+    "enableAnalytics": false,
+    "enablePerformanceMonitoring": false,
+    "enableCrashlytics": false,
+    "enableDebugMode": true,
+    "enableTestData": true,
+    "maxFileUploadSize": 5242880,
+    "sessionTimeout": 7200000,
+    "enableAuditLogging": false
+  },
+  "security": {
+    "enforceHTTPS": false,
+    "enableCSP": false,
+    "sessionCookieSecure": false,
+    "requireEmailVerification": false,
+    "maxLoginAttempts": 50,
+    "lockoutDuration": 60000
+  },
+  "monitoring": {
+    "enableErrorTracking": true,
+    "enablePerformanceTracking": false,
+    "enableUserAnalytics": false,
+    "logLevel": "debug",
+    "enableRealTimeAlerts": false
+  },
+  "backup": {
+    "enableAutomaticBackup": false,
+    "backupSchedule": null,
+    "retentionDays": 1,
+    "enablePointInTimeRecovery": false
+  },
+  "emulators": {
+    "useEmulators": true,
+    "auth": { "port": 9099 },
+    "functions": { "port": 5001 },
+    "firestore": { "port": 8080 },
+    "storage": { "port": 9199 },
+    "hosting": { "port": 5000 }
+  }
+}

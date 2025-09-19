@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/components/hr/AbsenceReportReview.tsx - HR MANAGER INTERFACE
 // ✅ LEARNS FROM: ReportAbsence patterns, FirebaseService usage, HRMeetingReview structure
 import React, { useState, useEffect } from 'react';
@@ -124,7 +125,7 @@ export const AbsenceReportReview: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        console.log('📋 Loading absence reports for organization:', user.organizationId);
+        Logger.debug('📋 Loading absence reports for organization:', user.organizationId)
 
         // ✅ PATTERN: Use FirebaseService.queryDocuments like HRMeetingReview
         const reports = await FirebaseService.queryDocuments<AbsenceReport>(
@@ -136,12 +137,12 @@ export const AbsenceReportReview: React.FC = () => {
           100 // Limit results
         );
 
-        console.log('✅ Absence reports loaded:', reports.length);
+        Logger.success(4088)
         setAbsenceReports(reports.reverse()); // Reverse to show newest first
         setFilteredReports(reports.reverse());
 
       } catch (err) {
-        console.error('❌ Error loading absence reports:', err);
+        Logger.error('❌ Error loading absence reports:', err)
         setError('Failed to load absence reports. Please try again.');
         setAbsenceReports([]);
         setFilteredReports([]);
@@ -242,10 +243,10 @@ export const AbsenceReportReview: React.FC = () => {
       setShowReviewModal(false);
       setSelectedReport(null);
 
-      console.log('✅ Absence report updated successfully');
+      Logger.success(7561)
 
     } catch (err) {
-      console.error('❌ Error updating absence report:', err);
+      Logger.error('❌ Error updating absence report:', err)
       setError('Failed to update absence report. Please try again.');
     } finally {
       setReviewing(false);

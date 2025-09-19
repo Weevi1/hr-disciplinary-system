@@ -1,0 +1,258 @@
+# .github/workflows/environment-deploy.yml - Environment-specific deployment workflow
+name: Environment Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+      skip_tests:
+        description: 'Skip tests (use with caution)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  validate-and-deploy:
+    name: Validate & Deploy to ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    timeout-minutes: 45
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Load environment configuration
+        id: env-config
+        run: |
+          ENV_FILE="config/environments/${{ github.event.inputs.environment }}.json"
+          
+          if [[ ! -f "$ENV_FILE" ]]; then
+            echo "❌ Environment configuration not found: $ENV_FILE"
+            exit 1
+          fi
+          
+          # Extract key configuration values
+          PROJECT_ID=$(jq -r '.firebase.projectId' "$ENV_FILE")
+          FUNCTIONS_REGION=$(jq -r '.firebase.functionsRegion' "$ENV_FILE")
+          ENABLE_ANALYTICS=$(jq -r '.features.enableAnalytics' "$ENV_FILE")
+          
+          echo "project-id=$PROJECT_ID" >> $GITHUB_OUTPUT
+          echo "functions-region=$FUNCTIONS_REGION" >> $GITHUB_OUTPUT
+          echo "enable-analytics=$ENABLE_ANALYTICS" >> $GITHUB_OUTPUT
+          
+          echo "Deploying to environment: ${{ github.event.inputs.environment }}"
+          echo "Firebase Project ID: $PROJECT_ID"
+          echo "Functions Region: $FUNCTIONS_REGION"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            frontend/package-lock.json
+            functions/package-lock.json
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@latest
+
+      - name: Install dependencies
+        run: |
+          echo "Installing frontend dependencies..."
+          cd frontend && npm ci
+          
+          echo "Installing functions dependencies..."
+          cd ../functions && npm ci
+
+      - name: Run tests
+        if: github.event.inputs.skip_tests != 'true'
+        run: |
+          echo "Running comprehensive test suite..."
+          
+          # Frontend tests
+          cd frontend
+          npm run test:unit
+          
+          # Functions tests (if they exist)
+          cd ../functions
+          if [[ -f "package.json" ]] && grep -q "test" package.json; then
+            npm test
+          fi
+
+      - name: Create environment-specific config
+        run: |
+          cd frontend
+          
+          # Create environment file based on target environment
+          case "${{ github.event.inputs.environment }}" in
+            "development")
+              cat > .env << EOF
+          VITE_ENVIRONMENT=development
+          VITE_FIREBASE_API_KEY=${{ secrets.DEV_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.DEV_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID=${{ steps.env-config.outputs.project-id }}
+          VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.DEV_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.DEV_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID=${{ secrets.DEV_FIREBASE_APP_ID }}
+          VITE_ENABLE_ANALYTICS=false
+          VITE_DEBUG_MODE=true
+          EOF
+              ;;
+            "staging")
+              cat > .env << EOF
+          VITE_ENVIRONMENT=staging
+          VITE_FIREBASE_API_KEY=${{ secrets.STAGING_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.STAGING_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID=${{ steps.env-config.outputs.project-id }}
+          VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.STAGING_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.STAGING_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID=${{ secrets.STAGING_FIREBASE_APP_ID }}
+          VITE_ENABLE_ANALYTICS=false
+          VITE_DEBUG_MODE=true
+          EOF
+              ;;
+            "production")
+              cat > .env << EOF
+          VITE_ENVIRONMENT=production
+          VITE_FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID=${{ steps.env-config.outputs.project-id }}
+          VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID=${{ secrets.FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID=${{ secrets.FIREBASE_MEASUREMENT_ID }}
+          VITE_ENABLE_ANALYTICS=${{ steps.env-config.outputs.enable-analytics }}
+          VITE_DEBUG_MODE=false
+          EOF
+              ;;
+          esac
+
+      - name: Build application
+        run: |
+          cd frontend
+          echo "Building for ${{ github.event.inputs.environment }} environment..."
+          npm run build
+          
+          # Verify build
+          if [[ ! -f "dist/index.html" ]]; then
+            echo "❌ Build failed - index.html not found"
+            exit 1
+          fi
+          
+          echo "✅ Frontend build completed"
+          du -sh dist/
+
+      - name: Build functions
+        run: |
+          cd functions
+          echo "Building functions..."
+          npm run build
+          
+          echo "✅ Functions build completed"
+          du -sh lib/
+
+      - name: Deploy to Firebase
+        run: |
+          # Select Firebase project
+          firebase use ${{ steps.env-config.outputs.project-id }} --token ${{ secrets.FIREBASE_TOKEN }}
+          
+          echo "Deploying to ${{ github.event.inputs.environment }} environment..."
+          echo "Project: ${{ steps.env-config.outputs.project-id }}"
+          
+          # Deploy based on environment
+          case "${{ github.event.inputs.environment }}" in
+            "development")
+              # Deploy only essential services for dev
+              firebase deploy --only hosting,firestore:rules --token ${{ secrets.FIREBASE_TOKEN }}
+              ;;
+            "staging")
+              # Full deployment for staging
+              firebase deploy --only hosting,functions,firestore:rules,storage:rules --token ${{ secrets.FIREBASE_TOKEN }}
+              ;;
+            "production")
+              # Full production deployment with extra validation
+              firebase deploy --token ${{ secrets.FIREBASE_TOKEN }}
+              ;;
+          esac
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Verify deployment
+        run: |
+          # Determine URL based on project ID
+          case "${{ steps.env-config.outputs.project-id }}" in
+            "hr-disciplinary-system")
+              URL="https://hr-disciplinary-system.web.app"
+              ;;
+            "hr-system-staging")
+              URL="https://hr-system-staging.web.app"
+              ;;
+            "hr-system-dev")
+              URL="https://hr-system-dev.web.app"
+              ;;
+            *)
+              URL="https://${{ steps.env-config.outputs.project-id }}.web.app"
+              ;;
+          esac
+          
+          echo "Verifying deployment at: $URL"
+          
+          # Wait for deployment to propagate
+          sleep 30
+          
+          # Verify site is accessible
+          for i in {1..5}; do
+            if curl -f -s "$URL" > /dev/null; then
+              echo "✅ Deployment verified successfully!"
+              break
+            else
+              echo "⏳ Attempt $i: Site not yet accessible, waiting..."
+              sleep 10
+            fi
+          done
+          
+          # Final verification
+          if ! curl -f -s "$URL" > /dev/null; then
+            echo "❌ Deployment verification failed"
+            exit 1
+          fi
+
+      - name: Post-deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Project ID:** ${{ steps.env-config.outputs.project-id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          case "${{ steps.env-config.outputs.project-id }}" in
+            "hr-disciplinary-system")
+              echo "**URL:** https://hr-disciplinary-system.web.app" >> $GITHUB_STEP_SUMMARY
+              ;;
+            "hr-system-staging")
+              echo "**URL:** https://hr-system-staging.web.app" >> $GITHUB_STEP_SUMMARY
+              ;;
+            "hr-system-dev")
+              echo "**URL:** https://hr-system-dev.web.app" >> $GITHUB_STEP_SUMMARY
+              ;;
+            *)
+              echo "**URL:** https://${{ steps.env-config.outputs.project-id }}.web.app" >> $GITHUB_STEP_SUMMARY
+              ;;
+          esac
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Deployment completed successfully!" >> $GITHUB_STEP_SUMMARY

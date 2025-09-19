@@ -1,3 +1,4 @@
+import Logger from 'logger';
 // frontend/src/utils/newsApi.ts
 // 📰 Real News Data - Final version using DOMParser to fix browser compatibility
 
@@ -85,7 +86,7 @@ export const getNewsByKeywords = async (keywords: string[]): Promise<NewsItem[]>
     }).slice(0, 5);
 
   } catch (error) {
-    console.error('News API fetch failed through proxy:', error);
+    Logger.error('News API fetch failed through proxy:', error)
     return []; // Return empty array on failure to allow fallback to RSS
   }
 };
@@ -132,7 +133,7 @@ export const getCapeNewsFromRSS = async (): Promise<NewsItem[]> => {
     });
 
   } catch (error) {
-    console.error('RSS News fetch failed:', error);
+    Logger.error('RSS News fetch failed:', error)
     // Throw the final error to be caught by the component
     throw new Error('Could not fetch news from backup RSS feed.');
   }

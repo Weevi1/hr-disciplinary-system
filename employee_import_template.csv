@@ -1,0 +1,4 @@
+employeeNumber,firstName,lastName,email,phoneNumber,whatsappNumber,department,position,startDate,contractType,preferredDeliveryMethod,probationEndDate
+EMP001,John,Doe,john.doe@company.com,+27123456789,+27123456789,Engineering,Software Developer,2024-01-15,permanent,email,
+EMP002,Sarah,Johnson,sarah.johnson@company.com,+27987654321,+27987654321,Human Resources,HR Manager,2023-06-01,permanent,whatsapp,
+EMP003,Michael,Smith,michael.smith@company.com,+27555123456,,Operations,Operations Coordinator,2024-11-01,contract,printed,2025-02-01

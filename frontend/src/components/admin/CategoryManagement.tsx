@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/components/admin/CategoryManagementUI.tsx
 // 🏆 COMPLETE CATEGORY MANAGEMENT UI - WHITE LABEL SYSTEM
 // ✅ Full CRUD operations on organization categories
@@ -131,6 +132,8 @@ interface SortOptions {
 interface CategoryManagementUIProps {
   onClose?: () => void;
   initialTab?: TabType;
+  organizationId?: string; // Optional prop for cases where used outside OrganizationProvider
+  isEmbedded?: boolean; // Optional prop for embedded usage
 }
 
 // ============================================
@@ -139,7 +142,9 @@ interface CategoryManagementUIProps {
 
 export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
   onClose,
-  initialTab = 'overview'
+  initialTab = 'overview',
+  organizationId: propOrganizationId,
+  isEmbedded = false
 }) => {
   
   // ============================================
@@ -147,9 +152,42 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
   // ============================================
   
   const { user } = useAuth();
-  const { organization, organizationId } = useOrganization();
+
+  // Try to get organization context, but allow it to be null for SuperAdmin usage
+  let organization = null;
+  let contextOrganizationId = null;
+
+  try {
+    const orgContext = useOrganization();
+    organization = orgContext.organization;
+    contextOrganizationId = orgContext.organizationId;
+  } catch (error) {
+    // useOrganization hook not available - that's fine, we'll use the prop
+  }
+
+  // Use prop organizationId if provided, otherwise use context
+  const organizationId = propOrganizationId || contextOrganizationId;
+
+  // Return early if no organizationId available
+  if (!organizationId) {
+    return (
+      <div className="p-6 text-center">
+        <div className="text-red-600 mb-4">
+          <AlertTriangle className="w-12 h-12 mx-auto mb-2" />
+          <h3 className="text-lg font-semibold">Organization ID Required</h3>
+          <p className="text-sm">Cannot manage categories without an organization ID.</p>
+        </div>
+        {onClose && (
+          <button onClick={onClose} className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">
+            Close
+          </button>
+        )}
+      </div>
+    );
+  }
+
   const { canManageCategories, canViewAnalytics } = useMultiRolePermissions();
-  
+
   // ============================================
   // STATE MANAGEMENT
   // ============================================
@@ -308,10 +346,10 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
         setCategoryStats(stats);
       }
       
-      console.log('[CategoryManagement] ✅ Data loaded successfully');
+      Logger.debug('[CategoryManagement] ✅ Data loaded successfully')
       
     } catch (error) {
-      console.error('[CategoryManagement] ❌ Error loading data:', error);
+      Logger.error('[CategoryManagement] ❌ Error loading data:', error)
       setError(error instanceof Error ? error.message : 'Failed to load category data');
     } finally {
       setLoading(false);
@@ -385,7 +423,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
       setSuccess(`Category ${existingCustomization?.isDisabled ? 'enabled' : 'disabled'} successfully`);
       
     } catch (error) {
-      console.error('[CategoryManagement] Error toggling category:', error);
+      Logger.error('[CategoryManagement] Error toggling category:', error)
       setError('Failed to update category status');
     } finally {
       setSaving(false);
@@ -406,7 +444,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
       setSuccess('Category customization saved successfully');
       
     } catch (error) {
-      console.error('[CategoryManagement] Error saving customization:', error);
+      Logger.error('[CategoryManagement] Error saving customization:', error)
       setError('Failed to save category customization');
     } finally {
       setSaving(false);
@@ -445,7 +483,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
       setSuccess('Custom category created successfully');
       
     } catch (error) {
-      console.error('[CategoryManagement] Error creating custom category:', error);
+      Logger.error('[CategoryManagement] Error creating custom category:', error)
       setError('Failed to create custom category');
     } finally {
       setSaving(false);
@@ -472,7 +510,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
       setSuccess('Custom category deleted successfully');
       
     } catch (error) {
-      console.error('[CategoryManagement] Error deleting custom category:', error);
+      Logger.error('[CategoryManagement] Error deleting custom category:', error)
       setError('Failed to delete custom category');
     } finally {
       setSaving(false);

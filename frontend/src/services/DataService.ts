@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // frontend/src/services/DataService.ts
 // 🏆 COMPLETE ENHANCED DATASERVICE - SMART CATEGORY MERGING FOR WHITE LABEL - PART 1 OF 3
 // ✅ Preserves ALL existing functionality from original DataService
@@ -18,6 +19,7 @@ import {
   where, 
   orderBy, 
   limit as limitTo,
+  startAfter,
   serverTimestamp,
   writeBatch,
   addDoc,
@@ -32,16 +34,22 @@ import type {
   WarningLevel 
 } from '../services/WarningService';
 import { auth } from '../config/firebase';
+// Import billing types
+import type { 
+  Reseller, 
+  Subscription, 
+  Commission, 
+  SouthAfricanProvince 
+} from '../types/billing';
 
 // Import from UniversalCategories - our template source
-// TODO: Fix import issue
-// import { 
-//   UNIVERSAL_SA_CATEGORIES,
-//   type UniversalCategory,
-//   WarningLevel as UniversalWarningLevel,
-//   getLevelLabel
-// } from './UniversalCategories';
-
+// Import from UniversalCategories - our template source
+import { 
+  UNIVERSAL_SA_CATEGORIES,
+  type UniversalCategory,
+  WarningLevel as UniversalWarningLevel,
+  getLevelLabel
+} from './UniversalCategories';
 // Define interfaces here until types/core is properly set up
 interface EscalationRule {
   id: string;
@@ -148,22 +156,21 @@ export class DataService {
     // Check cache first
     const cached = this.categoryCache.get(organizationId);
     if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
-      console.log('[DataService] 💰 Returning cached categories');
+      Logger.debug('[DataService] 💰 Returning cached categories')
       return cached.data;
     }
 
     try {
-      console.log('[DataService] 🔄 Loading categories with smart merging for org:', organizationId);
+      Logger.debug('[DataService] 🔄 Loading categories with smart merging for org:', organizationId)
       
       // Step 1: Get base universal categories (8 defaults)
-      const universalCategories = []; // TODO: Fix UNIVERSAL_SA_CATEGORIES import
-      console.log('[DataService] 📋 Base universal categories:', universalCategories.length);
+      const universalCategories = UNIVERSAL_SA_CATEGORIES;
+      Logger.debug('[DataService] 📋 Base universal categories:', universalCategories.length)
       
-      // Step 2: Get organization customizations from Firestore
-      const customizationsRef = collection(db, COLLECTIONS.WARNING_CATEGORIES);
+      // Step 2: Get organization customizations from Firestore (SHARDED)
+      const customizationsRef = collection(db, 'organizations', organizationId, 'categories');
       const q = query(
         customizationsRef,
-        where('organizationId', '==', organizationId),
         where('isActive', '==', true),
         orderBy('name')
       );
@@ -176,7 +183,7 @@ export class DataService {
         updatedAt: doc.data().updatedAt?.toDate() || new Date()
       })) as CategoryCustomization[];
       
-      console.log('[DataService] 🏢 Organization customizations:', organizationCustomizations.length);
+      Logger.debug('[DataService] 🏢 Organization customizations:', organizationCustomizations.length)
       
       // Step 3: Smart merge - Universal categories with organization overrides
       const mergedCategories: WarningCategory[] = [];
@@ -190,7 +197,7 @@ export class DataService {
         
         if (customization && customization.isDisabled) {
           // Organization has disabled this category - skip it
-          console.log('[DataService] ❌ Category disabled by organization:', universalCat.name);
+          Logger.debug('[DataService] ❌ Category disabled by organization:', universalCat.name)
           continue;
         }
         
@@ -240,22 +247,22 @@ export class DataService {
         timestamp: Date.now()
       });
       
-      console.log('[DataService] ✅ Smart merge complete. Final categories:', mergedCategories.length);
-      console.log('[DataService] 📊 Categories:', mergedCategories.map(c => `${c.name} (${c.severity})`));
+      Logger.debug('[DataService] ✅ Smart merge complete. Final categories:', mergedCategories.length)
+      Logger.debug('[DataService] 📊 Categories:', mergedCategories.map(c => `${c.name} (${c.severity})`));
       
       return mergedCategories;
       
     } catch (error) {
-      console.error('[DataService] ❌ Error in smart category merge:', error);
+      Logger.error('[DataService] ❌ Error in smart category merge:', error)
       
       // Return cached data if available
       if (cached) {
-        console.log('[DataService] 🔄 Error occurred, returning stale cache');
+        Logger.debug('[DataService] 🔄 Error occurred, returning stale cache')
         return cached.data;
       }
       
       // Ultimate fallback - just use universal categories
-      console.log('[DataService] 🚨 Ultimate fallback to universal categories');
+      Logger.debug('[DataService] 🚨 Ultimate fallback to universal categories')
       return this.convertUniversalToWarningCategories(organizationId);
     }
   }
@@ -274,8 +281,8 @@ export class DataService {
         return category;
       }
       
-      // Fallback - try Firestore directly
-      const categoryRef = doc(db, COLLECTIONS.WARNING_CATEGORIES, categoryId);
+      // Fallback - try Firestore directly (SHARDED)
+      const categoryRef = doc(db, 'organizations', organizationId, 'categories', categoryId);
       const categoryDoc = await getDoc(categoryRef);
       
       if (categoryDoc.exists()) {
@@ -288,7 +295,7 @@ export class DataService {
       }
       
       // Last resort - try universal categories
-      const universalCategory = null; // TODO: Fix UNIVERSAL_SA_CATEGORIES import
+      const universalCategory = UNIVERSAL_SA_CATEGORIES.find(cat => cat.id === categoryId);
       if (universalCategory) {
         return this.convertUniversalToWarningCategory(universalCategory, organizationId);
       }
@@ -296,7 +303,7 @@ export class DataService {
       return null;
       
     } catch (error) {
-      console.error('[DataService] Error getting category:', error);
+      Logger.error('[DataService] Error getting category:', error)
       return null;
     }
   }
@@ -321,8 +328,8 @@ export class DataService {
     }
   ): Promise<void> {
     try {
-      const customizationId = `${organizationId}-${universalCategoryId}`;
-      const customizationRef = doc(db, COLLECTIONS.WARNING_CATEGORIES, customizationId);
+      const customizationId = universalCategoryId; // Use original ID in sharded structure
+      const customizationRef = doc(db, 'organizations', organizationId, 'categories', customizationId);
       
       const customizationData: CategoryCustomization = {
         id: customizationId,
@@ -340,10 +347,10 @@ export class DataService {
       // Clear cache
       this.categoryCache.delete(organizationId);
       
-      console.log('[DataService] ✅ Category customization saved:', universalCategoryId);
+      Logger.debug('[DataService] ✅ Category customization saved:', universalCategoryId)
       
     } catch (error) {
-      console.error('[DataService] Error customizing category:', error);
+      Logger.error('[DataService] Error customizing category:', error)
       throw error;
     }
   }
@@ -363,8 +370,8 @@ export class DataService {
     }
   ): Promise<string> {
     try {
-      const categoryId = `${organizationId}-custom-${Date.now()}`;
-      const categoryRef = doc(db, COLLECTIONS.WARNING_CATEGORIES, categoryId);
+      const categoryId = `custom-${Date.now()}`;
+      const categoryRef = doc(db, 'organizations', organizationId, 'categories', categoryId);
       
       const customCategoryData: CategoryCustomization = {
         id: categoryId,
@@ -386,11 +393,11 @@ export class DataService {
       // Clear cache
       this.categoryCache.delete(organizationId);
       
-      console.log('[DataService] ✅ Custom category created:', categoryData.name);
+      Logger.debug('[DataService] ✅ Custom category created:', categoryData.name)
       return categoryId;
       
     } catch (error) {
-      console.error('[DataService] Error creating custom category:', error);
+      Logger.error('[DataService] Error creating custom category:', error)
       throw error;
     }
   }
@@ -401,8 +408,8 @@ export class DataService {
    */
   static async disableCategory(organizationId: string, universalCategoryId: string): Promise<void> {
     try {
-      const customizationId = `${organizationId}-${universalCategoryId}`;
-      const customizationRef = doc(db, COLLECTIONS.WARNING_CATEGORIES, customizationId);
+      const customizationId = universalCategoryId; // Use original ID in sharded structure
+      const customizationRef = doc(db, 'organizations', organizationId, 'categories', customizationId);
       
       const disableData: Partial<CategoryCustomization> = {
         organizationId,
@@ -417,10 +424,10 @@ export class DataService {
       // Clear cache
       this.categoryCache.delete(organizationId);
       
-      console.log('[DataService] ✅ Category disabled:', universalCategoryId);
+      Logger.debug('[DataService] ✅ Category disabled:', universalCategoryId)
       
     } catch (error) {
-      console.error('[DataService] Error disabling category:', error);
+      Logger.error('[DataService] Error disabling category:', error)
       throw error;
     }
   }
@@ -456,7 +463,7 @@ export class DataService {
    * Convert all universal categories to legacy format
    */
   private static convertUniversalToWarningCategories(organizationId: string): WarningCategory[] {
-    return [].map((cat: any) => // TODO: Fix UNIVERSAL_SA_CATEGORIES import 
+    return UNIVERSAL_SA_CATEGORIES.map((cat: any) => 
       this.convertUniversalToWarningCategory(cat, organizationId)
     );
   }
@@ -501,7 +508,7 @@ export class DataService {
       } as Organization;
       
     } catch (error) {
-      console.error('[DataService] Error getting organization:', error);
+      Logger.error('[DataService] Error getting organization:', error)
       return null;
     }
   }
@@ -531,7 +538,7 @@ export class DataService {
       return orgRef.id;
       
     } catch (error) {
-      console.error('[DataService] Error creating organization:', error);
+      Logger.error('[DataService] Error creating organization:', error)
       throw error;
     }
   }
@@ -555,7 +562,7 @@ export class DataService {
       });
       
     } catch (error) {
-      console.error('[DataService] Error updating organization:', error);
+      Logger.error('[DataService] Error updating organization:', error)
       throw error;
     }
   }
@@ -569,10 +576,9 @@ export class DataService {
    */
   static async getEmployeesByOrganization(organizationId: string): Promise<Employee[]> {
     try {
-      const employeesRef = collection(db, COLLECTIONS.EMPLOYEES);
+      const employeesRef = collection(db, 'organizations', organizationId, 'employees');
       const q = query(
         employeesRef,
-        where('organizationId', '==', organizationId),
         where('isActive', '==', true),
         orderBy('profile.lastName'),
         orderBy('profile.firstName')
@@ -597,7 +603,7 @@ export class DataService {
       })) as Employee[];
       
     } catch (error) {
-      console.error('[DataService] Error getting employees:', error);
+      Logger.error('[DataService] Error getting employees:', error)
       return [];
     }
   }
@@ -612,7 +618,7 @@ export class DataService {
         employee.employment?.managerId === managerId && employee.isActive
       );
     } catch (error) {
-      console.error('[DataService] Failed to get employees by manager:', error);
+      Logger.error('[DataService] Failed to get employees by manager:', error)
       throw error;
     }
   }
@@ -648,7 +654,7 @@ export class DataService {
       } as Employee;
       
     } catch (error) {
-      console.error('[DataService] Error getting employee:', error);
+      Logger.error('[DataService] Error getting employee:', error)
       return null;
     }
   }
@@ -685,12 +691,12 @@ export class DataService {
       this.logAuditEvent(employeeData.id ? 'EMPLOYEE_UPDATED' : 'EMPLOYEE_CREATED', {
         employeeId: empRef.id,
         organizationId
-      }).catch(err => console.warn('Audit logging failed:', err));
+      }).catch(err => Logger.warn('Audit logging failed:', err));
       
       return empRef.id;
       
     } catch (error) {
-      console.error('[DataService] Error saving employee:', error);
+      Logger.error('[DataService] Error saving employee:', error)
       throw error;
     }
   }
@@ -715,7 +721,7 @@ export class DataService {
       });
       
     } catch (error) {
-      console.error('[DataService] Error archiving employee:', error);
+      Logger.error('[DataService] Error archiving employee:', error)
       throw error;
     }
   }
@@ -740,7 +746,7 @@ export class DataService {
       });
       
     } catch (error) {
-      console.error('[DataService] Error restoring employee:', error);
+      Logger.error('[DataService] Error restoring employee:', error)
       throw error;
     }
   }
@@ -755,10 +761,9 @@ export class DataService {
    */
   static async getWarningsByOrganization(organizationId: string, limit?: number): Promise<Warning[]> {
     try {
-      const warningsRef = collection(db, COLLECTIONS.WARNINGS);
+      const warningsRef = collection(db, 'organizations', organizationId, 'warnings');
       let q = query(
         warningsRef,
-        where('organizationId', '==', organizationId),
         orderBy('issueDate', 'desc')
       );
       
@@ -783,10 +788,10 @@ export class DataService {
       const employeeIds = [...new Set(warnings.map(w => w.employeeId).filter(id => id))];
       const categoryIds = [...new Set(warnings.map(w => w.categoryId).filter(id => id))];
       
-      // Fetch employees and categories in parallel
+      // Fetch employees and categories using batch queries for scalability
       const [employees, categories] = await Promise.all([
-        Promise.all(employeeIds.map(id => this.getEmployee(id))),
-        Promise.all(categoryIds.map(id => this.getWarningCategory(id, organizationId)))
+        this.getBatchEmployees(employeeIds, organizationId),
+        this.getBatchWarningCategories(categoryIds, organizationId)
       ]);
       
       const employeeMap = new Map();
@@ -822,7 +827,7 @@ export class DataService {
       });
       
     } catch (error) {
-      console.error('[DataService] Error getting warnings:', error);
+      Logger.error('[DataService] Error getting warnings:', error)
       return [];
     }
   }
@@ -831,23 +836,14 @@ export class DataService {
    * Get warnings for specific employee
    * ✅ PRESERVED: Original functionality maintained
    */
-  static async getWarningsForEmployee(employeeId: string, organizationId?: string): Promise<Warning[]> {
+  static async getWarningsForEmployee(employeeId: string, organizationId: string): Promise<Warning[]> {
     try {
-      const warningsRef = collection(db, COLLECTIONS.WARNINGS);
-      let q = query(
+      const warningsRef = collection(db, 'organizations', organizationId, 'warnings');
+      const q = query(
         warningsRef,
         where('employeeId', '==', employeeId),
         orderBy('issueDate', 'desc')
       );
-      
-      if (organizationId) {
-        q = query(
-          warningsRef,
-          where('employeeId', '==', employeeId),
-          where('organizationId', '==', organizationId),
-          orderBy('issueDate', 'desc')
-        );
-      }
       
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({
@@ -863,7 +859,7 @@ export class DataService {
       })) as Warning[];
       
     } catch (error) {
-      console.error('[DataService] Error getting employee warnings:', error);
+      Logger.error('[DataService] Error getting employee warnings:', error)
       return [];
     }
   }
@@ -872,12 +868,12 @@ export class DataService {
    * Get active warnings for employee
    * ✅ PRESERVED: Original functionality maintained
    */
-  static async getActiveWarningsForEmployee(employeeId: string, organizationId?: string): Promise<Warning[]> {
+  static async getActiveWarningsForEmployee(employeeId: string, organizationId: string): Promise<Warning[]> {
     try {
-      const warningsRef = collection(db, COLLECTIONS.WARNINGS);
+      const warningsRef = collection(db, 'organizations', organizationId, 'warnings');
       const now = new Date();
-      
-      let q = query(
+
+      const q = query(
         warningsRef,
         where('employeeId', '==', employeeId),
         where('isActive', '==', true),
@@ -885,18 +881,6 @@ export class DataService {
         orderBy('expiryDate', 'desc'),
         orderBy('issueDate', 'desc')
       );
-      
-      if (organizationId) {
-        q = query(
-          warningsRef,
-          where('employeeId', '==', employeeId),
-          where('organizationId', '==', organizationId),
-          where('isActive', '==', true),
-          where('expiryDate', '>', now),
-          orderBy('expiryDate', 'desc'),
-          orderBy('issueDate', 'desc')
-        );
-      }
       
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({
@@ -912,7 +896,7 @@ export class DataService {
       })) as Warning[];
       
     } catch (error) {
-      console.error('[DataService] Error getting active employee warnings:', error);
+      Logger.error('[DataService] Error getting active employee warnings:', error)
       return [];
     }
   }
@@ -921,9 +905,9 @@ export class DataService {
    * Get warning by ID
    * ✅ PRESERVED: Original functionality maintained
    */
-  static async getWarning(warningId: string): Promise<Warning | null> {
+  static async getWarning(warningId: string, organizationId: string): Promise<Warning | null> {
     try {
-      const warningRef = doc(db, COLLECTIONS.WARNINGS, warningId);
+      const warningRef = doc(db, 'organizations', organizationId, 'warnings', warningId);
       const warningDoc = await getDoc(warningRef);
       
       if (!warningDoc.exists()) {
@@ -943,7 +927,7 @@ export class DataService {
       } as Warning;
       
     } catch (error) {
-      console.error('[DataService] Error getting warning:', error);
+      Logger.error('[DataService] Error getting warning:', error)
       return null;
     }
   }
@@ -954,11 +938,11 @@ export class DataService {
    */
   static async saveWarning(warningData: Partial<Warning>, organizationId: string): Promise<string> {
     try {
-      console.log('💾 [SAVE] Saving warning to database...');
+      Logger.debug('💾 [SAVE] Saving warning to database...')
       
-      const warningRef = warningData.id ? 
-        doc(db, COLLECTIONS.WARNINGS, warningData.id) : 
-        doc(collection(db, COLLECTIONS.WARNINGS));
+      const warningRef = warningData.id ?
+        doc(db, 'organizations', organizationId, 'warnings', warningData.id) :
+        doc(collection(db, 'organizations', organizationId, 'warnings'));
 
       const dataToSave = {
         ...warningData,
@@ -975,11 +959,11 @@ export class DataService {
         employeeId: warningData.employeeId
       });
       
-      console.log('✅ [SAVE] Warning saved successfully:', warningRef.id);
+      Logger.success(33682)
       return warningRef.id;
       
     } catch (error) {
-      console.error('❌ [SAVE] Error saving warning:', error);
+      Logger.error('❌ [SAVE] Error saving warning:', error)
       throw error;
     }
   }
@@ -990,7 +974,7 @@ export class DataService {
    */
   static async updateWarningStatus(warningId: string, status: string, organizationId: string): Promise<void> {
     try {
-      const warningRef = doc(db, COLLECTIONS.WARNINGS, warningId);
+      const warningRef = doc(db, 'organizations', organizationId, 'warnings', warningId);
       
       await updateDoc(warningRef, {
         status,
@@ -1004,7 +988,7 @@ export class DataService {
       });
       
     } catch (error) {
-      console.error('[DataService] Error updating warning status:', error);
+      Logger.error('[DataService] Error updating warning status:', error)
       throw error;
     }
   }
@@ -1014,13 +998,13 @@ export class DataService {
    * ✅ PRESERVED: Original functionality maintained
    */
   static async markWarningDelivered(
-    warningId: string, 
-    organizationId: string, 
+    warningId: string,
+    organizationId: string,
     deliveryMethod: string,
     deliveryDetails?: any
   ): Promise<void> {
     try {
-      const warningRef = doc(db, COLLECTIONS.WARNINGS, warningId);
+      const warningRef = doc(db, 'organizations', organizationId, 'warnings', warningId);
       
       await updateDoc(warningRef, {
         isDelivered: true,
@@ -1038,7 +1022,7 @@ export class DataService {
       });
       
     } catch (error) {
-      console.error('[DataService] Error marking warning as delivered:', error);
+      Logger.error('[DataService] Error marking warning as delivered:', error)
       throw error;
     }
   }
@@ -1053,9 +1037,13 @@ export class DataService {
    */
   static async createUser(userData: Partial<User>): Promise<string> {
     try {
-      const userRef = userData.id ? 
-        doc(db, COLLECTIONS.USERS, userData.id) : 
-        doc(collection(db, COLLECTIONS.USERS));
+      if (!userData.organizationId) {
+        throw new Error('Organization ID is required for user creation');
+      }
+
+      const userRef = userData.id ?
+        doc(db, 'organizations', userData.organizationId, 'users', userData.id) :
+        doc(collection(db, 'organizations', userData.organizationId, 'users'));
 
       const dataToSave = {
         ...userData,
@@ -1073,7 +1061,7 @@ export class DataService {
       return userRef.id;
       
     } catch (error) {
-      console.error('[DataService] Error creating user:', error);
+      Logger.error('[DataService] Error creating user:', error)
       throw error;
     }
   }
@@ -1082,9 +1070,9 @@ export class DataService {
    * Get user by ID
    * ✅ PRESERVED: Original functionality maintained
    */
-  static async getUser(userId: string): Promise<User | null> {
+  static async getUser(userId: string, organizationId: string): Promise<User | null> {
     try {
-      const userRef = doc(db, COLLECTIONS.USERS, userId);
+      const userRef = doc(db, 'organizations', organizationId, 'users', userId);
       const userDoc = await getDoc(userRef);
       
       if (!userDoc.exists()) {
@@ -1099,7 +1087,7 @@ export class DataService {
       } as User;
       
     } catch (error) {
-      console.error('[DataService] Error getting user:', error);
+      Logger.error('[DataService] Error getting user:', error)
       return null;
     }
   }
@@ -1110,10 +1098,9 @@ export class DataService {
    */
   static async getUsersByOrganization(organizationId: string): Promise<User[]> {
     try {
-      const usersRef = collection(db, COLLECTIONS.USERS);
+      const usersRef = collection(db, 'organizations', organizationId, 'users');
       const q = query(
         usersRef,
-        where('organizationId', '==', organizationId),
         where('isActive', '==', true),
         orderBy('lastName'),
         orderBy('firstName')
@@ -1128,7 +1115,7 @@ export class DataService {
       })) as User[];
       
     } catch (error) {
-      console.error('[DataService] Error getting users:', error);
+      Logger.error('[DataService] Error getting users:', error)
       return [];
     }
   }
@@ -1137,9 +1124,9 @@ export class DataService {
    * Update user
    * ✅ PRESERVED: Original functionality maintained
    */
-  static async updateUser(userId: string, updates: Partial<User>): Promise<void> {
+  static async updateUser(userId: string, updates: Partial<User>, organizationId: string): Promise<void> {
     try {
-      const userRef = doc(db, COLLECTIONS.USERS, userId);
+      const userRef = doc(db, 'organizations', organizationId, 'users', userId);
       
       await updateDoc(userRef, {
         ...updates,
@@ -1152,7 +1139,7 @@ export class DataService {
       });
       
     } catch (error) {
-      console.error('[DataService] Error updating user:', error);
+      Logger.error('[DataService] Error updating user:', error)
       throw error;
     }
   }
@@ -1161,9 +1148,9 @@ export class DataService {
    * Deactivate user
    * ✅ PRESERVED: Original functionality maintained
    */
-  static async deactivateUser(userId: string, organizationId?: string): Promise<void> {
+  static async deactivateUser(userId: string, organizationId: string): Promise<void> {
     try {
-      const userRef = doc(db, COLLECTIONS.USERS, userId);
+      const userRef = doc(db, 'organizations', organizationId, 'users', userId);
       
       await updateDoc(userRef, {
         isActive: false,
@@ -1176,7 +1163,7 @@ export class DataService {
       });
       
     } catch (error) {
-      console.error('[DataService] Error deactivating user:', error);
+      Logger.error('[DataService] Error deactivating user:', error)
       throw error;
     }
   }
@@ -1190,9 +1177,13 @@ export class DataService {
    */
   static async createDocumentTemplate(templateData: any): Promise<string> {
     try {
-      const templateRef = templateData.id ? 
-        doc(db, COLLECTIONS.TEMPLATES, templateData.id) : 
-        doc(collection(db, COLLECTIONS.TEMPLATES));
+      if (!templateData.organizationId) {
+        throw new Error('Organization ID is required for template creation');
+      }
+
+      const templateRef = templateData.id ?
+        doc(db, 'organizations', templateData.organizationId, 'templates', templateData.id) :
+        doc(collection(db, 'organizations', templateData.organizationId, 'templates'));
 
       const dataToSave = {
         ...templateData,
@@ -1210,7 +1201,7 @@ export class DataService {
       return templateRef.id;
       
     } catch (error) {
-      console.error('[DataService] Error creating template:', error);
+      Logger.error('[DataService] Error creating template:', error)
       throw error;
     }
   }
@@ -1221,10 +1212,9 @@ export class DataService {
    */
   static async getDocumentTemplates(organizationId: string): Promise<any[]> {
     try {
-      const templatesRef = collection(db, COLLECTIONS.TEMPLATES);
+      const templatesRef = collection(db, 'organizations', organizationId, 'templates');
       const q = query(
         templatesRef,
-        where('organizationId', '==', organizationId),
         where('isActive', '==', true),
         orderBy('name')
       );
@@ -1238,7 +1228,7 @@ export class DataService {
       }));
       
     } catch (error) {
-      console.error('[DataService] Error getting templates:', error);
+      Logger.error('[DataService] Error getting templates:', error)
       return [];
     }
   }
@@ -1247,9 +1237,9 @@ export class DataService {
    * Update document template
    * ✅ PRESERVED: Original functionality maintained
    */
-  static async updateDocumentTemplate(templateId: string, updates: any): Promise<void> {
+  static async updateDocumentTemplate(templateId: string, updates: any, organizationId: string): Promise<void> {
     try {
-      const templateRef = doc(db, COLLECTIONS.TEMPLATES, templateId);
+      const templateRef = doc(db, 'organizations', organizationId, 'templates', templateId);
       
       await updateDoc(templateRef, {
         ...updates,
@@ -1262,7 +1252,7 @@ export class DataService {
       });
       
     } catch (error) {
-      console.error('[DataService] Error updating template:', error);
+      Logger.error('[DataService] Error updating template:', error)
       throw error;
     }
   }
@@ -1277,10 +1267,9 @@ export class DataService {
    */
   static async getEscalationRules(organizationId: string): Promise<EscalationRule[]> {
     try {
-      const rulesRef = collection(db, COLLECTIONS.ESCALATION_RULES);
+      const rulesRef = collection(db, 'organizations', organizationId, 'escalationRules');
       const q = query(
         rulesRef,
-        where('organizationId', '==', organizationId),
         where('isActive', '==', true),
         orderBy('category')
       );
@@ -1292,7 +1281,7 @@ export class DataService {
       })) as EscalationRule[];
       
     } catch (error) {
-      console.error('[DataService] Error getting escalation rules:', error);
+      Logger.error('[DataService] Error getting escalation rules:', error)
       return [];
     }
   }
@@ -1303,7 +1292,7 @@ export class DataService {
    */
   static async createEscalationRule(ruleData: Partial<EscalationRule>, organizationId: string): Promise<string> {
     try {
-      const ruleRef = doc(collection(db, COLLECTIONS.ESCALATION_RULES));
+      const ruleRef = doc(collection(db, 'organizations', organizationId, 'escalationRules'));
       
       const dataToSave = {
         ...ruleData,
@@ -1322,7 +1311,7 @@ export class DataService {
       return ruleRef.id;
       
     } catch (error) {
-      console.error('[DataService] Error creating escalation rule:', error);
+      Logger.error('[DataService] Error creating escalation rule:', error)
       throw error;
     }
   }
@@ -1366,7 +1355,7 @@ export class DataService {
       };
       
     } catch (error) {
-      console.error('[DataService] Error getting organization stats:', error);
+      Logger.error('[DataService] Error getting organization stats:', error)
       return {
         totalEmployees: 0,
         activeEmployees: 0,
@@ -1385,12 +1374,11 @@ export class DataService {
    */
   private static async getActiveWarnings(organizationId: string): Promise<Warning[]> {
     try {
-      const warningsRef = collection(db, COLLECTIONS.WARNINGS);
+      const warningsRef = collection(db, 'organizations', organizationId, 'warnings');
       const now = new Date();
-      
+
       const q = query(
         warningsRef,
-        where('organizationId', '==', organizationId),
         where('isActive', '==', true),
         where('expiryDate', '>', now)
       );
@@ -1407,7 +1395,7 @@ export class DataService {
       })) as Warning[];
       
     } catch (error) {
-      console.error('[DataService] Error getting active warnings:', error);
+      Logger.error('[DataService] Error getting active warnings:', error)
       return [];
     }
   }
@@ -1428,7 +1416,7 @@ export class DataService {
         userId: auth.currentUser?.uid || 'system'
       });
     } catch (error) {
-      console.error('[DataService] Error creating audit log:', error);
+      Logger.error('[DataService] Error creating audit log:', error)
       // Don't throw - audit logging shouldn't break main operations
     }
   }
@@ -1479,7 +1467,7 @@ export class DataService {
       }));
       
     } catch (error) {
-      console.error('[DataService] Error getting audit logs:', error);
+      Logger.error('[DataService] Error getting audit logs:', error)
       return [];
     }
   }
@@ -1513,7 +1501,7 @@ export class DataService {
       return { isValid: true };
       
     } catch (error) {
-      console.error('[DataService] Error validating warning level:', error);
+      Logger.error('[DataService] Error validating warning level:', error)
       return { isValid: false, reason: 'Validation error occurred' };
     }
   }
@@ -1527,7 +1515,7 @@ export class DataService {
       const employee = await this.getEmployee(employeeId);
       return employee !== null;
     } catch (error) {
-      console.error('[DataService] Error checking employee existence:', error);
+      Logger.error('[DataService] Error checking employee existence:', error)
       return false;
     }
   }
@@ -1541,7 +1529,7 @@ export class DataService {
       const organization = await this.getOrganization(organizationId);
       return organization !== null;
     } catch (error) {
-      console.error('[DataService] Error checking organization existence:', error);
+      Logger.error('[DataService] Error checking organization existence:', error)
       return false;
     }
   }
@@ -1555,17 +1543,16 @@ export class DataService {
    */
   static async employeeNumberExists(organizationId: string, employeeNumber: string): Promise<boolean> {
     try {
-      const employeesRef = collection(db, COLLECTIONS.EMPLOYEES);
+      const employeesRef = collection(db, 'organizations', organizationId, 'employees');
       const q = query(
         employeesRef,
-        where('organizationId', '==', organizationId),
         where('profile.employeeNumber', '==', employeeNumber)
       );
       
       const snapshot = await getDocs(q);
       return !snapshot.empty;
     } catch (error) {
-      console.error('[DataService] Error checking employee number existence:', error);
+      Logger.error('[DataService] Error checking employee number existence:', error)
       return false;
     }
   }
@@ -1586,7 +1573,7 @@ export class DataService {
         .map(doc => doc.data().profile?.employeeNumber)
         .filter(num => num && typeof num === 'string') as string[];
     } catch (error) {
-      console.error('[DataService] Error getting employee numbers:', error);
+      Logger.error('[DataService] Error getting employee numbers:', error)
       return [];
     }
   }
@@ -1634,7 +1621,7 @@ export class DataService {
           return `EMP${nextNumber.toString().padStart(3, '0')}`;
       }
     } catch (error) {
-      console.error('[DataService] Error generating employee number:', error);
+      Logger.error('[DataService] Error generating employee number:', error)
       // Fallback to timestamp-based number
       return `EMP${Date.now().toString().slice(-3)}`;
     }
@@ -1721,7 +1708,7 @@ export class DataService {
         message: 'Employee number is available'
       };
     } catch (error) {
-      console.error('[DataService] Error validating employee number:', error);
+      Logger.error('[DataService] Error validating employee number:', error)
       return {
         isValid: false,
         isAvailable: false,
@@ -1778,11 +1765,11 @@ export class DataService {
         });
       }
       
-      console.log(`[DataService] Cleaned up ${snapshot.docs.length} expired warnings`);
+      Logger.debug(`[DataService] Cleaned up ${snapshot.docs.length} expired warnings`)
       return snapshot.docs.length;
       
     } catch (error) {
-      console.error('[DataService] Error cleaning up expired warnings:', error);
+      Logger.error('[DataService] Error cleaning up expired warnings:', error)
       return 0;
     }
   }
@@ -1806,7 +1793,7 @@ export class DataService {
       };
       
     } catch (error) {
-      console.error('[DataService] Error getting system health:', error);
+      Logger.error('[DataService] Error getting system health:', error)
       return {
         status: 'degraded',
         timestamp: new Date(),
@@ -1824,7 +1811,7 @@ export class DataService {
    * ✅ ENHANCED: Now uses smart merging with UniversalCategories
    */
   private static getIndustryCategories(industry: string, organizationId: string): WarningCategory[] {
-    console.log('🎯 Using enhanced category system with UniversalCategories for white label consistency');
+    Logger.debug(59470)
     return this.convertUniversalToWarningCategories(organizationId);
   }
 
@@ -1834,9 +1821,14 @@ export class DataService {
    */
   static async createWarningCategory(categoryData: any): Promise<string> {
     try {
-      const categoryRef = categoryData.id ? 
-        doc(db, COLLECTIONS.WARNING_CATEGORIES, categoryData.id) : 
-        doc(collection(db, COLLECTIONS.WARNING_CATEGORIES));
+      const organizationId = categoryData.organizationId;
+      if (!organizationId) {
+        throw new Error('Organization ID is required for creating categories');
+      }
+
+      const categoryRef = categoryData.id ?
+        doc(db, 'organizations', organizationId, 'categories', categoryData.id) :
+        doc(collection(db, 'organizations', organizationId, 'categories'));
 
       const dataToSave = {
         ...categoryData,
@@ -1859,7 +1851,7 @@ export class DataService {
       return categoryRef.id;
       
     } catch (error) {
-      console.error('[DataService] Error creating warning category:', error);
+      Logger.error('[DataService] Error creating warning category:', error)
       throw error;
     }
   }
@@ -1900,7 +1892,7 @@ export class DataService {
       return employeeIds;
       
     } catch (error) {
-      console.error('[DataService] Error bulk creating employees:', error);
+      Logger.error('[DataService] Error bulk creating employees:', error)
       throw error;
     }
   }
@@ -1931,7 +1923,7 @@ export class DataService {
       });
       
     } catch (error) {
-      console.error('[DataService] Error bulk updating warning statuses:', error);
+      Logger.error('[DataService] Error bulk updating warning statuses:', error)
       throw error;
     }
   }
@@ -1942,7 +1934,7 @@ export class DataService {
    */
   static async loadOrganizations(): Promise<Organization[]> {
     try {
-      console.log('📊 [DataService] Loading all organizations...');
+      Logger.debug(62944)
       
       const orgsRef = collection(db, COLLECTIONS.ORGANIZATIONS);
       const q = query(orgsRef, orderBy('createdAt', 'desc'));
@@ -1955,18 +1947,647 @@ export class DataService {
         updatedAt: this.convertOptionalDate(doc.data().updatedAt)
       })) as Organization[];
       
-      console.log(`✅ [DataService] Loaded ${organizations.length} organizations`);
+      Logger.success(63433)
       return organizations;
       
     } catch (error) {
-      console.error('[DataService] Error loading organizations:', error);
+      Logger.error('[DataService] Error loading organizations:', error)
       throw error;
+    }
+  }
+
+  // ============================================
+  // 🚀 ENTERPRISE-SCALE BATCH OPERATIONS
+  // ============================================
+
+  /**
+   * Batch fetch employees with Firebase 'in' query limits handling
+   * Handles thousands of employees efficiently by chunking into groups of 10
+   * Critical for multi-tenant white-label deployment
+   */
+  static async getBatchEmployees(employeeIds: string[], organizationId: string): Promise<Employee[]> {
+    try {
+      if (!employeeIds.length) return [];
+
+      const employees: Employee[] = [];
+      const BATCH_SIZE = 10; // Firebase 'in' query limit
+
+      // Process in chunks to handle large datasets
+      for (let i = 0; i < employeeIds.length; i += BATCH_SIZE) {
+        const chunk = employeeIds.slice(i, i + BATCH_SIZE);
+        
+        const employeesRef = collection(db, COLLECTIONS.EMPLOYEES);
+        const q = query(
+          employeesRef,
+          where('organizationId', '==', organizationId),
+          where('__name__', 'in', chunk)
+        );
+
+        const snapshot = await getDocs(q);
+        const chunkEmployees = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: this.convertOptionalDate(doc.data().createdAt),
+          updatedAt: this.convertOptionalDate(doc.data().updatedAt)
+        })) as Employee[];
+
+        employees.push(...chunkEmployees);
+      }
+
+      Logger.success(65113)
+      return employees;
+
+    } catch (error) {
+      Logger.error('[DataService] Error in batch employee fetch:', error)
+      return [];
+    }
+  }
+
+  /**
+   * Batch fetch warning categories efficiently
+   * Handles large category lists for multi-tenant organizations
+   */
+  static async getBatchWarningCategories(categoryIds: string[], organizationId: string): Promise<WarningCategory[]> {
+    try {
+      if (!categoryIds.length) return [];
+
+      const categories: WarningCategory[] = [];
+      const BATCH_SIZE = 10; // Firebase 'in' query limit
+
+      // Process in chunks for scalability
+      for (let i = 0; i < categoryIds.length; i += BATCH_SIZE) {
+        const chunk = categoryIds.slice(i, i + BATCH_SIZE);
+        
+        const categoriesRef = collection(db, 'organizations', organizationId, 'categories');
+        const q = query(
+          categoriesRef,
+          where('__name__', 'in', chunk)
+        );
+
+        const snapshot = await getDocs(q);
+        const chunkCategories = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: this.convertOptionalDate(doc.data().createdAt),
+          updatedAt: this.convertOptionalDate(doc.data().updatedAt)
+        })) as WarningCategory[];
+
+        categories.push(...chunkCategories);
+      }
+
+      Logger.success(66603)
+      return categories;
+
+    } catch (error) {
+      Logger.error('[DataService] Error in batch category fetch:', error)
+      return [];
+    }
+  }
+
+  /**
+   * Paginated employee loading for large organizations
+   * Essential for handling hundreds of employees per organization
+   */
+  static async getPaginatedEmployees(
+    organizationId: string,
+    pageSize: number = 50,
+    lastEmployeeId?: string
+  ): Promise<{ employees: Employee[]; hasMore: boolean; lastId?: string }> {
+    try {
+      const employeesRef = collection(db, COLLECTIONS.EMPLOYEES);
+      let q = query(
+        employeesRef,
+        where('organizationId', '==', organizationId),
+        where('isActive', '==', true),
+        orderBy('profile.lastName'),
+        orderBy('profile.firstName'),
+        limitTo(pageSize + 1) // +1 to check if there are more records
+      );
+
+      // For pagination continuation
+      if (lastEmployeeId) {
+        const lastDoc = await getDoc(doc(db, COLLECTIONS.EMPLOYEES, lastEmployeeId));
+        if (lastDoc.exists()) {
+          q = query(
+            employeesRef,
+            where('organizationId', '==', organizationId),
+            where('isActive', '==', true),
+            orderBy('profile.lastName'),
+            orderBy('profile.firstName'),
+            startAfter(lastDoc),
+            limitTo(pageSize + 1)
+          );
+        }
+      }
+
+      const snapshot = await getDocs(q);
+      const allEmployees = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: this.convertOptionalDate(doc.data().createdAt),
+        updatedAt: this.convertOptionalDate(doc.data().updatedAt)
+      })) as Employee[];
+
+      // Check if there are more records
+      const hasMore = allEmployees.length > pageSize;
+      const employees = hasMore ? allEmployees.slice(0, pageSize) : allEmployees;
+      const lastId = employees.length > 0 ? employees[employees.length - 1].id : undefined;
+
+      Logger.success(68710)
+      return { employees, hasMore, lastId };
+
+    } catch (error) {
+      Logger.error('[DataService] Error in paginated employee fetch:', error)
+      return { employees: [], hasMore: false };
+    }
+  }
+
+  /**
+   * Optimistic locking for concurrent user protection
+   * Critical for multi-user organizations with concurrent edits
+   */
+  static async updateWithOptimisticLocking<T extends { id: string; version?: number }>(
+    collectionName: string,
+    id: string,
+    updates: Partial<T>,
+    currentVersion: number = 0
+  ): Promise<{ success: boolean; error?: string; newVersion?: number }> {
+    try {
+      const docRef = doc(db, collectionName, id);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        return { success: false, error: 'Document not found' };
+      }
+
+      const currentData = docSnap.data();
+      const storedVersion = currentData.version || 0;
+
+      // Check for version conflicts
+      if (storedVersion !== currentVersion) {
+        return { 
+          success: false, 
+          error: `Document was modified by another user. Expected version ${currentVersion}, found ${storedVersion}` 
+        };
+      }
+
+      // Update with incremented version
+      const newVersion = storedVersion + 1;
+      await updateDoc(docRef, {
+        ...updates,
+        version: newVersion,
+        updatedAt: serverTimestamp()
+      });
+
+      Logger.success(70248)
+      return { success: true, newVersion };
+
+    } catch (error) {
+      Logger.error('[DataService] Optimistic locking error:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }
 
 
   // ============================================
-  // 🎯 SUMMARY OF ENHANCEMENTS
+  // 💰 BILLING & RESELLER NETWORK METHODS
+  // ============================================
+
+  /**
+   * Create new reseller for provincial network
+   */
+  static async createReseller(resellerData: any): Promise<string> {
+    try {
+      const resellerId = `reseller_${Date.now()}`;
+      const reseller = {
+        ...resellerData,
+        id: resellerId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      await setDoc(doc(db, 'resellers', resellerId), reseller);
+      Logger.success(`✅ Reseller created: ${resellerId}`);
+      return resellerId;
+
+    } catch (error) {
+      Logger.error('❌ Failed to create reseller:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update existing reseller
+   */
+  static async updateReseller(resellerId: string, updates: any): Promise<void> {
+    try {
+      await updateDoc(doc(db, 'resellers', resellerId), {
+        ...updates,
+        updatedAt: serverTimestamp()
+      });
+
+      Logger.success(`✅ Reseller updated: ${resellerId}`);
+
+    } catch (error) {
+      Logger.error('❌ Failed to update reseller:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get single reseller by ID
+   */
+  static async getReseller(resellerId: string): Promise<any | null> {
+    try {
+      const docRef = doc(db, 'resellers', resellerId);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        return null;
+      }
+
+      return {
+        id: docSnap.id,
+        ...docSnap.data(),
+        createdAt: this.convertOptionalDate(docSnap.data().createdAt),
+        updatedAt: this.convertOptionalDate(docSnap.data().updatedAt)
+      };
+
+    } catch (error) {
+      Logger.error('❌ Failed to get reseller:', error);
+      throw error;
+    }
+  }
+
+
+  /**
+   * Get organizations (clients) for a specific reseller
+   */
+  static async getResellerClients(resellerId: string): Promise<any[]> {
+    try {
+      const orgsRef = collection(db, COLLECTIONS.ORGANIZATIONS);
+      const q = query(
+        orgsRef, 
+        where('resellerId', '==', resellerId),
+        orderBy('createdAt', 'desc')
+      );
+      
+      const snapshot = await getDocs(q);
+      const clients = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: this.convertOptionalDate(doc.data().createdAt),
+        updatedAt: this.convertOptionalDate(doc.data().updatedAt)
+      }));
+
+      Logger.success(`📊 Loaded ${clients.length} clients for reseller ${resellerId}`);
+      return clients;
+
+    } catch (error) {
+      Logger.error('❌ Failed to get reseller clients:', error);
+      throw error;
+    }
+  }
+
+
+  /**
+   * Create subscription record
+   */
+  static async createSubscription(subscriptionData: any): Promise<string> {
+    try {
+      const subscriptionId = `sub_${Date.now()}`;
+      const subscription = {
+        ...subscriptionData,
+        id: subscriptionId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      await setDoc(doc(db, 'subscriptions', subscriptionId), subscription);
+      Logger.success(`✅ Subscription created: ${subscriptionId}`);
+      return subscriptionId;
+
+    } catch (error) {
+      Logger.error('❌ Failed to create subscription:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update subscription (for tier changes, status updates)
+   */
+  static async updateSubscription(subscriptionId: string, updates: any): Promise<void> {
+    try {
+      await updateDoc(doc(db, 'subscriptions', subscriptionId), {
+        ...updates,
+        updatedAt: serverTimestamp()
+      });
+
+      Logger.success(`✅ Subscription updated: ${subscriptionId}`);
+
+    } catch (error) {
+      Logger.error('❌ Failed to update subscription:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get subscription by organization ID
+   */
+  static async getOrganizationSubscription(organizationId: string): Promise<any | null> {
+    try {
+      const subscriptionsRef = collection(db, 'subscriptions');
+      const q = query(subscriptionsRef, where('organizationId', '==', organizationId));
+      
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) {
+        return null;
+      }
+
+      const doc = snapshot.docs[0];
+      return {
+        id: doc.id,
+        ...doc.data(),
+        createdAt: this.convertOptionalDate(doc.data().createdAt),
+        updatedAt: this.convertOptionalDate(doc.data().updatedAt)
+      };
+
+    } catch (error) {
+      Logger.error('❌ Failed to get subscription:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create commission record when payment received
+   */
+  static async createCommission(commissionData: any): Promise<string> {
+    try {
+      const commissionId = commissionData.id || `comm_${Date.now()}`;
+      const commission = {
+        ...commissionData,
+        id: commissionId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      await setDoc(doc(db, 'commissions', commissionId), commission);
+      Logger.success(`💰 Commission recorded: ${commissionId}`);
+      return commissionId;
+
+    } catch (error) {
+      Logger.error('❌ Failed to create commission:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get commissions for a reseller
+   */
+  static async getResellerCommissions(resellerId: string, limit?: number): Promise<any[]> {
+    try {
+      const commissionsRef = collection(db, 'commissions');
+      let q = query(
+        commissionsRef, 
+        where('resellerId', '==', resellerId),
+        orderBy('createdAt', 'desc')
+      );
+      
+      if (limit) {
+        q = query(q, limitTo(limit));
+      }
+      
+      const snapshot = await getDocs(q);
+      const commissions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: this.convertOptionalDate(doc.data().createdAt),
+        updatedAt: this.convertOptionalDate(doc.data().updatedAt)
+      }));
+
+      return commissions;
+
+    } catch (error) {
+      Logger.error('❌ Failed to get reseller commissions:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update organization with billing fields (resellerId, subscriptionTier, etc.)
+   */
+  static async updateOrganizationBilling(organizationId: string, billingData: {
+    resellerId?: string;
+    subscriptionTier?: string;
+    subscriptionStatus?: string;
+    stripeCustomerId?: string;
+    monthlyRevenue?: number;
+  }): Promise<void> {
+    try {
+      await updateDoc(doc(db, COLLECTIONS.ORGANIZATIONS, organizationId), {
+        ...billingData,
+        updatedAt: serverTimestamp()
+      });
+
+      Logger.success(`💳 Organization billing updated: ${organizationId}`);
+
+    } catch (error) {
+      Logger.error('❌ Failed to update organization billing:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all organizations with billing info (for revenue dashboard)
+   */
+  static async getOrganizationsWithBilling(): Promise<any[]> {
+    try {
+      const orgsRef = collection(db, COLLECTIONS.ORGANIZATIONS);
+      const q = query(orgsRef, orderBy('createdAt', 'desc'));
+      
+      const snapshot = await getDocs(q);
+      const organizations = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: this.convertOptionalDate(doc.data().createdAt),
+        updatedAt: this.convertOptionalDate(doc.data().updatedAt)
+      }));
+
+      // Also load subscription data for each org
+      for (const org of organizations) {
+        const subscription = await this.getOrganizationSubscription(org.id);
+        if (subscription) {
+          org.subscription = subscription;
+        }
+      }
+
+      Logger.success(`📊 Loaded ${organizations.length} organizations with billing`);
+      return organizations;
+
+    } catch (error) {
+      Logger.error('❌ Failed to load organizations with billing:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create commission report for monthly payouts
+   */
+  static async createCommissionReport(reportData: any): Promise<string> {
+    try {
+      const reportId = reportData.id || `report_${reportData.resellerId}_${reportData.month}`;
+      const report = {
+        ...reportData,
+        id: reportId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      await setDoc(doc(db, 'commissionReports', reportId), report);
+      Logger.success(`📄 Commission report created: ${reportId}`);
+      return reportId;
+
+    } catch (error) {
+      Logger.error('❌ Failed to create commission report:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get pending commission reports for payout processing
+   */
+  static async getPendingCommissionReports(): Promise<any[]> {
+    try {
+      const reportsRef = collection(db, 'commissionReports');
+      const q = query(
+        reportsRef, 
+        where('payoutStatus', '==', 'pending'),
+        orderBy('createdAt', 'asc')
+      );
+      
+      const snapshot = await getDocs(q);
+      const reports = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: this.convertOptionalDate(doc.data().createdAt),
+        updatedAt: this.convertOptionalDate(doc.data().updatedAt)
+      }));
+
+      return reports;
+
+    } catch (error) {
+      Logger.error('❌ Failed to get pending commission reports:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Assign reseller to organization
+   */
+  static async assignResellerToOrganization(organizationId: string, resellerId: string): Promise<void> {
+    try {
+      // Update organization with reseller ID
+      await this.updateOrganizationBilling(organizationId, { resellerId });
+
+      // Update reseller's client list
+      const reseller = await this.getReseller(resellerId);
+      if (reseller) {
+        const updatedClientIds = [...(reseller.clientIds || []), organizationId];
+        await this.updateReseller(resellerId, { 
+          clientIds: updatedClientIds,
+          totalClientsAcquired: increment(1)
+        });
+      }
+
+      Logger.success(`🤝 Reseller ${resellerId} assigned to organization ${organizationId}`);
+
+    } catch (error) {
+      Logger.error('❌ Failed to assign reseller to organization:', error);
+      throw error;
+    }
+  }
+
+  // ============================================
+  // 🚀 RESELLER DEPLOYMENT METHODS
+  // ============================================
+
+
+  /**
+   * Get all resellers
+   * ✅ NEW: Get all reseller profiles
+   */
+  static async getAllResellers(): Promise<any[]> {
+    try {
+      const resellersQuery = query(
+        collection(db, 'resellers'),
+        orderBy('createdAt', 'desc')
+      );
+      
+      const snapshot = await getDocs(resellersQuery);
+      return snapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data(),
+        createdAt: this.convertOptionalDate(doc.data().createdAt),
+        updatedAt: this.convertOptionalDate(doc.data().updatedAt)
+      }));
+    } catch (error) {
+      Logger.error('Failed to get all resellers:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get reseller deployment history for rate limiting
+   * ✅ NEW: Support for reseller organization deployment
+   */
+  static async getResellerDeployments(resellerId: string, since: Date): Promise<any[]> {
+    try {
+      const deploymentsQuery = query(
+        collection(db, 'resellerDeployments'),
+        where('resellerId', '==', resellerId),
+        where('deployedAt', '>=', since),
+        orderBy('deployedAt', 'desc')
+      );
+      
+      const snapshot = await getDocs(deploymentsQuery);
+      return snapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data(),
+        deployedAt: doc.data().deployedAt?.toDate() || new Date(),
+        createdAt: doc.data().createdAt?.toDate() || new Date()
+      }));
+    } catch (error) {
+      Logger.error('Failed to get reseller deployments:', error);
+      return []; // Return empty array on error to allow deployment
+    }
+  }
+
+  /**
+   * Log reseller deployment for audit trail
+   * ✅ NEW: Track reseller organization deployments
+   */
+  static async logResellerDeployment(deploymentData: {
+    resellerId: string;
+    organizationId: string;
+    organizationName: string;
+    adminEmail: string;
+    deployedAt: any; // Firebase timestamp
+    notes?: string;
+  }): Promise<void> {
+    try {
+      await addDoc(collection(db, 'resellerDeployments'), {
+        ...deploymentData,
+        createdAt: deploymentData.deployedAt
+      });
+      Logger.info('Reseller deployment logged successfully');
+    } catch (error) {
+      Logger.error('Failed to log reseller deployment:', error);
+      // Don't throw error - deployment logging is not critical
+    }
+  }
+
+  // ============================================
+  // 🎯 ENHANCED SUMMARY
   // ============================================
   
   /*
@@ -1980,7 +2601,12 @@ export class DataService {
    * ✅ Legacy compatibility maintained
    * ✅ Batch operations and cleanup methods preserved
    * ✅ Enhanced date handling utilities
+   * 💰 NEW: Complete billing & reseller network methods
+   * 🏢 NEW: Provincial reseller management
+   * 💳 NEW: Subscription & commission tracking
+   * 📊 NEW: Revenue dashboard data methods
+   * 🚀 NEW: Reseller organization deployment tracking
    * 
-   * TOTAL: 40+ methods preserved and enhanced
+   * TOTAL: 52+ methods for complete white-label multi-tenant system
    */
 }

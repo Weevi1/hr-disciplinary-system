@@ -1,22 +1,22 @@
-// frontend/src/components/absences/ReportAbsence.tsx - FIXED VERSION
+import Logger from '../../utils/logger';
+// frontend/src/components/absences/ReportAbsence.tsx - V2 VERSION
+// ✅ V2 FEATURES: Auto-save, real-time validation, enhanced UX, memory leak prevention
 // ✅ FIXED: Removes undefined fields and properly handles optional data for Firebase
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   UserX, Calendar, Clock, FileText, Send, X, CheckCircle, 
-  AlertCircle, DollarSign, User
+  AlertCircle, DollarSign, User, Save, Wifi, WifiOff
 } from 'lucide-react';
 
 import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { FirebaseService } from '../../services/FirebaseService';
+import { DatabaseShardingService } from '../../services/DatabaseShardingService';
 import { API } from '../../api';
 import type { Employee } from '../../types/core';
 
-// 🏢 COLLECTIONS - Uses the new collection we added to Firestore rules
-const COLLECTIONS = {
-  ABSENCE_REPORTS: 'absence_reports'
-};
+// 🏢 SHARDED COLLECTIONS - Reports stored at /organizations/{orgId}/reports/{reportId}
 
 // 🌟 TYPES - Based on project knowledge structure
 interface AbsenceReport {
@@ -102,13 +102,110 @@ export const ReportAbsence: React.FC = () => {
 
   // 🔄 DATA STATE
   const [employees, setEmployees] = useState<Employee[]>([]);
+  
+  // 💾 V2: AUTO-SAVE STATE
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
+  
+  // 🔄 V2: REAL-TIME VALIDATION STATE
+  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+  
+  // 💾 V2: AUTO-SAVE KEY FOR LOCAL STORAGE
+  const autoSaveKey = useMemo(() => 
+    `absence_report_draft_${user?.id}_${organization?.id}`, 
+    [user?.id, organization?.id]
+  );
 
+  // 💾 V2: AUTO-SAVE FUNCTIONS
+  const saveToLocalStorage = useCallback(() => {
+    if (!autoSaveKey) return;
+    
+    const draftData = {
+      selectedEmployeeId: selectedEmployee?.id || '',
+      absenceDate,
+      absenceType,
+      reason,
+      timestamp: Date.now()
+    };
+    
+    try {
+      localStorage.setItem(autoSaveKey, JSON.stringify(draftData));
+      setAutoSaveStatus('saved');
+      setLastSaved(new Date());
+      Logger.debug('💾 Auto-saved absence report draft', draftData);
+    } catch (error) {
+      setAutoSaveStatus('error');
+      Logger.error('Failed to auto-save absence report draft:', error);
+    }
+  }, [autoSaveKey, selectedEmployee?.id, absenceDate, absenceType, reason]);
+  
+  const loadFromLocalStorage = useCallback(() => {
+    if (!autoSaveKey) return;
+    
+    try {
+      const saved = localStorage.getItem(autoSaveKey);
+      if (!saved) return;
+      
+      const draftData = JSON.parse(saved);
+      // Only restore if saved within last 24 hours
+      if (Date.now() - draftData.timestamp > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(autoSaveKey);
+        return;
+      }
+      
+      Logger.debug('📋 Restored absence report draft', draftData);
+      if (draftData.absenceDate) setAbsenceDate(draftData.absenceDate);
+      if (draftData.absenceType) setAbsenceType(draftData.absenceType);
+      if (draftData.reason) setReason(draftData.reason);
+      // Note: selectedEmployee will be set after employees load
+      return draftData;
+    } catch (error) {
+      Logger.error('Failed to restore absence report draft:', error);
+      localStorage.removeItem(autoSaveKey);
+    }
+  }, [autoSaveKey]);
+  
+  const clearAutoSave = useCallback(() => {
+    if (autoSaveKey) {
+      localStorage.removeItem(autoSaveKey);
+      setAutoSaveStatus('idle');
+      setLastSaved(null);
+    }
+  }, [autoSaveKey]);
+  
+  // 📁 V2: REAL-TIME VALIDATION
+  const validateField = useCallback((field: string, value: any) => {
+    const errors: {[key: string]: string} = {};
+    
+    switch (field) {
+      case 'selectedEmployee':
+        if (!value) errors.selectedEmployee = 'Please select an employee';
+        break;
+      case 'absenceDate':
+        if (!value) errors.absenceDate = 'Please select an absence date';
+        break;
+      case 'absenceType':
+        if (!value) errors.absenceType = 'Please select an absence type';
+        break;
+      case 'reason':
+        if (value && value.length > 80) {
+          errors.reason = 'Reason must be 80 characters or less';
+        }
+        break;
+    }
+    
+    setFieldErrors(prev => ({ ...prev, [field]: errors[field] || '' }));
+    return !errors[field];
+  }, []);
+  
   // ✅ FIXED: Load filtered employees using the SAME pattern as HODDashboardSection
   useEffect(() => {
     // Use the same positive condition pattern as HODDashboardSection
     if (organization?.id && user?.id) {
       const loadFilteredEmployees = async () => {
-        console.log('📋 Loading employees for absence reporting. Manager:', user.id, 'Role:', user.role?.id, 'Org:', organization.id);
+        Logger.debug('📋 Loading employees for absence reporting. Manager:', user.id, 'Role:', user.role?.id, 'Org:', organization.id)
 
         try {
           setDataLoading(true);
@@ -116,7 +213,7 @@ export const ReportAbsence: React.FC = () => {
           
           // ✅ FIXED: Use the EXACT same approach as HODDashboardSection
           const employeesData = await API.employees.getByManager(user?.id || '', organization.id);
-          console.log('✅ Managed employees loaded for absence reporting:', employeesData.length);
+          Logger.success(3871)
           
           // Transform employees to the expected format (same as HODDashboardSection)
           const transformedEmployees = employeesData.map(emp => ({
@@ -131,11 +228,21 @@ export const ReportAbsence: React.FC = () => {
             ...emp // Keep all original properties
           }));
           
-          console.log('👥 Employee details for absence reporting:', transformedEmployees.map(e => `${e.firstName} ${e.lastName}`));
+          Logger.debug('👥 Employee details for absence reporting:', transformedEmployees.map(e => `${e.firstName} ${e.lastName}`));
           setEmployees(transformedEmployees);
           
+          // 💾 V2: Restore draft after employees load
+          const draftData = loadFromLocalStorage();
+          if (draftData?.selectedEmployeeId) {
+            const savedEmployee = transformedEmployees.find(emp => emp.id === draftData.selectedEmployeeId);
+            if (savedEmployee) {
+              setSelectedEmployee(savedEmployee);
+              Logger.debug('📋 Restored selected employee from draft:', savedEmployee.firstName, savedEmployee.lastName);
+            }
+          }
+          
         } catch (err) {
-          console.error('❌ Error loading managed employees for absence reporting:', err);
+          Logger.error('❌ Error loading managed employees for absence reporting:', err)
           setError('Failed to load your team members. Please try again.');
           setEmployees([]);
         } finally {
@@ -145,10 +252,42 @@ export const ReportAbsence: React.FC = () => {
 
       loadFilteredEmployees();
     } else {
-      console.log('⏳ Waiting for user or organization to load...', { userId: user?.id, orgId: organization?.id });
+      Logger.debug('⏳ Waiting for user or organization to load...', { userId: user?.id, orgId: organization?.id })
       setDataLoading(false);
     }
-  }, [user?.id, organization?.id]);
+  }, [user?.id, organization?.id, loadFromLocalStorage]);
+
+  // 💾 V2: AUTO-SAVE TRIGGER
+  useEffect(() => {
+    if (selectedEmployee || absenceDate || absenceType || reason) {
+      setAutoSaveStatus('saving');
+      
+      // Clear existing timeout
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+      
+      // Save after 1 second of inactivity
+      autoSaveTimeoutRef.current = setTimeout(() => {
+        saveToLocalStorage();
+      }, 1000);
+    }
+    
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [selectedEmployee, absenceDate, absenceType, reason, saveToLocalStorage]);
+  
+  // 💾 V2: CLEANUP ON UNMOUNT
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // ✅ VALIDATE FORM
   const isFormValid = () => {
@@ -191,8 +330,15 @@ export const ReportAbsence: React.FC = () => {
         absenceReport.reason = reason.trim();
       }
 
-      // ✅ FIXED: Use correct FirebaseService method that works with our rules
-      await FirebaseService.createDocument(COLLECTIONS.ABSENCE_REPORTS, absenceReport as AbsenceReport);
+      // 🔧 FIXED: Use sharded structure for absence reports
+      await DatabaseShardingService.createDocument(
+        organization.id, 
+        'reports', 
+        absenceReport as AbsenceReport
+      );
+      
+      // 💾 V2: Clear auto-save on successful submission
+      clearAutoSave();
       
       setSuccess(true);
 
@@ -202,7 +348,7 @@ export const ReportAbsence: React.FC = () => {
       }, 3000);
 
     } catch (err) {
-      console.error('Failed to submit absence report:', err);
+      Logger.error('Failed to submit absence report:', err)
       setError('Failed to submit absence report. Please try again.');
     } finally {
       setLoading(false);
@@ -290,6 +436,30 @@ export const ReportAbsence: React.FC = () => {
               <div>
                 <h1 className="text-2xl font-bold">Report Absence</h1>
                 <p className="text-orange-100">Log employee absence for HR notification</p>
+                
+                {/* 💾 V2: AUTO-SAVE INDICATOR */}
+                {(selectedEmployee || absenceDate || absenceType || reason) && (
+                  <div className="flex items-center gap-2 text-xs text-orange-100 mt-2">
+                    {autoSaveStatus === 'saving' && (
+                      <>
+                        <div className="w-3 h-3 border border-orange-200 border-t-transparent rounded-full animate-spin" />
+                        <span>Saving draft...</span>
+                      </>
+                    )}
+                    {autoSaveStatus === 'saved' && lastSaved && (
+                      <>
+                        <Save className="w-3 h-3" />
+                        <span>Draft saved at {lastSaved.toLocaleTimeString()}</span>
+                      </>
+                    )}
+                    {autoSaveStatus === 'error' && (
+                      <>
+                        <WifiOff className="w-3 h-3" />
+                        <span>Save failed - check connection</span>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <button
@@ -380,8 +550,14 @@ export const ReportAbsence: React.FC = () => {
                   onChange={(e) => {
                     const emp = employees.find(emp => emp.id === e.target.value);
                     setSelectedEmployee(emp || null);
+                    setTouchedFields(prev => new Set(prev).add('selectedEmployee'));
+                    validateField('selectedEmployee', emp);
                   }}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
+                    touchedFields.has('selectedEmployee') && fieldErrors.selectedEmployee
+                      ? 'border-red-300 bg-red-50'
+                      : 'border-gray-300'
+                  }`}
                   required
                 >
                   <option value="">Choose an employee...</option>
@@ -392,6 +568,12 @@ export const ReportAbsence: React.FC = () => {
                     </option>
                   ))}
                 </select>
+                {touchedFields.has('selectedEmployee') && fieldErrors.selectedEmployee && (
+                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {fieldErrors.selectedEmployee}
+                  </p>
+                )}
               </div>
 
               {/* 📅 ABSENCE DATE */}
@@ -403,53 +585,89 @@ export const ReportAbsence: React.FC = () => {
                 <input
                   type="date"
                   value={absenceDate}
-                  onChange={(e) => setAbsenceDate(e.target.value)}
+                  onChange={(e) => {
+                    setAbsenceDate(e.target.value);
+                    setTouchedFields(prev => new Set(prev).add('absenceDate'));
+                    validateField('absenceDate', e.target.value);
+                  }}
                   max={new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
+                    touchedFields.has('absenceDate') && fieldErrors.absenceDate
+                      ? 'border-red-300 bg-red-50'
+                      : 'border-gray-300'
+                  }`}
                   required
                 />
+                {touchedFields.has('absenceDate') && fieldErrors.absenceDate && (
+                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {fieldErrors.absenceDate}
+                  </p>
+                )}
               </div>
 
-              {/* 🏠 ABSENCE TYPE */}
+              {/* 🏠 ABSENCE TYPE DROPDOWN - V2 ENHANCED */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Clock className="w-4 h-4 inline mr-1" />
-                  Type of Absence *
+                  Type of Absence <span className="text-red-500">*</span>
                 </label>
-                <div className="space-y-3">
+                <select
+                  value={absenceType}
+                  onChange={(e) => {
+                    setAbsenceType(e.target.value);
+                    setTouchedFields(prev => new Set(prev).add('absenceType'));
+                    validateField('absenceType', e.target.value);
+                  }}
+                  onBlur={() => {
+                    setTouchedFields(prev => new Set(prev).add('absenceType'));
+                    validateField('absenceType', absenceType);
+                  }}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${
+                    touchedFields.has('absenceType') && fieldErrors.absenceType
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                      : 'border-gray-300 focus:border-orange-500 focus:ring-orange-500'
+                  }`}
+                >
+                  <option value="">Select type of absence...</option>
                   {ABSENCE_TYPES.map((type) => (
-                    <label
-                      key={type.id}
-                      className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all hover:bg-gray-50 ${
-                        absenceType === type.id
-                          ? 'border-orange-500 bg-orange-50'
-                          : 'border-gray-200'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="absenceType"
-                        value={type.id}
-                        checked={absenceType === type.id}
-                        onChange={(e) => setAbsenceType(e.target.value)}
-                        className="w-4 h-4 text-orange-600 border-gray-300 focus:ring-orange-500"
-                      />
-                      <div className="ml-3 flex-1">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-lg">{type.icon}</span>
-                          <span className="font-medium text-gray-900">{type.label}</span>
-                          {type.payrollImpact && (
-                            <span className="flex items-center text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
-                              <DollarSign className="w-3 h-3 mr-1" />
-                              Affects Pay
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600 mt-1">{type.description}</p>
-                      </div>
-                    </label>
+                    <option key={type.id} value={type.id}>
+                      {type.icon} {type.label}{type.payrollImpact ? ' (Affects Pay)' : ''}
+                    </option>
                   ))}
-                </div>
+                </select>
+                
+                {/* Selected Type Details */}
+                {selectedAbsenceType && (
+                  <div className="mt-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{selectedAbsenceType.icon}</span>
+                        <span className="font-medium text-orange-900">{selectedAbsenceType.label}</span>
+                      </div>
+                      {selectedAbsenceType.payrollImpact && (
+                        <span className="flex items-center text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
+                          <DollarSign className="w-3 h-3 mr-1" />
+                          Affects Pay
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-orange-700">{selectedAbsenceType.description}</p>
+                    {selectedAbsenceType.payrollImpact && (
+                      <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        This absence type will affect the employee's payroll calculation
+                      </p>
+                    )}
+                  </div>
+                )}
+                
+                {touchedFields.has('absenceType') && fieldErrors.absenceType && (
+                  <p className="text-red-600 text-sm mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {fieldErrors.absenceType}
+                  </p>
+                )}
               </div>
 
               {/* 📝 REASON (OPTIONAL) */}
@@ -460,14 +678,33 @@ export const ReportAbsence: React.FC = () => {
                 </label>
                 <textarea
                   value={reason}
-                  onChange={(e) => setReason(e.target.value.slice(0, 80))}
+                  onChange={(e) => {
+                    const newReason = e.target.value.slice(0, 80);
+                    setReason(newReason);
+                    setTouchedFields(prev => new Set(prev).add('reason'));
+                    validateField('reason', newReason);
+                  }}
                   placeholder="Brief explanation if needed..."
                   rows={3}
                   maxLength={80}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors resize-none"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors resize-none ${
+                    touchedFields.has('reason') && fieldErrors.reason
+                      ? 'border-red-300 bg-red-50'
+                      : 'border-gray-300'
+                  }`}
                 />
-                <div className="text-right text-sm text-gray-500 mt-1">
-                  {remainingChars} characters remaining
+                <div className="flex justify-between items-center text-xs mt-1">
+                  {touchedFields.has('reason') && fieldErrors.reason && (
+                    <p className="text-red-600 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      {fieldErrors.reason}
+                    </p>
+                  )}
+                  <div className={`text-sm ml-auto ${
+                    remainingChars < 10 ? 'text-red-500' : 'text-gray-500'
+                  }`}>
+                    {remainingChars} characters remaining
+                  </div>
                 </div>
               </div>
 

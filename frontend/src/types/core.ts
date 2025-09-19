@@ -23,7 +23,7 @@ export type WarningLevel =
   | 'suspension'       // Suspension with/without pay
   | 'dismissal';       // Termination
 
-export type WarningStatus = 'draft' | 'pending_approval' | 'approved' | 'delivered';
+export type WarningStatus = 'issued' | 'delivered' | 'acknowledged';
 export type ContractType = 'permanent' | 'contract' | 'temporary';
 export type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
 export type EscalationCondition = 'repeat_offense' | 'time_based' | 'severity_based';
@@ -80,8 +80,9 @@ export interface Organization {
   sectorName?: string;
   branding: {
     logo: string | null;
-    primaryColor: string;
-    secondaryColor: string;
+    primaryColor: string;    // Main brand color - buttons, headers, key UI elements
+    secondaryColor: string;  // Supporting color - secondary buttons, backgrounds
+    accentColor: string;     // Accent color - badges, highlights, notifications
     companyName: string;
     domain: string;
   };
@@ -181,6 +182,12 @@ export interface Employee {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  // Archive lifecycle fields
+  archivedAt?: Date | any; // Support both Date and Firestore Timestamp
+  archiveReason?: string;
+  archivedBy?: string;
+  restoredAt?: Date | any;
+  restoredBy?: string;
 }
 
 export interface EmployeeFormData {

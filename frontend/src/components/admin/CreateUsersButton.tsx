@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // Add this as a temporary component to your SuperAdminDashboard or create a new page
 // frontend/src/components/admin/CreateUsersButton.tsx
 
@@ -15,7 +16,7 @@ export const CreateUsersButton = () => {
     setResult('');
     
     try {
-      console.log('🚀 Creating additional users for Potas Pilots...');
+      Logger.debug('🚀 Creating additional users for Potas Pilots...')
       
       const orgId = 'potaspilots'; // Your organization ID
       
@@ -49,12 +50,12 @@ export const CreateUsersButton = () => {
       // Create HR Manager
       const hrManagerRef = doc(db, 'users', hrManagerData.id);
       await setDoc(hrManagerRef, hrManagerData);
-      console.log('✅ HR Manager created:', hrManagerData.email);
+      Logger.success(1789)
 
       // Create HOD Manager  
       const hodManagerRef = doc(db, 'users', hodManagerData.id);
       await setDoc(hodManagerRef, hodManagerData);
-      console.log('✅ HOD Manager created:', hodManagerData.email);
+      Logger.success(2006)
 
       setResult(`✅ Successfully created:
 📧 HR Manager: ${hrManagerData.email}
@@ -62,10 +63,10 @@ export const CreateUsersButton = () => {
 
 🎉 All users ready for login!`);
 
-      console.log('🎉 All additional users created successfully!');
+      Logger.debug('🎉 All additional users created successfully!')
       
     } catch (error) {
-      console.error('❌ Error creating users:', error);
+      Logger.error('❌ Error creating users:', error)
       setResult(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setCreating(false);

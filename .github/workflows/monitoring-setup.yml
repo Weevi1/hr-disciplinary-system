@@ -1,0 +1,289 @@
+# .github/workflows/monitoring-setup.yml - Set up monitoring and alerting
+name: Setup Monitoring
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to set up monitoring for'
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+      action:
+        description: 'Monitoring action'
+        required: true
+        type: choice
+        options:
+          - setup
+          - update
+          - teardown
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  setup-monitoring:
+    name: Setup Monitoring for ${{ github.event.inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Load environment configuration
+        id: env-config
+        run: |
+          ENV_FILE="config/environments/${{ github.event.inputs.environment }}.json"
+          PROJECT_ID=$(jq -r '.firebase.projectId' "$ENV_FILE")
+          echo "project-id=$PROJECT_ID" >> $GITHUB_OUTPUT
+
+      - name: Setup uptime checks
+        if: github.event.inputs.action != 'teardown'
+        run: |
+          # Create uptime check for the main application
+          gcloud alpha monitoring uptime create \
+            --display-name="HR System ${{ github.event.inputs.environment }} Uptime" \
+            --resource-type="url" \
+            --resource-path="/" \
+            --hostname="${{ steps.env-config.outputs.project-id }}.web.app" \
+            --http-check-path="/" \
+            --check-interval="60s" \
+            --timeout="30s" \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Setup notification channels
+        if: github.event.inputs.action != 'teardown'
+        run: |
+          # Email notification channel
+          cat > email-channel.yaml << EOF
+          displayName: "HR System Email Alerts"
+          type: email
+          labels:
+            email_address: "${{ secrets.ALERT_EMAIL }}"
+          EOF
+          
+          gcloud alpha monitoring channels create \
+            --channel-content-from-file="email-channel.yaml" \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+          # Slack notification channel (if webhook is provided)
+          if [[ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]]; then
+            cat > slack-channel.yaml << EOF
+          displayName: "HR System Slack Alerts"
+          type: slack
+          labels:
+            channel_name: "#hr-system-alerts"
+            url: "${{ secrets.SLACK_WEBHOOK_URL }}"
+          EOF
+            
+            gcloud alpha monitoring channels create \
+              --channel-content-from-file="slack-channel.yaml" \
+              --project=${{ secrets.GCP_PROJECT_ID }}
+          fi
+
+      - name: Setup alert policies
+        if: github.event.inputs.action != 'teardown'
+        run: |
+          # High error rate alert
+          cat > error-rate-alert.yaml << EOF
+          displayName: "High Error Rate - ${{ github.event.inputs.environment }}"
+          conditions:
+          - displayName: "Cloud Function error rate"
+            conditionThreshold:
+              filter: 'resource.type="cloud_function"'
+              comparison: COMPARISON_GREATER_THAN
+              thresholdValue: 0.05
+              duration: 300s
+          alertStrategy:
+            autoClose: 86400s
+          EOF
+          
+          gcloud alpha monitoring policies create \
+            --policy-from-file="error-rate-alert.yaml" \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+          # Response time alert
+          cat > response-time-alert.yaml << EOF
+          displayName: "Slow Response Times - ${{ github.event.inputs.environment }}"
+          conditions:
+          - displayName: "Function execution time"
+            conditionThreshold:
+              filter: 'resource.type="cloud_function" AND metric.type="cloudfunctions.googleapis.com/function/execution_times"'
+              comparison: COMPARISON_GREATER_THAN
+              thresholdValue: 10000
+              duration: 300s
+          alertStrategy:
+            autoClose: 86400s
+          EOF
+          
+          gcloud alpha monitoring policies create \
+            --policy-from-file="response-time-alert.yaml" \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Setup custom dashboards
+        if: github.event.inputs.action != 'teardown'
+        run: |
+          # Create main overview dashboard
+          cat > main-dashboard.json << 'EOF'
+          {
+            "displayName": "HR System Overview - ${{ github.event.inputs.environment }}",
+            "mosaicLayout": {
+              "tiles": [
+                {
+                  "width": 6,
+                  "height": 4,
+                  "widget": {
+                    "title": "Application Uptime",
+                    "scorecard": {
+                      "timeSeriesQuery": {
+                        "timeSeriesFilter": {
+                          "filter": "resource.type=\"uptime_check_id\"",
+                          "aggregation": {
+                            "alignmentPeriod": "300s",
+                            "perSeriesAligner": "ALIGN_FRACTION_TRUE"
+                          }
+                        }
+                      },
+                      "gaugeView": {
+                        "upperBound": 1.0
+                      }
+                    }
+                  }
+                },
+                {
+                  "xPos": 6,
+                  "width": 6,
+                  "height": 4,
+                  "widget": {
+                    "title": "Function Executions",
+                    "xyChart": {
+                      "dataSets": [{
+                        "timeSeriesQuery": {
+                          "timeSeriesFilter": {
+                            "filter": "resource.type=\"cloud_function\" AND metric.type=\"cloudfunctions.googleapis.com/function/execution_count\"",
+                            "aggregation": {
+                              "alignmentPeriod": "300s",
+                              "perSeriesAligner": "ALIGN_RATE"
+                            }
+                          }
+                        }
+                      }],
+                      "timeshiftDuration": "0s",
+                      "yAxis": {
+                        "label": "Executions/sec",
+                        "scale": "LINEAR"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+          EOF
+          
+          gcloud monitoring dashboards create \
+            --config-from-file="main-dashboard.json" \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Setup log-based metrics
+        if: github.event.inputs.action != 'teardown'
+        run: |
+          # Error count metric
+          gcloud logging metrics create hr_system_errors \
+            --description="Count of application errors" \
+            --log-filter='resource.type="cloud_function" AND severity>=ERROR' \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+          # User activity metric
+          gcloud logging metrics create hr_system_user_activity \
+            --description="User activity tracking" \
+            --log-filter='resource.type="cloud_function" AND jsonPayload.eventType="user_action"' \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+          # Security events metric
+          gcloud logging metrics create hr_system_security_events \
+            --description="Security-related events" \
+            --log-filter='resource.type="cloud_function" AND (jsonPayload.eventType="auth_failure" OR jsonPayload.eventType="permission_denied")' \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Setup log exports
+        if: github.event.inputs.action != 'teardown'
+        run: |
+          # Export error logs to BigQuery for analysis
+          gcloud logging sinks create hr-system-error-logs \
+            bigquery.googleapis.com/projects/${{ secrets.GCP_PROJECT_ID }}/datasets/hr_system_logs \
+            --log-filter='resource.type="cloud_function" AND severity>=ERROR' \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+          # Export audit logs to Cloud Storage
+          gcloud logging sinks create hr-system-audit-logs \
+            storage.googleapis.com/hr-system-audit-logs-${{ github.event.inputs.environment }} \
+            --log-filter='protoPayload.serviceName="firestore.googleapis.com" OR protoPayload.serviceName="firebase.googleapis.com"' \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Teardown monitoring
+        if: github.event.inputs.action == 'teardown'
+        run: |
+          echo "⚠️ Tearing down monitoring resources for ${{ github.event.inputs.environment }}"
+          
+          # List and delete alert policies
+          gcloud alpha monitoring policies list \
+            --filter="displayName~'${{ github.event.inputs.environment }}'" \
+            --format="value(name)" \
+            --project=${{ secrets.GCP_PROJECT_ID }} | \
+          while read policy; do
+            gcloud alpha monitoring policies delete "$policy" --quiet --project=${{ secrets.GCP_PROJECT_ID }}
+          done
+          
+          # List and delete uptime checks
+          gcloud alpha monitoring uptime list \
+            --filter="displayName~'${{ github.event.inputs.environment }}'" \
+            --format="value(name)" \
+            --project=${{ secrets.GCP_PROJECT_ID }} | \
+          while read check; do
+            gcloud alpha monitoring uptime delete "$check" --quiet --project=${{ secrets.GCP_PROJECT_ID }}
+          done
+
+      - name: Verify setup
+        if: github.event.inputs.action != 'teardown'
+        run: |
+          echo "## Monitoring Setup Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Project ID:** ${{ steps.env-config.outputs.project-id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Setup Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # List created resources
+          echo "### Created Resources:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "**Uptime Checks:**" >> $GITHUB_STEP_SUMMARY
+          gcloud alpha monitoring uptime list \
+            --filter="displayName~'${{ github.event.inputs.environment }}'" \
+            --format="table(displayName,httpCheck.path)" \
+            --project=${{ secrets.GCP_PROJECT_ID }} >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Alert Policies:**" >> $GITHUB_STEP_SUMMARY
+          gcloud alpha monitoring policies list \
+            --filter="displayName~'${{ github.event.inputs.environment }}'" \
+            --format="table(displayName,enabled)" \
+            --project=${{ secrets.GCP_PROJECT_ID }} >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Monitoring setup completed successfully!"

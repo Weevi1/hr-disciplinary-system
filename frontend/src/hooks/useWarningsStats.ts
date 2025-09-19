@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // frontend/src/hooks/useWarningsStats.ts
 // 🏆 LIVE WARNINGS STATISTICS HOOK
 // Follows the exact pattern from HR reports in BusinessDashboard.tsx
@@ -5,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { API } from '@/api';
+import { DataServiceV2 } from '../services/DataServiceV2';
 import type { Warning } from '../types';
 
 interface WarningsStats {
@@ -23,8 +25,8 @@ interface WarningsStats {
     dismissal: number;
   };
   byStatus: {
-    draft: number;
     issued: number;
+    delivered: number;
     acknowledged: number;
     appealed: number;
     expired: number;
@@ -59,7 +61,7 @@ const initialStats: WarningsStats = {
     dismissal: 0
   },
   byStatus: {
-    draft: 0,
+    delivered: 0,
     issued: 0,
     acknowledged: 0,
     appealed: 0,
@@ -88,12 +90,12 @@ const loadWarningsStats = async () => {
     setLoading(true);
     setError(null);
 
-    console.log('🔔 Loading warnings stats for:', user.organizationId);
+    Logger.debug('🔔 Loading warnings stats for:', user.organizationId)
 
     // Load all warnings for the organization
     const warnings = await API.warnings.getAll(user.organizationId);
     
-    console.log('🔔 Warnings loaded:', warnings.length);
+    Logger.debug('🔔 Warnings loaded:', warnings.length)
 
     // Calculate stats
     const now = new Date();
@@ -118,7 +120,7 @@ const loadWarningsStats = async () => {
         dismissal: 0
       },
       byStatus: {
-        draft: 0,
+        delivered: 0,
         issued: 0,
         acknowledged: 0,
         appealed: 0,
@@ -133,8 +135,8 @@ const loadWarningsStats = async () => {
 
     warnings.forEach(warning => {
       // 🎯 FIX: Use centralized date conversion
-      const issueDate = DataService.convertDate(warning.issueDate || warning.createdAt);
-      const expiryDate = warning.expiryDate ? DataService.convertDate(warning.expiryDate) : null;
+      const issueDate = warning.issueDate ? new Date(warning.issueDate) : new Date(warning.createdAt);
+      const expiryDate = warning.expiryDate ? new Date(warning.expiryDate) : null;
       const isActive = expiryDate ? expiryDate > now : true;
 
       // Active vs expired
@@ -164,8 +166,8 @@ const loadWarningsStats = async () => {
         calculatedStats.byStatus[warning.status as keyof typeof calculatedStats.byStatus]++;
       }
 
-      // Pending review (drafts or appeals)
-      if (warning.status === 'draft' || warning.appealSubmitted) {
+      // Pending review (appeals)
+      if (warning.appealSubmitted) {
         calculatedStats.pendingReview++;
       }
 
@@ -184,7 +186,7 @@ const loadWarningsStats = async () => {
     setStats(calculatedStats);
     
   } catch (error) {
-    console.error('Failed to load warnings stats:', error);
+    Logger.error('Failed to load warnings stats:', error)
     setError('Failed to load warnings statistics');
   } finally {
     setLoading(false);

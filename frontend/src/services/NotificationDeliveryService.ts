@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // frontend/src/services/NotificationDeliveryService.ts
 // 🎯 ROLE-BASED NOTIFICATION DELIVERY SERVICE
 // ✅ Handles notifications based on user roles and permissions
@@ -71,14 +72,15 @@ const NOTIFICATION_RULES: NotificationRule[] = [
     ]
   },
   {
-    event: 'document_needs_approval',
+    event: 'warning_needs_delivery',
     roles: ['hr-manager', 'business-owner'],
-    priority: 'warning',
-    title: 'Document Approval Required',
-    messageTemplate: 'Warning document for {{employeeName}} needs HR approval before delivery',
-    category: 'approval',
+    priority: 'high',
+    title: 'Warning Needs Delivery',
+    messageTemplate: 'New {{warningLevel}} warning for {{employeeName}} requires delivery via {{deliveryMethod}}',
+    category: 'delivery',
     actions: [
-      { label: 'Review & Approve', action: 'approve_document', variant: 'primary' }
+      { label: 'Process Delivery', action: 'process_delivery', variant: 'primary' },
+      { label: 'View Warning', action: 'view_warning', variant: 'secondary' }
     ]
   },
 
@@ -191,13 +193,13 @@ export class NotificationDeliveryService {
       const rule = NOTIFICATION_RULES.find(r => r.event === event);
       
       if (!rule) {
-        console.warn(`📭 No notification rule found for event: ${event}`);
+        Logger.warn(`📭 No notification rule found for event: ${event}`)
         return 0;
       }
 
       const message = this.processMessageTemplate(rule.messageTemplate, data);
       
-      console.log(`🔔 Sending ${event} notification to roles:`, rule.roles);
+      Logger.debug(`🔔 Sending ${event} notification to roles:`, rule.roles)
       
       const notificationCount = await createBulkNotification(
         organizationId,
@@ -213,11 +215,11 @@ export class NotificationDeliveryService {
         }
       );
 
-      console.log(`✅ Sent ${notificationCount} notifications for event: ${event}`);
+      Logger.success(6887)
       return notificationCount;
 
     } catch (error) {
-      console.error(`❌ Failed to send role-based notification for event: ${event}`, error);
+      Logger.error(`❌ Failed to send role-based notification for event: ${event}`, error)
       throw error;
     }
   }
@@ -251,10 +253,10 @@ export class NotificationDeliveryService {
       );
 
       await Promise.all(promises);
-      console.log(`✅ Sent notifications to ${userIds.length} specific users`);
+      Logger.success(7892)
 
     } catch (error) {
-      console.error('❌ Failed to send user notifications:', error);
+      Logger.error('❌ Failed to send user notifications:', error)
       throw error;
     }
   }
@@ -281,10 +283,10 @@ export class NotificationDeliveryService {
       const userIds = usersSnapshot.docs.map(doc => doc.id);
 
       await this.sendUserNotification(organizationId, userIds, type, title, message, data);
-      console.log(`✅ Sent system notification to ${userIds.length} users`);
+      Logger.success(8803)
 
     } catch (error) {
-      console.error('❌ Failed to send system notification:', error);
+      Logger.error('❌ Failed to send system notification:', error)
       throw error;
     }
   }

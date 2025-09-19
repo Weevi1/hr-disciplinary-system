@@ -80,71 +80,77 @@ export const BusinessDashboard = memo(() => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* 🎨 WELCOME SECTION */}
-      <ErrorBoundary FallbackComponent={ErrorFallback}>
-        <Suspense fallback={<WelcomeSkeleton />}>
-          <WelcomeSection />
-        </Suspense>
-      </ErrorBoundary>
+      {/* 🎨 COMPACT WELCOME SECTION - Desktop first */}
+      <div className="bg-gray-50 pb-0">
+        <div className="max-w-7xl mx-auto p-6 pb-4">
+          <ErrorBoundary FallbackComponent={ErrorFallback}>
+            <Suspense fallback={<WelcomeSkeleton />}>
+              <WelcomeSection />
+            </Suspense>
+          </ErrorBoundary>
+        </div>
+      </div>
 
-      {/* 🏢 BUSINESS OWNER DASHBOARD */}
-      {canManageOrganization() && (
-        <ErrorBoundary FallbackComponent={ErrorFallback}>
-          <Suspense fallback={
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-              <div className="grid grid-cols-1 gap-6">
+      {/* 🏢 MAIN DASHBOARD CONTENT - Desktop Layout */}
+      <div className="max-w-7xl mx-auto p-6 pt-2">
+        
+        {/* 🏢 BUSINESS OWNER DASHBOARD */}
+        {canManageOrganization() && (
+          <ErrorBoundary FallbackComponent={ErrorFallback}>
+            <Suspense fallback={
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+                <SkeletonCard />
                 <SkeletonCard />
                 <SkeletonCard />
               </div>
-            </div>
-          }>
-            <BusinessOwnerDashboardSection />
-          </Suspense>
-        </ErrorBoundary>
-      )}
+            }>
+              <BusinessOwnerDashboardSection />
+            </Suspense>
+          </ErrorBoundary>
+        )}
 
-      {/* 🔔 HR MANAGEMENT SECTION */}
-      {canManageHR() && !canManageOrganization() && (
-        <ErrorBoundary FallbackComponent={ErrorFallback}>
-          <Suspense fallback={
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 🔔 HR MANAGEMENT SECTION */}
+        {canManageHR() && !canManageOrganization() && (
+          <ErrorBoundary FallbackComponent={ErrorFallback}>
+            <Suspense fallback={
+              <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 mb-6">
+                <SkeletonCard />
+                <SkeletonCard />
                 <SkeletonCard />
                 <SkeletonCard />
               </div>
-            </div>
-          }>
-            <HRDashboardSection />
-          </Suspense>
-        </ErrorBoundary>
-      )}
+            }>
+              <HRDashboardSection />
+            </Suspense>
+          </ErrorBoundary>
+        )}
 
-      {/* 👥 HOD MANAGER SECTION */}
-      {getPrimaryRole() === 'hod-manager' && !canManageHR() && !canManageOrganization() && (
-        <ErrorBoundary FallbackComponent={ErrorFallback}>
-          <Suspense fallback={
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 👥 HOD MANAGER SECTION */}
+        {getPrimaryRole() === 'hod-manager' && !canManageHR() && !canManageOrganization() && (
+          <ErrorBoundary FallbackComponent={ErrorFallback}>
+            <Suspense fallback={
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+                <SkeletonCard />
                 <SkeletonCard />
                 <SkeletonCard />
               </div>
-            </div>
-          }>
-            <HODDashboardSection />
-          </Suspense>
-        </ErrorBoundary>
-      )}
+            }>
+              <HODDashboardSection />
+            </Suspense>
+          </ErrorBoundary>
+        )}
 
-      {/* 💭 INSPIRATIONAL QUOTES SECTION */}
-      <ErrorBoundary FallbackComponent={ErrorFallback}>
-        <Suspense fallback={
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-            <div className="h-32 bg-white rounded-2xl shadow-lg animate-pulse"></div>
-          </div>
-        }>
-          <QuotesSection />
-        </Suspense>
-      </ErrorBoundary>
+        {/* 💭 COMPACT QUOTES SECTION */}
+        <div className="mt-6">
+          <ErrorBoundary FallbackComponent={ErrorFallback}>
+            <Suspense fallback={
+              <div className="h-20 bg-white rounded-xl shadow-sm animate-pulse border border-gray-100"></div>
+            }>
+              <QuotesSection />
+            </Suspense>
+          </ErrorBoundary>
+        </div>
+      </div>
     </div>
   );
 });

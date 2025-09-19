@@ -1,0 +1,40 @@
+{
+  "name": "staging",
+  "firebase": {
+    "projectId": "hr-system-staging",
+    "databaseURL": "https://hr-system-staging-default-rtdb.firebaseio.com",
+    "storageBucket": "hr-system-staging.appspot.com",
+    "functionsRegion": "us-central1"
+  },
+  "features": {
+    "enableAnalytics": false,
+    "enablePerformanceMonitoring": true,
+    "enableCrashlytics": true,
+    "enableDebugMode": true,
+    "enableTestData": true,
+    "maxFileUploadSize": 10485760,
+    "sessionTimeout": 1800000,
+    "enableAuditLogging": true
+  },
+  "security": {
+    "enforceHTTPS": true,
+    "enableCSP": true,
+    "sessionCookieSecure": true,
+    "requireEmailVerification": false,
+    "maxLoginAttempts": 10,
+    "lockoutDuration": 300000
+  },
+  "monitoring": {
+    "enableErrorTracking": true,
+    "enablePerformanceTracking": true,
+    "enableUserAnalytics": false,
+    "logLevel": "debug",
+    "enableRealTimeAlerts": false
+  },
+  "backup": {
+    "enableAutomaticBackup": true,
+    "backupSchedule": "0 6 * * *",
+    "retentionDays": 7,
+    "enablePointInTimeRecovery": false
+  }
+}

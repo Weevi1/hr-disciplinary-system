@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/components/users/UserList.tsx
 // 🎯 Enhanced Display and manage users with professional table layout
 import React, { useState } from 'react';
@@ -50,7 +51,7 @@ export const UserList: React.FC<UserListProps> = ({
       setActionLoading(userId);
       await onDeactivateUser(userId);
     } catch (error) {
-      console.error('Error deactivating user:', error);
+      Logger.error('Error deactivating user:', error)
     } finally {
       setActionLoading(null);
     }
@@ -70,7 +71,7 @@ export const UserList: React.FC<UserListProps> = ({
       setActionLoading(userId);
       await onReactivateUser(userId);
     } catch (error) {
-      console.error('Error reactivating user:', error);
+      Logger.error('Error reactivating user:', error)
     } finally {
       setActionLoading(null);
     }
@@ -79,7 +80,7 @@ export const UserList: React.FC<UserListProps> = ({
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return 'Unknown';
     try {
-      return new Date(dateString).toLocaleDateString('en-US', {
+      return new Date(dateString).toLocaleDateString('en-ZA', {
         year: 'numeric',
         month: 'short',
         day: 'numeric'

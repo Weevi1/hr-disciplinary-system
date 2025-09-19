@@ -1,9 +1,10 @@
+import Logger from '../../../utils/logger';
 // frontend/src/components/warnings/WarningDetailsModal.tsx
-// 🚀 PRODUCTION-READY WARNING DETAILS MODAL - COMPLETE REPLACEMENT
-// ✨ Modern glassmorphism design with micro-interactions
-// 📱 Mobile-first responsive with progressive disclosure
-// 🎨 Status-driven theming and smart visual hierarchy
-// ✅ FIXED: Working PDF, Audio, and Signature buttons
+// 🚀 WARNING DETAILS MODAL V2 - PRODUCTION-READY
+// ✅ Clean, professional design optimized for enterprise use
+// 🖥️ Desktop-first with excellent information hierarchy
+// 📋 Production-ready UX with streamlined workflows
+// 🎯 Optimized for HR dashboard integration
 
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
@@ -24,11 +25,15 @@ interface WarningDetailsModalProps {
   warning: any;
   isOpen: boolean;
   onClose: () => void;
-  onApprove?: (warningId: string) => void;
-  onReject?: (warningId: string, reason?: string) => void;
   canTakeAction?: boolean;
   userRole?: string;
   className?: string;
+  // Standard approval/rejection actions
+  onApprove?: (warningId: string) => Promise<void>;
+  onReject?: (warningId: string, reason: string) => Promise<void>;
+  // HR Appeal functionality
+  onAppealOutcome?: (outcome: 'upheld' | 'overturned' | 'modified') => void;
+  canManageAppeals?: boolean;
 }
 
 interface WarningTheme {
@@ -62,7 +67,7 @@ const safeDate = (date: any, fallback: string = 'Not set'): string => {
   if (!date) return fallback;
   try {
     const dateObj = date instanceof Date ? date : new Date(date);
-    return dateObj.toLocaleDateString('en-US', {
+    return dateObj.toLocaleDateString('en-ZA', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -86,52 +91,36 @@ const safeDateTime = (date: any, time?: string): string => {
 const getWarningTheme = (level: string, status: string): WarningTheme => {
   const levelThemes = {
     verbal: {
-      primary: 'from-blue-500 to-indigo-600',
-      secondary: 'from-blue-100 to-indigo-100',
+      primary: 'bg-blue-600',
+      secondary: 'bg-blue-50',
       accent: 'text-blue-600',
-      background: 'bg-blue-50/80',
-      text: 'text-blue-900',
+      background: 'bg-blue-50',
+      text: 'text-blue-800',
       border: 'border-blue-200'
     },
-    first_written: {
-      primary: 'from-amber-500 to-orange-600',
-      secondary: 'from-amber-100 to-orange-100',
-      accent: 'text-amber-600',
-      background: 'bg-amber-50/80',
-      text: 'text-amber-900',
+    written: {
+      primary: 'bg-yellow-600',
+      secondary: 'bg-yellow-50',
+      accent: 'text-yellow-600',
+      background: 'bg-yellow-50',
+      text: 'text-yellow-800',
       border: 'border-amber-200'
     },
-    second_written: {
-      primary: 'from-orange-500 to-red-600',
-      secondary: 'from-orange-100 to-red-100',
-      accent: 'text-orange-600',
-      background: 'bg-orange-50/80',
-      text: 'text-orange-900',
-      border: 'border-orange-200'
-    },
-    final_written: {
-      primary: 'from-red-500 to-rose-600',
-      secondary: 'from-red-100 to-rose-100',
+    final: {
+      primary: 'bg-red-600',
+      secondary: 'bg-red-50',
       accent: 'text-red-600',
-      background: 'bg-red-50/80',
-      text: 'text-red-900',
+      background: 'bg-red-50',
+      text: 'text-red-800',
       border: 'border-red-200'
     },
-    suspension: {
-      primary: 'from-purple-500 to-violet-600',
-      secondary: 'from-purple-100 to-violet-100',
-      accent: 'text-purple-600',
-      background: 'bg-purple-50/80',
-      text: 'text-purple-900',
-      border: 'border-purple-200'
-    },
     dismissal: {
-      primary: 'from-gray-800 to-black',
-      secondary: 'from-gray-100 to-gray-200',
-      accent: 'text-gray-800',
-      background: 'bg-gray-50/80',
-      text: 'text-gray-900',
-      border: 'border-gray-300'
+      primary: 'bg-red-700',
+      secondary: 'bg-red-50',
+      accent: 'text-red-700',
+      background: 'bg-red-50',
+      text: 'text-red-900',
+      border: 'border-red-300'
     }
   };
 
@@ -146,11 +135,13 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
   warning,
   isOpen,
   onClose,
-  onApprove,
-  onReject,
   canTakeAction = false,
   userRole = 'viewer',
-  className = ''
+  className = '',
+  onApprove,
+  onReject,
+  onAppealOutcome,
+  canManageAppeals = false
 }) => {
   
   // ============================================
@@ -175,6 +166,12 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
     subtitle?: string;
   } | null>(null);
   
+  // HR Appeal functionality state
+  const [showAppealDialog, setShowAppealDialog] = useState(false);
+  const [appealOutcome, setAppealOutcome] = useState<'upheld' | 'overturned' | 'modified' | null>(null);
+  const [appealNotes, setAppealNotes] = useState('');
+  const [appealProcessing, setAppealProcessing] = useState(false);
+  
   const modalRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -193,7 +190,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
       position: safeText(warning.position),
       category: safeText(warning.category),
       level: warning.level || 'verbal',
-      status: warning.status || 'draft',
+      status: warning.status || 'issued',
       incidentDate: safeDate(warning.incidentDate),
       incidentTime: safeText(warning.incidentTime),
       incidentDateTime: safeDateTime(warning.incidentDate, warning.incidentTime),
@@ -270,7 +267,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
       await onApprove(warningData.id);
       setTimeout(handleClose, 1000);
     } catch (error) {
-      console.error('Failed to approve warning:', error);
+      Logger.error('Failed to approve warning:', error)
       setActionState({ type: null, loading: false });
     }
   }, [onApprove, warningData?.id, handleClose]);
@@ -283,7 +280,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
       await onReject(warningData.id, rejectReason);
       setTimeout(handleClose, 1000);
     } catch (error) {
-      console.error('Failed to reject warning:', error);
+      Logger.error('Failed to reject warning:', error)
       setActionState({ type: null, loading: false });
     }
   }, [onReject, warningData?.id, rejectReason, handleClose]);
@@ -338,17 +335,14 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
 
   const renderStatusBadge = (status: string, size: 'sm' | 'lg' = 'sm') => {
     const statusConfig = {
-      draft: { icon: FileText, text: 'Draft', color: 'bg-gray-100 text-gray-700' },
-      pending_review: { icon: Clock, text: 'Pending Review', color: 'bg-amber-100 text-amber-700' },
-      approved: { icon: CheckCircle, text: 'Approved', color: 'bg-green-100 text-green-700' },
-      rejected: { icon: X, text: 'Rejected', color: 'bg-red-100 text-red-700' },
-      issued: { icon: Shield, text: 'Issued', color: 'bg-blue-100 text-blue-700' },
+      issued: { icon: FileText, text: 'Issued', color: 'bg-green-100 text-green-700' },
+      delivered: { icon: CheckCircle, text: 'Delivered', color: 'bg-blue-100 text-blue-700' },
       acknowledged: { icon: CheckCircle, text: 'Acknowledged', color: 'bg-emerald-100 text-emerald-700' },
       appealed: { icon: Scale, text: 'Under Appeal', color: 'bg-purple-100 text-purple-700' },
       expired: { icon: FileText, text: 'Expired', color: 'bg-gray-100 text-gray-500' }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.issued;
     const Icon = config.icon;
     
     return (
@@ -592,232 +586,218 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
         `}
         onClick={(e) => e.target === backdropRef.current && handleClose()}
       >
-        {/* Main Modal Container */}
+        {/* Main Modal Container - V2 Clean Design */}
         <div 
           ref={modalRef}
           className={`
-            relative w-full max-w-5xl max-h-[95vh] 
-            bg-white/95 backdrop-blur-2xl
-            rounded-3xl shadow-2xl border border-white/20
+            relative w-full max-w-4xl max-h-[90vh] 
+            bg-white rounded-lg shadow-xl border border-gray-200
             overflow-hidden
-            transition-all duration-500 ease-out
-            ${isAnimating ? 'scale-95 opacity-0 translate-y-8' : 'scale-100 opacity-100 translate-y-0'}
+            transition-all duration-300 ease-out
+            ${isAnimating ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}
           `}
-          style={{
-            background: `linear-gradient(135deg, 
-              rgba(255, 255, 255, 0.95), 
-              rgba(255, 255, 255, 0.85)
-            )`,
-            boxShadow: `
-              0 25px 50px -12px rgba(0, 0, 0, 0.25),
-              0 0 0 1px rgba(255, 255, 255, 0.2),
-              inset 0 1px 0 rgba(255, 255, 255, 0.3)
-            `
-          }}
         >
-          {/* Animated Background Pattern */}
-          <div className="absolute inset-0 opacity-5">
-            <div className={`w-full h-full bg-gradient-to-br ${theme.primary}`} />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent_50%)]" />
-          </div>
-
-          {/* Header Section */}
-          <div className={`
-            relative z-10 px-8 py-6 
-            bg-gradient-to-r ${theme.secondary}
-            border-b border-white/20 backdrop-blur-sm
-          `}>
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-4">
-                <div className={`
-                  w-16 h-16 rounded-2xl bg-gradient-to-br ${theme.primary}
-                  flex items-center justify-center shadow-lg
-                `}>
-                  <AlertTriangle className="w-8 h-8 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900 mb-1">
-                    Warning Details
-                  </h1>
-                  <p className={`text-sm ${theme.text} opacity-80`}>
-                    Comprehensive warning information and actions
-                  </p>
-                </div>
+          {/* Clean Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className={`
+                w-10 h-10 rounded-lg ${theme.primary}
+                flex items-center justify-center
+              `}>
+                <Shield className="w-5 h-5 text-white" />
               </div>
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">
+                  Warning Details
+                </h1>
+                <p className="text-sm text-gray-600">
+                  {warningData.employeeName} • {warningData.category}
+                </p>
+              </div>
+            </div>
+            
+            {/* Close Button & Status Badges */}
+            <div className="flex items-center gap-3">
+              <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${
+                warningData.level === 'verbal' ? 'bg-blue-100 text-blue-800' :
+                warningData.level === 'written' ? 'bg-yellow-100 text-yellow-800' :
+                warningData.level === 'final' ? 'bg-red-100 text-red-800' :
+                warningData.level === 'dismissal' ? 'bg-red-200 text-red-900' : 
+                'bg-gray-100 text-gray-800'
+              }`}>
+                {warningData.level === 'verbal' ? 'Verbal Warning' :
+                 warningData.level === 'written' ? 'Written Warning' :
+                 warningData.level === 'final' ? 'Final Warning' :
+                 warningData.level === 'dismissal' ? 'Dismissal' : 'Warning'}
+              </span>
               
-              {/* Close Button */}
               <button
                 onClick={handleClose}
-                className={`
-                  w-12 h-12 rounded-xl bg-white/80 backdrop-blur-sm
-                  flex items-center justify-center
-                  text-gray-400 hover:text-gray-600
-                  hover:bg-white transition-all duration-200
-                  border border-white/20 shadow-sm
-                `}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
+          </div>
 
-            {/* Status and Level Badges */}
-            <div className="flex flex-wrap items-center gap-3">
-              {renderLevelBadge(warningData.level, 'lg')}
-              {renderStatusBadge(warningData.status, 'lg')}
-            </div>
-
-            {/* Employee Quick Info */}
-            <div className="mt-4 p-4 rounded-2xl bg-white/60 backdrop-blur-sm border border-white/20">
-              <div className="flex flex-wrap items-center gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-gray-500" />
-                  <span className="font-medium text-gray-900">{warningData.employeeName}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-700">{warningData.employeeNumber}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Building className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-700">{warningData.department}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-gray-500" />
-                  <span className="text-gray-700">{warningData.incidentDateTime}</span>
+          {/* Content Area */}
+          <div className="overflow-y-auto max-h-[calc(90vh-200px)]">
+            <div className="p-6 space-y-6">
+              
+              {/* Summary Section */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h3 className="text-md font-semibold text-gray-900 mb-3">Incident Summary</h3>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Description:</span>
+                    <p className="text-sm text-gray-600 mt-1">{warningData.description}</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-700">Date:</span>
+                      <span className="ml-2 text-gray-600">{warningData.incidentDate}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Location:</span>
+                      <span className="ml-2 text-gray-600">{warningData.incidentLocation}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Navigation Tabs */}
-          <div className="relative z-10 px-8 py-4 bg-white/40 backdrop-blur-sm border-b border-white/10">
-            <div className="flex gap-2">
-              {[
-                { id: 'overview', label: 'Overview', icon: Eye },
-                { id: 'details', label: 'Full Details', icon: FileText },
-                { id: 'timeline', label: 'Timeline', icon: Clock }
-              ].map((tab) => {
-                const Icon = tab.icon;
-                const isActive = currentView === tab.id;
-                
-                return (
+              {/* Employee Information */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-600" />
+                    Employee Details
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Name:</span>
+                      <span className="font-medium text-gray-900">{warningData.employeeName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">ID:</span>
+                      <span className="font-medium text-gray-900">{warningData.employeeNumber}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Position:</span>
+                      <span className="font-medium text-gray-900">{warningData.position}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Department:</span>
+                      <span className="font-medium text-gray-900">{warningData.department}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-gray-600" />
+                    Warning Timeline
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Issue Date:</span>
+                      <span className="font-medium text-gray-900">{warningData.issueDate}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Expiry Date:</span>
+                      <span className="font-medium text-gray-900">{warningData.expiryDate}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Issued By:</span>
+                      <span className="font-medium text-gray-900">{warningData.issuedByName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Status:</span>
+                      <span className={`font-medium ${
+                        warningData.deliveryStatus === 'delivered' ? 'text-green-600' : 'text-orange-600'
+                      }`}>
+                        {warningData.deliveryStatus === 'delivered' ? 'Delivered' : 'Pending Delivery'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                <div className="flex items-center gap-3">
+                  {warningData.hasAudio && (
+                    <button
+                      onClick={handlePlayAudio}
+                      className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm"
+                    >
+                      <Headphones className="w-4 h-4" />
+                      Audio Recording
+                    </button>
+                  )}
+                  
                   <button
-                    key={tab.id}
-                    onClick={() => setCurrentView(tab.id as any)}
-                    className={`
-                      flex items-center gap-2 px-6 py-3 rounded-2xl font-medium text-sm
-                      transition-all duration-300 relative overflow-hidden
-                      ${isActive 
-                        ? `bg-gradient-to-r ${theme.primary} text-white shadow-lg scale-105` 
-                        : 'bg-white/60 text-gray-600 hover:bg-white/80 hover:text-gray-800'
-                      }
-                    `}
+                    onClick={handlePreviewPDF}
+                    className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm"
                   >
-                    {isActive && (
-                      <div className="absolute inset-0 bg-white/10 animate-pulse" />
-                    )}
-                    <Icon className="w-4 h-4" />
-                    {tab.label}
+                    <FileText className="w-4 h-4" />
+                    View PDF
                   </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Main Content Area */}
-          <div className="relative z-10 max-h-[60vh] overflow-y-auto">
-            <div className="p-8">
-              {currentView === 'overview' && renderOverviewContent()}
-              {currentView === 'details' && (
-                <div className="text-center py-12">
-                  <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Detailed View</h3>
-                  <p className="text-gray-600">Comprehensive details available in overview for now</p>
-                </div>
-              )}
-              {currentView === 'timeline' && (
-                <div className="text-center py-12">
-                  <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Timeline View</h3>
-                  <p className="text-gray-600">Event timeline available in overview for now</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Action Bar */}
-          {canTakeAction && (
-            <div className="relative z-10 px-8 py-6 bg-white/80 backdrop-blur-sm border-t border-white/20">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  Actions available for {userRole}
-                </div>
-                
-                <div className="flex gap-3">
-                  {warningData.status === 'pending_review' && (
-                    <>
-                      <button
-                        onClick={handleRejectClick}
-                        disabled={actionState.loading}
-                        className="px-6 py-3 rounded-xl font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-all duration-200 disabled:opacity-50"
-                      >
-                        {actionState.type === 'reject' && actionState.loading ? (
-                          <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          'Reject'
-                        )}
-                      </button>
-                      
-                      <button
-                        onClick={handleApprove}
-                        disabled={actionState.loading}
-                        className={`
-                          px-8 py-3 rounded-xl font-bold text-white
-                          bg-gradient-to-r ${theme.primary}
-                          hover:shadow-lg hover:scale-105
-                          transition-all duration-200
-                          disabled:opacity-50 disabled:scale-100
-                        `}
-                      >
-                        {actionState.type === 'approve' && actionState.loading ? (
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          'Approve Warning'
-                        )}
-                      </button>
-                    </>
+                  
+                  {warningData.hasSignatures && (
+                    <button
+                      onClick={handleViewSignatures}
+                      className="flex items-center gap-2 px-3 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors text-sm"
+                    >
+                      <FileSignature className="w-4 h-4" />
+                      Signatures
+                    </button>
                   )}
                 </div>
+                
+                {canTakeAction && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleRejectClick}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                    >
+                      Reject
+                    </button>
+                    <button
+                      onClick={handleApprove}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                    >
+                      Approve
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Reject Dialog */}
+          {/* Rejection Dialog */}
           {showRejectDialog && (
-            <div className="absolute inset-0 z-20 bg-black/50 backdrop-blur-sm flex items-center justify-center p-8">
-              <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Reject Warning</h3>
-                <p className="text-gray-600 mb-4">
-                  Please provide a reason for rejecting this warning. This will be recorded in the audit trail.
-                </p>
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg max-w-md w-full p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Reject Warning</h3>
+                <p className="text-sm text-gray-600 mb-4">Please provide a reason for rejecting this warning:</p>
                 <textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   rows={4}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                   placeholder="Enter rejection reason..."
                 />
-                <div className="flex gap-3 mt-6">
+                <div className="flex gap-3 mt-4">
                   <button
                     onClick={() => setShowRejectDialog(false)}
-                    className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 font-medium transition-colors"
+                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium transition-colors text-sm"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleReject}
                     disabled={!rejectReason.trim() || actionState.loading}
-                    className="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 font-medium transition-colors"
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium transition-colors text-sm"
                   >
                     {actionState.loading ? 'Processing...' : 'Reject Warning'}
                   </button>
@@ -827,6 +807,142 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Nested Modals - Redesigned for V2 */}
+      
+      {/* Audio Modal - Clean Design */}
+      {showAudioModal && warningData?.hasAudio && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Audio Recording</h3>
+              <button
+                onClick={() => setShowAudioModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <AudioPlaybackWidget 
+                audioData={warningData.audioRecording}
+                compact={false}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Signatures Modal - Clean Design */}
+      {showSignatureModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-auto">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Digital Signatures</h3>
+              <button
+                onClick={() => setShowSignatureModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              {warningData?.hasSignatures ? (
+                <div className="space-y-4">
+                  {warningData.signatures?.manager && (
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2">Manager Signature</h4>
+                      <div className="bg-gray-50 border border-gray-200 rounded p-4 text-center">
+                        <img
+                          src={warningData.signatures.manager}
+                          alt="Manager Signature"
+                          className="max-w-full h-20 mx-auto"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {warningData.signatures?.employee && (
+                    <div className="border border-gray-200 rounded-lg p-4">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-2">Employee Signature</h4>
+                      <div className="bg-gray-50 border border-gray-200 rounded p-4 text-center">
+                        <img
+                          src={warningData.signatures.employee}
+                          alt="Employee Signature"
+                          className="max-w-full h-20 mx-auto"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <FileSignature className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No signatures available</h3>
+                  <p className="text-gray-600">Digital signatures have not been collected for this warning.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PDF Preview Modal - Keep existing functionality */}
+      {showPDFPreview && (
+        <PDFPreviewModal
+          isOpen={showPDFPreview}
+          onClose={() => setShowPDFPreview(false)}
+          warningData={{
+            selectedEmployee: {
+              id: warning.employeeId || '',
+              firstName: warning.employeeName || 'Unknown',
+              lastName: warning.employeeLastName || 'Employee', 
+              employeeId: warning.employeeNumber || '',
+              employeeNumber: warning.employeeNumber || '',
+              department: warning.employeeDepartment || warning.department || '',
+              position: warning.employeePosition || warning.position || '',
+              email: warning.employeeEmail || ''
+            },
+            selectedCategory: {
+              id: warning.categoryId || '',
+              name: warning.categoryName || warning.category || 'General',
+              severity: 'medium',
+              description: warning.categoryName || warning.category || 'General'
+            },
+            formData: {
+              incidentDate: warning.incidentDate?.toISOString?.()?.split('T')[0] || new Date().toISOString().split('T')[0],
+              incidentTime: warning.incidentTime || '12:00',
+              incidentLocation: warning.incidentLocation || '',
+              incidentDescription: warning.incidentDescription || warning.description || '',
+              additionalNotes: warning.additionalNotes || '',
+              validityPeriod: warning.validityPeriod || 6,
+              issueDate: warning.issueDate?.toISOString?.()?.split('T')[0] || new Date().toISOString().split('T')[0]
+            },
+            signatures: warning.signatures || { manager: null, employee: null },
+            lraRecommendation: {
+              category: warning.categoryName || warning.category || 'General',
+              recommendedLevel: warning.level || 'Counselling Session',
+              suggestedLevel: warning.level || 'counselling',
+              reason: 'Based on incident severity and employee history',
+              warningCount: 1,
+              previousWarnings: [],
+              legalRequirements: ['Employee consultation', 'Written documentation', 'Appeal process notification']
+            },
+            organizationId: warning.organizationId || ''
+          }}
+          onPDFGenerated={(blob, filename) => {
+            Logger.debug('PDF generated:', filename)
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }}
+        />
+      )}
 
       {/* 🎯 WORKING MODALS */}
       
@@ -875,7 +991,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
             organizationId: warning.organizationId || ''
           }}
           onPDFGenerated={(blob, filename) => {
-            console.log('PDF generated:', filename);
+            Logger.debug('PDF generated:', filename)
             console.log('Warning data for PDF:', {
               categoryName: warning.categoryName,
               category: warning.category,

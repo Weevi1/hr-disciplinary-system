@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/hooks/dashboard/useQuotesRotation.ts
 // 💬 SMART QUOTES MANAGEMENT HOOK
 // ✅ Smooth transitions and user preferences
@@ -122,7 +123,7 @@ export const useQuotesRotation = (): QuotesHookReturn => {
         setIsRotating(prefs.rotationEnabled);
       }
     } catch (error) {
-      console.warn('⚠️ Failed to load quotes preferences:', error);
+      Logger.warn('⚠️ Failed to load quotes preferences:', error)
     }
   }, []);
 
@@ -131,7 +132,7 @@ export const useQuotesRotation = (): QuotesHookReturn => {
     try {
       localStorage.setItem(QUOTES_STORAGE_KEY, JSON.stringify(newPrefs));
     } catch (error) {
-      console.warn('⚠️ Failed to save quotes preferences:', error);
+      Logger.warn('⚠️ Failed to save quotes preferences:', error)
     }
   }, []);
 

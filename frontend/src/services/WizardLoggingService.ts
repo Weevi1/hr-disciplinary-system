@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // frontend/src/services/WizardLoggingService.ts
 // 🔍 REAL-TIME WIZARD LOGGING SERVICE
 // Tracks data flow through wizard steps and catches issues as they happen
@@ -554,18 +555,18 @@ class WizardLoggingService {
 
     if (entry.data) {
       console.groupCollapsed(`${prefix} (${sessionId.slice(-6)})`, style);
-      console.log('%cData:', this.styles.data, entry.data);
+      Logger.debug('%cData:', this.styles.data, entry.data)
       if (entry.validation) {
-        console.log('%cValidation:', this.styles.validation, entry.validation);
+        Logger.debug('%cValidation:', this.styles.validation, entry.validation)
       }
       if (entry.metadata) {
-        console.log('%cMetadata:', this.styles.debug, entry.metadata);
+        Logger.debug('%cMetadata:', this.styles.debug, entry.metadata)
       }
       console.groupEnd();
     } else {
-      console.log(`${prefix} (${sessionId.slice(-6)})`, style);
+      Logger.debug(`${prefix} (${sessionId.slice(-6)})`, style);
       if (entry.metadata) {
-        console.log('%cMetadata:', this.styles.debug, entry.metadata);
+        Logger.debug('%cMetadata:', this.styles.debug, entry.metadata)
       }
     }
   }

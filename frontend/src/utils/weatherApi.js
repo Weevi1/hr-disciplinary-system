@@ -1,3 +1,4 @@
+import Logger from 'logger';
 // frontend/src/utils/weatherApi.js
 // 🌤️ Real Weather Data from OpenWeatherMap (Free API)
 
@@ -52,7 +53,7 @@ export const getWeatherByCoords = async (lat, lon) => {
       }
     };
   } catch (error) {
-    console.error('Weather API Error:', error);
+    Logger.error('Weather API Error:', error)
     // Return fallback data if API fails
     return {
       current: {
@@ -119,7 +120,7 @@ export const getWeatherByCity = async (cityName = 'Cape Town') => {
       }
     };
   } catch (error) {
-    console.error('Weather API Error:', error);
+    Logger.error('Weather API Error:', error)
     return null;
   }
 };
@@ -139,7 +140,7 @@ export const getCurrentLocationWeather = async () => {
         resolve(weatherData);
       },
       async (error) => {
-        console.log('Location denied, using default city');
+        Logger.debug('Location denied, using default city')
         // Fallback to Cape Town if location denied
         const weatherData = await getWeatherByCity('Cape Town');
         resolve(weatherData);

@@ -27,17 +27,42 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
+          // Core React libraries
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          
+          // Firebase services
           'firebase-vendor': [
             'firebase/app', 
             'firebase/auth', 
             'firebase/firestore', 
             'firebase/functions', 
-            'firebase/storage'
+            'firebase/storage',
+            'firebase/analytics'
           ],
-          'ui-vendor': ['lucide-react', '@headlessui/react']
+          
+          // UI and Icon libraries
+          'ui-vendor': ['lucide-react', '@headlessui/react'],
+          
+          // PDF and document libraries
+          'pdf-vendor': ['jspdf', 'html2canvas'],
+          
+          // Utility libraries
+          'utils-vendor': ['date-fns'],
+          
+          // Split large component bundles
+          'dashboard-components': [
+            './src/components/dashboard/DashboardRouter',
+            './src/components/dashboard/HRDashboardSection',
+            './src/components/dashboard/HODDashboardSection'
+          ],
+          
+          'warning-components': [
+            './src/components/warnings/ReviewDashboard'
+          ]
         }
       }
-    }
+    },
+    target: 'esnext',
+    minify: true
   }
 })

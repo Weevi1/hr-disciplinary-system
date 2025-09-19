@@ -1,10 +1,18 @@
+import Logger from '../../utils/logger';
 // frontend/src/components/employees/EmployeeFormModal.tsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../auth/AuthContext';
-import { DataService } from '../../services/DataService';
+import { API } from '../../api';
+import { DatabaseShardingService } from '../../services/DatabaseShardingService';
 import { createEmployeeFromForm, createFormFromEmployee } from '../../types';
 import type { Employee, User } from '../../types';
 import type { EmployeeFormData, DeliveryMethod } from '../../types';
+import { X, User as UserIcon, Building, Settings, Save, Loader2 } from 'lucide-react';
+
+// Helper function to get role ID from either string or object role format
+const getRoleId = (role: any): string => {
+  return typeof role === 'string' ? role : role?.id || '';
+};
 
 interface EmployeeFormModalProps {
   employee?: Employee | null;
@@ -31,474 +39,408 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
     contractType: 'permanent',
     probationEndDate: '',
     preferredDeliveryMethod: 'email',
-    managerId: '', // Manager field
-    isActive: true
+    managerId: ''
   });
   
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [employeeNumberValidation, setEmployeeNumberValidation] = useState<{
-    isValid: boolean;
-    isAvailable: boolean;
-    message?: string;
-    suggestions?: string[];
-  } | null>(null);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isValidating, setIsValidating] = useState(false);
   const [managers, setManagers] = useState<User[]>([]);
   const [loadingManagers, setLoadingManagers] = useState(false);
 
-  // Auto-generate employee number for new employees
-  const handleAutoGenerateEmployeeNumber = async () => {
-    if (!organization) return;
-    
-    try {
-      const nextNumber = await DataService.generateNextEmployeeNumber(organization.id);
-      setFormData(prev => ({ ...prev, employeeNumber: nextNumber }));
-      
-      // Validate the generated number
-      const validation = await DataService.validateEmployeeNumber(
-        organization.id, 
-        nextNumber,
-        employee?.id
-      );
-      setEmployeeNumberValidation(validation);
-    } catch (error) {
-      console.error('Failed to generate employee number:', error);
-    }
-  };
-
-  // Validate employee number on change
-  const handleEmployeeNumberChange = async (value: string) => {
-    setFormData(prev => ({ ...prev, employeeNumber: value }));
-    
-    if (!organization || !value.trim()) {
-      setEmployeeNumberValidation(null);
-      return;
-    }
-    
-    setIsValidating(true);
-    try {
-      const validation = await DataService.validateEmployeeNumber(
-        organization.id, 
-        value,
-        employee?.id
-      );
-      setEmployeeNumberValidation(validation);
-      setShowSuggestions(!validation.isAvailable && !!validation.suggestions);
-    } catch (error) {
-      console.error('Failed to validate employee number:', error);
-      setEmployeeNumberValidation({
-        isValid: false,
-        isAvailable: false,
-        message: 'Validation error'
-      });
-    } finally {
-      setIsValidating(false);
-    }
-  };
-
-  // Load existing employee data when editing
+  // Disable body scroll when modal is open
   useEffect(() => {
-    if (employee) {
-      setFormData(createFormFromEmployee(employee));
-    }
-  }, [employee]);
+    // Save original body style
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    
+    // Disable body scroll
+    document.body.style.overflow = 'hidden';
+    
+    // Cleanup function to restore scroll
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
 
- // Load managers for the dropdown - DEBUG VERSION
+  // Load managers for the dropdown
   useEffect(() => {
     const loadManagers = async () => {
-      console.log('[DEBUG] EmployeeFormModal mounted, organization:', organization);
-      
-      if (!organization) {
-        console.log('[DEBUG] No organization, skipping manager load');
-        return;
-      }
+      if (!organization) return;
       
       try {
         setLoadingManagers(true);
-        console.log('[DEBUG] Loading managers for org:', organization.id);
+        const usersResult = await DatabaseShardingService.queryDocuments(organization.id, 'users', []);
+        const users = usersResult.documents as User[];
         
-        // Get users who can be managers
-        const users = await DataService.getUsersByOrganization(organization.id);
-        console.log('[DEBUG] All users loaded:', users.length, 'users');
-        console.log('[DEBUG] Users:', users);
-        
-        // Show each user's role structure
-        users.forEach(user => {
-          console.log(`[DEBUG] User: ${user.firstName} ${user.lastName}`, {
-            role: user.role,
-            roleType: typeof user.role,
-            email: user.email
-          });
-        });
-        
-        // Filter managers with improved role checking
-        const managerUsers = users.filter(user => {
-          // Handle both string and object role formats
-          const roleId = typeof user.role === 'string' ? user.role : user.role?.id;
-          const isManager = ['business-owner', 'hr-manager', 'hod-manager'].includes(roleId);
-          
-          console.log(`[DEBUG] ${user.firstName} ${user.lastName}: roleId="${roleId}" isManager=${isManager}`);
+        const managerUsers = users.filter((user: User) => {
+          const roleId = getRoleId(user.role);
+          const isManager = roleId === 'hod-manager' || 
+                           roleId === 'hr-manager' || 
+                           roleId === 'business-owner';
           return isManager;
         });
         
-        console.log('[DEBUG] Manager users found:', managerUsers.length);
-        console.log('[DEBUG] Managers:', managerUsers);
         setManagers(managerUsers);
-        
       } catch (error) {
-        console.error('[DEBUG] Failed to load managers:', error);
+        Logger.error('Failed to load managers:', error)
       } finally {
         setLoadingManagers(false);
       }
     };
 
-    loadManagers(); // Run immediately when component mounts
+    loadManagers();
   }, [organization]);
+
+  // Initialize form data when employee prop changes
+  useEffect(() => {
+    if (employee) {
+      const formFromEmployee = createFormFromEmployee(employee);
+      setFormData(formFromEmployee);
+    }
+  }, [employee]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!organization) return;
-
+    
+    setLoading(true);
+    setError(null);
+    
     try {
-      setLoading(true);
-      setError(null);
-
-      // Validate form
-      if (!formData.employeeNumber || !formData.firstName || !formData.lastName || !formData.email) {
-        throw new Error('Please fill in all required fields');
-      }
-
-      // Validate employee number
-      if (employeeNumberValidation && !employeeNumberValidation.isAvailable) {
-        throw new Error(employeeNumberValidation.message || 'Employee number is not available');
-      }
-
-      const employeeData = createEmployeeFromForm(formData, organization.id);
-      
       if (employee) {
-        employeeData.id = employee.id;
-        employeeData.createdAt = employee.createdAt;
+        // Update existing employee - preserve existing structure and ID
+        const updatedEmployee = {
+          ...employee, // Preserve existing data and ID
+          profile: {
+            ...employee.profile,
+            employeeNumber: formData.employeeNumber,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phoneNumber: formData.phoneNumber || null,
+            whatsappNumber: formData.whatsappNumber || null,
+            department: formData.department,
+            position: formData.position,
+            startDate: formData.startDate ? new Date(formData.startDate) : new Date(),
+            preferredDeliveryMethod: formData.preferredDeliveryMethod
+          },
+          employment: {
+            ...employee.employment,
+            contractType: formData.contractType,
+            ...(formData.managerId && { managerId: formData.managerId }),
+            ...(formData.probationEndDate && { probationEndDate: new Date(formData.probationEndDate) })
+          },
+          isActive: employee.isActive, // Preserve current active status - use archive functionality to change status
+          updatedAt: new Date()
+        };
+        
+        await API.employees.update(employee.id, organization.id, updatedEmployee);
+        Logger.debug(`✅ Updated employee: ${employee.id}`);
+      } else {
+        // Create new employee
+        const employeeData = createEmployeeFromForm(formData, organization.id);
+        // Remove ID for new employee creation
+        const { id, ...employeeDataWithoutId } = employeeData;
+        const employeeId = await API.employees.create(employeeDataWithoutId);
+        Logger.debug(`✅ Created new employee: ${employeeId}`);
       }
-
-      await DataService.saveEmployee(employeeData, organization.id);
+      
       onSave();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save employee');
+    } catch (error: any) {
+      Logger.error('Error saving employee:', error)
+      setError(error.message || 'Failed to save employee');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="p-6 border-b">
-          <h2 className="text-2xl font-bold text-gray-800">
-            {employee ? 'Edit Employee' : 'Add New Employee'}
-          </h2>
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={(e) => {
+        // Close modal if clicking backdrop
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-slate-200 flex-shrink-0">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">
+              {employee ? 'Edit Employee' : 'Add New Employee'}
+            </h2>
+            <p className="text-sm text-slate-600 mt-1">
+              Fill in the employee details below
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        
-        <form onSubmit={handleSubmit} className="p-6">
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800">{error}</p>
-            </div>
-          )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Employee Number *
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  required
-                  value={formData.employeeNumber}
-                  onChange={(e) => handleEmployeeNumberChange(e.target.value)}
-                  className={`flex-1 px-4 py-2 border-2 rounded-lg focus:outline-none ${
-                    employeeNumberValidation?.isAvailable === false
-                      ? 'border-red-300 focus:border-red-500'
-                      : employeeNumberValidation?.isAvailable === true
-                      ? 'border-green-300 focus:border-green-500'
-                      : 'border-gray-200 focus:border-blue-500'
-                  }`}
-                  placeholder="EMP001"
-                />
-                {!employee && (
-                  <button
-                    type="button"
-                    onClick={handleAutoGenerateEmployeeNumber}
-                    className="px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-sm font-medium transition-colors"
-                    title="Auto-generate next employee number"
-                  >
-                    Auto
-                  </button>
-                )}
-                {isValidating && (
-                  <div className="flex items-center px-2">
-                    <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Validation feedback */}
-              {employeeNumberValidation && (
-                <div className={`mt-1 text-sm ${
-                  employeeNumberValidation.isAvailable 
-                    ? 'text-green-600' 
-                    : 'text-red-600'
-                }`}>
-                  {employeeNumberValidation.message}
-                </div>
-              )}
-              
-              {/* Suggestions */}
-              {showSuggestions && employeeNumberValidation?.suggestions && (
-                <div className="mt-2 p-2 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-800 mb-1">Suggestions:</p>
-                  <div className="flex gap-1 flex-wrap">
-                    {employeeNumberValidation.suggestions.map((suggestion, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() => handleEmployeeNumberChange(suggestion)}
-                        className="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs transition-colors"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Start Date *
-              </label>
-              <input
-                type="date"
-                required
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                First Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Last Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email *
-              </label>
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                value={formData.phoneNumber}
-                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                placeholder="+27123456789"
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                WhatsApp Number
-              </label>
-              <input
-                type="tel"
-                value={formData.whatsappNumber}
-                onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
-                placeholder="+27123456789"
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Department *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.department}
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Position *
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.position}
-                onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-            
-           {/* 🔧 FIXED MANAGER FIELD */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Line Manager
-              </label>
-              <select
-                value={formData.managerId || ''}
-                onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
-                disabled={loadingManagers}
-              >
-                <option value="">Select Manager (Optional)</option>
-                {managers.map((manager) => {
-                  // Fix: Extract the role name properly
-                  const roleName = typeof manager.role === 'string' 
-                    ? manager.role 
-                    : manager.role?.name || manager.role?.id || 'Manager';
-                  
-                  return (
-                    <option key={manager.id} value={manager.id}>
-                      {manager.firstName} {manager.lastName} ({roleName})
-                    </option>
-                  );
-                })}
-              </select>
-              {loadingManagers && (
-                <p className="text-sm text-gray-500 mt-1">Loading managers...</p>
-              )}
-              {!loadingManagers && managers.length === 0 && (
-                <p className="text-sm text-amber-600 mt-1">
-                  No managers found. Make sure users have manager roles assigned.
-                </p>
-              )}
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Contract Type
-              </label>
-              <select
-                value={formData.contractType}
-                onChange={(e) => setFormData({ ...formData, contractType: e.target.value as any })}
-                className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
-              >
-                <option value="permanent">Permanent</option>
-                <option value="contract">Contract</option>
-                <option value="temporary">Temporary</option>
-              </select>
-            </div>
-            
-            {employee && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Status
-                </label>
-                <select
-                  value={formData.isActive ? 'active' : 'archived'}
-                  onChange={(e) => setFormData({ ...formData, isActive: e.target.value === 'active' })}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="active">Active</option>
-                  <option value="archived">Archived</option>
-                </select>
+        {/* Form Content */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="overflow-y-auto flex-1 p-6 space-y-6">
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-800 text-sm">{error}</p>
               </div>
             )}
-          </div>
-          
-          {/* Delivery Preference Section */}
-          <div className="mt-6 pt-6 border-t">
-            <h3 className="text-lg font-semibold mb-4">🏆 Delivery Preference</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {(['email', 'whatsapp', 'printed'] as DeliveryMethod[]).map((method) => (
-                <label 
-                  key={method}
-                  className={`
-                    flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all
-                    ${formData.preferredDeliveryMethod === method 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300'}
-                  `}
-                >
+
+            {/* Personal Information Section */}
+            <div className="bg-blue-50 rounded-lg p-4">
+              <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <UserIcon className="w-5 h-5 text-blue-600" />
+                Personal Information
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Employee Number *
+                  </label>
                   <input
-                    type="radio"
-                    name="deliveryMethod"
-                    value={method}
-                    checked={formData.preferredDeliveryMethod === method}
-                    onChange={(e) => setFormData({ ...formData, preferredDeliveryMethod: e.target.value as DeliveryMethod })}
-                    className="mr-3"
+                    type="text"
+                    required
+                    value={formData.employeeNumber}
+                    onChange={(e) => setFormData({ ...formData, employeeNumber: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                    placeholder="EMP001"
                   />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">
-                        {method === 'email' ? '📧' : method === 'whatsapp' ? '📱' : '🖨️'}
-                      </span>
-                      <span className="font-medium capitalize">{method}</span>
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {method === 'email' ? 'Digital delivery' : 
-                       method === 'whatsapp' ? 'Mobile delivery' : 'Physical copy'}
-                    </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Start Date *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    First Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                    placeholder="John"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Last Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                    placeholder="Doe"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                    placeholder="john.doe@company.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                    placeholder="+27 123 456 789"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Work Information Section */}
+            <div className="bg-emerald-50 rounded-lg p-4">
+              <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <Building className="w-5 h-5 text-emerald-600" />
+                Work Information
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Department *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.department}
+                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                    placeholder="Human Resources"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Position *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.position}
+                    onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                    placeholder="HR Manager"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Contract Type *
+                  </label>
+                  <select
+                    required
+                    value={formData.contractType}
+                    onChange={(e) => setFormData({ ...formData, contractType: e.target.value as 'permanent' | 'contract' | 'temporary' | 'intern' })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="permanent">Permanent</option>
+                    <option value="contract">Contract</option>
+                    <option value="temporary">Temporary</option>
+                    <option value="intern">Intern</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Manager
+                  </label>
+                  <select
+                    value={formData.managerId}
+                    onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                    disabled={loadingManagers}
+                  >
+                    <option value="">No Manager</option>
+                    {managers.map(manager => (
+                      <option key={manager.id} value={manager.id}>
+                        {manager.firstName} {manager.lastName} ({typeof manager.role === 'string' ? manager.role : manager.role?.name})
+                      </option>
+                    ))}
+                  </select>
+                  {loadingManagers && (
+                    <div className="text-sm text-gray-500 mt-1">Loading managers...</div>
+                  )}
+                </div>
+
+                {formData.contractType !== 'permanent' && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Probation End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.probationEndDate}
+                      onChange={(e) => setFormData({ ...formData, probationEndDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                    />
                   </div>
-                </label>
-              ))}
+                )}
+              </div>
+            </div>
+
+            {/* Communication Preferences Section */}
+            <div className="bg-amber-50 rounded-lg p-4">
+              <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <Settings className="w-5 h-5 text-amber-600" />
+                Communication Preferences
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    WhatsApp Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.whatsappNumber}
+                    onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                    placeholder="+27 123 456 789"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Preferred Delivery Method *
+                  </label>
+                  <select
+                    required
+                    value={formData.preferredDeliveryMethod}
+                    onChange={(e) => setFormData({ ...formData, preferredDeliveryMethod: e.target.value as DeliveryMethod })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                  >
+                    <option value="email">Email</option>
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="printed">Printed Copy</option>
+                  </select>
+                </div>
+
+              </div>
             </div>
           </div>
-          
-          <div className="flex gap-4 mt-8">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-semibold disabled:opacity-50"
-            >
-              {loading ? 'Saving...' : (employee ? 'Update Employee' : 'Add Employee')}
-            </button>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-200 flex-shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-300"
+              className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
             >
               Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  {employee ? 'Update Employee' : 'Add Employee'}
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -506,3 +448,5 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
     </div>
   );
 };
+
+export default EmployeeFormModal;

@@ -1,7 +1,8 @@
+import Logger from '../../utils/logger';
 // frontend/src/hooks/employees/useEmployeeImport.ts
 import { useState } from 'react';
-import { API } from '@/api';
-import { DataService } from '../../services/DataService';
+import { API } from '../../api';
+import { DataServiceV2 } from '../../services/DataServiceV2';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { createEmployeeFromForm } from '../../types';
 import type { CSVImportRow, CSVImportResult, EmployeeFormData } from '../../types';
@@ -111,10 +112,10 @@ export const useEmployeeImport = () => {
         setCsvData(data);
         
         if (errors.length > 0) {
-          console.warn('CSV Import Warnings:', errors);
+          Logger.warn('CSV Import Warnings:', errors)
         }
       } catch (error) {
-        console.error('CSV parsing failed:', error);
+        Logger.error('CSV parsing failed:', error)
         setCsvData([]);
       }
     };
@@ -154,11 +155,11 @@ export const useEmployeeImport = () => {
           
           // Auto-generate employee number if empty
           if (!employeeNumber || employeeNumber.trim() === '') {
-            employeeNumber = await DataService.generateNextEmployeeNumber(organizationId);
+            employeeNumber = await API.employees.generateNextEmployeeNumber(organizationId);
           }
           
           // Validate employee number for duplicates
-          const validation = await DataService.validateEmployeeNumber(
+          const validation = await API.employees.validateEmployeeNumber(
             organizationId, 
             employeeNumber
           );
@@ -189,7 +190,9 @@ export const useEmployeeImport = () => {
 
 
           const employeeData = createEmployeeFromForm(formData, organizationId);
-          employeesToCreate.push(employeeData);
+          // Remove ID for CSV import - let Firestore generate it for new employees
+          const { id, ...employeeDataWithoutId } = employeeData;
+          employeesToCreate.push(employeeDataWithoutId);
         } catch (err) {
           errors.push({
             row: rowNumber,
@@ -209,7 +212,7 @@ export const useEmployeeImport = () => {
       // Second pass: create employees individually with rate limiting and retry
       if (employeesToCreate.length > 0) {
         try {
-          console.log(`🚀 Attempting to import ${employeesToCreate.length} employees with rate limiting...`);
+          Logger.debug(`🚀 Attempting to import ${employeesToCreate.length} employees with rate limiting...`)
           
           for (let i = 0; i < employeesToCreate.length; i++) {
             // Update creation progress (30% to 90%)
@@ -230,8 +233,8 @@ export const useEmployeeImport = () => {
                 }
                 
                 
-                // Use the exact same method as manual employee creation
-                await DataService.saveEmployee(employeesToCreate[i], organizationId);
+                // Use the API layer for sharded employee creation (same as manual creation)
+                await API.employees.create(employeesToCreate[i]);
                 
                 imported++;
                 success = true;
@@ -244,12 +247,12 @@ export const useEmployeeImport = () => {
                 const errorMessage = individualError instanceof Error ? individualError.message : 'Unknown error';
                 
                 if (retryCount < maxRetries && errorMessage.includes('permissions')) {
-                  console.warn(`⚠️ Retry ${retryCount}/${maxRetries} for employee ${i + 1}: ${errorMessage}`);
+                  Logger.warn(`⚠️ Retry ${retryCount}/${maxRetries} for employee ${i + 1}: ${errorMessage}`)
                   setCurrentImportStep(`⚠️ Retrying ${employee.profile?.firstName} ${employee.profile?.lastName} (${retryCount}/${maxRetries})...`);
                   // Exponential backoff
                   await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
                 } else {
-                  console.error(`❌ Failed to create employee ${i + 1} after ${retryCount} attempts:`, individualError);
+                  Logger.error(`❌ Failed to create employee ${i + 1} after ${retryCount} attempts:`, individualError)
                   failed++;
                   errors.push({
                     row: i + 2,
@@ -267,9 +270,9 @@ export const useEmployeeImport = () => {
           setCurrentImportStep('Finalizing import...');
           await new Promise(resolve => setTimeout(resolve, 500));
           
-          console.log(`✅ Import completed: ${imported} successful, ${failed} failed of ${employeesToCreate.length} employees`);
+          Logger.success(10447)
         } catch (generalError) {
-          console.error('❌ Import process failed:', generalError);
+          Logger.error('❌ Import process failed:', generalError)
           failed += employeesToCreate.length - imported;
         }
       }

@@ -1,3 +1,4 @@
+import Logger from '../../../utils/logger';
 // frontend/src/components/warnings/modals/SimplePDFDownloadModal.tsx
 // 🔄 SIMPLE PDF DOWNLOAD MODAL - FALLBACK WITHOUT QR COMPLEXITY
 // ✅ Provides reliable PDF download without QR code complications
@@ -254,7 +255,7 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
         } : undefined
       };
 
-      console.log('📄 Generating PDF with simple download modal...');
+      Logger.debug(8949)
       const blob = await PDFGenerationService.generateWarningPDF(pdfData);
       
       setPdfBlob(blob);
@@ -273,7 +274,7 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
       }
 
     } catch (error) {
-      console.error('❌ PDF generation failed:', error);
+      Logger.error('❌ PDF generation failed:', error)
       setError(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsGenerating(false);
@@ -295,7 +296,7 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
     URL.revokeObjectURL(url);
     
     setDownloadCount(prev => prev + 1);
-    console.log('📥 PDF downloaded:', filename);
+    Logger.debug('📥 PDF downloaded:', filename)
   }, [pdfBlob, filename]);
 
   // Open PDF in new tab

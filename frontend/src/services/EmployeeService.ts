@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // frontend/src/services/EmployeeService.ts
 import { DataService } from './DataService';
 import type { Employee } from '../types';
@@ -36,7 +37,7 @@ export class EmployeeService {
       // Load employees for that organization
       return await DataService.loadEmployees(organization.id);
     } catch (error) {
-      console.error('Error loading employees:', error);
+      Logger.error('Error loading employees:', error)
       return [];
     }
   }
@@ -48,7 +49,7 @@ export class EmployeeService {
     try {
       return await DataService.loadEmployees(organizationId);
     } catch (error) {
-      console.error('Error loading employees:', error);
+      Logger.error('Error loading employees:', error)
       return [];
     }
   }
@@ -60,7 +61,7 @@ export class EmployeeService {
     try {
       return await DataService.getEmployee(employeeId);
     } catch (error) {
-      console.error('Error loading employee:', error);
+      Logger.error('Error loading employee:', error)
       return null;
     }
   }
@@ -73,7 +74,7 @@ export class EmployeeService {
       const organization = await DataService.getOrganization();
       await DataService.saveEmployee(organization.id, employee);
     } catch (error) {
-      console.error('Error saving employee:', error);
+      Logger.error('Error saving employee:', error)
       throw error;
     }
   }
@@ -86,7 +87,7 @@ export class EmployeeService {
       const organization = await DataService.getOrganization();
       await DataService.archiveEmployee(organization.id, employeeId, reason);
     } catch (error) {
-      console.error('Error archiving employee:', error);
+      Logger.error('Error archiving employee:', error)
       throw error;
     }
   }
@@ -99,7 +100,7 @@ export class EmployeeService {
       const organization = await DataService.getOrganization();
       await DataService.deleteEmployee(organization.id, employeeId);
     } catch (error) {
-      console.error('Error deleting employee:', error);
+      Logger.error('Error deleting employee:', error)
       throw error;
     }
   }
@@ -119,7 +120,7 @@ export class EmployeeService {
         return fullName.includes(searchLower) || employeeCode.includes(searchLower);
       });
     } catch (error) {
-      console.error('Error searching employees:', error);
+      Logger.error('Error searching employees:', error)
       return [];
     }
   }
@@ -134,7 +135,7 @@ export class EmployeeService {
         employee.department === department && employee.isActive
       );
     } catch (error) {
-      console.error('Error loading department employees:', error);
+      Logger.error('Error loading department employees:', error)
       return [];
     }
   }
@@ -145,24 +146,24 @@ export class EmployeeService {
  */
 static async getEmployeesByManager(managerId: string): Promise<Employee[]> {
   try {
-    console.log('[EmployeeService] Getting employees for manager:', managerId);
+    Logger.debug('[EmployeeService] Getting employees for manager:', managerId)
     
     // Get all employees first
     const allEmployees = await this.getAll();
-    console.log('[EmployeeService] Total employees loaded:', allEmployees.length);
+    Logger.debug('[EmployeeService] Total employees loaded:', allEmployees.length)
     
     // 🔧 FIXED: Check employment.managerId which is where the form saves it
     const managedEmployees = allEmployees.filter(employee => {
       const isDirectlyManaged = employee.employment?.managerId === managerId;
       
       if (isDirectlyManaged) {
-        console.log('[EmployeeService] Found directly managed employee:', employee.profile.firstName, employee.profile.lastName);
+        Logger.debug('[EmployeeService] Found directly managed employee:', employee.profile.firstName, employee.profile.lastName)
       }
       
       return isDirectlyManaged && employee.isActive;
     });
     
-    console.log('[EmployeeService] Found directly managed employees:', managedEmployees.length);
+    Logger.debug('[EmployeeService] Found directly managed employees:', managedEmployees.length)
     
     // If no employees found with direct manager relationship,
     // check if this manager is responsible for specific departments
@@ -176,7 +177,7 @@ static async getEmployeesByManager(managerId: string): Promise<Employee[]> {
         });
         
         if (userProfile?.role?.id === 'hod-manager' && userProfile?.departmentIds) {
-          console.log('[EmployeeService] Checking department-based assignments...');
+          Logger.debug('[EmployeeService] Checking department-based assignments...')
           
           // Return employees from manager's departments
           const departmentEmployees = allEmployees.filter(employee => {
@@ -197,15 +198,15 @@ static async getEmployeesByManager(managerId: string): Promise<Employee[]> {
             return isInManagedDepartment;
           });
           
-          console.log('[EmployeeService] Found department employees:', departmentEmployees.length);
+          Logger.debug('[EmployeeService] Found department employees:', departmentEmployees.length)
           
           // 🚀 TEMPORARY FIX: If still no matches, let's see what departments we have
           if (departmentEmployees.length === 0) {
-            console.log('[EmployeeService] 🔍 DEBUGGING - No department matches found');
-            console.log('[EmployeeService] Manager departments:', userProfile.departmentIds);
+            Logger.debug('[EmployeeService] 🔍 DEBUGGING - No department matches found')
+            Logger.debug('[EmployeeService] Manager departments:', userProfile.departmentIds)
             
             const allDepartments = new Set(allEmployees.map(emp => emp.profile.department));
-            console.log('[EmployeeService] Available employee departments:', Array.from(allDepartments));
+            Logger.debug('[EmployeeService] Available employee departments:', Array.from(allDepartments));
             
             // Try case-insensitive matching
             const flexibleDepartmentEmployees = allEmployees.filter(employee => {
@@ -226,21 +227,21 @@ static async getEmployeesByManager(managerId: string): Promise<Employee[]> {
               return hasMatch;
             });
             
-            console.log('[EmployeeService] Found flexible department matches:', flexibleDepartmentEmployees.length);
+            Logger.debug('[EmployeeService] Found flexible department matches:', flexibleDepartmentEmployees.length)
             return flexibleDepartmentEmployees;
           }
           
           return departmentEmployees;
         }
       } catch (error) {
-        console.warn('[EmployeeService] Could not get user profile for department filtering:', error);
+        Logger.warn('[EmployeeService] Could not get user profile for department filtering:', error)
       }
     }
     
     return managedEmployees;
     
   } catch (error) {
-    console.error('[EmployeeService] Error getting employees by manager:', error);
+    Logger.error('[EmployeeService] Error getting employees by manager:', error)
     return []; // Return empty array instead of throwing
   }
 }
@@ -250,11 +251,11 @@ static async getEmployeesByManager(managerId: string): Promise<Employee[]> {
    */
 static async getEmployeesWithWarningContext(organizationId: string): Promise<EmployeeWithContext[]> {
   try {
-    console.log('[EmployeeService] Loading employees with warning context for org:', organizationId);
+    Logger.debug('[EmployeeService] Loading employees with warning context for org:', organizationId)
     
     // Load all employees
     const employees = await DataService.loadEmployees(organizationId);
-    console.log('[EmployeeService] Found employees:', employees.length);
+    Logger.debug('[EmployeeService] Found employees:', employees.length)
     
     // Transform to EmployeeWithContext with warning data
     const employeesWithContext: EmployeeWithContext[] = await Promise.all(
@@ -319,7 +320,7 @@ static async getEmployeesWithWarningContext(organizationId: string): Promise<Emp
           return employeeWithContext;
           
         } catch (employeeError) {
-          console.error('[EmployeeService] Error processing employee:', employee.id, employeeError);
+          Logger.error('[EmployeeService] Error processing employee:', employee.id, employeeError)
           
           // Return basic employee data if warning context fails
           return {
@@ -341,11 +342,11 @@ static async getEmployeesWithWarningContext(organizationId: string): Promise<Emp
       })
     );
     
-    console.log('[EmployeeService] Processed employees with context:', employeesWithContext.length);
+    Logger.debug('[EmployeeService] Processed employees with context:', employeesWithContext.length)
     return employeesWithContext;
     
   } catch (error) {
-    console.error('[EmployeeService] Error getting employees with warning context:', error);
+    Logger.error('[EmployeeService] Error getting employees with warning context:', error)
     return [];
   }
 }
@@ -358,7 +359,7 @@ static async getEmployeesWithWarningContext(organizationId: string): Promise<Emp
       const allEmployees = await this.getAll();
       return allEmployees.filter(employee => employee.isActive).length;
     } catch (error) {
-      console.error('Error counting employees:', error);
+      Logger.error('Error counting employees:', error)
       return 0;
     }
   }
@@ -394,7 +395,7 @@ static async getEmployeesWithWarningContext(organizationId: string): Promise<Emp
 
       return stats;
     } catch (error) {
-      console.error('Error calculating statistics:', error);
+      Logger.error('Error calculating statistics:', error)
       return {
         total: 0,
         active: 0,

@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/components/warnings/SignatureDisplay.tsx
 // ✍️ SIGNATURE DISPLAY COMPONENT FOR WARNING DOCUMENTS
 // ✅ Works with base64 PNG signatures from enhancedwarningwizard
@@ -91,7 +92,7 @@ const SignatureModal: React.FC<SignatureModalProps> = ({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Signature download failed:', error);
+      Logger.error('Signature download failed:', error)
     }
   }, [signature, title]);
 
@@ -100,7 +101,7 @@ const SignatureModal: React.FC<SignatureModalProps> = ({
       await navigator.clipboard.writeText(signature);
       // You could add a toast notification here
     } catch (error) {
-      console.error('Failed to copy signature:', error);
+      Logger.error('Failed to copy signature:', error)
     }
   }, [signature]);
 

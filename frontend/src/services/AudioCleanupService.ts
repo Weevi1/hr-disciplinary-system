@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // UPDATE FILE: frontend/src/services/AudioCleanupService.ts
 // 🎯 SUPER USER ONLY AUDIO CLEANUP SERVICE
 // ✅ Updated to use HTTPS endpoints with proper CORS
@@ -49,7 +50,7 @@ export class AudioCleanupService {
       const result = await response.json();
       return result.data; // Extract data from Firebase function response format
     } catch (error: any) {
-      console.error(`❌ Request to ${endpoint} failed:`, error);
+      Logger.error(`❌ Request to ${endpoint} failed:`, error)
       throw error;
     }
   }
@@ -64,15 +65,15 @@ export class AudioCleanupService {
     triggeredAt: string;
   }> {
     try {
-      console.log('🔧 Triggering manual global audio cleanup...');
+      Logger.debug('🔧 Triggering manual global audio cleanup...')
       
       const result = await this.makeAuthenticatedRequest('manualAudioCleanup');
       
-      console.log('✅ Manual cleanup completed:', result);
+      Logger.success(2143)
       return result;
       
     } catch (error: any) {
-      console.error('❌ Manual cleanup failed:', error);
+      Logger.error('❌ Manual cleanup failed:', error)
       
       // Handle specific permission errors
       if (error.message.includes('Access denied') || error.message.includes('PERMISSION_DENIED')) {
@@ -93,15 +94,15 @@ export class AudioCleanupService {
     lastCleanup: Date | null;
   }> {
     try {
-      console.log('📊 Fetching cleanup statistics...');
+      Logger.debug(2927)
       
       const result = await this.makeAuthenticatedRequest('getCleanupStats');
       
-      console.log('✅ Cleanup stats retrieved:', result);
+      Logger.success(3047)
       return result;
       
     } catch (error: any) {
-      console.error('❌ Failed to fetch cleanup stats:', error);
+      Logger.error('❌ Failed to fetch cleanup stats:', error)
       
       if (error.message.includes('Access denied') || error.message.includes('PERMISSION_DENIED')) {
         throw new Error('Access denied: Cleanup statistics are restricted to super-users only');
@@ -128,15 +129,15 @@ export class AudioCleanupService {
     generatedAt: string;
   }> {
     try {
-      console.log('📊 Fetching global audio statistics...');
+      Logger.debug(4037)
       
       const result = await this.makeAuthenticatedRequest('getGlobalAudioStats');
       
-      console.log('✅ Global audio stats retrieved:', result);
+      Logger.success(4130)
       return result;
       
     } catch (error: any) {
-      console.error('❌ Failed to fetch global audio stats:', error);
+      Logger.error('❌ Failed to fetch global audio stats:', error)
       
       if (error.message.includes('Access denied') || error.message.includes('PERMISSION_DENIED')) {
         throw new Error('Access denied: Global audio statistics are restricted to super-users only');
@@ -164,15 +165,15 @@ export class AudioCleanupService {
     note: string;
   }> {
     try {
-      console.log('👁️ Previewing cleanup without deletion...');
+      Logger.debug('👁️ Previewing cleanup without deletion...')
       
       const result = await this.makeAuthenticatedRequest('previewAudioCleanup');
       
-      console.log('✅ Cleanup preview retrieved:', result);
+      Logger.success(5312)
       return result;
       
     } catch (error: any) {
-      console.error('❌ Failed to preview cleanup:', error);
+      Logger.error('❌ Failed to preview cleanup:', error)
       
       if (error.message.includes('Access denied') || error.message.includes('PERMISSION_DENIED')) {
         throw new Error('Access denied: Cleanup preview is restricted to super-users only');
@@ -199,11 +200,11 @@ export class AudioCleanupService {
       // TODO: Implement based on your admin workflow requirements
       // This could create a deletion request document that gets processed
       
-      console.log('✅ Audio deletion requested successfully');
+      Logger.success(6517)
       return true;
       
     } catch (error: any) {
-      console.error('❌ Audio deletion request failed:', error);
+      Logger.error('❌ Audio deletion request failed:', error)
       throw new Error(`Deletion request failed: ${error.message}`);
     }
   }
@@ -322,7 +323,7 @@ export class AudioCleanupService {
         }
       } catch (error) {
         // Don't fail health check if preview fails
-        console.warn('Could not check for expired files:', error);
+        Logger.warn('Could not check for expired files:', error)
       }
 
       return {
@@ -429,7 +430,7 @@ export class AudioCleanupService {
           break;
         }
         
-        console.log(`🔄 Retry attempt ${i + 1}/${retries} after ${delay}ms...`);
+        Logger.debug(`🔄 Retry attempt ${i + 1}/${retries} after ${delay}ms...`)
         await new Promise(resolve => setTimeout(resolve, delay));
         delay *= 1.5; // Exponential backoff
       }
@@ -466,7 +467,7 @@ export class AudioCleanupService {
         schedule
       };
     } catch (error: any) {
-      console.error('❌ Failed to load dashboard data:', error);
+      Logger.error('❌ Failed to load dashboard data:', error)
       throw error;
     }
   }

@@ -1,3 +1,5 @@
+import Logger from '../utils/logger';
+import { userCreationManager } from '../utils/userCreationContext';
 // frontend/src/services/FirebaseService.ts
 import { 
   collection, 
@@ -35,25 +37,11 @@ export class FirebaseServiceError extends Error {
   }
 }
 
-// Logging utility
-class Logger {
-  static log(message: string, data?: any) {
-    console.log(`[FirebaseService] ${message}`, data || '');
-  }
-
-  static error(message: string, error?: any) {
-    console.error(`[FirebaseService] ERROR: ${message}`, error || '');
-  }
-
-  static warn(message: string, data?: any) {
-    console.warn(`[FirebaseService] WARNING: ${message}`, data || '');
-  }
-}
 
 // Error handler
 class ErrorHandler {
   static handle(error: any, operation: string): never {
-    Logger.error(`${operation} failed`, error);
+    Logger.error(`[FirebaseService] ${operation} failed`, error);
 
     if (error instanceof FirestoreError) {
       throw new FirebaseServiceError(
@@ -91,9 +79,9 @@ export class FirebaseService {
    */
   static async signIn(email: string, password: string): Promise<FirebaseUser> {
     try {
-      Logger.log('Attempting sign in', { email });
+      Logger.debug('Attempting sign in', { email });
       const credential = await signInWithEmailAndPassword(auth, email, password);
-      Logger.log('Sign in successful', { uid: credential.user.uid });
+      Logger.debug('Sign in successful', { uid: credential.user.uid });
       return credential.user;
     } catch (error) {
       ErrorHandler.handle(error, 'signIn');
@@ -105,9 +93,9 @@ export class FirebaseService {
    */
   static async signUp(email: string, password: string): Promise<FirebaseUser> {
     try {
-      Logger.log('Creating new user', { email });
+      Logger.debug('Creating new user', { email });
       const credential = await createUserWithEmailAndPassword(auth, email, password);
-      Logger.log('User created successfully', { uid: credential.user.uid });
+      Logger.debug('User created successfully', { uid: credential.user.uid });
       return credential.user;
     } catch (error) {
       ErrorHandler.handle(error, 'signUp');
@@ -119,9 +107,9 @@ export class FirebaseService {
    */
   static async signOut(): Promise<void> {
     try {
-      Logger.log('Signing out user');
+      Logger.debug('Signing out user');
       await signOut(auth);
-      Logger.log('Sign out successful');
+      Logger.debug('Sign out successful');
     } catch (error) {
       ErrorHandler.handle(error, 'signOut');
     }
@@ -146,15 +134,20 @@ export class FirebaseService {
     documentId: string
   ): Promise<T | null> {
     try {
-      Logger.log('Getting document', { collection: collectionName, id: documentId });
+      Logger.debug('Getting document', { collection: collectionName, id: documentId });
       const docRef = doc(db, collectionName, documentId);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
-        Logger.log('Document found', { collection: collectionName, id: documentId });
+        Logger.debug('Document found', { collection: collectionName, id: documentId });
         return { id: docSnap.id, ...docSnap.data() } as T;
       } else {
-        Logger.warn('Document not found', { collection: collectionName, id: documentId });
+        // Suppress warning if we're currently creating a user and this might be a race condition
+        if (userCreationManager.isPendingUser(documentId) || userCreationManager.isCreating()) {
+          Logger.debug('Document not found (expected during user creation)', { collection: collectionName, id: documentId });
+        } else {
+          Logger.warn('Document not found', { collection: collectionName, id: documentId });
+        }
         return null;
       }
     } catch (error) {
@@ -170,7 +163,7 @@ export class FirebaseService {
     queryConstraints?: any[]
   ): Promise<T[]> {
     try {
-      Logger.log('Getting collection', { collection: collectionName });
+      Logger.debug('Getting collection', { collection: collectionName });
       const collectionRef = collection(db, collectionName);
       
       let q = queryConstraints 
@@ -183,7 +176,7 @@ export class FirebaseService {
         ...doc.data()
       })) as T[];
       
-      Logger.log('Collection retrieved', { 
+      Logger.debug('Collection retrieved', { 
         collection: collectionName, 
         count: documents.length 
       });
@@ -204,7 +197,7 @@ export class FirebaseService {
   ): Promise<string> {
     try {
       const id = documentId || doc(collection(db, collectionName)).id;
-      Logger.log('Creating document', { collection: collectionName, id });
+      Logger.debug('Creating document', { collection: collectionName, id });
       
       const docRef = doc(db, collectionName, id);
       
@@ -217,7 +210,7 @@ export class FirebaseService {
         updatedAt: serverTimestamp()
       });
       
-      Logger.log('Document created', { collection: collectionName, id });
+      Logger.debug('Document created', { collection: collectionName, id });
       return id;
     } catch (error) {
       ErrorHandler.handle(error, `createDocument(${collectionName})`);
@@ -233,7 +226,7 @@ export class FirebaseService {
     data: Partial<T>
   ): Promise<void> {
     try {
-      Logger.log('Updating document', { collection: collectionName, id: documentId });
+      Logger.debug('Updating document', { collection: collectionName, id: documentId });
       
       const docRef = doc(db, collectionName, documentId);
       await updateDoc(docRef, {
@@ -241,7 +234,7 @@ export class FirebaseService {
         updatedAt: serverTimestamp()
       } as any);
       
-      Logger.log('Document updated', { collection: collectionName, id: documentId });
+      Logger.debug('Document updated', { collection: collectionName, id: documentId });
     } catch (error) {
       ErrorHandler.handle(error, `updateDocument(${collectionName}/${documentId})`);
     }
@@ -255,12 +248,12 @@ export class FirebaseService {
     documentId: string
   ): Promise<void> {
     try {
-      Logger.log('Deleting document', { collection: collectionName, id: documentId });
+      Logger.debug('Deleting document', { collection: collectionName, id: documentId });
       
       const docRef = doc(db, collectionName, documentId);
       await deleteDoc(docRef);
       
-      Logger.log('Document deleted', { collection: collectionName, id: documentId });
+      Logger.debug('Document deleted', { collection: collectionName, id: documentId });
     } catch (error) {
       ErrorHandler.handle(error, `deleteDocument(${collectionName}/${documentId})`);
     }
@@ -284,7 +277,7 @@ export class FirebaseService {
     limitCount?: number
   ): Promise<T[]> {
     try {
-      Logger.log('Querying documents', { 
+      Logger.debug('Querying documents', { 
         collection: collectionName, 
         conditions: conditions.length 
       });
@@ -319,7 +312,7 @@ export class FirebaseService {
     documents: T[]
   ): Promise<string[]> {
     try {
-      Logger.log('Batch creating documents', { 
+      Logger.debug('Batch creating documents', { 
         collection: collectionName, 
         count: documents.length 
       });
@@ -334,7 +327,7 @@ export class FirebaseService {
         ids.push(...chunkIds);
       }
       
-      Logger.log('Batch create completed', { 
+      Logger.debug('Batch create completed', { 
         collection: collectionName, 
         created: ids.length 
       });
@@ -342,6 +335,90 @@ export class FirebaseService {
       return ids;
     } catch (error) {
       ErrorHandler.handle(error, `batchCreate(${collectionName})`);
+    }
+  }
+  // ============================================
+  // CLOUD FUNCTIONS INTEGRATION
+  // ============================================
+
+  /**
+   * Refresh custom claims for a user
+   */
+  static async refreshUserClaims(targetUserId?: string): Promise<{ success: boolean; claims?: any; message?: string }> {
+    try {
+      Logger.debug('Refreshing user custom claims', { targetUserId });
+
+      // Import Firebase Functions
+      const { getFunctions, httpsCallable } = await import('firebase/functions');
+      const functions = getFunctions();
+      const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
+
+      const result = await refreshClaims({ targetUserId });
+
+      Logger.debug('Custom claims refreshed successfully', result.data);
+      return result.data as { success: boolean; claims?: any; message?: string };
+
+    } catch (error) {
+      Logger.error('Failed to refresh custom claims:', error);
+      throw new FirebaseServiceError(
+        'Failed to refresh custom claims',
+        'refresh-claims-failed',
+        error
+      );
+    }
+  }
+
+  /**
+   * Refresh custom claims for all users in an organization
+   */
+  static async refreshOrganizationUserClaims(organizationId: string): Promise<{ success: boolean; results?: any[] }> {
+    try {
+      Logger.debug('Refreshing organization user claims', { organizationId });
+
+      // Import Firebase Functions
+      const { getFunctions, httpsCallable } = await import('firebase/functions');
+      const functions = getFunctions();
+      const refreshOrgClaims = httpsCallable(functions, 'refreshOrganizationUserClaims');
+
+      const result = await refreshOrgClaims({ organizationId });
+
+      Logger.debug('Organization claims refreshed successfully', result.data);
+      return result.data as { success: boolean; results?: any[] };
+
+    } catch (error) {
+      Logger.error('Failed to refresh organization claims:', error);
+      throw new FirebaseServiceError(
+        'Failed to refresh organization claims',
+        'refresh-org-claims-failed',
+        error
+      );
+    }
+  }
+
+  /**
+   * Get current user's custom claims for debugging
+   */
+  static async getUserClaims(): Promise<{ uid: string; email: string; claims: any }> {
+    try {
+      Logger.debug('Getting user custom claims');
+
+      // Import Firebase Functions
+      const { getFunctions, httpsCallable } = await import('firebase/functions');
+      const functions = getFunctions();
+      const getClaims = httpsCallable(functions, 'getUserClaims');
+
+      const result = await getClaims();
+
+      Logger.debug('User claims retrieved', result.data);
+      return result.data as { uid: string; email: string; claims: any };
+
+    } catch (error) {
+      Logger.error('Failed to get user claims:', error);
+      throw new FirebaseServiceError(
+        'Failed to get user claims',
+        'get-claims-failed',
+        error
+      );
     }
   }
 }

@@ -1,25 +1,29 @@
+import Logger from '../../../utils/logger';
 // frontend/src/components/warnings/enhanced/EnhancedWarningWizard.tsx
-// 🏆 COMPLETE ENHANCED WARNING WIZARD WITH DEBUGGING - INFINITE LOOP FIXED
-// ✅ Fixed infinite loop in validation and render functions
-// ✅ Optimized logging to only track user actions, not renders
-// ✅ Real-time debugging without performance issues
-// ✅ Full Firestore error prevention
-// ✅ Ultra-efficient 16kbps Opus compression (~120KB per minute)
-// 🚀 UPDATED: Added full-screen support via isFullScreen prop
-// 🔧 FIXED: Using standard EscalationRecommendation interface from service layer
-// 🔧 CRITICAL FIX: Fixed temporal dead zone error and function structure
+// 🎯 ENHANCED WARNING WIZARD V2 - PROFESSIONAL TREATMENT COMPLETE
+// ✅ V2 Components: Split into focused, reusable components for maintainability
+// ✅ Memory Leak Fixes: Proper signature pad cleanup and event listener management
+// ✅ Auto-save Functionality: Prevent data loss with debounced persistence
+// ✅ Real-time Validation: Immediate feedback with writing assistance
+// ✅ Mobile-First Design: Responsive layouts optimized for touch devices
+// ✅ Performance Optimized: React.memo, useCallback, proper dependency arrays
+// 🚀 UPDATED: Using V2 step components with modern React patterns
+// 🔧 SECURITY: Proper input sanitization and signature validation
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
-import { Check, ChevronLeft, ChevronRight, X, FileText, Scale, Send } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, X, FileText, Scale, Send, Mic } from 'lucide-react';
 // Import debugging components
 import { useWizardLogging } from '../../../hooks/useWizardLogging';
 
-// Import the step components
-import { CombinedIncidentStep } from './steps/CombinedIncidentStep'; 
-import { LegalReviewSignaturesStep } from './steps/LegalReviewSignaturesStep';
+// Import the step components - V2 versions with performance improvements
+import { CombinedIncidentStepV2 } from './steps/CombinedIncidentStepV2'; 
+import { LegalReviewSignaturesStepV2 } from './steps/LegalReviewSignaturesStepV2';
 import { DeliveryCompletionStep } from './steps/DeliveryCompletionStep';
+
+// Import microphone permission handler
+import { MicrophonePermissionHandler } from './components/MicrophonePermissionHandler';
 
 // Import audio recording components
 import { useAudioRecording } from '../../../hooks/warnings/useAudioRecording';
@@ -56,11 +60,11 @@ interface SignatureData {
   employeeName?: string;
 }
 
-// 3-STEP WIZARD ENUM
+// 3-STEP WIZARD ENUM (AUDIO CONSENT REMOVED - AUTOMATIC)
 enum WizardStep {
-  INCIDENT_DETAILS = 1,
-  LEGAL_REVIEW_SIGNATURES = 2,
-  DELIVERY_COMPLETION = 3
+  INCIDENT_DETAILS = 0,
+  LEGAL_REVIEW_SIGNATURES = 1,
+  DELIVERY_COMPLETION = 2
 }
 
 interface EnhancedWarningWizardProps {
@@ -79,7 +83,7 @@ interface EnhancedWarningWizardProps {
 // MAIN COMPONENT
 // ============================================
 
-export const EnhancedWarningWizard: React.FC<EnhancedWarningWizardProps> = ({
+const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   employees,
   categories,
   currentManagerName,
@@ -100,6 +104,26 @@ export const EnhancedWarningWizard: React.FC<EnhancedWarningWizardProps> = ({
   
   // 🎯 Audio recording hook
   const audioRecording = useAudioRecording();
+
+  // 🎙️ Handle microphone permission granted - start automatic recording
+  const handlePermissionGranted = useCallback(async () => {
+    setMicrophonePermissionGranted(true);
+    setShowPermissionHandler(false);
+    
+    // Automatically start recording once permission is granted
+    try {
+      await audioRecording.startRecording();
+      Logger.debug('🎙️ Automatic audio recording started after permission granted');
+    } catch (error) {
+      Logger.error('❌ Failed to start automatic recording:', error);
+    }
+  }, [audioRecording]);
+
+  // 🎙️ Handle microphone permission denied
+  const handlePermissionDenied = useCallback(() => {
+    setMicrophonePermissionGranted(false);
+    // Keep showing permission handler for retry
+  }, []);
 
   // 🔧 ADD: Body scroll lock when wizard opens
   useEffect(() => {
@@ -131,6 +155,8 @@ export const EnhancedWarningWizard: React.FC<EnhancedWarningWizardProps> = ({
   // ============================================
   
   const [currentStep, setCurrentStep] = useState<WizardStep>(WizardStep.INCIDENT_DETAILS);
+  const [microphonePermissionGranted, setMicrophonePermissionGranted] = useState(false);
+  const [showPermissionHandler, setShowPermissionHandler] = useState(true);
   const [completedSteps, setCompletedSteps] = useState<Set<WizardStep>>(new Set());
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   // Form data
@@ -203,7 +229,7 @@ export const EnhancedWarningWizard: React.FC<EnhancedWarningWizardProps> = ({
   // ============================================
   
   const handlePreviousStep = useCallback(() => {
-    if (currentStep > 1 && !isNavigating) {
+    if (currentStep > 0 && !isNavigating) {
       setCurrentStep(currentStep - 1);
     }
   }, [currentStep, isNavigating]);
@@ -217,19 +243,19 @@ export const EnhancedWarningWizard: React.FC<EnhancedWarningWizardProps> = ({
 
 // 🔧 ENHANCED: Scroll to top when step changes with debugging
 useEffect(() => {
-  console.log('🔍 Step changed, attempting scroll to top:', currentStep);
+  Logger.debug('🔍 Step changed, attempting scroll to top:', currentStep)
   
   const contentElement = document.querySelector('.wizard-content__scrollable');
-  console.log('🔍 Content element found:', !!contentElement);
+  Logger.debug('🔍 Content element found:', !!contentElement)
   
   if (contentElement) {
-    console.log('🔍 Current scroll position:', contentElement.scrollTop);
+    Logger.debug('🔍 Current scroll position:', contentElement.scrollTop)
     contentElement.scrollTo({ top: 0, behavior: 'smooth' });
     
     // Fallback: Force scroll if smooth doesn't work
     setTimeout(() => {
       if (contentElement.scrollTop > 0) {
-        console.log('⚡ Fallback: Force instant scroll');
+        Logger.debug('⚡ Fallback: Force instant scroll')
         contentElement.scrollTop = 0;
       }
     }, 300);
@@ -333,10 +359,11 @@ useEffect(() => {
     logging.trackAPI('generateLRARecommendation', { employeeId, categoryId });
     
     try {
-      // 🔧 FIXED: Now correctly receives EscalationRecommendation via API
+      // 🔧 FIXED: Now correctly receives EscalationRecommendation via API with organizationId
       const recommendation = await API.warnings.getEscalationRecommendation(
         employeeId,
-        categoryId
+        categoryId,
+        organization?.id || 'default'
       );
       
       setLraRecommendation(recommendation);
@@ -422,13 +449,17 @@ useEffect(() => {
       currentStep,
       completedSteps: Array.from(completedSteps)
     });
-    
+
+    // 🎤 CRITICAL: Force cleanup any ongoing audio recording
+    Logger.debug('🗑️ Force cleaning up audio recording due to wizard closure');
+    audioRecording.forceCleanup();
+
     // 🔧 ADD: Unlock body scroll before closing
     document.body.classList.remove('modal-open');
-    
+
     logging.endSession('cancelled');
     onCancel();
-  }, [onCancel, logging, currentStep, completedSteps]);
+  }, [onCancel, logging, currentStep, completedSteps, audioRecording]);
 
   // ============================================
   // WIZARD INITIALIZATION (RUN ONCE)
@@ -562,7 +593,7 @@ useEffect(() => {
         // 🎤 CRITICAL: Auto-stop audio recording FIRST before creating warning
         let audioUrl = null;
         if (audioRecording?.isRecording) {
-          console.log('🎤 Auto-stopping audio recording before saving warning...');
+          Logger.debug('🎤 Auto-stopping audio recording before saving warning...')
           logging.trackSuccess('AUDIO_AUTO_STOP_BEFORE_SAVE', {
             duration: audioRecording.duration,
             size: audioRecording.size
@@ -571,13 +602,13 @@ useEffect(() => {
           // Get the audioUrl directly from stopRecording return value
           audioUrl = await audioRecording.stopRecording();
           
-          console.log('✅ Audio recording stopped. URL available:', !!audioUrl);
+          Logger.success(21068)
           
           if (!audioUrl) {
-            console.warn('⚠️ Audio URL not returned from stopRecording. Will create warning with placeholder.');
+            Logger.warn('⚠️ Audio URL not returned from stopRecording. Will create warning with placeholder.')
           }
         }
-        console.log('📄 Creating warning document after signatures completed...');
+        Logger.debug(21325)
         
         if (!selectedEmployee || !selectedCategory || !organization) {
           throw new Error('Missing required data for warning creation');
@@ -625,10 +656,10 @@ useEffect(() => {
             status: 'ready',
             processingStatus: 'pending'
           };
-          console.log('✅ Audio recording data prepared for warning save');
+          Logger.success(23340)
         } else {
           // CRITICAL: Audio recording is mandatory - show error and prevent save
-          console.error('❌ Audio recording is mandatory for all warnings');
+          Logger.error('❌ Audio recording is mandatory for all warnings')
           logging.trackError(new Error('Audio recording missing'), { 
             warningData: formData, 
             audioState: {
@@ -653,7 +684,7 @@ useEffect(() => {
 
         // 🔥 STEP 1: Create the warning document
         const warningId = await API.warnings.create(warningData);
-        console.log('✅ Warning created successfully with ID:', warningId);
+        Logger.success(24554)
         
         // Store warning ID for step 3
         setFinalWarningId(warningId);
@@ -661,7 +692,7 @@ useEffect(() => {
         // 🔥 STEP 2: Upload audio to Firebase and update warning document
         if (audioUrl && audioRecording?.uploadToFirebaseFromUrl && audioRecording?.recordingId && warningId) {
           try {
-            console.log('☁️ Uploading audio to Firebase Storage...');
+            Logger.debug('☁️ Uploading audio to Firebase Storage...')
             
             // Upload audio to Firebase Storage using the returned audioUrl directly
             const firebaseAudioUrl = await audioRecording.uploadToFirebaseFromUrl(
@@ -672,12 +703,12 @@ useEffect(() => {
             );
             
             if (firebaseAudioUrl) {
-              console.log('✅ Audio uploaded to Firebase:', firebaseAudioUrl);
+              Logger.success(25382)
               
               // Use Firebase functions for document updates
               
               // 🔥 Update warning document with Firebase audio URL
-              console.log('📝 Updating warning document with Firebase audio URL...');
+              Logger.debug('📝 Updating warning document with Firebase audio URL...')
               const warningRef = doc(db, 'warnings', warningId);
               
               await updateDoc(warningRef, {
@@ -688,7 +719,7 @@ useEffect(() => {
                 updatedAt: new Date()
               });
               
-              console.log('✅ Warning document updated with Firebase audio URL!');
+              Logger.success(26224)
               logging.trackSuccess('AUDIO_UPLOADED_AND_UPDATED', { 
                 warningId, 
                 firebaseUrl: firebaseAudioUrl,
@@ -697,11 +728,11 @@ useEffect(() => {
               });
               
             } else {
-              console.warn('⚠️ Audio upload returned null URL');
+              Logger.warn('⚠️ Audio upload returned null URL')
               logging.trackWarning('AUDIO_UPLOAD_NULL_URL', { warningId });
             }
           } catch (audioError: any) {
-            console.error('❌ Audio upload failed:', audioError);
+            Logger.error('❌ Audio upload failed:', audioError)
             logging.trackError(audioError, { 
               context: 'AUDIO_UPLOAD_STEP2',
               warningId,
@@ -720,7 +751,7 @@ useEffect(() => {
                 updatedAt: new Date()
               });
             } catch (updateError) {
-              console.error('❌ Failed to update warning with audio error:', updateError);
+              Logger.error('❌ Failed to update warning with audio error:', updateError)
               logging.trackError(updateError as Error, { context: 'AUDIO_ERROR_UPDATE' });
             }
           }
@@ -729,7 +760,7 @@ useEffect(() => {
         logging.trackSuccess('WARNING_FULLY_CREATED_STEP2', { warningId });
         
       } catch (error) {
-        console.error('❌ Error creating warning:', error);
+        Logger.error('❌ Error creating warning:', error)
         logging.trackError(error as Error, { context: 'WARNING_CREATION_ON_SIGNATURE_COMPLETE' });
         // Don't prevent step progression - let user continue to step 3 and retry there
       }
@@ -746,17 +777,17 @@ useEffect(() => {
   const stepConfig = useMemo(() => ({
     [WizardStep.INCIDENT_DETAILS]: {
       title: 'Incident Details',
-      subtitle: `Step ${WizardStep.INCIDENT_DETAILS} of 3`,
+      subtitle: `Step ${WizardStep.INCIDENT_DETAILS + 1} of 3`,
       icon: FileText,
     },
     [WizardStep.LEGAL_REVIEW_SIGNATURES]: {
       title: 'Review & Sign',
-      subtitle: `Step ${WizardStep.LEGAL_REVIEW_SIGNATURES} of 3`,
+      subtitle: `Step ${WizardStep.LEGAL_REVIEW_SIGNATURES + 1} of 3`,
       icon: Scale,
     },
     [WizardStep.DELIVERY_COMPLETION]: {
       title: 'Deliver & Complete',
-      subtitle: `Step ${WizardStep.DELIVERY_COMPLETION} of 3`,
+      subtitle: `Step ${WizardStep.DELIVERY_COMPLETION + 1} of 3`,
       icon: Send,
     }
   }), []);
@@ -800,7 +831,7 @@ useEffect(() => {
     switch (currentStep) {
       case WizardStep.INCIDENT_DETAILS:
         return (
-          <CombinedIncidentStep
+          <CombinedIncidentStepV2
             employees={employees}
             categories={categories}
             formData={formData}
@@ -817,7 +848,7 @@ useEffect(() => {
 
       case WizardStep.LEGAL_REVIEW_SIGNATURES:
         return (
-          <LegalReviewSignaturesStep
+          <LegalReviewSignaturesStepV2
             lraRecommendation={lraRecommendation}
             selectedEmployee={selectedEmployee}
             formData={formData}
@@ -850,6 +881,8 @@ useEffect(() => {
     }
   }, [
     currentStep,
+    organizationName,
+    currentManagerName,
     employees,
     categories,
     formData,
@@ -861,10 +894,8 @@ useEffect(() => {
     loadEmployeeWarningHistory,
     lraRecommendation,
     isAnalyzing,
-    currentManagerName,
     handleSignaturesComplete,
     signatures,
-    organizationName,
     audioRecording,
     handleWizardComplete
   ]);
@@ -912,9 +943,51 @@ const warningDataForDebugger = useMemo(() => ({
      organization?.id, currentStep, isStepValid, isAnalyzing, warningHistory, finalWarningId]);
 
   // ============================================
+  // 🔥 CLEANUP ON UNMOUNT + DEBUGGING
+  // ============================================
+
+  useEffect(() => {
+    // Mount logging
+    Logger.debug('🚀 EnhancedWarningWizard MOUNTED', {
+      employeesCount: employees.length,
+      categoriesCount: categories.length,
+      managerName: currentManagerName,
+      orgName: organizationName,
+      timestamp: Date.now()
+    });
+
+    // Cleanup function that runs when component unmounts
+    return () => {
+      Logger.debug('🧹 EnhancedWarningWizard UNMOUNTING - cleaning up audio recording', {
+        reason: 'Component unmount',
+        timestamp: Date.now()
+      });
+
+      // Force cleanup any ongoing audio recording
+      // Note: Using forceCleanup to ensure complete resource release
+      audioRecording.forceCleanup();
+
+      // Cleanup body classes
+      document.body.classList.remove('modal-open');
+    };
+  }, []); // 🔥 FIXED: Only run on mount/unmount, not on prop changes
+
+  // ============================================
   // 🔥 MAIN RENDER WITH FULL-SCREEN SUPPORT
   // ============================================
   
+  // 🎙️ Show microphone permission handler first if needed
+  if (showPermissionHandler && !microphonePermissionGranted) {
+    return (
+      <MicrophonePermissionHandler
+        onPermissionGranted={handlePermissionGranted}
+        onPermissionDenied={handlePermissionDenied}
+        organizationName={organizationName}
+        managerName={currentManagerName}
+      />
+    );
+  }
+
 return (
   <div className={`
     enhanced-warning-wizard-modal
@@ -953,7 +1026,7 @@ return (
         />
       </div>
       <span className="progress-text">
-        Step {currentStep} of {Object.keys(stepConfig).length}
+        Step {currentStep + 1} of {Object.keys(stepConfig).length}
       </span>
     </div>
 
@@ -1074,7 +1147,7 @@ return (
         {/* Progress indicator on mobile */}
         <div className="md:hidden flex items-center space-x-1">
           <span className="text-xs text-gray-500">
-            Step {currentStep} of {Object.keys(stepConfig).length}
+            Step {currentStep + 1} of {Object.keys(stepConfig).length}
           </span>
         </div>
       </div>
@@ -1084,3 +1157,37 @@ return (
   </div>
 );
 };
+
+// 🔥 PERFORMANCE: Prevent unnecessary rerenders when props haven't changed
+// Custom comparison to ignore array reference changes if content is the same
+const arePropsEqual = (prevProps: EnhancedWarningWizardProps, nextProps: EnhancedWarningWizardProps) => {
+  // Check primitive props
+  if (
+    prevProps.currentManagerName !== nextProps.currentManagerName ||
+    prevProps.organizationName !== nextProps.organizationName ||
+    prevProps.preSelectedEmployeeId !== nextProps.preSelectedEmployeeId ||
+    prevProps.preSelectedCategoryId !== nextProps.preSelectedCategoryId ||
+    prevProps.isFullScreen !== nextProps.isFullScreen
+  ) {
+    Logger.debug('🔄 Wizard props changed - primitive props differ');
+    return false;
+  }
+
+  // Check arrays by length and content
+  if (prevProps.employees.length !== nextProps.employees.length) {
+    Logger.debug('🔄 Wizard props changed - employee count differs');
+    return false;
+  }
+
+  if (prevProps.categories.length !== nextProps.categories.length) {
+    Logger.debug('🔄 Wizard props changed - category count differs');
+    return false;
+  }
+
+  // Arrays same length, assume content is same to prevent remount
+  // This prevents remount due to array reference changes
+  Logger.debug('✅ Wizard props equal - preventing remount');
+  return true;
+};
+
+export const EnhancedWarningWizard = React.memo(EnhancedWarningWizardComponent, arePropsEqual);

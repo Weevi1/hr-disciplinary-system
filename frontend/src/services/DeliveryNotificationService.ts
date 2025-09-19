@@ -1,3 +1,4 @@
+import Logger from '../utils/logger';
 // frontend/src/services/DeliveryNotificationService.ts
 // 📬 DELIVERY NOTIFICATION SERVICE 
 // ✅ Creates notifications for HR when warnings need to be delivered
@@ -91,7 +92,7 @@ export class DeliveryNotificationService {
     request: CreateDeliveryNotificationRequest
   ): Promise<string> {
     try {
-      console.log('📬 Creating delivery notification for HR...', request);
+      Logger.debug('📬 Creating delivery notification for HR...', request)
       
       // Determine priority based on warning level
       const priority = this.determinePriority(request.warningLevel);
@@ -138,7 +139,7 @@ export class DeliveryNotificationService {
         notificationData
       );
       
-      console.log('✅ Delivery notification created:', docRef.id);
+      Logger.success(3842)
       
       // Create system notification for HR users
       await this.createSystemNotification(request, docRef.id);
@@ -146,7 +147,7 @@ export class DeliveryNotificationService {
       return docRef.id;
       
     } catch (error) {
-      console.error('❌ Failed to create delivery notification:', error);
+      Logger.error('❌ Failed to create delivery notification:', error)
       throw error;
     }
   }
@@ -176,10 +177,10 @@ export class DeliveryNotificationService {
       }
       
       // Update in Firestore (you'll need to implement this)
-      console.log('📝 Updating delivery status:', notificationId, status);
+      Logger.debug('📝 Updating delivery status:', notificationId, status)
       
     } catch (error) {
-      console.error('❌ Failed to update delivery status:', error);
+      Logger.error('❌ Failed to update delivery status:', error)
       throw error;
     }
   }
@@ -249,10 +250,10 @@ export class DeliveryNotificationService {
         this.getDeliveryMethodName(request.deliveryMethod)
       );
       
-      console.log('🔔 Role-based notification sent to HR team');
+      Logger.debug('🔔 Role-based notification sent to HR team')
       
     } catch (error) {
-      console.error('❌ Failed to create system notification:', error);
+      Logger.error('❌ Failed to create system notification:', error)
       // Don't throw - delivery notification creation is more important
     }
   }

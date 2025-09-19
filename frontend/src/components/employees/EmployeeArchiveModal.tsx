@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/components/employees/EmployeeArchiveModal.tsx
 // ✅ FIXED: Now passes reason to archive function + debug logging
 import React, { useState } from 'react';
@@ -31,24 +32,24 @@ export const EmployeeArchiveModal: React.FC<EmployeeArchiveModalProps> = ({
 
     // ✅ VALIDATION: Check if we have a valid employee with ID
     if (!employee || !employee.id || employee.id.trim().length === 0) {
-      console.error('🚨 CRITICAL ERROR: Invalid employee or missing employee ID');
+      Logger.error('🚨 CRITICAL ERROR: Invalid employee or missing employee ID')
       alert('Error: Invalid employee data. Cannot archive.');
       return;
     }
 
     setLoading(true);
     try {
-      console.log('🔍 Calling onArchive with employee and reason...');
+      Logger.debug('🔍 Calling onArchive with employee and reason...')
       
       // ✅ FIXED: Pass the reason parameter to the archive function
       await onArchive(employee, reason.trim() || undefined);
       
-      console.log('✅ Archive operation completed successfully');
+      Logger.success(1682)
       
       // Close modal after successful archive
       onClose();
     } catch (error) {
-      console.error('❌ Archive operation failed:', error);
+      Logger.error('❌ Archive operation failed:', error)
       alert(`Failed to archive employee: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);

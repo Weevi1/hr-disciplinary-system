@@ -34,7 +34,16 @@ interface WelcomeSectionProps {
 export const WelcomeSection = memo<WelcomeSectionProps>(({ className = '' }) => {
   const isDesktop = useBreakpoint(768);
   const { user } = useAuth();
-  const { organization } = useOrganization();
+  
+  // Handle organization context safely - it may not be available for superusers
+  let organization = null;
+  try {
+    organization = useOrganization()?.organization;
+  } catch (error) {
+    // Superuser case - no organization context available
+    organization = null;
+  }
+  
   const { getPrimaryRole } = useMultiRolePermissions();
   
   // --- STATE FOR REAL-TIME CLOCK ---
@@ -70,10 +79,10 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({ className = '' }) => 
   };
 
   // Formatters for different views
-  const getFormattedTime = () => time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).split(' ');
+  const getFormattedTime = () => time.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', hour12: true }).split(' ');
   const getFormattedDate = (compact = false) => {
     return compact 
-      ? time.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+      ? time.toLocaleDateString('en-ZA', { weekday: 'long', month: 'short', day: 'numeric' })
       : time.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   };
 
@@ -82,33 +91,34 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({ className = '' }) => 
   return (
     <div className={className}>
       {isDesktop ? (
-        // --- 🖥️ DESKTOP LAYOUT (Classic, immersive banner) ---
-        <div className={`relative overflow-hidden rounded-3xl p-8 text-white shadow-2xl bg-gradient-to-r ${getRoleGradient()}`}>
-            {/* Background elements */}
-            <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-48 translate-x-48"></div>
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full translate-y-32 -translate-x-32"></div>
+        // --- 🖥️ DESKTOP LAYOUT (Compact horizontal bar) ---
+        <div className={`relative overflow-hidden rounded-2xl p-4 text-white shadow-lg bg-gradient-to-r ${getRoleGradient()}`}>
+            {/* Subtle background elements */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16"></div>
 
-            <div className="relative z-10">
-              <div className="mb-8">
-                <h1 className="text-4xl font-bold mb-2">
-                  Good {getTimePeriod()}, {user?.firstName}! 👋
-                </h1>
-                <p className="text-xl opacity-90">
-                  {organization?.name || 'Your Organization'} • {getFormattedDate(false)}
-                </p>
+            <div className="relative z-10 flex items-center justify-between">
+              {/* Left: Greeting */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-bold">
+                    Good {getTimePeriod()}, {user?.firstName}! 👋
+                  </h1>
+                </div>
+                <div className="hidden lg:block text-sm opacity-90 border-l border-white/20 pl-4 ml-2">
+                  {organization?.name || 'SuperUser Dashboard'} • {getFormattedDate(true)}
+                </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-6">
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center hover:bg-white/15 transition-all duration-300 flex flex-col justify-center items-center">
-                  <Clock className="w-8 h-8 mb-2 opacity-80" />
-                  <div className="text-4xl font-bold tracking-wider">{currentTime} {timePeriod}</div>
-                  <div className="text-sm text-white/80 mt-1">Current Time</div>
+              {/* Right: Time & Role */}
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2">
+                  <Clock className="w-4 h-4 opacity-80" />
+                  <div className="text-lg font-bold">{currentTime} {timePeriod}</div>
                 </div>
                 
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center hover:bg-white/15 transition-all duration-300 flex flex-col justify-center items-center">
-                  <UserCircle className="w-8 h-8 mb-2 opacity-80" />
-                  <div className="text-3xl font-bold leading-tight">{getRoleDisplayName()}</div>
-                  <div className="text-sm text-white/80 mt-1">Your Role</div>
+                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2">
+                  <UserCircle className="w-4 h-4 opacity-80" />
+                  <div className="text-sm font-medium">{getRoleDisplayName()}</div>
                 </div>
               </div>
             </div>

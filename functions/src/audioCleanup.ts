@@ -13,11 +13,12 @@ const db = admin.firestore();
 const storage = admin.storage();
 
 // 🎯 CORS CONFIGURATION - MOVE THIS TO TOP LEVEL
-const corsHandler = cors({
+const corsHandler = cors.default({
   origin: [
     'https://hr-disciplinary-system.web.app',
     'https://hr-disciplinary-system.firebaseapp.com',
     'http://localhost:3000',
+    'http://localhost:3001',
     'http://localhost:5173'
   ],
   methods: ['GET', 'POST', 'OPTIONS'],
@@ -105,8 +106,8 @@ async function performGlobalAudioCleanup(
 
   try {
     const orgsSnapshot = await db.collection('organizations').get();
-    
-    console.log(`🏢 Found ${orgsSnapshot.size} organizations to process`);
+
+    console.log(`🏢 Found ${orgsSnapshot.size} organizations to process for cleanup`);
     
     for (const orgDoc of orgsSnapshot.docs) {
       const organizationId = orgDoc.id;
@@ -125,7 +126,13 @@ async function performGlobalAudioCleanup(
         const warningsSnapshot = await warningsQuery.get();
         result.totalScanned += warningsSnapshot.size;
 
-        console.log(`📄 Found ${warningsSnapshot.size} warnings with expired audio in ${organizationName}`);
+        // Also check total warnings with audio (for debugging)
+        const allWarningsWithAudio = await db
+          .collection(`organizations/${organizationId}/warnings`)
+          .where('audioRecording', '!=', null)
+          .get();
+
+        console.log(`📄 Organization ${organizationName}: ${allWarningsWithAudio.size} total warnings with audio, ${warningsSnapshot.size} with expired audio`);
 
         for (const warningDoc of warningsSnapshot.docs) {
           try {
@@ -610,13 +617,14 @@ export const getGlobalAudioStats = functions.https.onRequest(async (req, res) =>
       await verifySuperUser(context);
 
       console.log('📊 Fetching global audio statistics...');
-      
+
       let totalAudioRecordings = 0;
       let totalExpiredRecordings = 0;
       let totalStorageUsed = 0;
       const organizationStats: any[] = [];
 
       const orgsSnapshot = await db.collection('organizations').get();
+      console.log(`🏢 Found ${orgsSnapshot.size} organizations to analyze for audio`);
       
       for (const orgDoc of orgsSnapshot.docs) {
         const organizationId = orgDoc.id;
@@ -628,6 +636,7 @@ export const getGlobalAudioStats = functions.https.onRequest(async (req, res) =>
             .where('audioRecording', '!=', null);
 
           const warningsSnapshot = await warningsWithAudioQuery.get();
+          console.log(`📄 Organization ${organizationName}: Found ${warningsSnapshot.size} warnings with audio`);
           
           let orgAudioCount = 0;
           let orgExpiredCount = 0;

@@ -1,3 +1,4 @@
+import Logger from '../../utils/logger';
 // frontend/src/hooks/dashboard/useWeatherData.ts
 // 🌤️ OPTIMIZED WEATHER DATA MANAGEMENT
 // ✅ Intelligent caching and error handling
@@ -61,10 +62,10 @@ export const useWeatherData = (): WeatherHookReturn => {
         return null;
       }
 
-      console.log('📦 Using cached weather data');
+      Logger.debug('📦 Using cached weather data')
       return data;
     } catch (error) {
-      console.warn('⚠️ Weather cache read failed:', error);
+      Logger.warn('⚠️ Weather cache read failed:', error)
       localStorage.removeItem(WEATHER_CACHE_KEY);
       return null;
     }
@@ -77,9 +78,9 @@ export const useWeatherData = (): WeatherHookReturn => {
         timestamp: Date.now()
       };
       localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify(cache));
-      console.log('💾 Weather data cached');
+      Logger.debug('💾 Weather data cached')
     } catch (error) {
-      console.warn('⚠️ Weather cache write failed:', error);
+      Logger.warn('⚠️ Weather cache write failed:', error)
     }
   }, []);
 
@@ -98,17 +99,17 @@ export const useWeatherData = (): WeatherHookReturn => {
         return;
       }
 
-      console.log('🌤️ Fetching fresh weather data');
+      Logger.debug('🌤️ Fetching fresh weather data')
       
       let weather: WeatherData;
       
       try {
         weather = await getCurrentLocationWeather();
-        console.log('✅ Weather data loaded from current location');
+        Logger.success(3057)
       } catch (locationError) {
-        console.warn('⚠️ Location weather failed, trying Cape Town fallback:', locationError);
+        Logger.warn('⚠️ Location weather failed, trying Cape Town fallback:', locationError)
         weather = await getWeatherByCity('Cape Town');
-        console.log('✅ Weather data loaded from Cape Town fallback');
+        Logger.success(3311)
       }
 
       setWeatherData(weather);
@@ -116,7 +117,7 @@ export const useWeatherData = (): WeatherHookReturn => {
       setLastUpdated(new Date());
       
     } catch (error) {
-      console.error('❌ All weather APIs failed:', error);
+      Logger.error('❌ All weather APIs failed:', error)
       setWeatherError('Weather data unavailable');
     } finally {
       setWeatherLoading(false);

@@ -1,0 +1,364 @@
+# .github/workflows/test.yml - Comprehensive Testing Pipeline
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, master, develop ]
+    paths:
+      - 'frontend/**'
+      - 'functions/**'
+      - '.github/workflows/test.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'frontend/**'
+      - 'functions/**'
+      - '.github/workflows/test.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Frontend Unit Tests
+  frontend-unit-tests:
+    name: Frontend Unit Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:unit
+        env:
+          CI: true
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./frontend/coverage/lcov.info
+          flags: frontend-unit
+          name: frontend-unit-coverage
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: frontend-unit-test-results
+          path: |
+            frontend/coverage/
+            frontend/test-results/
+
+  # Firebase Integration Tests
+  firebase-integration-tests:
+    name: Firebase Integration Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@latest
+
+      - name: Verify Firebase CLI installation
+        run: firebase --version
+
+      - name: Start Firebase emulators
+        run: |
+          firebase emulators:start --only firestore,auth,storage,functions --project demo-test &
+          sleep 15
+          # Verify emulators are running
+          curl -f http://localhost:8080/ || exit 1
+          curl -f http://localhost:9099/ || exit 1
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          CI: true
+          FIRESTORE_EMULATOR_HOST: localhost:8080
+          FIREBASE_AUTH_EMULATOR_HOST: localhost:9099
+          FIREBASE_STORAGE_EMULATOR_HOST: localhost:9199
+
+      - name: Stop Firebase emulators
+        if: always()
+        run: |
+          pkill -f "firebase.*emulators" || true
+          sleep 2
+
+      - name: Upload integration test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: firebase-integration-test-results
+          path: frontend/test-results/
+
+  # Functions Unit Tests
+  functions-unit-tests:
+    name: Cloud Functions Unit Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./functions
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build functions
+        run: npm run build
+
+      - name: Run functions tests
+        run: npm test
+        env:
+          CI: true
+          
+  # E2E Tests
+  e2e-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Install Playwright
+        run: |
+          cd frontend
+          npx playwright install --with-deps chromium firefox webkit
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@latest
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Start Firebase emulators and hosting
+        run: |
+          firebase emulators:start --only firestore,auth,storage,hosting --project demo-test &
+          sleep 20
+          # Verify services are running
+          curl -f http://localhost:5000/ || exit 1
+          curl -f http://localhost:8080/ || exit 1
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Run E2E tests
+        run: |
+          cd frontend
+          npx playwright test
+        env:
+          CI: true
+          BASE_URL: http://localhost:5000
+          FIRESTORE_EMULATOR_HOST: localhost:8080
+          FIREBASE_AUTH_EMULATOR_HOST: localhost:9099
+          FIREBASE_STORAGE_EMULATOR_HOST: localhost:9199
+
+      - name: Upload E2E test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: e2e-test-results
+          path: |
+            frontend/test-results/
+            frontend/playwright-report/
+
+      - name: Stop Firebase emulators
+        if: always()
+        run: |
+          pkill -f "firebase.*emulators" || true
+          sleep 2
+
+  # Security Testing
+  security-tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security audit
+        run: npm audit --audit-level=moderate
+
+      - name: Check for vulnerabilities
+        run: |
+          npx audit-ci --moderate
+        continue-on-error: true
+
+      - name: Run permission system tests
+        run: npm run test -- --testPathPattern="permissions"
+        env:
+          CI: true
+
+  # Performance Tests
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build application
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools@latest
+
+      - name: Start Firebase emulators
+        run: |
+          firebase emulators:start --only firestore,auth,storage,hosting --project demo-test &
+          sleep 15
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.12.x
+
+      - name: Run Lighthouse CI
+        run: |
+          lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Upload Lighthouse results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: lighthouse-results
+          path: .lighthouseci/
+
+  # Test Summary
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [frontend-unit-tests, firebase-integration-tests, functions-unit-tests, e2e-tests, security-tests]
+    if: always()
+    
+    steps:
+      - name: Download all test artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Generate test summary
+        run: |
+          echo "# Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.frontend-unit-tests.result }}" == "success" ]]; then
+            echo "✅ Frontend Unit Tests: PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Frontend Unit Tests: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.firebase-integration-tests.result }}" == "success" ]]; then
+            echo "✅ Firebase Integration Tests: PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Firebase Integration Tests: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.functions-unit-tests.result }}" == "success" ]]; then
+            echo "✅ Functions Unit Tests: PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Functions Unit Tests: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.e2e-tests.result }}" == "success" ]]; then
+            echo "✅ E2E Tests: PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ E2E Tests: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.security-tests.result }}" == "success" ]]; then
+            echo "✅ Security Tests: PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Security Tests: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check if all tests passed
+        if: needs.frontend-unit-tests.result != 'success' || needs.firebase-integration-tests.result != 'success' || needs.functions-unit-tests.result != 'success' || needs.e2e-tests.result != 'success' || needs.security-tests.result != 'success'
+        run: |
+          echo "Some tests failed. Please check the individual job results."
+          exit 1

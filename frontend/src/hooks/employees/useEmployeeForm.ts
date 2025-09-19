@@ -1,7 +1,7 @@
 // frontend/src/hooks/employees/useEmployeeForm.ts
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../auth/AuthContext';
-import { DataService } from '../../services/DataService';
+import { API } from '../../api';
 import { createEmployeeFromForm, createFormFromEmployee, validateEmployee } from '../../types';
 import type { Employee } from '../../types';
 import type { EmployeeFormData } from '../../types';
@@ -101,7 +101,13 @@ export const useEmployeeForm = ({ employee, onSuccess }: UseEmployeeFormProps) =
         employeeData.disciplinaryRecord = employee.disciplinaryRecord; // Preserve warnings
       }
 
-      await DataService.saveEmployee(organization.id, employeeData);
+      if (employee) {
+        // Update existing employee
+        await API.employees.update(employee.id, organization.id, employeeData);
+      } else {
+        // Create new employee
+        await API.employees.create(employeeData);
+      }
       
       if (onSuccess) {
         onSuccess();

@@ -46,21 +46,61 @@ export const QuotesSection = memo<QuotesSectionProps>(({ className = '' }) => {
   return (
     <div className={className}>
       {isDesktop ? (
-        // --- 🖥️ DESKTOP VIEW (Classic, full-featured) ---
-        <div className={`bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-orange-900/50 rounded-2xl p-6 border border-amber-100 dark:border-slate-700 shadow-lg text-gray-800 dark:text-gray-200 ${className}`}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Newspaper className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-              Daily Inspiration
-            </h3>
-            
-            <div className="flex items-center gap-2">
+        // --- 🖥️ DESKTOP VIEW (Compact, horizontal layout) ---
+        <div className={`bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-4 border border-amber-200 shadow-sm ${className}`}>
+          <div className="flex items-center justify-between">
+            {/* Left: Quote Content */}
+            <div className="flex-1 mr-6">
+              <div className="flex items-start gap-3">
+                <Newspaper className="w-4 h-4 text-amber-600 mt-1 flex-shrink-0" />
+                <div className="flex-1">
+                  <blockquote className="text-gray-700 italic text-sm leading-tight">
+                    "{currentQuote.text}"
+                  </blockquote>
+                  <div className="flex items-center justify-between mt-2">
+                    <cite className="text-xs font-medium text-amber-700 not-italic">
+                      — {currentQuote.author}
+                    </cite>
+                    <div className="flex items-center gap-2">
+                      {currentQuote.isPopular && (
+                        <span className="text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full">
+                          ⭐
+                        </span>
+                      )}
+                      <span className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full capitalize">
+                        {currentQuote.category}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Controls */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={previousQuote}
+                className="p-1 text-gray-400 hover:text-amber-600 rounded hover:bg-amber-100 transition-colors"
+                title="Previous quote"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={nextQuote}
+                className="p-1 text-gray-400 hover:text-amber-600 rounded hover:bg-amber-100 transition-colors"
+                title="Next quote"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              
+              <div className="w-px h-6 bg-amber-200 mx-1"></div>
+              
               <button
                 onClick={() => toggleFavorite(currentQuote.id)}
-                className={`p-1.5 rounded-lg transition-colors ${
+                className={`p-1 rounded transition-colors ${
                   isFavorite 
-                    ? 'text-red-500 hover:text-red-600 bg-red-100 dark:bg-red-500/20' 
-                    : 'text-gray-400 hover:text-red-500 bg-gray-50 hover:bg-red-100 dark:bg-white/5 dark:hover:bg-red-500/20'
+                    ? 'text-red-500 bg-red-100' 
+                    : 'text-gray-400 hover:text-red-500 hover:bg-red-100'
                 }`}
                 title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
               >
@@ -69,63 +109,15 @@ export const QuotesSection = memo<QuotesSectionProps>(({ className = '' }) => {
               
               <button
                 onClick={toggleRotation}
-                className={`p-1.5 rounded-lg transition-colors ${
+                className={`p-1 rounded transition-colors ${
                   isRotating 
-                    ? 'text-green-600 hover:text-green-700 bg-green-100 dark:bg-green-500/20' 
-                    : 'text-gray-400 hover:text-green-600 bg-gray-50 hover:bg-green-100 dark:bg-white/5 dark:hover:bg-green-500/20'
+                    ? 'text-green-600 bg-green-100' 
+                    : 'text-gray-400 hover:text-green-600 hover:bg-green-100'
                 }`}
                 title={isRotating ? 'Pause rotation' : 'Start rotation'}
               >
                 {isRotating ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
               </button>
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            <blockquote className="text-gray-700 dark:text-gray-300 italic leading-relaxed min-h-[4rem] flex items-center">
-              "{currentQuote.text}"
-            </blockquote>
-            
-            <div className="flex items-center justify-between">
-              <cite className="text-sm font-medium text-amber-700 dark:text-amber-300 not-italic">
-                — {currentQuote.author}
-              </cite>
-              <div className="flex items-center gap-2">
-                {currentQuote.isPopular && (
-                  <span className="text-xs bg-amber-200 dark:bg-amber-400/20 text-amber-800 dark:text-amber-300 px-2 py-1 rounded-full">
-                    ⭐ Popular
-                  </span>
-                )}
-                <span className="text-xs bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full capitalize">
-                  {currentQuote.category}
-                </span>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between pt-2 border-t border-amber-200 dark:border-slate-600">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={previousQuote}
-                  className="p-1.5 text-gray-400 hover:text-amber-600 rounded-lg hover:bg-amber-100 dark:hover:bg-white/10 transition-colors"
-                  title="Previous quote"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={nextQuote}
-                  className="p-1.5 text-gray-400 hover:text-amber-600 rounded-lg hover:bg-amber-100 dark:hover:bg-white/10 transition-colors"
-                  title="Next quote"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-              
-              <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                <span>Quote {currentQuote.id}</span>
-                {preferences.favoriteQuotes.length > 0 && (
-                  <span>• {preferences.favoriteQuotes.length} favorited</span>
-                )}
-              </div>
             </div>
           </div>
         </div>

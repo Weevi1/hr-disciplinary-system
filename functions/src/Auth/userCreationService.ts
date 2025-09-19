@@ -28,6 +28,15 @@ interface CreateUserResponse {
   message: string;
 }
 
+interface CreateResellerUserRequest {
+  email: string;
+  password: string;
+  displayName: string;
+  resellerId: string;
+  firstName: string;
+  lastName: string;
+}
+
 // 🛡️ Helper function to extract role from both formats
 const extractUserRole = (userData: any): string => {
   if (!userData) return '';
@@ -402,5 +411,94 @@ export const resetUserPassword = onCall({
     }
     
     throw new HttpsError('internal', 'Failed to reset password');
+  }
+});
+
+// 🏪 Cloud Function to create reseller users without disrupting current session
+export const createResellerUser = onCall({
+  enforceAppCheck: false,
+  cors: true
+}, async (request: CallableRequest<CreateResellerUserRequest>) => {
+  try {
+    // Verify request authentication
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    const { email, password, displayName, resellerId, firstName, lastName } = request.data;
+
+    // Validate required fields
+    if (!email || !password || !resellerId || !firstName || !lastName) {
+      throw new HttpsError('invalid-argument', 'Missing required fields');
+    }
+
+    console.log(`🏪 Creating reseller user: ${email} for reseller: ${resellerId}`);
+
+    // Create Firebase Auth user
+    const userRecord = await admin.auth().createUser({
+      email: email,
+      password: password,
+      displayName: displayName
+    });
+
+    console.log(`✅ Firebase Auth user created: ${userRecord.uid}`);
+
+    // Create user document in Firestore
+    const userDocument = {
+      id: userRecord.uid,
+      email: email,
+      firstName: firstName,
+      lastName: lastName,
+      role: 'reseller',
+      resellerId: resellerId,
+      isActive: true,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      permissions: {
+        canManageEmployees: false,
+        canCreateWarnings: false,
+        canViewReports: true,
+        canManageUsers: false,
+        canManageSettings: false
+      }
+    };
+
+    await admin.firestore()
+      .collection('users')
+      .doc(userRecord.uid)
+      .set(userDocument);
+
+    console.log(`✅ Firestore user document created for: ${email}`);
+
+    // Log audit event
+    await admin.firestore().collection('auditLog').add({
+      action: 'RESELLER_USER_CREATED',
+      resourceType: 'user',
+      resourceId: userRecord.uid,
+      performedBy: request.auth.uid,
+      details: {
+        email: email,
+        resellerId: resellerId,
+        method: 'cloud_function'
+      },
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      ipAddress: request.rawRequest.ip || 'unknown'
+    });
+
+    return {
+      uid: userRecord.uid,
+      email: email,
+      success: true,
+      message: `Reseller user account created successfully`
+    };
+
+  } catch (error: any) {
+    console.error('❌ Error creating reseller user:', error);
+    
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+    
+    throw new HttpsError('internal', 'Failed to create reseller user');
   }
 });
