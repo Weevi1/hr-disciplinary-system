@@ -209,21 +209,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             Logger.debug('👤 User not found in flat structure, searching sharded organizations...')
 
-            // Get all organizations to search for the user
+            // Get all organizations to search for the user (parallel lookup for better performance)
             const organizations = await FirebaseService.getCollection<Organization>(COLLECTIONS.ORGANIZATIONS);
 
-            for (const org of organizations) {
+            // Try to find user in all organizations in parallel instead of sequentially
+            const userSearchPromises = organizations.map(async (org) => {
               try {
                 const shardedUser = await DatabaseShardingService.getDocument(org.id, 'users', firebaseUser.uid);
-                if (shardedUser) {
-                  userData = shardedUser as User;
-                  Logger.success(`✅ Found user in sharded organization: ${org.id}`);
-                  break;
-                }
+                return shardedUser ? { user: shardedUser, orgId: org.id } : null;
               } catch (error) {
-                // Continue searching other organizations
-                Logger.debug(`User not found in organization: ${org.id}`);
+                return null;
               }
+            });
+
+            // Wait for all searches to complete and take the first successful result
+            const searchResults = await Promise.all(userSearchPromises);
+            const foundResult = searchResults.find(result => result !== null);
+
+            if (foundResult) {
+              userData = foundResult.user as User;
+              Logger.success(`✅ Found user in sharded organization: ${foundResult.orgId}`);
             }
           } else {
             Logger.success(`✅ Found user in flat structure (super user/reseller)`);
