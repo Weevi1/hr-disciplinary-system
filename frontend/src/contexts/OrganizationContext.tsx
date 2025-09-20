@@ -145,20 +145,33 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
 
   // 🎯 useEffect hook to trigger the initial data load when the component mounts or orgId changes
   useEffect(() => {
-    if (organizationId) {
-      // Reset loading state when organization ID changes
-      if (loadedOrgRef.current !== organizationId) {
-        loadingRef.current = false;
-        loadedOrgRef.current = null;
-        // Clear cache for previous org if switching organizations
-        if (loadedOrgRef.current) {
-          CacheService.clearByPrefix(`org:${loadedOrgRef.current}:`);
+    // Prevent duplicate calls in StrictMode
+    let mounted = true;
+
+    const loadData = async () => {
+      if (!mounted) return;
+
+      if (organizationId) {
+        // Reset loading state when organization ID changes
+        if (loadedOrgRef.current !== organizationId) {
+          loadingRef.current = false;
+          loadedOrgRef.current = null;
+          // Clear cache for previous org if switching organizations
+          if (loadedOrgRef.current) {
+            CacheService.clearByPrefix(`org:${loadedOrgRef.current}:`);
+          }
         }
+        await loadOrganizationData();
+      } else {
+        Logger.warn("[OrganizationProvider] No organizationId provided, skipping data load")
       }
-      loadOrganizationData();
-    } else {
-      Logger.warn("[OrganizationProvider] No organizationId provided, skipping data load")
-    }
+    };
+
+    loadData();
+
+    return () => {
+      mounted = false;
+    };
   }, [organizationId]);
 
   // 🎯 UPDATED: Context value with categories for performance optimization

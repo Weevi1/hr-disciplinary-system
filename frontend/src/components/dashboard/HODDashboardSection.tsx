@@ -172,9 +172,9 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
             }
           }
         } else {
-          // Organization is still loading, use empty categories for now
-          console.log('⏳ Organization still loading, using empty categories temporarily');
-          loadedCategories = [];
+          // Fallback 3: Use default manufacturing categories
+          console.log('⚠️ No categories available, using default categories');
+          loadedCategories = getDefaultManufacturingCategories();
         }
         
         // Transform categories to ensure proper structure
@@ -207,7 +207,8 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
 
   // Load team members and categories data when component mounts and categories are ready
   useEffect(() => {
-    if (organization?.id && user?.id && !isLoadingWizardData && !orgLoading) {
+    // Only load when we have organization, user, and categories are loaded
+    if (organization?.id && user?.id && !isLoadingWizardData && !orgLoading && contextCategories !== null) {
       loadWizardData();
     }
   }, [organization?.id, user?.id, orgLoading, contextCategories]); // Wait for org loading to complete
