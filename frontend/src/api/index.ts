@@ -15,6 +15,7 @@ import { ShardedDataService } from '../services/ShardedDataService';
 import { DatabaseShardingService } from '../services/DatabaseShardingService';
 import { WarningService } from '../services/WarningService';
 import CacheService from '../services/CacheService';
+import { where } from 'firebase/firestore';
 import * as UniversalCategories from '../services/UniversalCategories';
 import type { 
   Warning,
@@ -381,8 +382,8 @@ export const employees = {
             organizationId,
             'employees',
             [
-              ['employment.managerId', '==', managerId],
-              ['isActive', '==', true]
+              where('employment.managerId', '==', managerId),
+              where('isActive', '==', true)
             ],
             {
               pageSize: 50, // Reasonable limit for manager's direct reports

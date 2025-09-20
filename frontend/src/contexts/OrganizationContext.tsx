@@ -59,8 +59,14 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
   // 🎯 STREAMLINED: Only load organization and sector data
   const loadOrganizationData = async () => {
     // 🔧 FIX: Prevent duplicate loading in React StrictMode
-    if (loadingRef.current || loadedOrgRef.current === organizationId) {
-      Logger.debug(`[OrganizationProvider] Skipping duplicate load for: ${organizationId}`);
+    if (loadingRef.current) {
+      Logger.debug(`[OrganizationProvider] Already loading, skipping duplicate for: ${organizationId}`);
+      return;
+    }
+
+    if (loadedOrgRef.current === organizationId && organization && categories) {
+      Logger.debug(`[OrganizationProvider] Already loaded, skipping reload for: ${organizationId}`);
+      setLoading(false);
       return;
     }
 
@@ -144,6 +150,10 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
       if (loadedOrgRef.current !== organizationId) {
         loadingRef.current = false;
         loadedOrgRef.current = null;
+        // Clear cache for previous org if switching organizations
+        if (loadedOrgRef.current) {
+          CacheService.clearByPrefix(`org:${loadedOrgRef.current}:`);
+        }
       }
       loadOrganizationData();
     } else {
