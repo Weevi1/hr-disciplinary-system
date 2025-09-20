@@ -151,7 +151,7 @@ export class UserOrgIndexService {
    */
   static async getOrganizationUsers(organizationId: string): Promise<UserOrgIndexEntry[]> {
     try {
-      const allEntries = await FirebaseService.queryCollection<UserOrgIndexEntry>(
+      const allEntries = await FirebaseService.queryDocuments<UserOrgIndexEntry>(
         this.COLLECTION,
         [
           { field: 'organizationId', operator: '==', value: organizationId },

@@ -60,7 +60,7 @@ interface HODDashboardSectionProps {
 export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className = '' }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { organization } = useOrganization();
+  const { organization, categories: contextCategories } = useOrganization();
   const { canCreateWarnings, canManageEmployees } = useMultiRolePermissions();
   const { dueFollowUps, counts: followUpCounts } = useCounsellingFollowUps();
   const isDesktop = useBreakpoint(768);
@@ -143,26 +143,32 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
       console.log('📋 HOD Dashboard: Transformed employees:', transformedEmployees.map(e => `${e.firstName} ${e.lastName}`));
       setEmployees(transformedEmployees);
       
-      // 🔥 FIXED: Proper categories loading with multiple fallbacks
+      // 🔥 OPTIMIZED: Use categories from OrganizationContext to eliminate extra queries
       let loadedCategories: any[] = [];
-      
+
       try {
-        // First, try to get categories from organization context
-        if (organization.categories && Array.isArray(organization.categories) && organization.categories.length > 0) {
-          console.log('✅ Using categories from organization context:', organization.categories.length);
-          loadedCategories = organization.categories;
+        // First, try to get categories from organization context (now loaded by OrganizationProvider)
+        if (contextCategories && Array.isArray(contextCategories) && contextCategories.length > 0) {
+          console.log('✅ Using categories from organization context:', contextCategories.length);
+          loadedCategories = contextCategories;
         } else {
-          // Fallback 1: Load categories directly from DataService
-          console.log('⚠️ Organization categories not available, loading directly...');
-          const categoriesFromService = await DataServiceV2.getWarningCategories(organization.id);
-          
-          if (categoriesFromService && categoriesFromService.length > 0) {
-            console.log('✅ Loaded categories from DataService:', categoriesFromService.length);
-            loadedCategories = categoriesFromService;
+          // Fallback 1: Check if organization object has categories (legacy)
+          if (organization.categories && Array.isArray(organization.categories) && organization.categories.length > 0) {
+            console.log('✅ Using categories from organization object:', organization.categories.length);
+            loadedCategories = organization.categories;
           } else {
-            // Fallback 2: Use default manufacturing categories (since console shows manufacturing)
-            console.log('⚠️ No categories from service, using manufacturing defaults');
-            loadedCategories = getDefaultManufacturingCategories();
+            // Fallback 2: Load categories directly from DataService (should be rare now)
+            console.log('⚠️ Organization categories not available in context, loading directly...');
+            const categoriesFromService = await DataServiceV2.getWarningCategories(organization.id);
+
+            if (categoriesFromService && categoriesFromService.length > 0) {
+              console.log('✅ Loaded categories from DataService:', categoriesFromService.length);
+              loadedCategories = categoriesFromService;
+            } else {
+              // Fallback 3: Use default manufacturing categories (should be very rare)
+              console.log('⚠️ No categories from service, using manufacturing defaults');
+              loadedCategories = getDefaultManufacturingCategories();
+            }
           }
         }
         
