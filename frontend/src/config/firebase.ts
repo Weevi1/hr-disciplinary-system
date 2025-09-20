@@ -30,9 +30,9 @@ export const analytics = getAnalytics(app);
 
 // Connect to emulators in development
 if (import.meta.env.DEV) {
-  // Note: You can enable emulators if needed, but since CORS is failing, 
+  // Note: You can enable emulators if needed, but since CORS is failing,
   // let's try connecting directly to production functions
-  Logger.debug('🔧 Development mode: Using production functions');
+  Logger.debug('🔧 Development mode: Using production functions in region us-central1');
 }
 
 // Firebase persistence is now handled automatically by Firebase v9+
