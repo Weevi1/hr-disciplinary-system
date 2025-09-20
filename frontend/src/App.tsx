@@ -394,8 +394,11 @@ const AppRoutes: React.FC = () => {
 // ============================================
 
 function App() {
-  Logger.debug('🚀 <File> by Fifo - Fully Integrated, Fully Online HR Management System initializing...')
-  
+  // Only log in production to avoid StrictMode double-logging
+  if (import.meta.env.PROD) {
+    Logger.debug('🚀 <File> by Fifo - Fully Integrated, Fully Online HR Management System initializing...')
+  }
+
   return (
     <ErrorBoundary>
       <ToastProvider>
