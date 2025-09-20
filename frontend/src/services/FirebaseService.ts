@@ -218,6 +218,26 @@ export class FirebaseService {
   }
 
   /**
+   * Set a document (create or replace)
+   */
+  static async setDocument<T extends Record<string, any>>(
+    collectionName: string,
+    documentId: string,
+    data: T
+  ): Promise<void> {
+    try {
+      Logger.debug('Setting document', { collection: collectionName, id: documentId });
+
+      const docRef = doc(db, collectionName, documentId);
+      await setDoc(docRef, data);
+
+      Logger.debug('Document set', { collection: collectionName, id: documentId });
+    } catch (error) {
+      ErrorHandler.handle(error, `setDocument(${collectionName}/${documentId})`);
+    }
+  }
+
+  /**
    * Update an existing document
    */
   static async updateDocument<T>(

@@ -1,6 +1,8 @@
 // migrateUserOrgIndex.ts - One-time migration script for UserOrgIndex
 import Logger from '../utils/logger';
 import { UserOrgIndexService } from '../services/UserOrgIndexService';
+import { FirebaseService } from '../services/FirebaseService';
+import { DatabaseShardingService } from '../services/DatabaseShardingService';
 
 /**
  * Production-level migration script to populate UserOrgIndex
@@ -87,7 +89,7 @@ export class UserOrgIndexMigration {
     try {
       Logger.debug('📋 Migrating flat users (super-users, resellers)...');
 
-      const users = await UserOrgIndexService['FirebaseService'].getCollection('users');
+      const users = await FirebaseService.getCollection('users');
 
       for (const user of users) {
         try {
@@ -128,14 +130,14 @@ export class UserOrgIndexMigration {
     try {
       Logger.debug('🏢 Migrating sharded users (organization users)...');
 
-      const organizations = await UserOrgIndexService['FirebaseService'].getCollection('organizations');
+      const organizations = await FirebaseService.getCollection('organizations');
       stats.organizations = organizations.length;
 
       for (const org of organizations) {
         try {
           Logger.debug(`Processing organization: ${org.name || org.id}`);
 
-          const orgUsers = await UserOrgIndexService['DatabaseShardingService'].getCollection(
+          const orgUsers = await DatabaseShardingService.getCollection(
             org.id,
             'users'
           );
@@ -232,7 +234,7 @@ export class UserOrgIndexMigration {
       Logger.warn('⚠️ This will delete all index entries but preserve original user data');
 
       // Clear the entire index (this is safe because original user data is untouched)
-      const allIndexEntries = await UserOrgIndexService['FirebaseService'].getCollection('userOrgIndex');
+      const allIndexEntries = await FirebaseService.getCollection('userOrgIndex');
 
       for (const entry of allIndexEntries) {
         await UserOrgIndexService.removeUserOrganization(entry.id);

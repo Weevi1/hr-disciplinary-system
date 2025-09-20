@@ -82,7 +82,18 @@ service cloud.firestore {
         (isSuperUser() && resource == null && request.resource.data.role == 'reseller')
       );
     }
-    
+
+    // UserOrgIndex collection - for scalable O(1) user-organization mapping
+    match /userOrgIndex/{userId} {
+      // Allow users to read their own index entry for authentication
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        isSuperUser()
+      );
+      // Allow system services to maintain the index
+      allow write: if isAuthenticated();
+    }
+
     // Organizations collection
     match /organizations/{organizationId} {
       allow read: if isAuthenticated() && (
