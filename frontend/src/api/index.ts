@@ -12,7 +12,9 @@ import Logger from '../utils/logger';
 
 import { DataServiceV2 } from '../services/DataServiceV2';
 import { ShardedDataService } from '../services/ShardedDataService';
+import { DatabaseShardingService } from '../services/DatabaseShardingService';
 import { WarningService } from '../services/WarningService';
+import CacheService from '../services/CacheService';
 import * as UniversalCategories from '../services/UniversalCategories';
 import type { 
   Warning,
@@ -267,11 +269,18 @@ export const warnings = {
 
 export const employees = {
   /**
-   * Get all employees for organization (SHARDED)
+   * Get all employees for organization (OPTIMIZED SHARDED with pagination)
    */
-  async getAll(organizationId: string): Promise<Employee[]> {
+  async getAll(organizationId: string, pageSize: number = 100): Promise<Employee[]> {
     try {
-      const result = await ShardedDataService.loadEmployees(organizationId);
+      // Use pagination to avoid loading thousands of employees at once
+      const result = await ShardedDataService.loadEmployees(organizationId, {
+        pageSize,
+        orderField: 'profile.lastName',
+        orderDirection: 'asc'
+      });
+
+      Logger.success(`👥 [OPTIMIZED] Loaded ${result.documents.length} employees with pagination (pageSize: ${pageSize})`);
       return result.documents;
     } catch (error) {
       handleError('employees.getAll', error);
@@ -358,14 +367,36 @@ export const employees = {
   },
 
   /**
-   * Get employees by manager ID (SHARDED)
+   * Get employees by manager ID (OPTIMIZED + CACHED)
    */
   async getByManager(managerId: string, organizationId: string): Promise<Employee[]> {
     try {
-      const result = await ShardedDataService.loadEmployees(organizationId);
-      return result.documents.filter(employee => 
-        employee.employment?.managerId === managerId
+      const cacheKey = CacheService.generateOrgKey(organizationId, 'employees', 'manager', managerId);
+
+      const result = await CacheService.getOrFetch(
+        cacheKey,
+        async () => {
+          // Use direct database query instead of loading all employees and filtering
+          const queryResult = await DatabaseShardingService.queryDocuments<Employee>(
+            organizationId,
+            'employees',
+            [
+              ['employment.managerId', '==', managerId],
+              ['isActive', '==', true]
+            ],
+            {
+              pageSize: 50, // Reasonable limit for manager's direct reports
+              orderField: 'profile.lastName',
+              orderDirection: 'asc'
+            }
+          );
+
+          Logger.success(`👥 [OPTIMIZED] Loaded ${queryResult.documents.length} employees for manager ${managerId}`);
+          return queryResult.documents;
+        }
       );
+
+      return result;
     } catch (error) {
       handleError('employees.getByManager', error);
     }
@@ -625,6 +656,90 @@ export const categories = {
 };
 
 // ============================================
+// BATCH LOADING API (Performance Optimization)
+// ============================================
+
+export const batch = {
+  /**
+   * Load all dashboard data in parallel for optimal performance
+   */
+  async loadDashboardData(organizationId: string, managerId: string): Promise<{
+    employees: Employee[];
+    followUps: any[];
+    stats: any;
+    loadTime: number;
+  }> {
+    try {
+      const startTime = Date.now();
+      Logger.debug('🚀 [BATCH] Loading dashboard data in parallel...');
+
+      // Use Promise.all to load all data concurrently
+      const [employeesData, followUpsData, statsData] = await Promise.all([
+        employees.getByManager(managerId, organizationId),
+        // Add follow-ups and stats if needed - placeholder for now
+        Promise.resolve([]),
+        Promise.resolve({})
+      ]);
+
+      const loadTime = Date.now() - startTime;
+
+      Logger.success(`🚀 [BATCH] Dashboard data loaded in ${loadTime}ms (employees: ${employeesData.length})`);
+
+      return {
+        employees: employeesData,
+        followUps: followUpsData,
+        stats: statsData,
+        loadTime
+      };
+    } catch (error) {
+      handleError('batch.loadDashboardData', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Load organization setup data (for organization management)
+   */
+  async loadOrganizationSetup(organizationId: string): Promise<{
+    organization: any;
+    categories: any[];
+    settings: any;
+    loadTime: number;
+  }> {
+    try {
+      const startTime = Date.now();
+      Logger.debug('🚀 [BATCH] Loading organization setup data...');
+
+      // Cache keys for batch loading
+      const orgKey = CacheService.generateOrgKey(organizationId, 'organization');
+      const categoriesKey = CacheService.generateOrgKey(organizationId, 'categories');
+      const settingsKey = CacheService.generateOrgKey(organizationId, 'settings');
+
+      // Load all data in parallel with caching
+      const [orgData, categoriesData, settingsData] = await Promise.all([
+        CacheService.getOrFetch(orgKey, () => DataServiceV2.getOrganization(organizationId)),
+        CacheService.getOrFetch(categoriesKey, () => ShardedDataService.getWarningCategories(organizationId)),
+        CacheService.getOrFetch(settingsKey, () => Promise.resolve({})) // Placeholder for settings
+      ]);
+
+      const loadTime = Date.now() - startTime;
+
+      Logger.success(`🚀 [BATCH] Organization setup loaded in ${loadTime}ms`);
+
+      return {
+        organization: orgData,
+        categories: categoriesData,
+        settings: settingsData,
+        loadTime
+      };
+    } catch (error) {
+      handleError('batch.loadOrganizationSetup', error);
+      throw error;
+    }
+  }
+};
+
+// ============================================
 // UNIFIED API EXPORT
 // ============================================
 
@@ -632,7 +747,8 @@ export const API = {
   warnings,
   employees,
   organizations,
-  categories
+  categories,
+  batch
 } as const;
 
 // Default export for convenience
