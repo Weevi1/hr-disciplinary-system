@@ -133,9 +133,9 @@ export class DeliveryNotificationService {
         createdByName: request.createdByName
       };
       
-      // Save to Firestore
+      // Save to Firestore (SHARDED COLLECTION)
       const docRef = await addDoc(
-        collection(db, 'deliveryNotifications'), 
+        collection(db, 'organizations', request.organizationId, 'deliveryNotifications'),
         notificationData
       );
       
