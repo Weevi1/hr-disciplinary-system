@@ -6,6 +6,7 @@ import type { User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { FirebaseService } from '../services/FirebaseService';
 import { DatabaseShardingService } from '../services/DatabaseShardingService';
+import { UserOrgIndexService } from '../services/UserOrgIndexService';
 import { userCreationManager } from '../utils/userCreationContext';
 import type { User, Organization } from '../types';
 
@@ -150,143 +151,154 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         if (firebaseUser) {
           Logger.debug('👤 Firebase user authenticated:', firebaseUser.email)
-          
-          // Load user profile from Firestore - try flat structure first for super users/resellers, then sharded
-          let userData = await FirebaseService.getDocument<User>(
-            COLLECTIONS.USERS,
-            firebaseUser.uid
-          );
-          
-          // If not found in flat structure, try to find in sharded structure
-          if (!userData) {
-            // Check if this user is currently being created
-            if (userCreationManager.isPendingUser(firebaseUser.uid)) {
-              Logger.debug('⏳ User creation in progress, waiting for completion...')
-              // Set a temporary loading state and wait for user creation to complete
-              dispatch({ type: 'SET_LOADING', payload: true });
 
-              // Try again after a short delay to allow creation to complete
-              setTimeout(async () => {
-                // Re-attempt to find the user
-                const retryUserData = await FirebaseService.getDocument<User>(
-                  COLLECTIONS.USERS,
-                  firebaseUser.uid
-                );
+          // 🚀 PRODUCTION OPTIMIZATION: Use O(1) UserOrgIndex lookup instead of O(n) organization search
+          // This works for ALL user types: Business Owner, HR Manager, HOD Manager, Super User, Reseller
 
-                if (!retryUserData) {
-                  // Search in sharded organizations
-                  const organizations = await FirebaseService.getCollection<Organization>(COLLECTIONS.ORGANIZATIONS);
-                  for (const org of organizations) {
-                    try {
-                      const shardedUser = await DatabaseShardingService.getDocument(org.id, 'users', firebaseUser.uid);
-                      if (shardedUser) {
-                        const normalizedRole = normalizeUserRole(shardedUser.role);
-                        dispatch({
-                          type: 'SET_USER',
-                          payload: { ...shardedUser, role: normalizedRole } as User
-                        });
+          // Check if this user is currently being created
+          if (userCreationManager.isPendingUser(firebaseUser.uid)) {
+            Logger.debug('⏳ User creation in progress, waiting for completion...')
+            dispatch({ type: 'SET_LOADING', payload: true });
 
-                        // Load organization
-                        if (shardedUser.organizationId) {
-                          const organization = await FirebaseService.getDocument<Organization>(
-                            COLLECTIONS.ORGANIZATIONS,
-                            shardedUser.organizationId
-                          );
-                          if (organization) {
-                            dispatch({ type: 'SET_ORGANIZATION', payload: organization });
-                          }
-                        }
-                        return;
-                      }
-                    } catch (error) {
-                      Logger.debug(`User not found in organization: ${org.id}`);
-                    }
+            // Try again after a short delay to allow creation to complete
+            setTimeout(async () => {
+              const result = await UserOrgIndexService.getUserWithOrganization(firebaseUser.uid);
+
+              if (result) {
+                const normalizedRole = normalizeUserRole(result.user.role);
+                dispatch({
+                  type: 'SET_USER',
+                  payload: { ...result.user, role: normalizedRole } as User
+                });
+
+                // Load organization if needed
+                if (result.organizationId && result.organizationId !== 'system') {
+                  const orgData = await FirebaseService.getDocument<Organization>(
+                    COLLECTIONS.ORGANIZATIONS,
+                    result.organizationId
+                  );
+                  if (orgData) {
+                    dispatch({ type: 'SET_ORGANIZATION', payload: orgData });
                   }
                 }
-              }, 2000); // Wait 2 seconds for creation to complete
-              return;
-            }
-
-            Logger.debug('👤 User not found in flat structure, searching sharded organizations...')
-
-            // Get all organizations to search for the user (parallel lookup for better performance)
-            const organizations = await FirebaseService.getCollection<Organization>(COLLECTIONS.ORGANIZATIONS);
-
-            // Try to find user in all organizations in parallel instead of sequentially
-            const userSearchPromises = organizations.map(async (org) => {
-              try {
-                const shardedUser = await DatabaseShardingService.getDocument(org.id, 'users', firebaseUser.uid);
-                return shardedUser ? { user: shardedUser, orgId: org.id } : null;
-              } catch (error) {
-                return null;
+              } else {
+                Logger.error('❌ User creation completed but user not found in index');
+                dispatch({ type: 'SET_ERROR', payload: 'User profile not found after creation' });
               }
-            });
 
-            // Wait for all searches to complete and take the first successful result
-            const searchResults = await Promise.all(userSearchPromises);
-            const foundResult = searchResults.find(result => result !== null);
-
-            if (foundResult) {
-              userData = foundResult.user as User;
-              Logger.success(`✅ Found user in sharded organization: ${foundResult.orgId}`);
-            }
-          } else {
-            Logger.success(`✅ Found user in flat structure (super user/reseller)`);
-          }
-
-          if (!userData) {
-            // User exists in Firebase Auth but not in Firestore
-            Logger.error('❌ User profile not found in Firestore for:', firebaseUser.email)
-            dispatch({
-              type: 'SET_ERROR',
-              payload: 'User profile not found. Please contact administrator.'
-            });
+              dispatch({ type: 'SET_LOADING', payload: false });
+            }, 2000);
             return;
           }
 
-          // 🔧 BACKWARDS COMPATIBLE: Normalize role format
-          const normalizedRole = normalizeUserRole(userData.role);
-          Logger.success(5534)
-          
-          // Create user object with normalized role
-          const userWithNormalizedRole = {
-            ...userData,
-            role: normalizedRole
-          };
-          
-          dispatch({ type: 'SET_USER', payload: userWithNormalizedRole });
-          
-          // Load organization if user belongs to one
-          if (userData.organizationId) {
-            Logger.debug('🏢 Loading organization:', userData.organizationId)
-            
-            try {
-              const organization = await FirebaseService.getDocument<Organization>(
+          // 🎯 SCALABLE LOOKUP: Single index query instead of searching ALL organizations
+          const result = await UserOrgIndexService.getUserWithOrganization(firebaseUser.uid);
+
+          if (result) {
+            // ✅ User found via index - instant O(1) lookup regardless of organization count
+            const normalizedRole = normalizeUserRole(result.user.role);
+            dispatch({
+              type: 'SET_USER',
+              payload: { ...result.user, role: normalizedRole } as User
+            });
+
+            // Load organization if needed (not for system users)
+            if (result.organizationId && result.organizationId !== 'system') {
+              const orgData = await FirebaseService.getDocument<Organization>(
                 COLLECTIONS.ORGANIZATIONS,
-                userData.organizationId
+                result.organizationId
               );
-              
-              if (organization) {
-                Logger.success(6366)
-                dispatch({ type: 'SET_ORGANIZATION', payload: organization });
-              } else {
-                Logger.warn('⚠️ Organization not found:', userData.organizationId)
-                dispatch({ 
-                  type: 'SET_ERROR', 
-                  payload: 'Organization not found. Please contact administrator.' 
-                });
+              if (orgData) {
+                dispatch({ type: 'SET_ORGANIZATION', payload: orgData });
               }
-            } catch (orgError) {
-              Logger.error('❌ Failed to load organization:', orgError)
-              dispatch({ 
-                type: 'SET_ERROR', 
-                payload: 'Failed to load organization data.' 
-              });
             }
+
+            Logger.success(`✅ User authenticated via index: ${result.user.email} → ${result.organizationId}`);
           } else {
-            // Super user or user without organization
-            Logger.debug('ℹ️ User has no organization (likely super-user)');
-            dispatch({ type: 'SET_ORGANIZATION', payload: null });
+            // ❌ User not found in index - fallback to legacy search for backward compatibility
+            Logger.debug('👤 User not found in index, trying legacy lookup...')
+
+            // Try flat structure first (super users/resellers)
+            let userData = await FirebaseService.getDocument<User>(
+              COLLECTIONS.USERS,
+              firebaseUser.uid
+            );
+
+            if (!userData) {
+              Logger.debug('👤 User not found in flat structure, searching sharded organizations...')
+
+              // Get all organizations to search for the user (parallel lookup for better performance)
+              const organizations = await FirebaseService.getCollection<Organization>(COLLECTIONS.ORGANIZATIONS);
+
+              // Try to find user in all organizations in parallel instead of sequentially
+              const userSearchPromises = organizations.map(async (org) => {
+                try {
+                  const shardedUser = await DatabaseShardingService.getDocument(org.id, 'users', firebaseUser.uid);
+                  return shardedUser ? { user: shardedUser, orgId: org.id } : null;
+                } catch (error) {
+                  return null;
+                }
+              });
+
+              // Wait for all searches to complete and take the first successful result
+              const searchResults = await Promise.all(userSearchPromises);
+              const foundResult = searchResults.find(result => result !== null);
+
+              if (foundResult) {
+                userData = foundResult.user as User;
+                Logger.success(`✅ Found user in sharded organization: ${foundResult.orgId}`);
+
+                // Create index entry for future O(1) lookups
+                try {
+                  await UserOrgIndexService.setUserOrganization(
+                    firebaseUser.uid,
+                    foundResult.orgId,
+                    userData.role,
+                    userData.email,
+                    'sharded'
+                  );
+                  Logger.success(`✅ Created index entry for user: ${firebaseUser.uid}`);
+                } catch (indexError) {
+                  Logger.error('❌ Failed to create index entry:', indexError);
+                }
+
+                // Load organization
+                const orgData = await FirebaseService.getDocument<Organization>(
+                  COLLECTIONS.ORGANIZATIONS,
+                  foundResult.orgId
+                );
+                if (orgData) {
+                  dispatch({ type: 'SET_ORGANIZATION', payload: orgData });
+                }
+              }
+            } else {
+              Logger.success(`✅ Found user in flat structure (super user/reseller)`);
+
+              // Create index entry for flat users too
+              try {
+                await UserOrgIndexService.setUserOrganization(
+                  firebaseUser.uid,
+                  userData.organizationId || 'system',
+                  userData.role,
+                  userData.email,
+                  'flat'
+                );
+                Logger.success(`✅ Created index entry for flat user: ${firebaseUser.uid}`);
+              } catch (indexError) {
+                Logger.error('❌ Failed to create index entry for flat user:', indexError);
+              }
+            }
+
+            if (userData) {
+              const normalizedRole = normalizeUserRole(userData.role);
+              dispatch({
+                type: 'SET_USER',
+                payload: { ...userData, role: normalizedRole } as User
+              });
+            } else {
+              Logger.error('❌ User not found in any organization');
+              dispatch({ type: 'SET_ERROR', payload: 'User profile not found' });
+            }
           }
           
         } else {
