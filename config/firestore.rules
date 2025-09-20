@@ -585,7 +585,17 @@ service cloud.firestore {
         isAuthenticated()
       );
     }
-    
+
+    // Sharded delivery notifications collection
+    match /organizations/{organizationId}/deliveryNotifications/{notificationId} {
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager()) ||
+        // Allow HR managers to read delivery notifications
+        (belongsToOrganization(organizationId) && isHRManager())
+      );
+    }
+
     // Sharded escalation rules collection
     match /organizations/{organizationId}/escalationRules/{ruleId} {
       allow read, write: if isAuthenticated() && (

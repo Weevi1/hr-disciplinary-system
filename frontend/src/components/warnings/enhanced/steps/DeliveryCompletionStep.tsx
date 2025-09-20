@@ -112,9 +112,6 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
   
   // PDF Preview Modal State
   const [showPDFPreview, setShowPDFPreview] = useState(false);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
-  const [filename, setFilename] = useState<string>('');
   
   // Warning creation state
   const [isCreatingWarning, setIsCreatingWarning] = useState(false);
@@ -157,70 +154,8 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
   ];
 
   // ============================================
-  // PDF GENERATION
+  // PDF GENERATION - Handled by PDFPreviewModal
   // ============================================
-
-  const generatePDF = useCallback(async () => {
-    if (!selectedEmployee || !organization || !user) return null;
-
-    try {
-      setIsGeneratingPDF(true);
-
-      // Generate filename
-      const today = new Date().toISOString().split('T')[0];
-      const employeeName = `${selectedEmployee.firstName}_${selectedEmployee.lastName}`.replace(/\s+/g, '_');
-      const fileName = `Warning_${employeeName}_${today}.pdf`;
-      setFilename(fileName);
-
-      // Prepare PDF data
-      const pdfData = {
-        warningId: `WRN-${Date.now()}`,
-        issuedDate: new Date(formData.issueDate),
-        warningLevel: lraRecommendation?.recommendedLevel || 'Counselling Session',
-        category: lraRecommendation?.category || formData.categoryId,
-        description: formData.incidentDescription || formData.description,
-        incidentDate: new Date(formData.incidentDate),
-        incidentTime: formData.incidentTime,
-        incidentLocation: formData.incidentLocation,
-        
-        employee: {
-          firstName: selectedEmployee.firstName,
-          lastName: selectedEmployee.lastName,
-          employeeNumber: selectedEmployee.employeeNumber || '',
-          department: selectedEmployee.department || '',
-          position: selectedEmployee.position || '',
-          email: selectedEmployee.email || ''
-        },
-        
-        organization: organization,
-        
-        signatures: signatures,
-        
-        deliveryChoice: {
-          method: selectedDeliveryMethod,
-          timestamp: new Date(),
-          chosenBy: currentManagerName,
-          contactDetails: {}
-        },
-        
-        disciplineRecommendation: lraRecommendation,
-        
-        additionalNotes: formData.additionalNotes,
-        validityPeriod: formData.validityPeriod
-      };
-
-      const blob = await PDFGenerationService.generateWarningPDF(pdfData);
-      setPdfBlob(blob);
-      
-      return { blob, filename: fileName };
-      
-    } catch (error) {
-      Logger.error('❌ PDF generation failed:', error)
-      throw error;
-    } finally {
-      setIsGeneratingPDF(false);
-    }
-  }, [selectedEmployee, organization, user, formData, lraRecommendation, signatures, selectedDeliveryMethod, currentManagerName]);
 
   // ============================================
   // PDF PREVIEW HANDLERS
@@ -229,17 +164,14 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
   const handlePreviewPDF = useCallback(async () => {
     try {
       Logger.debug('🔄 Opening PDF preview modal...')
-      
-      if (!pdfBlob) {
-        await generatePDF();
-      }
-      
+
+      // Let PDFPreviewModal handle PDF generation - no duplicate generation
       setShowPDFPreview(true);
     } catch (error) {
       Logger.error('❌ Error opening PDF preview:', error)
       setAudioUploadError('Failed to generate PDF preview');
     }
-  }, [pdfBlob, generatePDF]);
+  }, []);
 
   // ============================================
   // 🔥 ENHANCED WARNING CREATION WITH AUDIO URL FIX
@@ -577,20 +509,10 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={handlePreviewPDF}
-                disabled={isGeneratingPDF}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
               >
-                {isGeneratingPDF ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Generating Preview...
-                  </>
-                ) : (
-                  <>
-                    <Eye className="w-4 h-4" />
-                    Preview Warning Document
-                  </>
-                )}
+                <Eye className="w-4 h-4" />
+                Preview Warning Document
               </button>
             </div>
           </div>

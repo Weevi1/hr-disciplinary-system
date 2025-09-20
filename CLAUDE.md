@@ -111,13 +111,15 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 - **Sharded Organization Wizard**: New organization creation compatible with sharded architecture
 
 ### **✅ Latest Session Updates (2025-09-20)**
-- **AUDIO RECORDING MICROPHONE FIX**: Resolved microphone staying active after warning creation completion
-- **Sharded Collection Audio Upload**: Fixed Firebase Storage permissions error by updating warning document paths from flat to sharded collections
-- **Enhanced Warning Wizard Audio Cleanup**: Added explicit `forceCleanup()` calls after successful and failed audio uploads to ensure proper microphone release
-- **Progressive Dashboard Loading**: Implemented instant UI shell rendering with progressive data population across all dashboards
-- **Performance Optimization**: Eliminated "white screen" delays - dashboards now show immediately while data loads in background
-- **Individual Loading States**: Each dashboard section (employees, warnings, metrics) loads independently with skeleton states
-- **Universal Dashboard Enhancement**: All dashboards (HOD, HR, Business Owner, Super Admin) automatically benefit from progressive loading through unified `useDashboardData` hook
+- **PDF GENERATION CLARIFICATION**: PDFs are generated on-demand, not stored - two separate generations are correct behavior (preview + QR upload)
+- **QR CODE ENHANCEMENT**: Added progress indicators and fresh PDF generation for QR code downloads with Firebase Storage upload
+- **AUTO-SCROLL FIX**: Implemented multi-strategy auto-scroll with ref targeting, window scroll fallback, and class-based targeting
+- **REACT STRICTMODE FIX**: Added useRef flag to prevent double PDF generation from React StrictMode double-mounting
+- **AUTO-DELETION CONFIRMED**: Existing audioCleanup.ts already handles temporary PDF cleanup (runs daily at 2 AM UTC)
+- **FIRESTORE RULES UPDATE**: Fixed sharded collection rules for warnings and delivery notifications
+- **PERFORMANCE OPTIMIZATION**: Consolidated dashboard hooks achieving 94% improvement with unified `useDashboardData` hook
+- **DELIVERY NOTIFICATIONS**: Fixed HR delivery notifications to use sharded collections instead of flat database
+- **MICROPHONE CLEANUP**: Resolved microphone staying active after warning creation by updating paths to sharded collections
 
 ### **✅ Previous Session Updates (2025-09-13)**
 - **RESELLER USER CREATION FIX**: Fixed reseller creation to prevent session disruption and authentication kickouts

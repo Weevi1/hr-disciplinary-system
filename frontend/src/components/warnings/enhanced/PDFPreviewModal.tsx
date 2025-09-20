@@ -5,7 +5,7 @@ import Logger from '../../../utils/logger';
 // 📱 Enhanced QR code download functionality with modern UX
 // 🏢 Enterprise-ready PDF generation and management
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   X, 
   Download, 
@@ -103,6 +103,12 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
 
   // QR Code Modal State (new)
   const [showQRModal, setShowQRModal] = useState(false);
+  const [qrPdfBlob, setQrPdfBlob] = useState<Blob | null>(null);
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
+  const [qrGenerationStep, setQrGenerationStep] = useState<string>('');
+
+  // Modal scroll ref for improved auto-scroll
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // ============================================
   // RESILIENT DATA EXTRACTION - HANDLES INCOMPLETE STATES
@@ -357,32 +363,143 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
     URL.revokeObjectURL(url);
   }, [pdfBlob, filename]);
 
-  // NEW: QR Code download handler
-  const handleQRDownload = useCallback(() => {
+  // NEW: Enhanced QR Code download handler with fresh PDF generation
+  const handleQRDownload = useCallback(async () => {
     Logger.debug('📱 [PDFPreviewModal] QR download button clicked')
-    console.log('📱 [PDFPreviewModal] Current state:', {
-      pdfBlob: pdfBlob ? `${(pdfBlob.size / 1024).toFixed(1)} KB` : 'null',
-      filename: filename,
-      warningId: extractedData?.id,
-      organizationId: extractedData?.organization?.id
-    });
-    if (!pdfBlob) {
-      Logger.error('❌ [PDFPreviewModal] No PDF blob available for QR generation')
+
+    if (!extractedData || !organization) {
+      Logger.error('❌ [PDFPreviewModal] Missing data for QR generation')
+      setError('Missing required data for QR code generation');
       return;
     }
-    Logger.success(12914)
-    setShowQRModal(true);
-  }, [pdfBlob, filename, extractedData?.id, extractedData?.organization?.id]);
+
+    setIsGeneratingQR(true);
+    setQrGenerationStep('Generating PDF for QR code...');
+
+    try {
+      // Step 1: Generate a fresh PDF for the QR code
+      Logger.debug('🔄 Generating fresh PDF for QR code upload...')
+      setQrGenerationStep('Creating PDF document...');
+
+      // Prepare data for PDF service (same as regular generation)
+      const pdfData = {
+        warningId: extractedData.warningId,
+        issuedDate: extractedData.issueDate,
+        employee: {
+          firstName: extractedData.employee.firstName,
+          lastName: extractedData.employee.lastName,
+          employeeNumber: extractedData.employee.employeeId,
+          department: extractedData.employee.department,
+          position: extractedData.employee.position,
+          email: extractedData.employee.email
+        },
+        warningLevel: extractedData.recommendation?.suggestedLevel || 'verbal',
+        category: extractedData.category.name,
+        description: extractedData.incident.description,
+        incidentDate: new Date(extractedData.incident.date),
+        incidentTime: extractedData.incident.time,
+        incidentLocation: extractedData.incident.location,
+        organization: organization,
+        signatures: extractedData.signatures,
+        additionalNotes: extractedData.additionalNotes,
+        validityPeriod: extractedData.validityPeriod,
+        legalCompliance: {
+          isCompliant: true,
+          framework: 'LRA Section 188',
+          requirements: extractedData.recommendation?.legalRequirements || []
+        },
+        disciplineRecommendation: extractedData.recommendation ? {
+          suggestedLevel: extractedData.recommendation.suggestedLevel,
+          reason: extractedData.recommendation.reason || 'Progressive discipline escalation',
+          warningCount: extractedData.recommendation.warningCount || 0,
+          activeWarnings: extractedData.recommendation.previousWarnings || [],
+          legalRequirements: extractedData.recommendation.legalRequirements || []
+        } : undefined,
+        deliveryChoice: deliveryChoice ? {
+          method: deliveryChoice.method,
+          timestamp: new Date(),
+          chosenBy: 'Manager',
+          contactDetails: deliveryChoice.contactDetails
+        } : undefined
+      };
+
+      setQrGenerationStep('Generating PDF document...');
+      const qrBlob = await PDFGenerationService.generateWarningPDF(pdfData);
+
+      Logger.debug('✅ QR PDF generated:', {
+        size: `${(qrBlob.size / 1024).toFixed(1)} KB`,
+        filename: generatedFilename
+      });
+
+      setQrPdfBlob(qrBlob);
+      setQrGenerationStep('Opening QR code modal...');
+
+      // Step 2: Open QR modal with the fresh PDF
+      setShowQRModal(true);
+
+    } catch (error) {
+      Logger.error('❌ QR PDF generation failed:', error)
+      setError(`Failed to generate QR code: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsGeneratingQR(false);
+      setQrGenerationStep('');
+    }
+  }, [extractedData, organization, generatedFilename, deliveryChoice]);
 
   // ============================================
-  // AUTO-GENERATE ON OPEN (unchanged)
+  // AUTO-GENERATE ON OPEN & AUTO-SCROLL TO TOP
   // ============================================
+
+  // 🔧 FIXED: Use useRef to prevent React StrictMode double-execution
+  const hasPDFGenerated = useRef(false);
 
   useEffect(() => {
-    if (isOpen && extractedData && !pdfBlob && !isGenerating) {
+    if (isOpen && extractedData && !pdfBlob && !isGenerating && !hasPDFGenerated.current) {
+      hasPDFGenerated.current = true;
       generatePDF();
     }
+
+    // Reset flag when modal closes
+    if (!isOpen) {
+      hasPDFGenerated.current = false;
+    }
   }, [isOpen, extractedData, pdfBlob, isGenerating, generatePDF]);
+
+  // 🎯 ENHANCED AUTO-SCROLL: More reliable scrolling to modal top
+  useEffect(() => {
+    if (isOpen) {
+      // Multiple scroll strategies for reliability
+      const scrollTimer = setTimeout(() => {
+        // Strategy 1: Scroll modal ref into view (most reliable)
+        if (modalRef.current) {
+          modalRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          Logger.debug('🔄 PDFPreviewModal: Auto-scrolled using modalRef');
+        }
+
+        // Strategy 2: Scroll window to top as fallback
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // Strategy 3: Find modal by class and scroll it into view
+        const modalElement = document.querySelector('.pdf-preview-modal');
+        if (modalElement) {
+          modalElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        Logger.debug('🔄 PDFPreviewModal: Auto-scroll completed');
+      }, 150); // Slightly longer delay for better reliability
+
+      // Prevent background scrolling while modal is open
+      document.body.style.overflow = 'hidden';
+
+      return () => {
+        clearTimeout(scrollTimer);
+        document.body.style.overflow = 'unset';
+      };
+    } else {
+      // Restore background scrolling when modal closes
+      document.body.style.overflow = 'unset';
+    }
+  }, [isOpen]);
 
   // ============================================
   // CLEANUP (unchanged)
@@ -405,7 +522,9 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full h-[90vh] overflow-hidden flex flex-col border border-gray-200">
+        <div
+          ref={modalRef}
+          className="pdf-preview-modal bg-white rounded-lg shadow-xl max-w-4xl w-full h-[90vh] overflow-hidden flex flex-col border border-gray-200">
           
           {/* Clean Header - V2 Design */}
           <div className="bg-white border-b border-gray-200 p-6 flex-shrink-0">
@@ -543,6 +662,22 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
                 </div>
               )}
 
+              {/* QR PDF Generation Progress */}
+              {isGeneratingQR && (
+                <div className="bg-purple-50 border border-purple-200 p-4 rounded-lg">
+                  <div className="flex items-center justify-center space-x-3">
+                    <Loader2 className="w-6 h-6 text-purple-600 animate-spin" />
+                    <div>
+                      <p className="text-purple-800 font-medium">Preparing QR Code Download</p>
+                      {qrGenerationStep && (
+                        <p className="text-purple-600 text-sm">{qrGenerationStep}</p>
+                      )}
+                      <p className="text-purple-600 text-xs mt-1">This creates a secure link for mobile devices</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Success State with Preview and Actions - V2 Design */}
               {pdfBlob && pdfUrl && !isGenerating && (
                 <div className="space-y-6">
@@ -573,10 +708,20 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
                         
                         <button
                           onClick={handleQRDownload}
-                          className="flex items-center gap-2 px-3 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                          disabled={isGeneratingQR}
+                          className="flex items-center gap-2 px-3 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <QrCode className="w-4 h-4" />
-                          <span>QR Code</span>
+                          {isGeneratingQR ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span>Generating...</span>
+                            </>
+                          ) : (
+                            <>
+                              <QrCode className="w-4 h-4" />
+                              <span>QR Code</span>
+                            </>
+                          )}
                         </button>
                         
                         <button
@@ -704,10 +849,20 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
                     {/* QR Code Download Button */}
                     <button
                       onClick={handleQRDownload}
-                      className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                      disabled={isGeneratingQR}
+                      className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <QrCode className="w-4 h-4" />
-                      <span>QR Code</span>
+                      {isGeneratingQR ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Generating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <QrCode className="w-4 h-4" />
+                          <span>QR Code</span>
+                        </>
+                      )}
                     </button>
 
                   </>
@@ -720,17 +875,20 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
       </div>
 
       {/* QR Code Modal Integration - Using the Feature-Rich Component */}
-      {pdfBlob && (
+      {qrPdfBlob && (
         <QRCodeDownloadModal
           isOpen={showQRModal}
-          onClose={() => setShowQRModal(false)}
-          pdfBlob={pdfBlob}
+          onClose={() => {
+            setShowQRModal(false);
+            setQrPdfBlob(null); // Clean up the QR PDF blob
+          }}
+          pdfBlob={qrPdfBlob} // Use the fresh PDF generated for QR
           filename={filename}
           employeeId={extractedData?.employee?.id}
           warningId={extractedData?.warningId}
           organizationId={extractedData?.organizationId || organization?.id}
           employeeName={
-            extractedData && 
+            extractedData &&
             `${extractedData.employee.firstName} ${extractedData.employee.lastName}`.trim()
           }
           onLinkGenerated={(linkData) => {
