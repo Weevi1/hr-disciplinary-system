@@ -6,9 +6,9 @@ import React, { useState, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
-  Users, UserPlus, Settings, Building2, Shield, 
+  Users, UserPlus, Settings, Building2, Shield,
   Plus, Eye, Edit, Trash2, AlertCircle, CheckCircle,
-  Crown, TrendingUp, Calendar, Mail, Phone
+  Crown, TrendingUp, Calendar, Mail, Phone, Archive, RotateCcw
 } from 'lucide-react';
 
 import { useAuth } from '../../auth/AuthContext';
@@ -311,6 +311,7 @@ export const OrganizationManagementV2 = memo(() => {
 
   // State
   const [users, setUsers] = useState<OrganizationUser[]>([]);
+  const [businessOwner, setBusinessOwner] = useState<OrganizationUser | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [stats, setStats] = useState<OrganizationStats>({
     totalUsers: 0,
@@ -344,22 +345,26 @@ export const OrganizationManagementV2 = memo(() => {
         []
       );
 
-      const organizationUsers = usersResult.documents
-        .filter((user: any) => {
-          // Handle both old format (string) and new format (object) roles
-          return getRoleId(user.role) !== 'business-owner'; // Exclude business owner
-        })
-        .map((user: any) => ({
-          id: user.id,
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
-          email: user.email,
-          role: user.role,
-          departmentIds: user.departmentIds || [],
-          isActive: user.isActive ?? true,
-          createdAt: user.createdAt || new Date().toISOString(),
-          lastLogin: user.lastLogin
-        }));
+      // Separate business owners from other users
+      const allUsers = usersResult.documents.map((user: any) => ({
+        id: user.id,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        email: user.email,
+        role: user.role,
+        departmentIds: user.departmentIds || [],
+        isActive: user.isActive ?? true,
+        createdAt: user.createdAt || new Date().toISOString(),
+        lastLogin: user.lastLogin
+      }));
+
+      const organizationUsers = allUsers.filter((user: any) => {
+        return getRoleId(user.role) !== 'business-owner';
+      });
+
+      const businessOwnerUser = allUsers.find((user: any) => {
+        return getRoleId(user.role) === 'business-owner';
+      }) || null;
 
       // Load employees for stats
       const employeesResult = await ShardedDataService.loadEmployees(organization.id);
@@ -409,6 +414,7 @@ export const OrganizationManagementV2 = memo(() => {
       };
 
       setUsers(organizationUsers);
+      setBusinessOwner(businessOwnerUser);
       setDepartments(mockDepartments);
       setStats(organizationStats);
 
@@ -428,6 +434,149 @@ export const OrganizationManagementV2 = memo(() => {
 
   const handleUserCreated = () => {
     loadOrganizationData();
+  };
+
+  // Archive user and reassign their employees to HR manager
+  const handleArchiveUser = async (userId: string) => {
+    if (!organization) return;
+
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    // Confirmation with warning about employee reassignment
+    const employeesManaged = await getEmployeesManagedByUser(userId);
+    const confirmMessage = employeesManaged.length > 0
+      ? `Archive ${user.firstName} ${user.lastName}?\n\nThis will:\n• Archive the user account\n• Reassign ${employeesManaged.length} employees to HR managers\n• Remove access to the system\n\nThis action can be undone by restoring the user.`
+      : `Archive ${user.firstName} ${user.lastName}?\n\nThis will remove their access to the system.\nThis action can be undone by restoring the user.`;
+
+    const confirmed = confirm(confirmMessage);
+    if (!confirmed) return;
+
+    try {
+      Logger.debug(`🗃️ Archiving user ${userId} and reassigning employees...`);
+
+      // Step 1: Reassign employees if user is a manager
+      if (employeesManaged.length > 0) {
+        await reassignEmployeesToHRManager(userId, employeesManaged);
+      }
+
+      // Step 2: Archive the user
+      await ShardedDataService.updateDocument(
+        organization.id,
+        'users',
+        userId,
+        {
+          isActive: false,
+          archivedAt: new Date().toISOString(),
+          archivedBy: user?.uid || 'system'
+        }
+      );
+
+      Logger.success(`✅ User archived successfully: ${user.firstName} ${user.lastName}`);
+
+      // Refresh data
+      loadOrganizationData();
+
+    } catch (error) {
+      Logger.error('❌ Failed to archive user:', error);
+      alert('Failed to archive user. Please try again.');
+    }
+  };
+
+  // Restore archived user
+  const handleRestoreUser = async (userId: string) => {
+    if (!organization) return;
+
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    const confirmed = confirm(`Restore ${user.firstName} ${user.lastName}?\n\nThis will reactivate their account and restore system access.`);
+    if (!confirmed) return;
+
+    try {
+      Logger.debug(`🔄 Restoring user ${userId}...`);
+
+      await ShardedDataService.updateDocument(
+        organization.id,
+        'users',
+        userId,
+        {
+          isActive: true,
+          restoredAt: new Date().toISOString(),
+          restoredBy: user?.uid || 'system',
+          archivedAt: null,
+          archivedBy: null
+        }
+      );
+
+      Logger.success(`✅ User restored successfully: ${user.firstName} ${user.lastName}`);
+
+      // Refresh data
+      loadOrganizationData();
+
+    } catch (error) {
+      Logger.error('❌ Failed to restore user:', error);
+      alert('Failed to restore user. Please try again.');
+    }
+  };
+
+  // Helper function to get employees managed by a user
+  const getEmployeesManagedByUser = async (managerId: string) => {
+    if (!organization) return [];
+
+    try {
+      const employeesResult = await ShardedDataService.loadEmployees(organization.id);
+      return employeesResult.documents.filter((emp: any) =>
+        emp.employment?.managerId === managerId && emp.isActive !== false
+      );
+    } catch (error) {
+      Logger.error('Error loading managed employees:', error);
+      return [];
+    }
+  };
+
+  // Helper function to reassign employees to HR manager
+  const reassignEmployeesToHRManager = async (oldManagerId: string, employees: any[]) => {
+    if (!organization || employees.length === 0) return;
+
+    try {
+      // Find active HR manager to reassign to
+      const hrManager = users.find(u =>
+        getRoleId(u.role) === 'hr-manager' && u.isActive && u.id !== oldManagerId
+      );
+
+      if (!hrManager) {
+        Logger.warn('⚠️ No active HR manager found for employee reassignment');
+        return;
+      }
+
+      Logger.debug(`📋 Reassigning ${employees.length} employees to HR manager: ${hrManager.firstName} ${hrManager.lastName}`);
+
+      // Update each employee's managerId
+      const updatePromises = employees.map(employee =>
+        ShardedDataService.updateDocument(
+          organization.id,
+          'employees',
+          employee.id,
+          {
+            'employment.managerId': hrManager.id,
+            'employment.managerName': `${hrManager.firstName} ${hrManager.lastName}`,
+            'employment.managerRole': 'hr-manager',
+            reassignedAt: new Date().toISOString(),
+            reassignedFrom: oldManagerId,
+            reassignedReason: 'Manager archived'
+          }
+        )
+      );
+
+      await Promise.all(updatePromises);
+
+      Logger.success(`✅ Reassigned ${employees.length} employees to ${hrManager.firstName} ${hrManager.lastName}`);
+
+    } catch (error) {
+      Logger.error('❌ Failed to reassign employees:', error);
+      throw error;
+    }
   };
 
   if (loading) {
@@ -543,6 +692,81 @@ export const OrganizationManagementV2 = memo(() => {
           )}
         </div>
 
+        {/* Business Owner Section */}
+        {businessOwner && (
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-3 mb-4">
+              <Crown className="w-6 h-6 text-yellow-600" />
+              Business Owner
+            </h3>
+
+            <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl p-4 border border-yellow-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <Crown className="w-6 h-6 text-yellow-600" />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-gray-900">
+                      {businessOwner.firstName} {businessOwner.lastName}
+                    </div>
+                    <div className="text-sm text-gray-600 flex items-center gap-1">
+                      <Mail className="w-3 h-3" />
+                      {businessOwner.email}
+                    </div>
+                    {businessOwner.lastLogin && (
+                      <div className="text-xs text-gray-500 flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        Last login: {new Date(businessOwner.lastLogin).toLocaleDateString()}
+                      </div>
+                    )}
+                    <div className="text-xs text-yellow-700 font-medium mt-1">
+                      👑 Organization Owner • Full Access
+                    </div>
+                  </div>
+                </div>
+
+                {/* Super Users and Resellers can manage business owners */}
+                {(user?.role === 'super-user' || user?.role === 'reseller') && (
+                  <div className="flex items-center gap-2">
+                    {businessOwner.isActive ? (
+                      <button
+                        onClick={() => handleArchiveUser(businessOwner.id)}
+                        className="p-2 hover:bg-red-100 rounded-lg transition-colors group"
+                        title="Archive business owner"
+                      >
+                        <Archive className="w-4 h-4 text-gray-500 group-hover:text-red-600" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleRestoreUser(businessOwner.id)}
+                        className="p-2 hover:bg-green-100 rounded-lg transition-colors group"
+                        title="Restore business owner"
+                      >
+                        <RotateCcw className="w-4 h-4 text-gray-500 group-hover:text-green-600" />
+                      </button>
+                    )}
+                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      businessOwner.isActive
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {businessOwner.isActive ? 'Active' : 'Archived'}
+                    </div>
+                  </div>
+                )}
+
+                {/* Business owners cannot manage themselves */}
+                {user?.role === 'business-owner' && (
+                  <div className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    Current User
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Current Users */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* HR Managers */}
@@ -578,12 +802,31 @@ export const OrganizationManagementV2 = memo(() => {
                         )}
                       </div>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      user.isActive 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.isActive ? 'Active' : 'Inactive'}
+                    <div className="flex items-center gap-2">
+                      {user.isActive ? (
+                        <button
+                          onClick={() => handleArchiveUser(user.id)}
+                          className="p-2 hover:bg-red-100 rounded-lg transition-colors group"
+                          title="Archive user"
+                        >
+                          <Archive className="w-4 h-4 text-gray-500 group-hover:text-red-600" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleRestoreUser(user.id)}
+                          className="p-2 hover:bg-green-100 rounded-lg transition-colors group"
+                          title="Restore user"
+                        >
+                          <RotateCcw className="w-4 h-4 text-gray-500 group-hover:text-green-600" />
+                        </button>
+                      )}
+                      <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        user.isActive
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {user.isActive ? 'Active' : 'Archived'}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -632,12 +875,31 @@ export const OrganizationManagementV2 = memo(() => {
                         )}
                       </div>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      user.isActive 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.isActive ? 'Active' : 'Inactive'}
+                    <div className="flex items-center gap-2">
+                      {user.isActive ? (
+                        <button
+                          onClick={() => handleArchiveUser(user.id)}
+                          className="p-2 hover:bg-red-100 rounded-lg transition-colors group"
+                          title="Archive user"
+                        >
+                          <Archive className="w-4 h-4 text-gray-500 group-hover:text-red-600" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleRestoreUser(user.id)}
+                          className="p-2 hover:bg-green-100 rounded-lg transition-colors group"
+                          title="Restore user"
+                        >
+                          <RotateCcw className="w-4 h-4 text-gray-500 group-hover:text-green-600" />
+                        </button>
+                      )}
+                      <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        user.isActive
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {user.isActive ? 'Active' : 'Archived'}
+                      </div>
                     </div>
                   </div>
                 </div>

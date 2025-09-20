@@ -31,13 +31,15 @@ import { CounsellingFollowUp } from '../counselling/CounsellingFollowUp';
 import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
-import { useCounsellingFollowUps } from '../../hooks/counselling/useCounsellingFollowUps';
+import { useDashboardData } from '../../hooks/dashboard/useDashboardData';
 import { API } from '../../api';
 import { DataServiceV2 } from '../../services/DataServiceV2';
-import { UNIVERSAL_SA_CATEGORIES } from '../../services/UniversalCategories';
 
 // Import employee management
 import { EmployeeManagement } from '../employees/EmployeeManagement';
+
+// Import skeleton components for progressive loading
+import { SkeletonCard, SkeletonStats } from '../common/SkeletonLoader';
 
 // --- A Reusable Breakpoint Hook (for responsive rendering) ---
 const useBreakpoint = (breakpoint: number) => {
@@ -60,9 +62,31 @@ interface HODDashboardSectionProps {
 export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className = '' }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { organization, categories: contextCategories, loading: orgLoading } = useOrganization();
+  const { organization, loading: orgLoading } = useOrganization();
   const { canCreateWarnings, canManageEmployees } = useMultiRolePermissions();
-  const { dueFollowUps, counts: followUpCounts } = useCounsellingFollowUps();
+
+  // 🚀 UNIFIED: Replace scattered hooks with single dashboard data hook
+  const {
+    categories: contextCategories,
+    employees: dashboardEmployees,
+    followUps: dueFollowUps,
+    loading: dashboardLoading,
+    error: dashboardError,
+    isReady
+  } = useDashboardData({ role: 'hod' });
+
+  // Create followUpCounts from dueFollowUps for compatibility
+  const followUpCounts = {
+    total: dueFollowUps?.length || 0,
+    overdue: dueFollowUps?.filter((f: any) => new Date(f.dueDate) < new Date()).length || 0,
+    dueSoon: dueFollowUps?.filter((f: any) => {
+      const dueDate = new Date(f.dueDate);
+      const today = new Date();
+      const threeDaysFromNow = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000);
+      return dueDate >= today && dueDate <= threeDaysFromNow;
+    }).length || 0
+  };
+
   const isDesktop = useBreakpoint(768);
 
   // ============================================
@@ -75,32 +99,11 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
   const [showEmployeeManagement, setShowEmployeeManagement] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [selectedFollowUpSession, setSelectedFollowUpSession] = useState<any>(null);
-  const [employees, setEmployees] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [isLoadingWizardData, setIsLoadingWizardData] = useState(false);
+  // 🚀 OPTIMIZED: Use data from unified dashboard hook instead of local state
+  const employees = dashboardEmployees || [];
+  const categories = contextCategories || [];
 
-  // Debug showWarningWizard changes
-  useEffect(() => {
-    console.log(`🔍 showWarningWizard changed to: ${showWarningWizard}`);
-  }, [showWarningWizard]);
-
-  // Debug employees array changes
-  useEffect(() => {
-    console.log(`🔍 employees array changed:`, {
-      count: employees.length,
-      employees: employees.map(e => `${e.firstName} ${e.lastName}`),
-      timestamp: Date.now()
-    });
-  }, [employees]);
-
-  // Debug categories array changes
-  useEffect(() => {
-    console.log(`🔍 categories array changed:`, {
-      count: categories.length,
-      categories: categories.map(c => c.name),
-      timestamp: Date.now()
-    });
-  }, [categories]);
+  // 🎯 PRODUCTION: Minimal debug logging only when needed
 
   // 🔥 PERFORMANCE: Memoize computed props to prevent wizard unmount/remount
   const currentManagerName = useMemo(() => {
@@ -111,121 +114,38 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
     return organization?.name || 'Your Organization';
   }, [organization?.name]);
 
-  // ============================================
-  // 🔥 FIXED: IMPROVED WIZARD DATA LOADING
-  // ============================================
-  
-  const loadWizardData = useCallback(async () => {
-    if (!organization?.id || isLoadingWizardData) return;
-
-    setIsLoadingWizardData(true);
-    try {
-      console.log('🔄 Loading wizard data for organization:', organization.id);
-      
-      // Load employees managed by this user (not all employees)
-      const employeesData = await API.employees.getByManager(user?.id || '', organization.id);
-      console.log('📋 HOD Dashboard: Loaded managed employees:', employeesData.length);
-      
-      // Transform employees to the expected format
-      const transformedEmployees = employeesData.map(emp => ({
-        id: emp.id,
-        firstName: emp.profile?.firstName || emp.firstName || 'Unknown',
-        lastName: emp.profile?.lastName || emp.lastName || 'Employee',
-        position: emp.profile?.position || emp.employment?.position || 'Unknown Position',
-        department: emp.profile?.department || emp.employment?.department || 'Unknown',
-        email: emp.profile?.email || emp.contact?.email || emp.email || '',
-        phone: emp.profile?.phone || emp.contact?.phone || emp.phone || '',
-        deliveryPreference: (emp.deliveryPreference || 'email') as 'email' | 'whatsapp' | 'print',
-        recentWarnings: emp.recentWarnings || { count: 0 },
-        riskIndicators: emp.riskIndicators || { highRisk: false, reasons: [] }
-      }));
-      
-      console.log('📋 HOD Dashboard: Transformed employees:', transformedEmployees.map(e => `${e.firstName} ${e.lastName}`));
-      setEmployees(transformedEmployees);
-      
-      // 🔥 OPTIMIZED: Use categories from OrganizationContext to eliminate extra queries
-      let loadedCategories: any[] = [];
-
-      try {
-        // First, try to get categories from organization context (now loaded by OrganizationProvider)
-        if (contextCategories && Array.isArray(contextCategories) && contextCategories.length > 0) {
-          console.log('✅ Using categories from organization context:', contextCategories.length);
-          loadedCategories = contextCategories;
-        } else if (!orgLoading) {
-          // Only try fallback if organization is not still loading
-          // Fallback 1: Check if organization object has categories (legacy)
-          if (organization.categories && Array.isArray(organization.categories) && organization.categories.length > 0) {
-            console.log('✅ Using categories from organization object:', organization.categories.length);
-            loadedCategories = organization.categories;
-          } else {
-            // Fallback 2: Load categories directly from DataService (should be rare now)
-            console.log('⚠️ Organization categories not available in context, loading directly...');
-            const categoriesFromService = await DataServiceV2.getWarningCategories(organization.id);
-
-            if (categoriesFromService && categoriesFromService.length > 0) {
-              console.log('✅ Loaded categories from DataService:', categoriesFromService.length);
-              loadedCategories = categoriesFromService;
-            } else {
-              // Fallback 3: Use default manufacturing categories (should be very rare)
-              console.log('⚠️ No categories from service, using manufacturing defaults');
-              loadedCategories = getDefaultManufacturingCategories();
-            }
-          }
-        } else {
-          // Fallback 3: Use default manufacturing categories
-          console.log('⚠️ No categories available, using default categories');
-          loadedCategories = getDefaultManufacturingCategories();
-        }
-        
-        // Transform categories to ensure proper structure
-        const transformedCategories = loadedCategories.map(cat => ({
-          id: cat.id,
-          name: cat.name || 'Unknown Category',
-          severity: cat.severity || 'medium',
-          description: cat.description || '',
-          lraSection: cat.lraSection || 'LRA Section 188',
-          schedule8Reference: cat.schedule8Reference || 'Schedule 8',
-          escalationPath: cat.escalationPath || ['verbal_warning', 'first_written', 'final_written', 'dismissal']
-        }));
-        
-        console.log('📋 HOD Dashboard: Final categories:', transformedCategories.map(c => c.name));
-        setCategories(transformedCategories);
-        
-      } catch (categoryError) {
-        console.error('❌ Error loading categories, using defaults:', categoryError);
-        setCategories(getDefaultManufacturingCategories());
-      }
-      
-    } catch (error) {
-      console.error('❌ Error loading wizard data:', error);
-      setEmployees([]); // Set empty array on error
-      setCategories(getDefaultManufacturingCategories()); // Ensure we always have categories
-    } finally {
-      setIsLoadingWizardData(false);
+  // 🔧 ULTRA-STABLE: Prevent ANY prop changes that could cause remount
+  const stableWizardProps = useMemo(() => {
+    if (employees.length === 0 || categories.length === 0) {
+      return null; // Don't render wizard until we have data
     }
-  }, [organization?.id, organization?.categories, user?.id]); // Remove isLoadingWizardData to prevent loop
 
-  // Load team members and categories data when component mounts and categories are ready
+    return {
+      employees,
+      categories,
+      currentManagerName,
+      organizationName,
+      key: `wizard-${organization?.id}-${employees.length}-${categories.length}` // Stable key
+    };
+  }, [employees.length, categories.length, currentManagerName, organizationName, organization?.id]);
+
+  // 🚀 OPTIMIZED: Data loading now handled by unified dashboard hook
+  // Employee and category data transformations moved to useDashboardData hook
+
+  // 🎯 PRODUCTION DEBUG: Only log when context is ready
   useEffect(() => {
-    // Only load when we have organization, user, and categories are loaded
-    if (organization?.id && user?.id && !isLoadingWizardData && !orgLoading && contextCategories !== null) {
-      loadWizardData();
+    if (!orgLoading && contextCategories && contextCategories.length > 0) {
+      console.log('✅ [HOD] Context ready:', {
+        organization: organization?.name,
+        categories: contextCategories.length,
+        employees: employees.length
+      });
     }
-  }, [organization?.id, user?.id, orgLoading, contextCategories]); // Wait for org loading to complete
+  }, [orgLoading, contextCategories, organization, employees]);
 
-  // 🔥 FIXED: Use UniversalCategories as the single source of truth for fallback
-  const getDefaultManufacturingCategories = () => {
-    // Transform UniversalCategories to the expected format
-    return UNIVERSAL_SA_CATEGORIES.map(cat => ({
-      id: cat.id,
-      name: cat.name,
-      severity: cat.severity,
-      description: cat.description,
-      lraSection: cat.lraSection,
-      schedule8Reference: cat.schedule8Reference,
-      escalationPath: cat.escalationPath
-    }));
-  };
+  // 🚀 OPTIMIZED: Data loading now handled automatically by useDashboardData hook
+
+  // 🎯 PROFESSIONAL GRADE: No fallback categories function - organization context only
 
   // ============================================
   // AUDIO CONSENT & WIZARD HANDLERS
@@ -236,12 +156,19 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
 
     console.log('🎯 Opening warning wizard with integrated audio consent...');
 
-    // FIXED: Load data FIRST, then show wizard with stable props
-    await loadWizardData();
-
-    // Only show wizard after data is loaded to ensure stable props
-    setShowWarningWizard(true);
-  }, [canCreateWarnings, loadWizardData]);
+    // 🚀 OPTIMIZED: Data is already loaded via useDashboardData hook
+    // Check if data is ready from unified hook
+    if (isReady && employees.length > 0 && categories.length > 0) {
+      setShowWarningWizard(true);
+    } else {
+      console.error('❌ Cannot open wizard: data not ready', {
+        isReady,
+        employees: employees.length,
+        categories: categories.length,
+        loading: dashboardLoading.overall
+      });
+    }
+  }, [canCreateWarnings, isReady, employees.length, categories.length, dashboardLoading]);
 
   // Audio consent handling is now integrated into the wizard
 
@@ -412,15 +339,15 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
             <button 
               key={tool.id} 
               onClick={tool.action}
-              disabled={tool.id === 'create-warning' && isLoadingWizardData}
+              disabled={tool.id === 'create-warning' && (dashboardLoading.overall || dashboardLoading.employees)}
               className={`p-3 rounded-lg cursor-pointer transition-all duration-200 flex flex-col items-center gap-2 ${getToolButtonColorClasses(tool.color)} ${
-                isLoadingWizardData && tool.id === 'create-warning' ? 'opacity-50 cursor-not-allowed' : ''
+                (dashboardLoading.overall || dashboardLoading.employees) && tool.id === 'create-warning' ? 'opacity-50 cursor-not-allowed' : ''
               } hover:shadow-md`}
             >
               <tool.icon className="w-4 h-4" />
               <span className="font-medium text-sm">{tool.title}</span>
               {tool.hasAudioRecording && <Mic className="w-3 h-3 opacity-60" />}
-              {isLoadingWizardData && tool.id === 'create-warning' && (
+              {(dashboardLoading.overall || dashboardLoading.employees) && tool.id === 'create-warning' && (
                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
               )}
             </button>
@@ -460,7 +387,11 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
               <span className="text-sm font-medium text-gray-900">Team Members</span>
             </div>
             <span className="text-lg font-bold text-emerald-600">
-              {isLoadingWizardData ? '...' : employees.length}
+              {dashboardLoading.employees ? (
+                <div className="animate-pulse h-6 w-8 bg-emerald-200 rounded"></div>
+              ) : (
+                employees.length
+              )}
             </span>
           </button>
         </div>
@@ -468,10 +399,10 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
 
       {/* Audio consent is now integrated into the wizard as first step */}
 
-      {/* Enhanced Warning Wizard */}
+      {/* Enhanced Warning Wizard - Conditional rendering with stable props */}
       {showWarningWizard && (
         <EnhancedWarningWizard
-          key="warning-wizard" // Add stable key
+          key="enhanced-warning-wizard"
           employees={employees}
           categories={categories}
           currentManagerName={currentManagerName}

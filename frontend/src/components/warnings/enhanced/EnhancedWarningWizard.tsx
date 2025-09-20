@@ -95,6 +95,9 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   isFullScreen // NEW: Destructure isFullScreen prop
 }) => {
 
+  // Component tracking for debugging
+  const componentId = useRef(Math.random().toString(36).substr(2, 9));
+
   // ============================================
   // HOOKS
   // ============================================
@@ -105,19 +108,12 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   // 🎯 Audio recording hook
   const audioRecording = useAudioRecording();
 
-  // 🎙️ Handle microphone permission granted - start automatic recording
+  // 🎙️ Handle microphone permission granted - just update state
   const handlePermissionGranted = useCallback(async () => {
     setMicrophonePermissionGranted(true);
     setShowPermissionHandler(false);
-    
-    // Automatically start recording once permission is granted
-    try {
-      await audioRecording.startRecording();
-      Logger.debug('🎙️ Automatic audio recording started after permission granted');
-    } catch (error) {
-      Logger.error('❌ Failed to start automatic recording:', error);
-    }
-  }, [audioRecording]);
+    Logger.debug('🎙️ Microphone permission granted');
+  }, []);
 
   // 🎙️ Handle microphone permission denied
   const handlePermissionDenied = useCallback(() => {
@@ -176,7 +172,6 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   // 🔧 FIXED: Using EscalationRecommendation instead of local LRARecommendation
   const [lraRecommendation, setLraRecommendation] = useState<EscalationRecommendation | null>(null);
   const [finalWarningId, setFinalWarningId] = useState<string | null>(null);
-  const [, setForceUpdate] = useState(0); // For timer re-render
   
   // 🔥 Navigation state to prevent race conditions
   const [isNavigating, setIsNavigating] = useState(false);
@@ -206,6 +201,7 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   const previousStepRef = useRef<WizardStep>(WizardStep.INCIDENT_DETAILS); // ← FIX: Safe initial value
   const previousFormDataRef = useRef<FormData>(formData);
   const loggedStepsRef = useRef<Set<WizardStep>>(new Set());
+  const mountGuardRef = useRef<boolean>(false); // ← Prevent duplicate audio recording in StrictMode
 
   // ============================================
   // 🔥 OPTIMIZED: STABLE DERIVED STATE
@@ -290,12 +286,6 @@ useEffect(() => {
   // ============================================
   
   const isRecording = audioRecording.isRecording;
-  useEffect(() => {
-    if (isRecording) {
-      const interval = setInterval(() => setForceUpdate(prev => prev + 1), 1000);
-      return () => clearInterval(interval);
-    }
-  }, [isRecording]);
 
   // ============================================
   // 🔥 WARNING HISTORY LOADING + EMPLOYEE SELECTION EFFECT
@@ -462,26 +452,35 @@ useEffect(() => {
   }, [onCancel, logging, currentStep, completedSteps, audioRecording]);
 
   // ============================================
-  // WIZARD INITIALIZATION (RUN ONCE)
+  // AUDIO RECORDING INITIALIZATION
   // ============================================
-  
+
   useEffect(() => {
-    const startRecordingOnMount = async () => {
-      if (!audioRecording.isRecording && !audioRecording.audioUrl) {
-        try {
-          await audioRecording.startRecording();
-          logging.trackSuccess('AUDIO_RECORDING_STARTED', {
-            duration: audioRecording.duration,
-            size: audioRecording.size
-          });
-        } catch (error) {
-          logging.trackError(error as Error, { context: 'AUDIO_RECORDING_START' });
-        }
+    // 🔧 STRICTMODE GUARD: Prevent duplicate recording start
+    if (mountGuardRef.current || !microphonePermissionGranted || audioRecording.isRecording || audioRecording.audioUrl) {
+      return;
+    }
+
+    const startRecording = async () => {
+      try {
+        mountGuardRef.current = true;
+        await audioRecording.startRecording();
+        logging.trackSuccess('AUDIO_RECORDING_STARTED', {
+          duration: audioRecording.duration,
+          size: audioRecording.size
+        });
+      } catch (error) {
+        logging.trackError(error as Error, { context: 'AUDIO_RECORDING_START' });
+        mountGuardRef.current = false; // Reset on error
       }
     };
 
-    startRecordingOnMount();
-  }, []); // Empty dependency array - run only once
+    startRecording();
+
+    return () => {
+      mountGuardRef.current = false;
+    };
+  }, [microphonePermissionGranted]); // ✅ FIXED: Only depend on permission state, not logging object
 
   // ============================================
   // 🔥 PENDING NAVIGATION HANDLER
@@ -707,9 +706,9 @@ useEffect(() => {
               
               // Use Firebase functions for document updates
               
-              // 🔥 Update warning document with Firebase audio URL
+              // 🔥 Update warning document with Firebase audio URL (SHARDED COLLECTION)
               Logger.debug('📝 Updating warning document with Firebase audio URL...')
-              const warningRef = doc(db, 'warnings', warningId);
+              const warningRef = doc(db, 'organizations', organization.id, 'warnings', warningId);
               
               await updateDoc(warningRef, {
                 'audioRecording.url': firebaseAudioUrl,
@@ -720,12 +719,16 @@ useEffect(() => {
               });
               
               Logger.success(26224)
-              logging.trackSuccess('AUDIO_UPLOADED_AND_UPDATED', { 
-                warningId, 
+              logging.trackSuccess('AUDIO_UPLOADED_AND_UPDATED', {
+                warningId,
                 firebaseUrl: firebaseAudioUrl,
                 duration: audioRecording.duration,
                 size: audioRecording.size
               });
+
+              // 🎤 CRITICAL: Force cleanup audio recording after successful upload
+              Logger.debug('🧹 Force cleaning up audio recording after successful upload...')
+              audioRecording.forceCleanup();
               
             } else {
               Logger.warn('⚠️ Audio upload returned null URL')
@@ -742,8 +745,8 @@ useEffect(() => {
             
             // Mark audio as failed in warning document
             try {
-              
-              const warningRef = doc(db, 'warnings', warningId);
+
+              const warningRef = doc(db, 'organizations', organization.id, 'warnings', warningId);
               await updateDoc(warningRef, {
                 'audioRecording.processingStatus': 'failed',
                 'audioRecording.error': audioError.message || 'Upload failed in Step 2',
@@ -754,6 +757,10 @@ useEffect(() => {
               Logger.error('❌ Failed to update warning with audio error:', updateError)
               logging.trackError(updateError as Error, { context: 'AUDIO_ERROR_UPDATE' });
             }
+
+            // 🎤 CRITICAL: Force cleanup audio recording after upload failure too
+            Logger.debug('🧹 Force cleaning up audio recording after upload failure...')
+            audioRecording.forceCleanup();
           }
         }
         
@@ -943,34 +950,21 @@ const warningDataForDebugger = useMemo(() => ({
      organization?.id, currentStep, isStepValid, isAnalyzing, warningHistory, finalWarningId]);
 
   // ============================================
-  // 🔥 CLEANUP ON UNMOUNT + DEBUGGING
+  // 🔥 CLEANUP ON UNMOUNT
   // ============================================
 
   useEffect(() => {
-    // Mount logging
-    Logger.debug('🚀 EnhancedWarningWizard MOUNTED', {
-      employeesCount: employees.length,
-      categoriesCount: categories.length,
-      managerName: currentManagerName,
-      orgName: organizationName,
-      timestamp: Date.now()
-    });
-
-    // Cleanup function that runs when component unmounts
+    // Cleanup function that runs ONLY when component actually unmounts
     return () => {
-      Logger.debug('🧹 EnhancedWarningWizard UNMOUNTING - cleaning up audio recording', {
-        reason: 'Component unmount',
-        timestamp: Date.now()
-      });
+      Logger.debug('🧹 EnhancedWarningWizard UNMOUNTING - cleaning up audio recording');
 
       // Force cleanup any ongoing audio recording
-      // Note: Using forceCleanup to ensure complete resource release
       audioRecording.forceCleanup();
 
       // Cleanup body classes
       document.body.classList.remove('modal-open');
     };
-  }, []); // 🔥 FIXED: Only run on mount/unmount, not on prop changes
+  }, []); // ✅ FIXED: Empty dependency array - only runs on mount/unmount
 
   // ============================================
   // 🔥 MAIN RENDER WITH FULL-SCREEN SUPPORT

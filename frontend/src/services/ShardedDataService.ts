@@ -106,6 +106,20 @@ export class ShardedDataService {
   }
 
   /**
+   * Get all employees for organization (alias for loadEmployees)
+   * Used by dashboard data hook for teams data
+   */
+  static async getAllEmployees(organizationId: string): Promise<Employee[]> {
+    try {
+      const result = await this.loadEmployees(organizationId);
+      return result.documents;
+    } catch (error) {
+      Logger.error(`❌ [SHARD] Failed to get all employees for ${organizationId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Get employee by ID
    */
   static async getEmployeeById(employeeId: string, organizationId: string): Promise<Employee | null> {

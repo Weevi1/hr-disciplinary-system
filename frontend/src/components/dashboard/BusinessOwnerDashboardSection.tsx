@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
+import { useDashboardData } from '../../hooks/dashboard/useDashboardData';
 import { OrganizationManagementV2 } from '../organization/OrganizationManagementV2';
 import { WarningsOverviewCard } from '../warnings/cards/OverviewCard';
 import { EmployeeManagement } from '../employees/EmployeeManagement';
@@ -32,15 +33,28 @@ interface BusinessOwnerDashboardSectionProps {
   isMobile?: boolean;
 }
 
-export const BusinessOwnerDashboardSection = memo<BusinessOwnerDashboardSectionProps>(({ 
-  className = '', 
-  isMobile = false 
+export const BusinessOwnerDashboardSection = memo<BusinessOwnerDashboardSectionProps>(({
+  className = '',
+  isMobile = false
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { organization } = useOrganization();
   const [showEmployeeManagement, setShowEmployeeManagement] = useState(false);
   const [showCategoryManagement, setShowCategoryManagement] = useState(false);
+
+  // 🚀 UNIFIED DASHBOARD DATA - Parallel loading for Business Owner role
+  const {
+    employees,
+    warnings,
+    reports,
+    metrics,
+    teams,
+    loading: dashboardLoading,
+    error: dashboardError,
+    refreshData,
+    isReady
+  } = useDashboardData({ role: 'business_owner' });
 
   // Handle escape key to close modals
   useEffect(() => {
@@ -134,14 +148,28 @@ export const BusinessOwnerDashboardSection = memo<BusinessOwnerDashboardSectionP
   const featuredActions = executiveActions.filter(action => action.featured);
   const regularActions = executiveActions.filter(action => !action.featured);
 
-  // 📊 MOCK EXECUTIVE METRICS (replace with real data)
+  // 📊 EXECUTIVE METRICS - Calculated from unified dashboard data
   const executiveMetrics = {
-    totalEmployees: 156,
-    monthlyGrowth: 12.5,
-    complianceScore: 94,
-    activeWarnings: 8,
-    pendingReviews: 23,
-    costPerEmployee: 4250
+    totalEmployees: employees?.length || 0,
+    monthlyGrowth: (() => {
+      const thisMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const thisMonthEmployees = employees?.filter(emp => {
+        const empDate = new Date(emp.createdAt || emp.metadata?.createdAt || 0);
+        return empDate.getMonth() === thisMonth && empDate.getFullYear() === currentYear;
+      })?.length || 0;
+      const lastMonthEmployees = employees?.filter(emp => {
+        const empDate = new Date(emp.createdAt || emp.metadata?.createdAt || 0);
+        const lastMonth = thisMonth === 0 ? 11 : thisMonth - 1;
+        const lastMonthYear = thisMonth === 0 ? currentYear - 1 : currentYear;
+        return empDate.getMonth() === lastMonth && empDate.getFullYear() === lastMonthYear;
+      })?.length || 0;
+      return lastMonthEmployees > 0 ? Math.round(((thisMonthEmployees - lastMonthEmployees) / lastMonthEmployees) * 100 * 10) / 10 : 0;
+    })(),
+    complianceScore: metrics?.complianceScore || 94, // Default to 94% if not available
+    activeWarnings: warnings?.filter(w => w.status !== 'delivered')?.length || 0,
+    pendingReviews: reports?.filter(r => r.status === 'pending')?.length || 0,
+    costPerEmployee: metrics?.costPerEmployee || 4250 // Default value if not available
   };
 
   // 🎨 COLOR MAPPING
@@ -197,9 +225,9 @@ export const BusinessOwnerDashboardSection = memo<BusinessOwnerDashboardSectionP
                   +{executiveMetrics.monthlyGrowth}%
                 </div>
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">{executiveMetrics.totalEmployees}</div>
+              <div className="text-3xl font-bold text-gray-900 mb-1">{dashboardLoading ? '...' : executiveMetrics.totalEmployees}</div>
               <div className="text-sm font-medium text-emerald-600">Total Employees</div>
-              <div className="text-xs text-gray-600 mt-2">Growth this month</div>
+              <div className="text-xs text-gray-600 mt-2">{executiveMetrics.monthlyGrowth > 0 ? 'Growth' : 'Change'} this month</div>
             </div>
           </div>
           
@@ -212,7 +240,7 @@ export const BusinessOwnerDashboardSection = memo<BusinessOwnerDashboardSectionP
                   A+
                 </div>
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-1">{executiveMetrics.complianceScore}%</div>
+              <div className="text-3xl font-bold text-gray-900 mb-1">{dashboardLoading ? '...' : executiveMetrics.complianceScore}%</div>
               <div className="text-sm font-medium text-blue-600">Compliance Score</div>
               <div className="text-xs text-gray-600 mt-2 flex items-center">
                 <CheckCircle className="w-3 h-3 mr-1" />
@@ -287,32 +315,32 @@ export const BusinessOwnerDashboardSection = memo<BusinessOwnerDashboardSectionP
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-4 text-white text-center shadow-lg hover:shadow-xl transition-shadow duration-200">
           <Users className="w-5 h-5 mx-auto mb-2 text-emerald-100" />
-          <div className="text-2xl font-bold">{executiveMetrics.totalEmployees}</div>
+          <div className="text-2xl font-bold">{dashboardLoading ? '...' : executiveMetrics.totalEmployees}</div>
           <div className="text-xs text-emerald-100 font-medium">Employees</div>
         </div>
         <div className="bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl p-4 text-white text-center shadow-lg hover:shadow-xl transition-shadow duration-200">
           <TrendingUp className="w-5 h-5 mx-auto mb-2 text-teal-100" />
-          <div className="text-2xl font-bold">+{executiveMetrics.monthlyGrowth}%</div>
+          <div className="text-2xl font-bold">{dashboardLoading ? '...' : `${executiveMetrics.monthlyGrowth >= 0 ? '+' : ''}${executiveMetrics.monthlyGrowth}%`}</div>
           <div className="text-xs text-teal-100 font-medium">Growth</div>
         </div>
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white text-center shadow-lg hover:shadow-xl transition-shadow duration-200">
           <Shield className="w-5 h-5 mx-auto mb-2 text-blue-100" />
-          <div className="text-2xl font-bold">{executiveMetrics.complianceScore}%</div>
+          <div className="text-2xl font-bold">{dashboardLoading ? '...' : executiveMetrics.complianceScore}%</div>
           <div className="text-xs text-blue-100 font-medium">Compliance</div>
         </div>
         <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-xl p-4 text-white text-center shadow-lg hover:shadow-xl transition-shadow duration-200">
           <AlertTriangle className="w-5 h-5 mx-auto mb-2 text-orange-100" />
-          <div className="text-2xl font-bold">{executiveMetrics.activeWarnings}</div>
+          <div className="text-2xl font-bold">{dashboardLoading ? '...' : executiveMetrics.activeWarnings}</div>
           <div className="text-xs text-orange-100 font-medium">Warnings</div>
         </div>
         <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-4 text-white text-center shadow-lg hover:shadow-xl transition-shadow duration-200">
           <Clock className="w-5 h-5 mx-auto mb-2 text-indigo-100" />
-          <div className="text-2xl font-bold">{executiveMetrics.pendingReviews}</div>
+          <div className="text-2xl font-bold">{dashboardLoading ? '...' : executiveMetrics.pendingReviews}</div>
           <div className="text-xs text-indigo-100 font-medium">Reviews</div>
         </div>
         <div className="bg-gradient-to-br from-slate-600 to-gray-700 rounded-xl p-4 text-white text-center shadow-lg hover:shadow-xl transition-shadow duration-200">
           <DollarSign className="w-5 h-5 mx-auto mb-2 text-slate-100" />
-          <div className="text-2xl font-bold">${executiveMetrics.costPerEmployee}</div>
+          <div className="text-2xl font-bold">{dashboardLoading ? '...' : `$${executiveMetrics.costPerEmployee}`}</div>
           <div className="text-xs text-slate-100 font-medium">Cost/Employee</div>
         </div>
       </div>

@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { useHRReportsData } from '../../hooks/dashboard/useHRReportsData';
 import { useEnhancedHRDashboard } from '../../hooks/dashboard/useEnhancedHRDashboard';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
+import { useDashboardData } from '../../hooks/dashboard/useDashboardData';
 import { CategoryManagement } from '../admin/CategoryManagement';
 import WarningsReviewDashboard from '../warnings/ReviewDashboard';
 import { EmployeeManagement } from '../employees/EmployeeManagement';
@@ -21,19 +22,39 @@ interface HRDashboardSectionProps {
 
 export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '', isMobile = false }) => {
   const navigate = useNavigate();
+
+  // 🚀 UNIFIED DASHBOARD DATA - Parallel loading for HR role
+  const {
+    employees,
+    warnings,
+    reports,
+    metrics,
+    loading: dashboardLoading,
+    error: dashboardError,
+    refreshData,
+    isReady
+  } = useDashboardData({ role: 'hr' });
+
+  // Legacy hooks for compatibility during transition
   const { hrReportsCount, hrCountsLoading, hrCountsError, refreshHRCounts, lastUpdated } = useHRReportsData();
   const { canManageCategories } = useMultiRolePermissions();
-  
-  // Enhanced dashboard data
-  const { 
-    warningStats, 
-    employeeStats, 
-    reportStats, 
-    trendData, 
-    isLoading: enhancedLoading, 
-    error: enhancedError,
-    refreshAllData 
-  } = useEnhancedHRDashboard();
+
+  // Calculate stats from unified data
+  const warningStats = {
+    totalActive: warnings?.length || 0,
+    undelivered: warnings?.filter(w => !w.delivered)?.length || 0,
+    highSeverity: warnings?.filter(w => w.severity === 'high' || w.category?.severity === 'gross_misconduct')?.length || 0
+  };
+
+  const employeeStats = {
+    totalEmployees: employees?.length || 0,
+    activeEmployees: employees?.filter(e => e.isActive !== false)?.length || 0,
+    newEmployees: employees?.filter(e => {
+      const created = new Date(e.createdAt || e.metadata?.createdAt || 0);
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      return created > thirtyDaysAgo;
+    })?.length || 0
+  };
   
   // State management
   const [showCategoryManagement, setShowCategoryManagement] = useState(false);
@@ -276,11 +297,14 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
             </div>
           )}
           <button
-            onClick={refreshHRCounts}
+            onClick={() => {
+              refreshData();
+              refreshHRCounts();
+            }}
             className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-            disabled={hrCountsLoading}
+            disabled={dashboardLoading || hrCountsLoading}
           >
-            <RefreshCw className={`w-3 h-3 ${hrCountsLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3 h-3 ${(dashboardLoading || hrCountsLoading) ? 'animate-spin' : ''}`} />
             Refresh
           </button>
 
@@ -359,9 +383,11 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
       </div>
 
       {/* Error Display */}
-      {hrCountsError && (
+      {(hrCountsError || dashboardError) && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-          <div className="text-red-700 text-sm">Failed to load HR data: {hrCountsError}</div>
+          <div className="text-red-700 text-sm">
+            Failed to load HR data: {hrCountsError || dashboardError}
+          </div>
         </div>
       )}
 

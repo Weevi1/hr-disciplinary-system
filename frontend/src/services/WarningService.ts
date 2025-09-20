@@ -537,9 +537,9 @@ export class WarningService {
     try {
       Logger.debug('💾 [SAVE] Saving warning to database...')
       
-      const warningRef = warningData.id ? 
-        doc(db, 'warnings', warningData.id) : 
-        doc(collection(db, 'warnings'));
+      const warningRef = warningData.id ?
+        doc(db, 'organizations', organizationId, 'warnings', warningData.id) :
+        doc(collection(db, 'organizations', organizationId, 'warnings'));
 
       const dataToSave = {
         ...warningData,
@@ -570,7 +570,9 @@ export class WarningService {
    */
   static async getWarningById(warningId: string): Promise<Warning | null> {
     try {
-      const warningRef = doc(db, 'warnings', warningId);
+      // Need organizationId to construct sharded path - get from user context
+      const organization = await DataService.getOrganization();
+      const warningRef = doc(db, 'organizations', organization.id, 'warnings', warningId);
       const warningDoc = await getDoc(warningRef);
       
       if (!warningDoc.exists()) {
