@@ -26,6 +26,7 @@ import {
   increment
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { UserOrgIndexService } from './UserOrgIndexService';
 import type { Organization, User } from '../types';
 import type { 
   Employee, 
@@ -1156,7 +1157,16 @@ export class DataService {
         isActive: false,
         updatedAt: serverTimestamp()
       });
-      
+
+      // Update UserOrgIndex to mark user as inactive
+      try {
+        await UserOrgIndexService.setUserActiveStatus(userId, false);
+        Logger.debug(`📋 Updated UserOrgIndex active status: ${userId} → false`);
+      } catch (indexError) {
+        Logger.error('❌ Failed to update UserOrgIndex active status:', indexError);
+        // Don't fail the entire deactivation for index issues
+      }
+
       await this.logAuditEvent('USER_DEACTIVATED', {
         userId,
         organizationId

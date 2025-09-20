@@ -4,6 +4,7 @@
 import { createUserWithEmailAndPassword, updateProfile, signOut, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { DatabaseShardingService } from './DatabaseShardingService';
+import { UserOrgIndexService } from './UserOrgIndexService';
 import { TimeService } from './TimeService';
 import Logger from '../utils/logger';
 
@@ -79,9 +80,24 @@ export class UserCreationService {
         firestoreUserData,
         newFirebaseUser.uid
       );
-      
+
       Logger.debug(`📄 Created Firestore document: ${newFirebaseUser.uid}`);
-      
+
+      // Step 3.5: Create UserOrgIndex entry for instant O(1) lookup
+      try {
+        await UserOrgIndexService.setUserOrganization(
+          newFirebaseUser.uid,
+          userData.organizationId,
+          userData.role,
+          userData.email,
+          'sharded'
+        );
+        Logger.debug(`📋 Created UserOrgIndex entry: ${newFirebaseUser.uid} → ${userData.organizationId}`);
+      } catch (indexError) {
+        Logger.error('❌ Failed to create UserOrgIndex entry:', indexError);
+        // Don't fail the entire user creation for index issues
+      }
+
       // Step 4: Update Firebase Auth profile
       await updateProfile(newFirebaseUser, {
         displayName: `${userData.firstName} ${userData.lastName}`
@@ -147,7 +163,22 @@ export class UserCreationService {
         firestoreUserData,
         newFirebaseUser.uid
       );
-      
+
+      // Step 2.5: Create UserOrgIndex entry for instant O(1) lookup
+      try {
+        await UserOrgIndexService.setUserOrganization(
+          newFirebaseUser.uid,
+          userData.organizationId,
+          userData.role,
+          userData.email,
+          'sharded'
+        );
+        Logger.debug(`📋 Created UserOrgIndex entry: ${newFirebaseUser.uid} → ${userData.organizationId}`);
+      } catch (indexError) {
+        Logger.error('❌ Failed to create UserOrgIndex entry:', indexError);
+        // Don't fail the entire user creation for index issues
+      }
+
       // Step 3: Update profile
       await updateProfile(newFirebaseUser, {
         displayName: `${userData.firstName} ${userData.lastName}`

@@ -6,6 +6,7 @@ import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 import { db, auth } from '../config/firebase'
 import { DatabaseShardingService } from './DatabaseShardingService'
 import { ShardedDataService } from './ShardedDataService'
+import { UserOrgIndexService } from './UserOrgIndexService'
 import { TimeService } from './TimeService'
 import { UNIVERSAL_SA_CATEGORIES } from './UniversalCategories'
 import Logger from '../utils/logger'
@@ -299,6 +300,21 @@ export class ShardedOrganizationService {
       }
 
       await DatabaseShardingService.createDocument(organizationId, 'users', userData, userId)
+
+      // Create UserOrgIndex entry for instant O(1) lookup
+      try {
+        await UserOrgIndexService.setUserOrganization(
+          userId,
+          organizationId,
+          'business-owner',
+          adminData.email,
+          'sharded'
+        )
+        Logger.debug(`📋 Created UserOrgIndex entry: ${userId} → ${organizationId}`)
+      } catch (indexError) {
+        Logger.error('❌ Failed to create UserOrgIndex entry:', indexError)
+        // Don't fail the entire organization creation for index issues
+      }
 
       // Mark user creation as complete
       userCreationManager.finishUserCreation(userId)
