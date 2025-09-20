@@ -60,7 +60,7 @@ interface HODDashboardSectionProps {
 export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className = '' }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { organization, categories: contextCategories } = useOrganization();
+  const { organization, categories: contextCategories, loading: orgLoading } = useOrganization();
   const { canCreateWarnings, canManageEmployees } = useMultiRolePermissions();
   const { dueFollowUps, counts: followUpCounts } = useCounsellingFollowUps();
   const isDesktop = useBreakpoint(768);
@@ -151,7 +151,8 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
         if (contextCategories && Array.isArray(contextCategories) && contextCategories.length > 0) {
           console.log('✅ Using categories from organization context:', contextCategories.length);
           loadedCategories = contextCategories;
-        } else {
+        } else if (!orgLoading) {
+          // Only try fallback if organization is not still loading
           // Fallback 1: Check if organization object has categories (legacy)
           if (organization.categories && Array.isArray(organization.categories) && organization.categories.length > 0) {
             console.log('✅ Using categories from organization object:', organization.categories.length);
@@ -170,6 +171,10 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
               loadedCategories = getDefaultManufacturingCategories();
             }
           }
+        } else {
+          // Organization is still loading, use empty categories for now
+          console.log('⏳ Organization still loading, using empty categories temporarily');
+          loadedCategories = [];
         }
         
         // Transform categories to ensure proper structure
@@ -200,12 +205,12 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
     }
   }, [organization?.id, organization?.categories, user?.id]); // Remove isLoadingWizardData to prevent loop
 
-  // Load team members and categories data when component mounts
+  // Load team members and categories data when component mounts and categories are ready
   useEffect(() => {
-    if (organization?.id && user?.id && !isLoadingWizardData) {
+    if (organization?.id && user?.id && !isLoadingWizardData && !orgLoading) {
       loadWizardData();
     }
-  }, [organization?.id, user?.id]); // Remove loadWizardData dependency to prevent loop
+  }, [organization?.id, user?.id, orgLoading, contextCategories]); // Wait for org loading to complete
 
   // 🔥 FIXED: Use UniversalCategories as the single source of truth for fallback
   const getDefaultManufacturingCategories = () => {
