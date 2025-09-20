@@ -2,7 +2,7 @@
 // 🎙️ COMPACT MICROPHONE PERMISSION HANDLER - MODAL OVERLAY VERSION
 // ✅ Compact modal that overlays the dashboard instead of taking full screen
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Shield, AlertCircle, CheckCircle, Volume2, Lock } from 'lucide-react';
 
 interface MicrophonePermissionHandlerProps {
@@ -14,6 +14,14 @@ interface MicrophonePermissionHandlerProps {
 
 type PermissionState = 'requesting' | 'granted' | 'denied' | 'error' | 'not-supported';
 
+// 🔧 GLOBAL SINGLETON: Prevent duplicate permission requests across StrictMode instances
+const globalPermissionState = {
+  isRequesting: false,
+  isGranted: false,
+  callbacks: [] as Array<() => void>,
+  errorCallbacks: [] as Array<() => void>
+};
+
 export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerProps> = ({
   onPermissionGranted,
   onPermissionDenied,
@@ -22,10 +30,36 @@ export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerPr
 }) => {
   const [permissionState, setPermissionState] = useState<PermissionState>('requesting');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const componentId = useRef(Math.random().toString(36).substr(2, 9));
 
   // Automatically request microphone permission on component mount
   useEffect(() => {
-    requestMicrophonePermission();
+    // 🔧 SINGLETON: Register callbacks and check if permission already granted
+    globalPermissionState.callbacks.push(onPermissionGranted);
+    globalPermissionState.errorCallbacks.push(onPermissionDenied);
+
+    if (globalPermissionState.isGranted) {
+      setPermissionState('granted');
+      setTimeout(onPermissionGranted, 100); // Slight delay for UI
+      return;
+    }
+
+    if (!globalPermissionState.isRequesting) {
+      globalPermissionState.isRequesting = true;
+      requestMicrophonePermission();
+    }
+
+    // Cleanup: Remove callbacks on unmount
+    return () => {
+      const callbackIndex = globalPermissionState.callbacks.indexOf(onPermissionGranted);
+      if (callbackIndex > -1) {
+        globalPermissionState.callbacks.splice(callbackIndex, 1);
+      }
+      const errorCallbackIndex = globalPermissionState.errorCallbacks.indexOf(onPermissionDenied);
+      if (errorCallbackIndex > -1) {
+        globalPermissionState.errorCallbacks.splice(errorCallbackIndex, 1);
+      }
+    };
   }, []);
 
   const requestMicrophonePermission = async () => {
@@ -54,15 +88,24 @@ export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerPr
       // Permission granted - clean up the stream
       stream.getTracks().forEach(track => track.stop());
       setPermissionState('granted');
-      
-      // Notify parent component
-      setTimeout(() => {
-        onPermissionGranted();
-      }, 1000); // Brief delay to show success message
+
+      // 🔧 SINGLETON: Set global state and call all registered callbacks
+      if (!globalPermissionState.isGranted) {
+        globalPermissionState.isGranted = true;
+        globalPermissionState.isRequesting = false;
+
+        // Call all registered callbacks
+        globalPermissionState.callbacks.forEach((callback) => {
+          setTimeout(callback, 1000); // Brief delay to show success message
+        });
+      }
 
     } catch (error: any) {
       console.error('Microphone permission error:', error);
-      
+
+      // 🔧 SINGLETON: Reset global state on error
+      globalPermissionState.isRequesting = false;
+
       if (error.name === 'NotAllowedError') {
         setPermissionState('denied');
         setErrorMessage('Microphone access was denied. Please allow microphone access and try again.');
@@ -76,8 +119,11 @@ export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerPr
         setPermissionState('error');
         setErrorMessage('An error occurred while accessing your microphone.');
       }
-      
-      onPermissionDenied();
+
+      // Call all registered error callbacks
+      globalPermissionState.errorCallbacks.forEach((callback) => {
+        callback();
+      });
     }
   };
 

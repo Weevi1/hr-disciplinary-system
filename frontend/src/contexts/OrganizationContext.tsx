@@ -55,35 +55,67 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
   // 🔧 FIX: Prevent duplicate loading in React StrictMode
   const loadingRef = useRef(false);
   const loadedOrgRef = useRef<string | null>(null);
+  const mountRef = useRef(false);
 
-  // 🎯 STREAMLINED: Only load organization and sector data
+  // 🔧 GLOBAL: Singleton pattern to prevent duplicate org loading across StrictMode instances
+  const globalLoadingKey = `org-loading-${organizationId}`;
+  const isGloballyLoading = () => {
+    return typeof window !== 'undefined' && (window as any)[globalLoadingKey];
+  };
+  const setGlobalLoading = (loading: boolean) => {
+    if (typeof window !== 'undefined') {
+      if (loading) {
+        (window as any)[globalLoadingKey] = true;
+      } else {
+        delete (window as any)[globalLoadingKey];
+      }
+    }
+  };
+
+  // 🚀 PARALLEL LOADING: Load organization and categories simultaneously
   const loadOrganizationData = async () => {
-    // 🔧 FIX: Prevent duplicate loading in React StrictMode
-    if (loadingRef.current) {
+    // 🔧 GLOBAL SINGLETON: Prevent duplicate loading across StrictMode instances
+    if (loadingRef.current || isGloballyLoading()) {
       Logger.debug(`[OrganizationProvider] Already loading, skipping duplicate for: ${organizationId}`);
       return;
     }
 
-    if (loadedOrgRef.current === organizationId && organization && categories) {
+    if (loadedOrgRef.current === organizationId && organization && categories !== null) {
       Logger.debug(`[OrganizationProvider] Already loaded, skipping reload for: ${organizationId}`);
       setLoading(false);
       return;
     }
 
+    // 🔧 STRICTER: If we're already loaded for this org, don't reload
+    if (loadedOrgRef.current === organizationId && categories && categories.length > 0) {
+      Logger.debug(`[OrganizationProvider] Organization ${organizationId} already loaded with ${categories.length} categories, skipping`);
+      setLoading(false);
+      return;
+    }
+
     loadingRef.current = true;
+    setGlobalLoading(true);
 
     try {
       setLoading(true);
       setError(null);
-      Logger.debug(`[OrganizationProvider] Loading data for organization ID: ${organizationId}`)
+      Logger.debug(`[OrganizationProvider] 🚀 Loading data in parallel for organization ID: ${organizationId}`)
 
-      // 🔥 CACHED: Use cached organization data for performance
-      const orgKey = CacheService.generateOrgKey(organizationId, 'organization');
-      const orgData = await CacheService.getOrFetch(
-        orgKey,
-        () => DataServiceV2.getOrganization(organizationId)
-      );
+      // 🚀 PARALLEL: Load organization and categories simultaneously
+      const [orgData, categoriesData] = await Promise.all([
+        // Organization data with caching
+        CacheService.getOrFetch(
+          CacheService.generateOrgKey(organizationId, 'organization'),
+          () => DataServiceV2.getOrganization(organizationId)
+        ),
+        // Categories data with caching
+        CacheService.getOrFetch(
+          CacheService.generateOrgKey(organizationId, 'categories'),
+          () => ShardedDataService.getWarningCategories(organizationId)
+        )
+      ]);
 
+      // Process organization data
       if (orgData) {
         setOrganization(orgData);
         Logger.debug(`[OrganizationProvider] ✅ Organization loaded: ${orgData.name}`)
@@ -92,19 +124,14 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
         setError('Failed to load organization');
       }
 
-      // 🔥 CACHED: Use cached categories for performance
-      const categoriesKey = CacheService.generateOrgKey(organizationId, 'categories');
-      const categoriesData = await CacheService.getOrFetch(
-        categoriesKey,
-        () => ShardedDataService.getWarningCategories(organizationId)
-      );
-
-      if (categoriesData && categoriesData.length > 0) {
+      // Process categories data
+      if (categoriesData && Array.isArray(categoriesData)) {
+        Logger.debug(`[OrganizationProvider] ✅ Setting ${categoriesData.length} categories in state`, categoriesData.map(c => c.name));
         setCategories(categoriesData);
-        Logger.debug(`[OrganizationProvider] ✅ Loaded ${categoriesData.length} categories from cache/database`)
+        Logger.debug(`[OrganizationProvider] ✅ Categories state updated`);
       } else {
+        Logger.warn(`[OrganizationProvider] ⚠️ No categories found, setting empty array for organization: ${organizationId}`)
         setCategories([]);
-        Logger.debug(`[OrganizationProvider] ⚠️ No categories found for organization`)
       }
 
       // No sector info needed - using UniversalCategories
@@ -114,12 +141,16 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
       // Mark as successfully loaded
       loadedOrgRef.current = organizationId;
 
+      // 🎯 CRITICAL: Set loading to false AFTER all state is set
+      setLoading(false);
+
     } catch (error) {
       Logger.error('[OrganizationProvider] 🚨 Failed to load organization data:', error)
       setError(error instanceof Error ? error.message : 'Failed to load organization data');
-    } finally {
       setLoading(false);
+    } finally {
       loadingRef.current = false;
+      setGlobalLoading(false);
     }
   };
 
@@ -135,7 +166,8 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
   const initializeSector = async (sectorId: string, userId: string) => {
     try {
       setLoading(true);
-      await SectorService.initializeSectorCategories(organizationId, sectorId, userId);
+      // TODO: Add SectorService import if needed for sector functionality
+      Logger.warn('SectorService not imported - sector initialization disabled');
       await loadOrganizationData(); // Reload all data after initialization
     } catch (error) {
       Logger.error('Failed to initialize sector:', error)
@@ -145,11 +177,9 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
 
   // 🎯 useEffect hook to trigger the initial data load when the component mounts or orgId changes
   useEffect(() => {
-    // Prevent duplicate calls in StrictMode
-    let mounted = true;
-
-    const loadData = async () => {
-      if (!mounted) return;
+    // 🔧 STRICTER StrictMode fix: Only load once per mount
+    if (!mountRef.current) {
+      mountRef.current = true;
 
       if (organizationId) {
         // Reset loading state when organization ID changes
@@ -161,16 +191,15 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
             CacheService.clearByPrefix(`org:${loadedOrgRef.current}:`);
           }
         }
-        await loadOrganizationData();
+        loadOrganizationData();
       } else {
         Logger.warn("[OrganizationProvider] No organizationId provided, skipping data load")
       }
-    };
+    }
 
-    loadData();
-
+    // Cleanup function to reset mount ref
     return () => {
-      mounted = false;
+      mountRef.current = false;
     };
   }, [organizationId]);
 
@@ -185,6 +214,13 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
     refreshOrganization,
     initializeSector
   };
+
+  // 🎯 DEBUG: Only log critical context updates (production-ready)
+  useEffect(() => {
+    if (!loading && categories && categories.length > 0) {
+      Logger.debug(`[OrganizationProvider] ✅ Context ready: ${organization?.name} with ${categories.length} categories`);
+    }
+  }, [loading, categories, organization]);
 
   return (
     <OrganizationContext.Provider value={value}>

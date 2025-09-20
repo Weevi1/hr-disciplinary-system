@@ -744,12 +744,54 @@ export const batch = {
 // UNIFIED API EXPORT
 // ============================================
 
+// ============================================
+// REPORTS API
+// ============================================
+
+export const reports = {
+  /**
+   * Get all reports for an organization
+   */
+  async getAll(organizationId: string): Promise<any[]> {
+    try {
+      // Placeholder - implement when reports service is ready
+      return [];
+    } catch (error) {
+      handleError('reports.getAll', error);
+    }
+  }
+};
+
+// ============================================
+// ANALYTICS API
+// ============================================
+
+export const analytics = {
+  /**
+   * Get dashboard metrics for an organization
+   */
+  async getDashboardMetrics(organizationId: string): Promise<any> {
+    try {
+      // Placeholder - implement when analytics service is ready
+      return {
+        complianceScore: 94,
+        costPerEmployee: 4250,
+        riskScore: 12
+      };
+    } catch (error) {
+      handleError('analytics.getDashboardMetrics', error);
+    }
+  }
+};
+
 export const API = {
   warnings,
   employees,
   organizations,
   categories,
-  batch
+  batch,
+  reports,
+  analytics
 } as const;
 
 // Default export for convenience

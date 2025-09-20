@@ -85,25 +85,45 @@ class AudioRecordingSingleton {
   }
 
   canStart(): boolean {
+    // 🔧 ATOMIC: Check and reserve in one operation to prevent race conditions
     const now = Date.now();
-    // If a recording was started very recently (within 500ms), block new attempts
-    if (this.startedAt > 0 && (now - this.startedAt) < 500) {
+
+    // Block if already recording or starting
+    if (this.isRecording || this.isStarting) {
+      Logger.debug('🔄 Blocking recording - singleton already active');
+      return false;
+    }
+
+    // Block if started very recently (prevents double-click issues)
+    if (this.startedAt > 0 && (now - this.startedAt) < 1000) {
       Logger.debug('🔄 Blocking duplicate recording attempt - too recent');
       return false;
     }
-    // Also check if any streams are active
+
+    // Block if any streams are active
     if (this.allActiveStreams.size > 0 || this.allActiveTracks.size > 0) {
       Logger.debug(`🔄 Blocking recording - ${this.allActiveStreams.size} active streams, ${this.allActiveTracks.size} active tracks exist`);
       return false;
     }
-    return !this.isRecording && !this.isStarting;
+
+    return true;
+  }
+
+  // 🔧 NEW: Atomic check and reserve operation
+  tryReserve(): boolean {
+    if (this.canStart()) {
+      this.isStarting = true;
+      this.startedAt = Date.now();
+      Logger.debug('🎤 Singleton: Recording slot reserved atomically');
+      return true;
+    }
+    return false;
   }
 
   startRecording(): void {
-    this.isStarting = true;
+    // Note: isStarting and startedAt already set by tryReserve()
     this.isRecording = true;
-    this.startedAt = Date.now();
-    Logger.debug('🎤 Singleton: Recording slot reserved');
+    Logger.debug('🎤 Singleton: Recording started');
   }
 
   stopRecording(): void {
@@ -125,7 +145,15 @@ class AudioRecordingSingleton {
     Logger.debug('🧹 Singleton: Recording stopped and cleaned up');
   }
 
-  setStream(stream: MediaStream): void {
+  setStream(stream: MediaStream): boolean {
+    // 🔧 CRITICAL: Check if we already have a stream - reject if so
+    if (this.mediaStream || this.allActiveStreams.size > 0) {
+      Logger.debug(`🚫 Singleton: Rejecting stream - already have ${this.allActiveStreams.size} active streams`);
+      // Stop the rejected stream immediately
+      stream.getTracks().forEach(track => track.stop());
+      return false;
+    }
+
     // Track this stream globally
     this.allActiveStreams.add(stream);
     stream.getTracks().forEach(track => {
@@ -139,6 +167,7 @@ class AudioRecordingSingleton {
     this.mediaStream = stream;
     this.isStarting = false; // Recording setup complete
     Logger.debug(`🎤 Singleton: Stream set, recording active. Total streams: ${this.allActiveStreams.size}`);
+    return true;
   }
 
   // New method to forcefully stop ALL streams
@@ -346,14 +375,11 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
   // ============================================
 
   const startRecording = useCallback(async (): Promise<void> => {
-    // SINGLETON: Check if we can start recording
-    if (!audioSingleton.canStart()) {
+    // 🔧 ATOMIC: Try to reserve recording slot atomically
+    if (!audioSingleton.tryReserve()) {
       Logger.debug('🔄 Recording already active via singleton, skipping new recording start');
       return;
     }
-
-    // SINGLETON: Reserve recording slot immediately
-    audioSingleton.startRecording();
 
     try {
       // Force cleanup any previous recording before starting new one
@@ -383,8 +409,15 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
       });
 
       // Store stream both locally and in singleton
+      const streamAccepted = audioSingleton.setStream(stream);
+      if (!streamAccepted) {
+        // Stream was rejected by singleton - another recording is active
+        Logger.debug('🚫 Stream rejected by singleton, aborting recording');
+        setState(prev => ({ ...prev, isProcessing: false, error: 'Another recording is already active' }));
+        return;
+      }
+
       streamRef.current = stream;
-      audioSingleton.setStream(stream);
       audioChunksRef.current = [];
       
       // Create MediaRecorder with optimal settings
@@ -425,10 +458,13 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
       mediaRecorder.start(1000); // Collect data every second
       startTimeRef.current = Date.now();
       warningShownRef.current = false;
-      
+
+      // 🔧 SINGLETON: Mark recording as fully started
+      audioSingleton.startRecording();
+
       // Start duration tracking
       durationIntervalRef.current = setInterval(updateDuration, 100);
-      
+
       const recordingId = generateRecordingId();
       
       setState(prev => ({

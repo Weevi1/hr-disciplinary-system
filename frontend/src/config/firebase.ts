@@ -28,6 +28,16 @@ export const storage = getStorage(app);
 export const functions = getFunctions(app, 'us-central1'); // Most functions are in us-central1
 export const analytics = getAnalytics(app);
 
+// Configure Firestore settings to prevent offline issues
+import { enableNetwork, connectFirestoreEmulator } from 'firebase/firestore';
+
+// Enable network explicitly and configure settings
+enableNetwork(db).then(() => {
+  Logger.debug('🔥 Firestore network enabled successfully');
+}).catch((error) => {
+  Logger.error('Failed to enable Firestore network:', error);
+});
+
 // Connect to emulators in development
 if (import.meta.env.DEV) {
   // Note: You can enable emulators if needed, but since CORS is failing,
