@@ -19,6 +19,8 @@ import {
 import Logger from '../../utils/logger';
 import { DataService } from '../../services/DataService';
 import CommissionService from '../../services/CommissionService';
+import { EncryptionService } from '../../services/EncryptionService';
+import { PIIAccessLogger } from '../../services/PIIAccessLogger';
 import type { Reseller, SouthAfricanProvince } from '../../types/billing';
 import { SA_PROVINCES } from '../../types/billing';
 
@@ -90,6 +92,12 @@ export const ResellerManagement: React.FC = () => {
     try {
       Logger.debug('Adding new reseller...', formData);
 
+      // Log PII access for compliance
+      await PIIAccessLogger.logBankingAccess('new-reseller', 'edit', 'Creating new reseller account');
+
+      // Encrypt sensitive banking details before storing
+      const encryptedBankDetails = EncryptionService.encryptBankingDetails(formData.bankDetails);
+
       const newReseller: Omit<Reseller, 'id' | 'createdAt' | 'updatedAt'> = {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -99,7 +107,7 @@ export const ResellerManagement: React.FC = () => {
         territory: formData.territory,
         commissionRate: formData.commissionRate,
         isActive: true,
-        bankDetails: formData.bankDetails,
+        bankDetails: encryptedBankDetails, // Encrypted banking details
         clientIds: [],
         totalClientsAcquired: 0,
         monthlyRecurringRevenue: 0,
@@ -197,6 +205,12 @@ The reseller profile has been saved successfully with ID: ${resellerId}
     try {
       Logger.debug('Updating reseller...', { id: editingReseller.id, formData });
 
+      // Log PII access for compliance
+      await PIIAccessLogger.logBankingAccess(editingReseller.id, 'edit', 'Updating reseller banking details');
+
+      // Encrypt sensitive banking details before storing
+      const encryptedBankDetails = EncryptionService.encryptBankingDetails(formData.bankDetails);
+
       await DataService.updateReseller(editingReseller.id, {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -205,7 +219,7 @@ The reseller profile has been saved successfully with ID: ${resellerId}
         province: formData.province,
         territory: formData.territory,
         commissionRate: formData.commissionRate,
-        bankDetails: formData.bankDetails,
+        bankDetails: encryptedBankDetails, // Encrypted banking details
         updatedAt: new Date().toISOString()
       });
 
@@ -219,19 +233,31 @@ The reseller profile has been saved successfully with ID: ${resellerId}
     }
   };
 
-  const startEditReseller = (reseller: Reseller) => {
-    setEditingReseller(reseller);
-    setFormData({
-      firstName: reseller.firstName,
-      lastName: reseller.lastName,
-      email: reseller.email,
-      phone: reseller.phone,
-      province: reseller.province,
-      territory: reseller.territory,
-      commissionRate: reseller.commissionRate,
-      bankDetails: reseller.bankDetails
-    });
-    setShowAddForm(true);
+  const startEditReseller = async (reseller: Reseller) => {
+    try {
+      // Log PII access for compliance
+      await PIIAccessLogger.logBankingAccess(reseller.id, 'view', 'Editing reseller details');
+
+      // Decrypt banking details for editing
+      const decryptedBankDetails = EncryptionService.decryptBankingDetails(reseller.bankDetails);
+
+      setEditingReseller(reseller);
+      setFormData({
+        firstName: reseller.firstName,
+        lastName: reseller.lastName,
+        email: reseller.email,
+        phone: reseller.phone,
+        province: reseller.province,
+        territory: reseller.territory,
+        commissionRate: reseller.commissionRate,
+        bankDetails: decryptedBankDetails // Show decrypted data for editing
+      });
+      setShowAddForm(true);
+    } catch (error) {
+      Logger.error('Failed to decrypt banking details:', error);
+      // Show error to user or provide fallback
+      alert('Error loading banking details. Please contact support.');
+    }
   };
 
   const cancelForm = () => {

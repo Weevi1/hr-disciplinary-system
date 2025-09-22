@@ -9,14 +9,12 @@
 // CORE TYPES - UNIFIED SYSTEM
 // ============================================
 
-export type WarningLevel = 
+export type WarningLevel =
   | 'counselling'      // Entry-level intervention
   | 'verbal'           // Verbal warning
   | 'first_written'    // First written warning
-  | 'second_written'   // Second written warning  
-  | 'final_written'    // Final written warning
-  | 'suspension'       // Suspension (with/without pay)
-  | 'dismissal';       // Termination
+  | 'second_written'   // Second written warning
+  | 'final_written';   // Final written warning (system stops here)
 
 export type CategorySeverity = 'minor' | 'serious' | 'gross_misconduct';
 
@@ -65,7 +63,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     lraSection: 'Section 188(1)(a) - Incapacity or poor work performance',
     schedule8Reference: 'Schedule 8, Item 10 - Incapacity/poor performance procedures',
     
-    escalationPath: ['counselling', 'verbal', 'first_written', 'second_written', 'final_written', 'dismissal'],
+    escalationPath: ['counselling', 'verbal', 'first_written', 'second_written', 'final_written'],
     escalationRationale: 'Attendance issues are typically correctable behavior problems that benefit from full progressive discipline, giving employees maximum opportunity to improve while building strong legal documentation.',
     
     commonExamples: [
@@ -120,7 +118,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     lraSection: 'Section 188(1)(a) - Incapacity or poor work performance',
     schedule8Reference: 'Schedule 8, Item 10 - Poor performance procedures',
     
-    escalationPath: ['counselling', 'verbal', 'first_written', 'second_written', 'final_written', 'dismissal'],
+    escalationPath: ['counselling', 'verbal', 'first_written', 'second_written', 'final_written'],
     escalationRationale: 'Performance issues often stem from lack of training, unclear expectations, or personal challenges. Full progressive discipline allows time for coaching, training, and performance improvement plans.',
     
     commonExamples: [
@@ -175,7 +173,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     lraSection: 'Section 188(1)(b) - Misconduct',
     schedule8Reference: 'Schedule 8, Item 1 - Misconduct procedures',
     
-    escalationPath: ['verbal', 'first_written', 'final_written', 'suspension', 'dismissal'],
+    escalationPath: ['verbal', 'first_written', 'final_written'],
     escalationRationale: 'Safety violations can result in injury, death, or legal liability. While counselling might be appropriate for first-time minor oversights, repeated or serious safety violations require formal progressive discipline.',
     
     commonExamples: [
@@ -231,7 +229,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     lraSection: 'Section 188(1)(b) - Misconduct',
     schedule8Reference: 'Schedule 8, Item 1 - Misconduct procedures',
     
-    escalationPath: ['counselling', 'verbal', 'first_written', 'final_written', 'dismissal'],
+    escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
     escalationRationale: 'Insubordination varies from minor attitude issues (requiring counselling) to serious defiance. Progressive discipline allows distinction between momentary lapses and persistent defiant behavior.',
     
     commonExamples: [
@@ -286,7 +284,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     lraSection: 'Section 188(1)(b) - Misconduct',
     schedule8Reference: 'Schedule 8, Item 1 - Misconduct procedures',
     
-    escalationPath: ['counselling', 'verbal', 'first_written', 'second_written', 'final_written', 'dismissal'],
+    escalationPath: ['counselling', 'verbal', 'first_written', 'second_written', 'final_written'],
     escalationRationale: 'Policy violations vary greatly in seriousness. Progressive discipline allows proportionate responses based on policy importance and violation severity.',
     
     commonExamples: [
@@ -341,7 +339,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     lraSection: 'Section 188(1)(b) - Misconduct',
     schedule8Reference: 'Schedule 8, Item 1 - Misconduct procedures',
     
-    escalationPath: ['first_written', 'final_written', 'suspension', 'dismissal'],
+    escalationPath: ['first_written', 'final_written'],
     escalationRationale: 'Dishonesty and theft break fundamental trust required for employment. Minor dishonesty may warrant progressive discipline, but serious theft or fraud often justifies immediate dismissal after investigation.',
     
     commonExamples: [
@@ -398,7 +396,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     lraSection: 'Section 188(1)(b) - Misconduct',
     schedule8Reference: 'Schedule 8, Item 1 - Misconduct procedures',
     
-    escalationPath: ['counselling', 'verbal', 'first_written', 'final_written', 'suspension', 'dismissal'],
+    escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
     escalationRationale: 'Substance abuse is both a health issue and workplace safety concern. Counselling and support are prioritized initially, but safety concerns require firm boundaries.',
     
     commonExamples: [
@@ -454,7 +452,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     lraSection: 'Section 188(1)(b) - Misconduct',
     schedule8Reference: 'Schedule 8, Item 1 - Misconduct procedures',
     
-    escalationPath: ['final_written', 'suspension', 'dismissal'],
+    escalationPath: ['final_written'],
     escalationRationale: 'Harassment and discrimination create legal liability and hostile work environments. While investigation is required, proven cases often warrant immediate serious action.',
     
     commonExamples: [
@@ -526,7 +524,7 @@ export function getCategoriesBySeverity(severity: CategorySeverity): UniversalCa
  */
 export function getEscalationPath(categoryId: string): WarningLevel[] {
   const category = getCategoryById(categoryId);
-  return category?.escalationPath || ['counselling', 'verbal', 'first_written', 'final_written', 'dismissal'];
+  return category?.escalationPath || ['counselling', 'verbal', 'first_written', 'final_written'];
 }
 
 /**
@@ -566,11 +564,11 @@ export function getAllEscalationPaths(): { [categoryId: string]: WarningLevel[] 
  * Validate escalation path structure
  */
 export function validateEscalationPath(path: WarningLevel[]): boolean {
-  const validLevels: WarningLevel[] = ['counselling', 'verbal', 'first_written', 'second_written', 'final_written', 'suspension', 'dismissal'];
-  
-  return path.every(level => validLevels.includes(level)) && 
-         path.length >= 2 && 
-         path[path.length - 1] === 'dismissal';
+  const validLevels: WarningLevel[] = ['counselling', 'verbal', 'first_written', 'second_written', 'final_written'];
+
+  return path.every(level => validLevels.includes(level)) &&
+         path.length >= 1 &&
+         path[path.length - 1] === 'final_written';
 }
 
 /**
@@ -582,11 +580,9 @@ export function getLevelLabel(level: WarningLevel): string {
     verbal: 'Verbal Warning',
     first_written: 'First Written Warning',
     second_written: 'Second Written Warning',
-    final_written: 'Final Written Warning',
-    suspension: 'Suspension',
-    dismissal: 'Dismissal'
+    final_written: 'Final Written Warning'
   };
-  
+
   return labels[level] || level;
 }
 

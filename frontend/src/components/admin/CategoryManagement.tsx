@@ -228,7 +228,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
     name: '',
     description: '',
     severity: 'serious',
-    escalationPath: ['counselling', 'verbal', 'first_written', 'final_written', 'dismissal'],
+    escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
     examples: [],
     isActive: true
   });
@@ -461,7 +461,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
       const categoryData = {
         name: newCustomCategory.name!,
         description: newCustomCategory.description || '',
-        escalationPath: newCustomCategory.escalationPath || ['verbal', 'first_written', 'final_written', 'dismissal'],
+        escalationPath: newCustomCategory.escalationPath || ['verbal', 'first_written', 'final_written'],
         examples: newCustomCategory.examples || [],
         severity: newCustomCategory.severity === 'minor' ? 'low' : 
                  newCustomCategory.severity === 'serious' ? 'medium' : 'high'
@@ -475,7 +475,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
         name: '',
         description: '',
         severity: 'serious',
-        escalationPath: ['counselling', 'verbal', 'first_written', 'final_written', 'dismissal'],
+        escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
         examples: [],
         isActive: true
       });
@@ -2082,7 +2082,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
                       name: '',
                       description: '',
                       severity: 'serious',
-                      escalationPath: ['counselling', 'verbal', 'first_written', 'final_written', 'dismissal'],
+                      escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
                       examples: [],
                       isActive: true
                     });

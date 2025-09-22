@@ -161,7 +161,7 @@ const EnhancedWarningWizardWrapper: React.FC = () => {
           description: cat.description || '',
           lraSection: cat.lraSection || 'LRA Section 188',
           schedule8Reference: cat.schedule8Reference || 'Schedule 8',
-          escalationPath: cat.escalationPath || ['verbal_warning', 'first_written', 'final_written', 'dismissal']
+          escalationPath: cat.escalationPath || ['verbal_warning', 'first_written', 'final_written']
         }));
 
         setEmployees(transformedEmployees);

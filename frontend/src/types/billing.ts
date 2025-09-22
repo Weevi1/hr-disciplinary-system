@@ -1,6 +1,8 @@
 // frontend/src/types/billing.ts
 // White-label billing system with provincial reseller network
 
+import type { EncryptedField } from '../services/EncryptionService';
+
 export type SubscriptionTier = 'starter' | 'professional' | 'enterprise' | 'enterprise-plus';
 
 export interface SubscriptionPlan {
@@ -40,12 +42,12 @@ export interface Reseller {
   commissionRate: number; // 0.50 for 50%
   isActive: boolean;
   
-  // Banking details for payouts
+  // Banking details for payouts (with encryption support)
   bankDetails: {
     accountHolder: string;
     bank: string;
-    accountNumber: string;
-    branchCode: string;
+    accountNumber: string | EncryptedField; // Can be encrypted or plain text (migration)
+    branchCode: string | EncryptedField;    // Can be encrypted or plain text (migration)
   };
   
   // Performance tracking
