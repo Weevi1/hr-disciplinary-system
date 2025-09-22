@@ -199,7 +199,7 @@ describe('WarningService Integration Tests', () => {
       const unauthorizedContext = testEnv.unauthenticatedContext()
       const firestore = unauthorizedContext.firestore()
 
-      const warningRef = firestore.collection('warnings').doc()
+      const warningRef = firestore.collection('organizations').doc('test-org').collection('warnings').doc()
       
       await expect(
         warningRef.set({
@@ -220,7 +220,7 @@ describe('WarningService Integration Tests', () => {
       })
 
       const firestore = managerContext!.firestore()
-      const warningRef = firestore.collection('warnings').doc()
+      const warningRef = firestore.collection('organizations').doc('test-org').collection('warnings').doc()
 
       // This should succeed with proper role and organization
       await expect(
@@ -251,7 +251,7 @@ describe('WarningService Integration Tests', () => {
       const firestore = managerContext!.firestore()
       
       // Try to create warning for different organization
-      const warningRef = firestore.collection('warnings').doc()
+      const warningRef = firestore.collection('organizations').doc('other-org').collection('warnings').doc()
       
       await expect(
         warningRef.set({

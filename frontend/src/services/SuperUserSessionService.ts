@@ -6,6 +6,7 @@ import { auth, db } from '../config/firebase';
 import { doc, setDoc, updateDoc, getDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { signInWithEmailAndPassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import Logger from '../utils/logger';
+import { EncryptionService } from './EncryptionService';
 
 interface SuperUserSession {
   userId: string;
@@ -148,8 +149,13 @@ export class SuperUserSessionService {
 
     try {
       const sessionRef = doc(db, 'superUserSessions', auth.currentUser.uid);
+
+      // Encrypt session activity data
+      const encryptedActivity = EncryptionService.encrypt(new Date().toISOString());
+
       await setDoc(sessionRef, {
-        lastActivity: serverTimestamp()
+        lastActivity: serverTimestamp(),
+        encryptedActivity // Store encrypted timestamp for audit
       }, { merge: true });
 
       if (this.currentSession) {
@@ -441,5 +447,5 @@ export function useSuperUserSession() {
   };
 }
 
-// Export for global access
-(window as any).SuperUserSessionService = SuperUserSessionService;
+// Export removed for security - use React context instead
+// SECURITY FIX: Removed global window exposure to prevent console manipulation

@@ -156,6 +156,56 @@ export const CombinedIncidentStepV2: React.FC<CombinedIncidentStepV2Props> = ({
         </div>
       )}
 
+      {/* 🚨 URGENT HR INTERVENTION ALERT */}
+      {lraRecommendation && !isAnalyzing && lraRecommendation.requiresHRIntervention && (
+        <div className="bg-red-50 border-2 border-red-300 rounded-xl p-6 mb-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h4 className="font-bold text-red-900 text-lg mb-2 flex items-center gap-2">
+                🚨 URGENT: Contact HR Immediately
+                <span className="px-2 py-1 bg-red-200 text-red-800 text-xs rounded-full animate-pulse">
+                  FINAL WARNING ALERT
+                </span>
+              </h4>
+              <div className="bg-red-100 rounded-lg p-4 mb-3">
+                <p className="text-red-800 font-medium mb-2">
+                  This employee already has a final written warning on record.
+                </p>
+                <p className="text-red-700 text-sm">
+                  {lraRecommendation.interventionReason}
+                </p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-red-200">
+                <h5 className="font-medium text-red-900 mb-2">Required Actions:</h5>
+                <ul className="text-sm text-red-800 space-y-1">
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-red-600 rounded-full"></span>
+                    Contact HR Department before proceeding
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-red-600 rounded-full"></span>
+                    Schedule disciplinary hearing
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-red-600 rounded-full"></span>
+                    Use HR intervention module for next steps
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-2 h-2 bg-red-600 rounded-full"></span>
+                    Document all decisions and rationale
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* LRA Recommendation Preview */}
       {lraRecommendation && !isAnalyzing && (
         <div className="bg-green-50 border border-green-200 rounded-xl p-6">

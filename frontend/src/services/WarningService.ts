@@ -256,8 +256,8 @@ export class WarningService {
         
         // HR Intervention System
         requiresHRIntervention,
-        interventionReason: requiresHRIntervention 
-          ? `Employee has active final written warning for ${universalCategory.name}. Next offense requires manual HR decision (suspension, hearing, or dismissal).`
+        interventionReason: requiresHRIntervention
+          ? `Employee has active final written warning for ${universalCategory.name}. Next offense requires manual HR decision through dedicated intervention module.`
           : undefined,
         interventionLevel: requiresHRIntervention ? 'urgent' : undefined,
         
@@ -332,7 +332,7 @@ export class WarningService {
     const nextIndex = currentIndex + 1;
     
     // If we're at or beyond the last step in path, cap at final_written
-    if (nextIndex >= escalationPath.length || escalationPath[nextIndex] === 'suspension' || escalationPath[nextIndex] === 'dismissal') {
+    if (nextIndex >= escalationPath.length) {
       const finalLevel = 'final_written';
       Logger.debug('⚠️ [ESCALATION] Capping at final written warning:', finalLevel)
       return finalLevel;
@@ -377,7 +377,7 @@ export class WarningService {
     const daysSinceFinal = Math.floor((Date.now() - finalWarning.issueDate.getTime()) / (1000 * 60 * 60 * 24));
     const warningCount = activeWarnings.length;
 
-    return `🚨 URGENT HR INTERVENTION REQUIRED: Employee has active final written warning for ${category.name} (issued ${daysSinceFinal} days ago) and has committed another offense. Total active warnings: ${warningCount}. HR must decide: suspension, disciplinary hearing, or dismissal. System cannot escalate beyond final written warning.`;
+    return `🚨 URGENT HR INTERVENTION REQUIRED: Employee has active final written warning for ${category.name} (issued ${daysSinceFinal} days ago) and has committed another offense. Total active warnings: ${warningCount}. HR must use dedicated intervention module to decide next steps. System cannot escalate beyond final written warning.`;
   }
 
   /**
@@ -403,7 +403,7 @@ export class WarningService {
     suggestedLevel: WarningLevel
   ): 'high' | 'medium' | 'low' {
     // High readiness: Following proper progressive discipline
-    if (activeWarnings.length >= 2 && suggestedLevel === 'dismissal') {
+    if (activeWarnings.length >= 2 && suggestedLevel === 'final_written') {
       return 'high';
     }
     
@@ -480,7 +480,7 @@ export class WarningService {
       recommendedLevel: getLevelLabel(defaultLevel),
       reason: 'Unable to analyze warning history - defaulting to counselling for safety',
       activeWarnings: [],
-      escalationPath: ['counselling', 'verbal', 'first_written', 'final_written', 'dismissal'],
+      escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
       isEscalation: false,
 
       // LRA compliance
@@ -518,9 +518,7 @@ export class WarningService {
       'second_written': 'second_written',
       'second_written_warning': 'second_written',
       'final_written': 'final_written',
-      'final_written_warning': 'final_written',
-      'suspension': 'suspension',
-      'dismissal': 'dismissal'
+      'final_written_warning': 'final_written'
     };
     
     return mapping[normalized] || 'counselling';

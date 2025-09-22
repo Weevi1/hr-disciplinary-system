@@ -99,6 +99,10 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
   const [showEmployeeManagement, setShowEmployeeManagement] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [selectedFollowUpSession, setSelectedFollowUpSession] = useState<any>(null);
+
+  // Final Warnings Watch List State
+  const [finalWarningEmployees, setFinalWarningEmployees] = useState<any[]>([]);
+  const [loadingFinalWarnings, setLoadingFinalWarnings] = useState(false);
   // 🚀 OPTIMIZED: Use data from unified dashboard hook instead of local state
   const employees = dashboardEmployees || [];
   const categories = contextCategories || [];
@@ -215,6 +219,58 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
     setSelectedFollowUpSession(null);
     // Refresh follow-ups data would happen automatically via the hook
   }, []);
+
+  // ============================================
+  // FINAL WARNINGS WATCH LIST
+  // ============================================
+
+  const fetchFinalWarningEmployees = useCallback(async () => {
+    if (!organization?.id || loadingFinalWarnings) return;
+
+    setLoadingFinalWarnings(true);
+    try {
+      const warnings = await API.warnings.getActiveWarnings(organization.id);
+
+      // Filter for final written warnings and group by employee
+      const finalWarnings = warnings.filter((warning: any) => warning.level === 'final_written');
+      const employeesWithFinal = finalWarnings.reduce((acc: any[], warning: any) => {
+        const existing = acc.find(emp => emp.employeeId === warning.employeeId);
+        if (existing) {
+          existing.warnings.push(warning);
+        } else {
+          const employee = employees.find(emp => emp.id === warning.employeeId);
+          if (employee) {
+            acc.push({
+              ...employee,
+              employeeId: warning.employeeId,
+              warnings: [warning],
+              latestFinalWarning: warning
+            });
+          }
+        }
+        return acc;
+      }, []);
+
+      // Sort by most recent final warning
+      employeesWithFinal.sort((a, b) =>
+        new Date(b.latestFinalWarning.issueDate).getTime() -
+        new Date(a.latestFinalWarning.issueDate).getTime()
+      );
+
+      setFinalWarningEmployees(employeesWithFinal);
+    } catch (error) {
+      console.error('Failed to fetch final warning employees:', error);
+    } finally {
+      setLoadingFinalWarnings(false);
+    }
+  }, [organization?.id, employees, loadingFinalWarnings]);
+
+  // Fetch final warning employees when dashboard loads
+  useEffect(() => {
+    if (isReady && employees.length > 0) {
+      fetchFinalWarningEmployees();
+    }
+  }, [isReady, employees.length, fetchFinalWarningEmployees]);
 
   // ============================================
   // TOOL ACTIONS CONFIGURATION
@@ -372,6 +428,66 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
                   <div className="text-xs text-gray-600">{session.sessionType}</div>
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* --- 🚨 Final Warnings Watch List --- */}
+        {finalWarningEmployees.length > 0 && (
+          <div className="bg-red-50 border-2 border-red-200 rounded-lg shadow-sm p-4">
+            <h4 className="text-sm font-semibold text-red-900 flex items-center gap-2 mb-3">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+              Final Warnings Watch List ({finalWarningEmployees.length})
+              <span className="px-2 py-0.5 bg-red-200 text-red-700 text-xs rounded-full animate-pulse">
+                MONITOR CLOSELY
+              </span>
+            </h4>
+            <div className="space-y-2">
+              {finalWarningEmployees.slice(0, 4).map((employee) => {
+                const daysSince = Math.floor(
+                  (Date.now() - new Date(employee.latestFinalWarning.issueDate).getTime()) / (1000 * 60 * 60 * 24)
+                );
+                return (
+                  <div
+                    key={employee.employeeId}
+                    className="w-full p-3 bg-white border border-red-200 rounded-lg"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="font-medium text-red-900">{employee.name}</div>
+                        <div className="text-xs text-red-700">
+                          {employee.latestFinalWarning.category} • {daysSince} days ago
+                        </div>
+                        <div className="text-xs text-red-600 mt-1">
+                          ⚠️ Next offense requires HR intervention
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs font-medium text-red-800 bg-red-100 px-2 py-1 rounded">
+                          {employee.warnings.length} warning{employee.warnings.length > 1 ? 's' : ''}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {finalWarningEmployees.length > 4 && (
+                <div className="text-xs text-red-600 text-center py-2">
+                  +{finalWarningEmployees.length - 4} more employees with final warnings
+                </div>
+              )}
+            </div>
+            <div className="mt-3 p-2 bg-red-100 rounded text-xs text-red-800">
+              💡 <strong>Tip:</strong> Monitor these employees closely. Any new offenses will trigger urgent HR intervention alerts.
+            </div>
+          </div>
+        )}
+
+        {loadingFinalWarnings && (
+          <div className="bg-gray-50 rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+              <span className="text-sm text-gray-600">Loading final warnings watch list...</span>
             </div>
           </div>
         )}

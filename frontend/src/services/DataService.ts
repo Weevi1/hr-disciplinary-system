@@ -230,7 +230,7 @@ export class DataService {
           name: customCat.customName || 'Custom Category',
           description: customCat.customDescription || 'Organization-specific category',
           severity: customCat.customSeverity || 'medium',
-          escalationPath: customCat.customEscalationPath || ['counselling', 'verbal', 'first_written', 'final_written', 'dismissal'],
+          escalationPath: customCat.customEscalationPath || ['counselling', 'verbal', 'first_written', 'final_written'],
           legalRequirements: ['Follow standard progressive discipline procedures'],
           examples: customCat.customExamples || [],
           defaultValidityPeriod: 6,

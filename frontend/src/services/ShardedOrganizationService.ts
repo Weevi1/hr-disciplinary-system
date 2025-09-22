@@ -233,7 +233,7 @@ export class ShardedOrganizationService {
           name: category,
           description: `Custom category: ${category}`,
           severity: 'minor',
-          escalationPath: ['counselling', 'verbal', 'first_written', 'final_written', 'dismissal'],
+          escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
           color: '#6366f1',
           isActive: true,
           isDefault: false

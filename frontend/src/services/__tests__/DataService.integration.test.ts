@@ -136,7 +136,7 @@ describe('DataService Integration Tests', () => {
           name: 'Safety',
           description: 'Safety violations',
           severity: 'high' as const,
-          escalationPath: ['written', 'final_written', 'dismissal'],
+          escalationPath: ['written', 'final_written'],
           requiredDocuments: ['incident_report', 'safety_checklist'],
           isActive: true,
         }

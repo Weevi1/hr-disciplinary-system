@@ -369,7 +369,7 @@ useEffect(() => {
         recommendedLevel: 'Counselling Session',
         reason: 'Fallback recommendation due to analysis error. Manual review required.',
         activeWarnings: [],
-        escalationPath: ['counselling', 'verbal', 'first_written', 'final_written', 'dismissal'],
+        escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
         isEscalation: false,
         
         // Essential LRA Compliance
