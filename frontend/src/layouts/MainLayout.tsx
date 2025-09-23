@@ -23,6 +23,7 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Logo } from '../components/common/Logo';
 import { BrandedLogo } from '../components/common/BrandedLogo';
 import { BrandingProvider } from '../contexts/BrandingContext';
+import { ThemeProvider } from '../contexts/ThemeContext';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -345,20 +346,24 @@ export const MainLayout = ({ children, onNavigate, currentView }: MainLayoutProp
   // Super users and resellers don't have organizations, so we need to handle this case
   if (user?.role?.id === 'super-user' || user?.role?.id === 'reseller' || !user?.organizationId) {
     return (
-      <MainLayoutContent onNavigate={onNavigate} currentView={currentView}>
-        {children}
-      </MainLayoutContent>
-    );
-  }
-
-  // For regular users with organizations, use OrganizationProvider + BrandingProvider
-  return (
-    <OrganizationProvider organizationId={user.organizationId}>
-      <BrandingProvider>
+      <ThemeProvider>
         <MainLayoutContent onNavigate={onNavigate} currentView={currentView}>
           {children}
         </MainLayoutContent>
-      </BrandingProvider>
+      </ThemeProvider>
+    );
+  }
+
+  // For regular users with organizations, use OrganizationProvider + ThemeProvider + BrandingProvider
+  return (
+    <OrganizationProvider organizationId={user.organizationId}>
+      <ThemeProvider>
+        <BrandingProvider>
+          <MainLayoutContent onNavigate={onNavigate} currentView={currentView}>
+            {children}
+          </MainLayoutContent>
+        </BrandingProvider>
+      </ThemeProvider>
     </OrganizationProvider>
   );
 };

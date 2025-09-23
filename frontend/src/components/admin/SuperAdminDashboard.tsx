@@ -30,6 +30,7 @@ import { CreateUsersButton } from './CreateUsersButton';
 import { EnhancedOrganizationWizard } from './EnhancedOrganizationWizard';
 import Logger from '../../utils/logger';
 import type { Organization } from '../../types/core';
+import { ThemeSelector } from '../common/ThemeSelector';
 
 interface SuperUserStats {
   totalOrganizations: number;
@@ -178,6 +179,8 @@ export const SuperAdminDashboard = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          <ThemeSelector />
+
           <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${getHealthColor(stats.systemHealth)}`}>
             {getHealthIcon(stats.systemHealth)}
             <span className="font-medium capitalize">{stats.systemHealth}</span>
