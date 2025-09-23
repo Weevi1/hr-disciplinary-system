@@ -33,6 +33,11 @@ git add . && git commit -m "Auto-backup: $(date +'%Y-%m-%d %H:%M:%S') - File edi
 - **✅ Sharded Architecture**: Database sharding implemented for multi-thousand organization support
 - **✅ V2 Components**: HOD Dashboard actions (Issue Warning, Book HR Meeting, Report Absence) fully upgraded to V2 standards
 - **✅ Employee Archive System**: Complete employee lifecycle management with archive/restore functionality
+- **✅ Legal Compliance**: All escalation paths cap at final written warnings with HR intervention alerts
+- **✅ Unified Escalation Logic**: Single source of truth in UniversalCategories.ts for all disciplinary procedures
+- **✅ Manager Dashboard Cache Fix**: Auto-refresh and manual refresh for employee assignment caching issues
+- **✅ Component Bug Fixes**: Fixed BookHRMeeting and CorrectiveCounselling crash issues with defensive programming
+- **✅ Escalation Path Consistency**: Custom organization categories now use correct escalation paths in warning wizard
 - **✅ Git Backup System**: Incremental backups after every file edit with unlimited version history
 
 ## Architecture Summary
@@ -91,6 +96,9 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 - `frontend/src/components/admin/steps/BrandingStep.tsx` - Enhanced 3-color branding configuration
 - `frontend/src/services/PDFGenerationService.ts` - PDF generation with organization branding and logos
 - `frontend/src/permissions/roleDefinitions.ts` - Role-based access control including reseller permissions
+- `frontend/src/contexts/ThemeContext.tsx` - Theme management system with localStorage persistence and organization branding integration
+- `frontend/src/config/themes.ts` - Theme color definitions (light, dark, branded) with dynamic CSS variable application
+- `frontend/src/components/common/ThemeSelector.tsx` - Theme switching UI component with dropdown interface
 - `config/firestore.rules` - Security rules (requires review)
 - `frontend/src/components/warnings/enhanced/` - Main warning workflow
 - `frontend/src/components/reseller/` - Reseller dashboard, client management, and organization deployment
@@ -110,7 +118,50 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 - **Firebase Integration Tests**: 37 comprehensive tests covering core services
 - **Sharded Organization Wizard**: New organization creation compatible with sharded architecture
 
-### **✅ Latest Session Updates (2025-09-20)**
+### **✅ Latest Session Updates (2025-09-23)**
+- **COMPREHENSIVE THEME SELECTOR SYSTEM**: Implemented complete theme switching functionality with three theme options
+  - **Light Theme** (default) - Clean and bright interface hardcoded for fast initial loading
+  - **Dark Theme** - Easy on the eyes with proper contrast ratios and dark backgrounds
+  - **Branded Theme** - Uses organization's custom branding colors (primary, secondary, accent) for full white-label experience
+  - Created `ThemeContext` with localStorage persistence and smooth 300ms transitions
+  - Added `ThemeSelector` component with elegant dropdown UI and visual theme icons
+  - Integrated theme selector into all dashboards: Business Dashboard, Super Admin Dashboard, Reseller Dashboard
+  - Updated CSS variables system to support dynamic theme switching with proper fallbacks
+  - Enabled Tailwind dark mode with class-based activation
+  - Theme preferences persist across browser sessions
+- **MIGRATION CLEANUP**: Removed obsolete migration scripts that were causing development server errors
+  - Deleted `migrateToNestedStructure.ts` and `testDualWrite.ts` (nested structure already implemented)
+  - Cleaned up imports in `main.tsx` to prevent 503 errors and WebSocket connection failures
+  - Development server now runs cleanly without migration script interference
+
+### **✅ Previous Session Updates (2025-09-23)**
+- **MANAGER DASHBOARD CACHE FIX**: Fixed cache issue where manager dashboards showed no employees on first login, requiring sign-out/sign-in
+  - Added auto-refresh logic with 2-second delay to allow auth to fully establish
+  - Added manual refresh button in HOD dashboard header for cache issues
+  - Fixed `useDashboardData` hook cache persistence with proper dependency management
+- **BOOKHRMETING CRASH FIX**: Fixed undefined employee.firstName crash in BookHRMeeting component
+  - Added defensive programming with null checks and fallback values
+  - Improved employee data transformation with consistent profile/employment structure
+  - Added `.filter(Boolean)` to remove any null entries from dropdown
+- **CORRECTIVE COUNSELLING FIX**: Fixed "DataService is not defined" error in CorrectiveCounselling component
+  - Changed from non-existent `DataService.getWarningCategories()` to `API.organizations.getCategories()`
+  - Ensures consistency with other components using established API patterns
+- **ESCALATION PATH CONSISTENCY FIX**: Fixed mismatch between warning wizard and category management escalation paths
+  - Warning wizard was using hardcoded fallback instead of organization category's actual escalation path
+  - Fixed `CategorySelector` to use `selectedCategory.escalationPath` instead of `getEscalationPath(selectedCategory.name)`
+  - Updated `WarningService` to check organization categories before universal categories
+  - Custom categories like "Cookie Craze" now show correct escalation paths in warning wizard
+
+### **✅ Previous Session Updates (2025-09-22)**
+- **ESCALATION LOGIC CONSOLIDATION**: Completed comprehensive consolidation of all escalation logic into UniversalCategories.ts as single source of truth
+- **FINAL WRITTEN WARNING CAP**: All escalation paths now stop at final_written warning - no automatic suspension/dismissal
+- **HR INTERVENTION SYSTEM**: Added urgent alerts in Enhanced Warning Wizard when employees have existing final warnings
+- **HOD DASHBOARD WATCH LIST**: Added "Final Warnings Watch List" showing employees requiring close monitoring with days since final warning
+- **LEGACY COMPONENT CLEANUP**: Removed 9 orphaned components (ConfigurationStep, 6 step components, SectorAssignment) that contained old escalation logic
+- **SECURITY IMPLEMENTATION COMPLETED**: All critical security fixes from previous session fully implemented and verified
+- **LEGAL COMPLIANCE**: System now properly caps escalation at final written warnings, requiring manual HR intervention for suspension/dismissal decisions
+
+### **✅ Previous Session Updates (2025-09-20)**
 - **PDF GENERATION CLARIFICATION**: PDFs are generated on-demand, not stored - two separate generations are correct behavior (preview + QR upload)
 - **QR CODE ENHANCEMENT**: Added progress indicators and fresh PDF generation for QR code downloads with Firebase Storage upload
 - **AUTO-SCROLL FIX**: Implemented multi-strategy auto-scroll with ref targeting, window scroll fallback, and class-based targeting

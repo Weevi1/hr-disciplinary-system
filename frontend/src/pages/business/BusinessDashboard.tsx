@@ -17,6 +17,7 @@ import { QuotesSection } from '../../components/dashboard/QuotesSection';
 import { HRDashboardSection } from '../../components/dashboard/HRDashboardSection';
 import { HODDashboardSection } from '../../components/dashboard/HODDashboardSection';
 import { BusinessOwnerDashboardSection } from '../../components/dashboard/BusinessOwnerDashboardSection';
+import { ThemeSelector } from '../../components/common/ThemeSelector';
 
 // 🛡️ ERROR FALLBACK COMPONENT
 const ErrorFallback = memo<{ error: Error; resetErrorBoundary: () => void }>(
@@ -79,15 +80,20 @@ export const BusinessDashboard = memo(() => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
       {/* 🎨 COMPACT WELCOME SECTION - Desktop first */}
-      <div className="bg-gray-50 pb-0">
+      <div className="pb-0" style={{ backgroundColor: 'var(--color-background)' }}>
         <div className="max-w-7xl mx-auto p-6 pb-4">
-          <ErrorBoundary FallbackComponent={ErrorFallback}>
-            <Suspense fallback={<WelcomeSkeleton />}>
-              <WelcomeSection />
-            </Suspense>
-          </ErrorBoundary>
+          <div className="flex justify-between items-start">
+            <ErrorBoundary FallbackComponent={ErrorFallback}>
+              <Suspense fallback={<WelcomeSkeleton />}>
+                <WelcomeSection />
+              </Suspense>
+            </ErrorBoundary>
+            <div className="ml-4">
+              <ThemeSelector />
+            </div>
+          </div>
         </div>
       </div>
 
