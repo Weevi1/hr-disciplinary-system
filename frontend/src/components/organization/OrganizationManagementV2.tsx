@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Users, UserPlus, Settings, Building2, Shield,
   Plus, Eye, Edit, Trash2, AlertCircle, CheckCircle,
-  Crown, TrendingUp, Calendar, Mail, Phone, Archive, RotateCcw
+  Crown, TrendingUp, Calendar, Mail, Phone, Archive, RotateCcw, X
 } from 'lucide-react';
 
 import { useAuth } from '../../auth/AuthContext';
@@ -16,9 +16,11 @@ import { useOrganization } from '../../contexts/OrganizationContext';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
 import { ShardedDataService } from '../../services/ShardedDataService';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '../../config/firebase';
+import { UserCreationService } from '../../services/UserCreationService';
 import { userCreationManager } from '../../utils/userCreationContext';
+import DepartmentService from '../../services/DepartmentService';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../../config/firebase';
 import Logger from '../../utils/logger';
 
 // Types
@@ -58,14 +60,18 @@ interface AddUserModalProps {
   onClose: () => void;
   onSuccess: () => void;
   userRole: 'hr-manager' | 'hod-manager';
+  employees: any[]; // List of current employees for promotion
 }
 
 const AddUserModal = memo<AddUserModalProps>(({
   isOpen,
   onClose,
   onSuccess,
-  userRole
+  userRole,
+  employees
 }) => {
+  const [selectionMode, setSelectionMode] = useState<'promote' | 'create'>(employees.length > 0 ? 'promote' : 'create');
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -86,87 +92,92 @@ const AddUserModal = memo<AddUserModalProps>(({
     setLoading(true);
     setError('');
 
-    let firebaseUserId: string | null = null;
-
     try {
-      Logger.debug(`🔧 Creating ${userRole} user with race condition prevention`);
-      
-      // Step 1: Create Firebase Auth account (this will trigger AuthContext listener)
-      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      const firebaseUser = userCredential.user;
-      firebaseUserId = firebaseUser.uid;
+      if (selectionMode === 'promote') {
+        if (!selectedEmployee) {
+          setError('Please select an employee to promote');
+          setLoading(false);
+          return;
+        }
 
-      // Step 2: Mark this user as being created to suppress warnings
-      userCreationManager.startUserCreation(firebaseUserId);
-      
-      Logger.debug(`👤 Created Firebase Auth user: ${firebaseUserId}`);
-      
-      // Step 3: Prepare user data
-      const roleData = {
-        id: userRole,
-        name: userRole === 'hr-manager' ? 'HR Manager' : 'Department Manager',
-        description: userRole === 'hr-manager' ? 'Human Resources Manager' : 'Head of Department Manager',
-        level: userRole === 'hr-manager' ? 3 : 2
-      };
+        Logger.debug(`🔧 Promoting employee ${selectedEmployee.id} to ${userRole}`);
 
-      const userData = {
-        uid: firebaseUserId, // Firebase Auth UID
-        id: firebaseUserId, // Use Firebase Auth UID
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        role: roleData,
-        organizationId: organization.id,
-        departmentIds: userRole === 'hod-manager' ? [formData.department] : [],
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
-        permissions: [{
-          resource: 'employees',
-          actions: userRole === 'hr-manager' ? ['create', 'read', 'update', 'delete'] : ['read'],
-          scope: 'organization'
-        }, {
-          resource: 'warnings',
-          actions: userRole === 'hod-manager' ? ['create', 'read', 'update'] : ['read'],
-          scope: userRole === 'hod-manager' ? 'department' : 'organization'
-        }]
-      };
+        // Validate email is provided
+        if (!formData.email.trim()) {
+          setError('Email address is required for creating user account');
+          setLoading(false);
+          return;
+        }
 
-      // Step 4: Create user document in sharded structure
-      await DatabaseShardingService.createDocument(
-        organization.id,
-        'users',
-        userData,
-        firebaseUserId
-      );
+        // Create user account for existing employee
+        const userData = {
+          firstName: selectedEmployee.profile?.firstName || selectedEmployee.firstName,
+          lastName: selectedEmployee.profile?.lastName || selectedEmployee.lastName,
+          email: formData.email.trim(), // Use the verified/entered email
+          password: 'temp123',
+          role: userRole,
+          organizationId: organization.id,
+          departmentIds: userRole === 'hod-manager' ? [formData.department] : [],
+          employeeId: selectedEmployee.id, // Link to existing employee record
+          updateEmployeeEmail: true // Flag to update employee record with verified email
+        };
 
-      Logger.debug(`📄 Created Firestore user document: ${firebaseUserId}`);
+        const createUserFunction = httpsCallable(functions, 'createOrganizationUser');
+        const result = await createUserFunction(userData);
 
-      // Step 5: Update Firebase Auth profile
-      await updateProfile(firebaseUser, {
-        displayName: `${formData.firstName} ${formData.lastName}`
-      });
+        if (!result.data.success) {
+          throw new Error(result.data.message || 'Failed to promote employee');
+        }
 
-      // Step 6: Mark user creation as complete
-      userCreationManager.finishUserCreation(firebaseUserId);
-      
-      Logger.success(`✅ Created ${userRole} user successfully: ${firebaseUserId}`);
-      
+        Logger.success(`✅ Promoted employee to ${userRole} with verified email: ${formData.email}`);
+
+      } else {
+        // Create new user AND employee
+        Logger.debug(`🔧 Creating new ${userRole} user and employee via Cloud Function`);
+
+        const userData = {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+          role: userRole,
+          organizationId: organization.id,
+          departmentIds: userRole === 'hod-manager' ? [formData.department] : [],
+          createEmployee: true // Flag to also create employee record
+        };
+
+        const createUserFunction = httpsCallable(functions, 'createOrganizationUser');
+        const result = await createUserFunction(userData);
+
+        if (!result.data.success) {
+          throw new Error(result.data.message || 'Failed to create user');
+        }
+
+        Logger.success(`✅ Created ${userRole} user and employee: ${result.data.userId}`);
+      }
+
       setLoading(false);
       onSuccess();
       onClose();
-      setFormData({ firstName: '', lastName: '', email: '', department: '', password: 'temp123' });
-      
+      resetForm();
+
     } catch (err: any) {
-      // Clean up user creation state on error
-      if (firebaseUserId) {
-        userCreationManager.finishUserCreation(firebaseUserId);
-      }
-      
-      Logger.error('❌ Error creating user:', err);
-      setError(err.message || 'Failed to create user');
+      Logger.error('❌ Error processing user:', err);
+      setError(err.message || 'Failed to process user');
       setLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setSelectionMode(employees.length > 0 ? 'promote' : 'create');
+    setSelectedEmployee(null);
+    setFormData({
+      firstName: '',
+      lastName: '',
+      email: '',
+      department: '',
+      password: 'temp123'
+    });
   };
 
   if (!isOpen) return null;
@@ -180,12 +191,141 @@ const AddUserModal = memo<AddUserModalProps>(({
             Add {userRole === 'hr-manager' ? 'HR Manager' : 'Department Manager'}
           </h2>
           <p className="text-sm text-gray-600 mt-1">
-            Create a new {userRole === 'hr-manager' ? 'HR manager' : 'department manager'} account
+            {selectionMode === 'promote'
+              ? `Promote an existing employee to ${userRole === 'hr-manager' ? 'HR manager' : 'department manager'}`
+              : `Create a new ${userRole === 'hr-manager' ? 'HR manager' : 'department manager'} account`
+            }
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          {/* Selection Mode Toggle */}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700">
+              Choose Option
+            </label>
+            <div className="space-y-2">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="selectionMode"
+                  value="promote"
+                  checked={selectionMode === 'promote'}
+                  onChange={(e) => setSelectionMode(e.target.value as 'promote' | 'create')}
+                  className="mr-3 text-blue-600"
+                  disabled={employees.length === 0}
+                />
+                <span className={employees.length === 0 ? 'text-gray-400' : 'text-gray-700'}>
+                  Promote Existing Employee {employees.length === 0 && '(No employees available)'}
+                </span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="selectionMode"
+                  value="create"
+                  checked={selectionMode === 'create'}
+                  onChange={(e) => setSelectionMode(e.target.value as 'promote' | 'create')}
+                  className="mr-3 text-blue-600"
+                />
+                <span className="text-gray-700">Create New Manager</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Employee Selection Mode */}
+          {selectionMode === 'promote' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Employee to Promote
+              </label>
+              <select
+                value={selectedEmployee?.id || ''}
+                onChange={(e) => {
+                  const emp = employees.find(emp => emp.id === e.target.value);
+                  setSelectedEmployee(emp || null);
+                  // Pre-populate email if available, otherwise suggest one
+                  if (emp) {
+                    const currentEmail = emp.profile?.email || emp.email;
+                    const suggestedEmail = currentEmail || `${emp.profile?.firstName || emp.firstName}.${emp.profile?.lastName || emp.lastName}@${organization?.name.toLowerCase().replace(/\s+/g, '')}.com`;
+                    setFormData(prev => ({ ...prev, email: currentEmail || '' }));
+                  } else {
+                    setFormData(prev => ({ ...prev, email: '' }));
+                  }
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              >
+                <option value="">Select an employee...</option>
+                {employees.map(emp => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.profile?.firstName || emp.firstName} {emp.profile?.lastName || emp.lastName}
+                    {emp.profile?.email && ` (${emp.profile.email})`}
+                  </option>
+                ))}
+              </select>
+              {selectedEmployee && (
+                <div className="mt-2 p-3 bg-blue-50 rounded-lg space-y-3">
+                  <div className="text-sm">
+                    <strong>Selected:</strong> {selectedEmployee.profile?.firstName || selectedEmployee.firstName} {selectedEmployee.profile?.lastName || selectedEmployee.lastName}
+                    <br />
+                    <strong>Department:</strong> {selectedEmployee.profile?.department || selectedEmployee.employment?.department || 'Not assigned'}
+                  </div>
+
+                  {/* Email Verification/Input */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      Email Address
+                      {selectedEmployee.profile?.email ? (
+                        <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                          Verify/Update
+                        </span>
+                      ) : (
+                        <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">
+                          Required
+                        </span>
+                      )}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          selectedEmployee.profile?.email ? 'border-yellow-300 bg-yellow-50' : 'border-gray-300'
+                        }`}
+                        placeholder={selectedEmployee.profile?.email || `${selectedEmployee.profile?.firstName || selectedEmployee.firstName}.${selectedEmployee.profile?.lastName || selectedEmployee.lastName}@${organization?.name.toLowerCase().replace(/\s+/g, '')}.com`}
+                        required
+                      />
+                      {selectedEmployee.profile?.email && formData.email === (selectedEmployee.profile?.email || selectedEmployee.email) && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <span className="text-green-600 text-sm">✓ Verified</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-600 mt-1 flex items-start gap-2">
+                      {selectedEmployee.profile?.email ? (
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-yellow-500 rounded-full flex-shrink-0 mt-1"></span>
+                          <span>Current: <strong>{selectedEmployee.profile.email}</strong>. You can verify or update it above.</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0 mt-1"></span>
+                          <span>No email on file. Please enter their email address for login access.</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Create New User Form */}
+          {selectionMode === 'create' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 First Name
@@ -248,6 +388,8 @@ const AddUserModal = memo<AddUserModalProps>(({
               </select>
             </div>
           )}
+          </>
+          )}
 
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -274,12 +416,12 @@ const AddUserModal = memo<AddUserModalProps>(({
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Creating...
+                  {selectionMode === 'promote' ? 'Promoting...' : 'Creating...'}
                 </>
               ) : (
                 <>
                   <UserPlus className="w-4 h-4" />
-                  Create User
+                  {selectionMode === 'promote' ? 'Promote Employee' : 'Create Manager'}
                 </>
               )}
             </button>
@@ -313,6 +455,7 @@ export const OrganizationManagementV2 = memo(() => {
   const [users, setUsers] = useState<OrganizationUser[]>([]);
   const [businessOwner, setBusinessOwner] = useState<OrganizationUser | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
   const [stats, setStats] = useState<OrganizationStats>({
     totalUsers: 0,
     totalEmployees: 0,
@@ -323,6 +466,7 @@ export const OrganizationManagementV2 = memo(() => {
   const [loading, setLoading] = useState(true);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [selectedUserRole, setSelectedUserRole] = useState<'hr-manager' | 'hod-manager'>('hr-manager');
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Load organization data with sharded architecture
   useEffect(() => {
@@ -373,49 +517,33 @@ export const OrganizationManagementV2 = memo(() => {
       const warningsResult = await ShardedDataService.loadWarnings(organization.id);
       const activeWarnings = warningsResult.documents.filter((w: any) => w.status === 'issued').length;
 
-      // Create mock departments (replace with real data loading)
-      const mockDepartments: Department[] = [
-        {
-          id: 'operations',
-          name: 'Operations',
-          employeeCount: employeesResult.documents.filter((e: any) => e.employment?.department === 'Operations').length,
-          createdAt: '2024-01-01',
-          managerId: organizationUsers.find(u => {
-            return getRoleId(u.role) === 'hod-manager' && u.departmentIds?.includes('operations');
-          })?.id,
-          managerName: (() => {
-            const manager = organizationUsers.find(u => {
-              return getRoleId(u.role) === 'hod-manager' && u.departmentIds?.includes('operations');
-            });
-            return manager ? `${manager.firstName} ${manager.lastName || ''}` : undefined;
-          })()
-        },
-        {
-          id: 'production',
-          name: 'Production',
-          employeeCount: employeesResult.documents.filter((e: any) => e.employment?.department === 'Production').length,
-          createdAt: '2024-01-01'
-        },
-        {
-          id: 'quality',
-          name: 'Quality Assurance',
-          employeeCount: employeesResult.documents.filter((e: any) => e.employment?.department === 'Quality Assurance').length,
-          createdAt: '2024-01-01'
-        }
-      ];
+      // Load real departments from Firebase
+      const departmentsData = await DepartmentService.getDepartments(organization.id);
+
+      // Convert to component format and add manager info
+      const realDepartments: Department[] = departmentsData.map(dept => ({
+        id: dept.id,
+        name: dept.name,
+        employeeCount: dept.employeeCount,
+        createdAt: dept.createdAt.toISOString(),
+        description: dept.description,
+        managerId: dept.managerId,
+        managerName: dept.managerName
+      }));
 
       // Calculate stats
       const organizationStats: OrganizationStats = {
         totalUsers: organizationUsers.length,
         totalEmployees: employeesResult.documents.length,
-        totalDepartments: mockDepartments.length,
+        totalDepartments: realDepartments.length,
         activeWarnings,
         monthlyGrowth: 12.5 // Mock growth - replace with real calculation
       };
 
       setUsers(organizationUsers);
       setBusinessOwner(businessOwnerUser);
-      setDepartments(mockDepartments);
+      setDepartments(realDepartments);
+      setEmployees(employeesResult.documents);
       setStats(organizationStats);
 
       Logger.success(`✅ Loaded organization data: ${organizationUsers.length} users, ${employeesResult.documents.length} employees`);
@@ -433,6 +561,14 @@ export const OrganizationManagementV2 = memo(() => {
   };
 
   const handleUserCreated = () => {
+    // Show success message
+    const roleName = selectedUserRole === 'hr-manager' ? 'HR Manager' : 'Department Manager';
+    setSuccessMessage(`✅ ${roleName} created successfully! User can now sign in with their email and password 'temp123'.`);
+
+    // Auto-hide success message after 5 seconds
+    setTimeout(() => setSuccessMessage(null), 5000);
+
+    // Reload data to show new user
     loadOrganizationData();
   };
 
@@ -598,6 +734,24 @@ export const OrganizationManagementV2 = memo(() => {
   return (
     <>
       <div className="space-y-6">
+        {/* Success Message */}
+        {successMessage && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 animate-in fade-in duration-300">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <div className="flex-1">
+                <p className="text-green-800 font-medium">{successMessage}</p>
+              </div>
+              <button
+                onClick={() => setSuccessMessage(null)}
+                className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Header with Stats */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white">
           <div className="flex items-center justify-between mb-4">
@@ -926,11 +1080,8 @@ export const OrganizationManagementV2 = memo(() => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {departments.map(dept => (
                 <div key={dept.id} className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-4 border border-orange-200">
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="mb-3">
                     <h4 className="font-semibold text-gray-900">{dept.name}</h4>
-                    <button className="p-1 hover:bg-orange-100 rounded-lg transition-colors">
-                      <Edit className="w-4 h-4 text-gray-500" />
-                    </button>
                   </div>
                   
                   {dept.managerName ? (
@@ -961,6 +1112,7 @@ export const OrganizationManagementV2 = memo(() => {
           onClose={() => setShowAddUserModal(false)}
           onSuccess={handleUserCreated}
           userRole={selectedUserRole}
+          employees={employees}
         />,
         document.body
       )}

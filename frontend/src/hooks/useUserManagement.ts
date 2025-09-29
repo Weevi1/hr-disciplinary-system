@@ -4,6 +4,7 @@ import Logger from '../utils/logger';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { FirebaseService, COLLECTIONS } from '../services/FirebaseService';
+import { DatabaseShardingService } from '../services/DatabaseShardingService';
 import { USER_ROLES, USER_MANAGEMENT_RULES, getCreatableRoles, canManageUser } from '../permissions/roleDefinitions';
 import type { User } from '../types';
 
@@ -90,7 +91,7 @@ export const useUserManagement = () => {
     );
   };
 
-  // Enhanced load users matching your original approach but optimized
+  // Enhanced load users using sharded database structure
   const loadUsers = async (): Promise<void> => {
     if (!currentUser?.organizationId) {
       setState(prev => ({ ...prev, loading: false, error: 'No organization found' }));
@@ -102,39 +103,49 @@ export const useUserManagement = () => {
 
       Logger.debug('🔍 Loading users for organization:', currentUser.organizationId)
 
-      // Get all users from the organization (matching your original approach)
-      const allUsers = await FirebaseService.getCollection<any>(COLLECTIONS.USERS);
+      // Get all users from the sharded organization structure
+      const usersResult = await DatabaseShardingService.queryDocuments(
+        currentUser.organizationId,
+        'users',
+        []
+      );
 
-      // Filter users that current user can manage
-      const manageableUsers = allUsers
-        .filter((user: any) => 
-          canManageUser(
+      // Helper function to get role ID from either string or object role
+      const getRoleId = (role: any): string => {
+        return typeof role === 'string' ? role : role?.id || '';
+      };
+
+      // Filter users that current user can manage (excluding business owners)
+      const manageableUsers = usersResult.documents
+        .filter((user: any) => {
+          const userRoleId = getRoleId(user.role);
+          return userRoleId !== 'business-owner' && canManageUser(
             currentUser.role.id,
             currentUser.organizationId,
-            user.role?.id || user.role,
+            userRoleId,
             user.organizationId,
             'read'
           )
-        )
+        })
         .map((user: any) => ({
           ...user,
           role: typeof user.role === 'string' ? USER_ROLES[user.role] : user.role
         }));
 
-      Logger.success(4262)
+      Logger.success(`✅ Loaded ${manageableUsers.length} manageable users from sharded structure`)
 
-      setState(prev => ({ 
-        ...prev, 
-        users: manageableUsers, 
-        loading: false 
+      setState(prev => ({
+        ...prev,
+        users: manageableUsers,
+        loading: false
       }));
 
     } catch (error) {
       Logger.error('❌ Error loading users:', error)
-      setState(prev => ({ 
-        ...prev, 
-        loading: false, 
-        error: error instanceof Error ? error.message : 'Failed to load users' 
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: error instanceof Error ? error.message : 'Failed to load users'
       }));
     }
   };
@@ -206,14 +217,24 @@ export const useUserManagement = () => {
 
   // Enhanced update user
   const updateUser = async (userId: string, updates: Partial<User>): Promise<void> => {
+    if (!currentUser?.organizationId) {
+      throw new Error('No organization found');
+    }
+
     try {
       Logger.debug('📝 Updating user:', userId)
 
-      await FirebaseService.updateDocument(COLLECTIONS.USERS, userId, {
-        ...updates,
-        updatedAt: new Date().toISOString(),
-        updatedBy: currentUser?.id
-      });
+      // Update user in sharded structure
+      await DatabaseShardingService.updateDocument(
+        currentUser.organizationId,
+        'users',
+        userId,
+        {
+          ...updates,
+          updatedAt: new Date().toISOString(),
+          updatedBy: currentUser?.id
+        }
+      );
 
       // Update local state
       setState(prev => ({
@@ -245,11 +266,17 @@ export const useUserManagement = () => {
     try {
       Logger.debug('🚫 Deactivating user:', userId)
 
-      await FirebaseService.updateDocument(COLLECTIONS.USERS, userId, {
-        isActive: false,
-        deactivatedAt: new Date().toISOString(),
-        deactivatedBy: currentUser?.id
-      });
+      // Update user in sharded structure
+      await DatabaseShardingService.updateDocument(
+        currentUser.organizationId!,
+        'users',
+        userId,
+        {
+          isActive: false,
+          deactivatedAt: new Date().toISOString(),
+          deactivatedBy: currentUser?.id
+        }
+      );
 
       // Update local state
       setState(prev => ({
@@ -270,13 +297,19 @@ export const useUserManagement = () => {
   // Enhanced reactivate user
   const reactivateUser = async (userId: string): Promise<void> => {
     try {
-      Logger.success(8897)
+      Logger.debug('✅ Reactivating user:', userId)
 
-      await FirebaseService.updateDocument(COLLECTIONS.USERS, userId, {
-        isActive: true,
-        reactivatedAt: new Date().toISOString(),
-        reactivatedBy: currentUser?.id
-      });
+      // Update user in sharded structure
+      await DatabaseShardingService.updateDocument(
+        currentUser!.organizationId!,
+        'users',
+        userId,
+        {
+          isActive: true,
+          reactivatedAt: new Date().toISOString(),
+          reactivatedBy: currentUser?.id
+        }
+      );
 
       // Update local state
       setState(prev => ({
