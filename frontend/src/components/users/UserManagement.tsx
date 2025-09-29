@@ -1,9 +1,10 @@
 // frontend/src/components/UserManagement.tsx
 // 🎯 Enhanced Main User Management component - Business Owner dashboard
 import React, { useState } from 'react';
-import { UserPlus, Users, Shield, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { UserPlus, Users, Shield, AlertCircle, CheckCircle, X, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/auth/AuthContext';
 import { useUserManagement } from '@/hooks/useUserManagement';
+import { useNavigate } from 'react-router-dom';
 import { CreateUserForm } from './CreateUserForm';
 import { UserList } from './UserList';
 import { PermissionInfoPanel } from './PermissionInfoPanel';
@@ -16,6 +17,7 @@ interface Message {
 }
 
 export const UserManagement: React.FC = () => {
+  const navigate = useNavigate();
   const { user: currentUser, organization } = useAuth();
   const {
     users,
@@ -136,10 +138,28 @@ export const UserManagement: React.FC = () => {
 
   return (
     <div>
-      {/* Enhanced Header matching your original style */}
+      {/* Enhanced Header with Back Button */}
       <div className="hr-card" style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {/* Back Button */}
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="hr-button-outline"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 1rem',
+                fontSize: '0.875rem'
+              }}
+              title="Back to Dashboard"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
+
+            <div>
             <h2 style={{ 
               margin: '0 0 0.5rem', 
               color: '#1e40af', 
@@ -176,6 +196,7 @@ export const UserManagement: React.FC = () => {
                   Inactive Users: {users.filter(u => !u.isActive).length}
                 </span>
               </div>
+            </div>
             </div>
           </div>
 

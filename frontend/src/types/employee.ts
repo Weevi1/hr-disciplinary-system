@@ -43,7 +43,6 @@ export interface EmployeeFormData {
   startDate: string;
   contractType: ContractType;
   probationEndDate?: string;
-  preferredDeliveryMethod: DeliveryMethod;
   managerId?: string; // 🔧 ADD THIS LINE
   isActive: boolean;
 }
@@ -126,7 +125,6 @@ export interface CSVImportRow {
   position: string;
   startDate: string;
   contractType?: string;
-  preferredDeliveryMethod?: string;
   probationEndDate?: string;
   [key: string]: string | undefined;
 }
@@ -154,7 +152,7 @@ export interface CSVRowValidation {
 // ============================================
 
 export interface BulkAction {
-  type: 'archive' | 'restore' | 'activate' | 'updateDepartment' | 'updateDeliveryMethod';
+  type: 'archive' | 'restore' | 'activate' | 'updateDepartment';
   employeeIds: string[];
   value?: string;
   reason?: string;
@@ -185,7 +183,6 @@ export interface EmployeePermissions {
   canViewContactInfo: boolean;
   canBulkImport: boolean;
   canExport: boolean;
-  canManageDeliveryMethods: boolean;
 }
 
 // ============================================
@@ -196,6 +193,14 @@ export const generateEmployeeId = (): string => {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substr(2, 9);
   return `emp_${timestamp}_${random}`;
+};
+
+export const generateEmployeeNumber = (organizationId: string): string => {
+  // Generate a unique employee number based on organization and timestamp
+  const orgCode = organizationId.toUpperCase().substring(0, 3);
+  const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
+  const random = Math.floor(Math.random() * 99).toString().padStart(2, '0');
+  return `${orgCode}${timestamp}${random}`;
 };
 
 // REPLACE the existing createEmployeeFromForm function in types/employee.ts with this:
@@ -224,7 +229,6 @@ export const createEmployeeFromForm = (
       department: formData.department,
       position: formData.position,
       startDate: new Date(formData.startDate),
-      preferredDeliveryMethod: formData.preferredDeliveryMethod
     },
     
     employment: {
@@ -245,11 +249,11 @@ export const createEmployeeFromForm = (
     },
     
     deliveryPreferences: {
-      primaryMethod: formData.preferredDeliveryMethod,
+      primaryMethod: 'email',
       allowAlternativeMethods: true,
-      whatsappConsent: formData.preferredDeliveryMethod === 'whatsapp',
-      emailConsent: formData.preferredDeliveryMethod === 'email',
-      printConsent: formData.preferredDeliveryMethod === 'printed',
+      whatsappConsent: false,
+      emailConsent: true,
+      printConsent: false,
       lastUpdated: now
     }
   };
@@ -308,7 +312,6 @@ export const createFormFromEmployee = (employee: Employee): EmployeeFormData => 
     startDate: safeDateToString(employee.profile.startDate),
     contractType: employee.employment.contractType,
     probationEndDate: safeDateToString(employee.employment.probationEndDate),
-    preferredDeliveryMethod: employee.profile.preferredDeliveryMethod || 'email',
     managerId: employee.employment.managerId || '',
     isActive: employee.isActive
   };
@@ -330,7 +333,6 @@ export const calculateEmployeePermissions = (
       canViewContactInfo: false,
       canBulkImport: false,
       canExport: false,
-      canManageDeliveryMethods: false
     };
   }
 
@@ -347,8 +349,7 @@ export const calculateEmployeePermissions = (
         canViewContactInfo: true,
         canBulkImport: true,
         canExport: true,
-        canManageDeliveryMethods: true
-      };
+        };
       
     case 'business-owner':
       return {
@@ -362,8 +363,7 @@ export const calculateEmployeePermissions = (
         canViewContactInfo: true,
         canBulkImport: false,
         canExport: true,
-        canManageDeliveryMethods: false
-      };
+        };
       
     case 'hr-manager':
       return {
@@ -377,13 +377,13 @@ export const calculateEmployeePermissions = (
         canViewContactInfo: true,
         canBulkImport: true,
         canExport: true,
-        canManageDeliveryMethods: true
-      };
+        };
       
     case 'hod-manager':
+    case 'hod':
       return {
-        canCreate: true, // Allow HOD managers to add team members
-        canEdit: true,   // Allow HOD managers to edit their team members
+        canCreate: true,  // HOD managers can add basic employee records
+        canEdit: false,   // HOD users can only VIEW existing employees (HR completes profiles)
         canArchive: false,
         canRestore: false,
         canViewAll: false,
@@ -392,9 +392,8 @@ export const calculateEmployeePermissions = (
         canViewContactInfo: true,
         canBulkImport: false,
         canExport: false,
-        canManageDeliveryMethods: false
-      };
-      
+        };
+
     default:
       return {
         canCreate: false,
@@ -407,23 +406,43 @@ export const calculateEmployeePermissions = (
         canViewContactInfo: false,
         canBulkImport: false,
         canExport: false,
-        canManageDeliveryMethods: false
-      };
+        };
   }
 };
 
 export const filterEmployees = (
   employees: Employee[],
   filters: EmployeeFilters,
-  permissions: EmployeePermissions
+  permissions: EmployeePermissions,
+  userRole?: string,
+  currentUserId?: string
 ): Employee[] => {
   return employees.filter(employee => {
-    if (!permissions.canViewAll && permissions.canViewDepartments.length > 0) {
-      if (!permissions.canViewDepartments.includes(employee.profile.department)) {
+    // Defensive check for employee structure
+    if (!employee || !employee.profile) {
+      return false;
+    }
+
+    // For HOD users, filter by manager relationship only
+    if (!permissions.canViewAll && (userRole === 'hod' || userRole === 'hod-manager')) {
+      const employeeManagerId = employee.employment?.managerId;
+
+      if (employeeManagerId) {
+        // Employee has a manager assigned - check if it's this user
+        if (employeeManagerId !== currentUserId) {
+          return false;
+        }
+      }
+      // If no manager assigned, show to all HOD users (transition period)
+      // HR can later assign specific managers to employees
+    } else if (!permissions.canViewAll && permissions.canViewDepartments.length > 0) {
+      // For other roles (like department heads), still use department filtering
+      const employeeDepartment = employee.profile.department;
+      if (!employeeDepartment || !permissions.canViewDepartments.includes(employeeDepartment)) {
         return false;
       }
     }
-    
+
     if (filters.isActive && !employee.isActive) {
       return false;
     }
@@ -431,30 +450,30 @@ export const filterEmployees = (
     if (!filters.isActive && !employee.isActive && !permissions.canViewArchived) {
       return false;
     }
-    
+
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
-      const matchesSearch = 
-        employee.profile.firstName.toLowerCase().includes(searchLower) ||
-        employee.profile.lastName.toLowerCase().includes(searchLower) ||
-        employee.profile.employeeNumber.toLowerCase().includes(searchLower) ||
-        employee.profile.email.toLowerCase().includes(searchLower);
-      
+      const matchesSearch =
+        (employee.profile.firstName?.toLowerCase() || '').includes(searchLower) ||
+        (employee.profile.lastName?.toLowerCase() || '').includes(searchLower) ||
+        (employee.profile.employeeNumber?.toLowerCase() || '').includes(searchLower) ||
+        (employee.profile.email?.toLowerCase() || '').includes(searchLower);
+
       if (!matchesSearch) return false;
     }
-    
+
     if (filters.department && employee.profile.department !== filters.department) {
       return false;
     }
-    
-    if (filters.contractType && employee.employment.contractType !== filters.contractType) {
+
+    if (filters.contractType && employee.employment?.contractType !== filters.contractType) {
       return false;
     }
-    
-    if (filters.hasWarnings && employee.disciplinaryRecord.activeWarnings === 0) {
+
+    if (filters.hasWarnings && (!employee.disciplinaryRecord || employee.disciplinaryRecord.activeWarnings === 0)) {
       return false;
     }
-    
+
     return true;
   });
 };
@@ -481,20 +500,20 @@ export const calculateEmployeeStats = (employees: Employee[]): EmployeeStats => 
     }
     
     if (employee.isActive) {
-      if (employee.employment.probationEndDate && 
+      if (employee.employment?.probationEndDate &&
           new Date(employee.employment.probationEndDate) > new Date()) {
         stats.onProbation++;
       }
       
-      if (employee.disciplinaryRecord.activeWarnings > 0) {
+      if (employee.disciplinaryRecord?.activeWarnings > 0) {
         stats.withActiveWarnings++;
       }
     }
     
-    const dept = employee.profile.department;
+    const dept = employee.profile?.department || 'Unknown';
     departmentCounts[dept] = (departmentCounts[dept] || 0) + 1;
-    
-    const contract = employee.employment.contractType;
+
+    const contract = employee.employment?.contractType || 'Unknown';
     contractCounts[contract] = (contractCounts[contract] || 0) + 1;
   });
   
@@ -521,7 +540,6 @@ export const generateSampleCSV = (): string => {
     'position',
     'startDate',
     'contractType',
-    'preferredDeliveryMethod',
     'probationEndDate'
   ];
   
@@ -537,7 +555,6 @@ export const generateSampleCSV = (): string => {
       'Software Developer',
       '2024-01-15',
       'permanent',
-      'email',
       '' // No probation for permanent employee
     ],
     [
@@ -551,7 +568,6 @@ export const generateSampleCSV = (): string => {
       'HR Manager',
       '2023-06-01',
       'permanent',
-      'whatsapp',
       '' // No probation for permanent employee
     ],
     [
@@ -565,7 +581,6 @@ export const generateSampleCSV = (): string => {
       'Operations Coordinator',
       '2024-11-01',
       'contract',
-      'printed',
       '2025-02-01' // 3-month probation period
     ]
   ];
