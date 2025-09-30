@@ -7,6 +7,11 @@ import React, { memo, useState, useEffect, useCallback } from 'react';
 import { Newspaper, ChevronLeft, ChevronRight, Play, Pause, Heart } from 'lucide-react';
 import { useQuotesRotation } from '../../hooks/dashboard/useQuotesRotation';
 
+// Import themed components
+import { ThemedCard, ThemedBadge } from '../common/ThemedCard';
+import { ThemedButton } from '../common/ThemedButton';
+import { ThemeSelector } from '../common/ThemeSelector';
+
 // --- A Simple Breakpoint Hook (consistent with other components) ---
 const useBreakpoint = (breakpoint: number) => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > breakpoint);
@@ -47,29 +52,37 @@ export const QuotesSection = memo<QuotesSectionProps>(({ className = '' }) => {
     <div className={className}>
       {isDesktop ? (
         // --- 🖥️ DESKTOP VIEW (Compact, horizontal layout) ---
-        <div className={`bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg p-4 border border-amber-200 shadow-sm ${className}`}>
+        <ThemedCard
+          padding="md"
+          shadow="sm"
+          className={className}
+          style={{
+            background: 'linear-gradient(to right, var(--color-background-secondary), var(--color-card-background))',
+            border: '1px solid var(--color-border)'
+          }}
+        >
           <div className="flex items-center justify-between">
             {/* Left: Quote Content */}
             <div className="flex-1 mr-6">
               <div className="flex items-start gap-3">
-                <Newspaper className="w-4 h-4 text-amber-600 mt-1 flex-shrink-0" />
+                <Newspaper className="w-4 h-4 mt-1 flex-shrink-0" style={{ color: 'var(--color-primary)' }} />
                 <div className="flex-1">
-                  <blockquote className="text-gray-700 italic text-sm leading-tight">
+                  <blockquote className="italic text-sm leading-tight" style={{ color: 'var(--color-text-secondary)' }}>
                     "{currentQuote.text}"
                   </blockquote>
                   <div className="flex items-center justify-between mt-2">
-                    <cite className="text-xs font-medium text-amber-700 not-italic">
+                    <cite className="text-xs font-medium not-italic" style={{ color: 'var(--color-primary)' }}>
                       — {currentQuote.author}
                     </cite>
                     <div className="flex items-center gap-2">
                       {currentQuote.isPopular && (
-                        <span className="text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full">
+                        <ThemedBadge variant="warning" size="sm">
                           ⭐
-                        </span>
+                        </ThemedBadge>
                       )}
-                      <span className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full capitalize">
+                      <ThemedBadge variant="default" size="sm" className="capitalize">
                         {currentQuote.category}
-                      </span>
+                      </ThemedBadge>
                     </div>
                   </div>
                 </div>
@@ -78,121 +91,134 @@ export const QuotesSection = memo<QuotesSectionProps>(({ className = '' }) => {
 
             {/* Right: Controls */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button
+              <ThemedButton
+                variant="ghost"
+                size="sm"
                 onClick={previousQuote}
-                className="p-1 text-gray-400 hover:text-amber-600 rounded hover:bg-amber-100 transition-colors"
                 title="Previous quote"
               >
                 <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
+              </ThemedButton>
+              <ThemedButton
+                variant="ghost"
+                size="sm"
                 onClick={nextQuote}
-                className="p-1 text-gray-400 hover:text-amber-600 rounded hover:bg-amber-100 transition-colors"
                 title="Next quote"
               >
                 <ChevronRight className="w-4 h-4" />
-              </button>
-              
-              <div className="w-px h-6 bg-amber-200 mx-1"></div>
-              
-              <button
+              </ThemedButton>
+
+              <div className="w-px h-6 mx-1" style={{ backgroundColor: 'var(--color-border)' }}></div>
+
+              <ThemedButton
+                variant="ghost"
+                size="sm"
                 onClick={() => toggleFavorite(currentQuote.id)}
-                className={`p-1 rounded transition-colors ${
-                  isFavorite 
-                    ? 'text-red-500 bg-red-100' 
-                    : 'text-gray-400 hover:text-red-500 hover:bg-red-100'
-                }`}
                 title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                style={{
+                  color: isFavorite ? 'var(--color-error)' : 'var(--color-text-tertiary)',
+                  backgroundColor: isFavorite ? 'var(--color-alert-error-bg)' : 'transparent'
+                }}
               >
                 <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
-              </button>
-              
-              <button
+              </ThemedButton>
+
+              <ThemedButton
+                variant="ghost"
+                size="sm"
                 onClick={toggleRotation}
-                className={`p-1 rounded transition-colors ${
-                  isRotating 
-                    ? 'text-green-600 bg-green-100' 
-                    : 'text-gray-400 hover:text-green-600 hover:bg-green-100'
-                }`}
                 title={isRotating ? 'Pause rotation' : 'Start rotation'}
+                style={{
+                  color: isRotating ? 'var(--color-success)' : 'var(--color-text-tertiary)',
+                  backgroundColor: isRotating ? 'var(--color-alert-success-bg)' : 'transparent'
+                }}
               >
                 {isRotating ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              </button>
+              </ThemedButton>
+
+              <div className="w-px h-6 mx-1" style={{ backgroundColor: 'var(--color-border)' }}></div>
+
+              <div className="ml-1">
+                <ThemeSelector />
+              </div>
             </div>
           </div>
-        </div>
+        </ThemedCard>
 
       ) : (
 
-        // --- 📱 MOBILE "INSPIRATION CARD" VIEW (Compact, Pastel Mint Theme) ---
-        <div className={`bg-emerald-50/80 dark:bg-emerald-950/60 backdrop-blur-xl border border-emerald-900/10 dark:border-white/10 rounded-2xl p-3 shadow-lg text-gray-800 dark:text-gray-200`}>
-          {/* Header with Title and Primary Controls */}
-          <div className="flex items-start justify-between mb-2">
-            <h3 className="font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-              <Newspaper className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+        // --- 📱 MOBILE "INSPIRATION CARD" VIEW (Ultra-Compact) ---
+        <ThemedCard
+          padding="sm"
+          shadow="md"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-card-background), var(--color-background-secondary))',
+            backdropFilter: 'blur(10px)'
+          }}
+        >
+          {/* Compact Header with Title and Essential Controls */}
+          <div className="flex items-center justify-between mb-1.5">
+            <h3 className="text-sm font-semibold flex items-center gap-1.5" style={{ color: 'var(--color-text)' }}>
+              <Newspaper className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
               Daily Inspiration
             </h3>
-            <div className="flex items-center gap-1.5">
-              <button
+            <div className="flex items-center gap-1">
+              <ThemedButton
+                variant="ghost"
+                size="sm"
                 onClick={() => toggleFavorite(currentQuote.id)}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  isFavorite 
-                    ? 'bg-red-100 dark:bg-red-500/20 text-red-500' 
-                    : 'bg-gray-200/70 dark:bg-white/10 text-gray-400 hover:text-red-500'
-                }`}
                 aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                style={{
+                  color: isFavorite ? 'var(--color-error)' : 'var(--color-text-tertiary)',
+                  backgroundColor: isFavorite ? 'var(--color-alert-error-bg)' : 'transparent',
+                  padding: '4px'
+                }}
               >
-                <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
-              </button>
-              <button
-                onClick={toggleRotation}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  isRotating 
-                    ? 'bg-green-100 dark:bg-green-500/20 text-green-600' 
-                    : 'bg-gray-200/70 dark:bg-white/10 text-gray-400 hover:text-green-600'
-                }`}
-                aria-label={isRotating ? 'Pause rotation' : 'Start rotation'}
-              >
-                {isRotating ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              </button>
+                <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'fill-current' : ''}`} />
+              </ThemedButton>
+              <div className="scale-75">
+                <ThemeSelector />
+              </div>
             </div>
           </div>
 
-          {/* Quote Content */}
-          <blockquote className="my-2 text-gray-700 dark:text-gray-300 italic text-sm leading-snug">
+          {/* Compact Quote Content */}
+          <blockquote className="mb-1.5 italic text-sm leading-tight" style={{ color: 'var(--color-text-secondary)' }}>
             "{currentQuote.text}"
           </blockquote>
 
-          {/* Author and Metadata */}
-          <div className="flex items-center justify-between text-xs mt-3">
-            <cite className="font-medium text-emerald-800 dark:text-emerald-300 not-italic">
-              — {currentQuote.author}
-            </cite>
-            <span className="bg-emerald-200/40 dark:bg-white/10 text-emerald-900 dark:text-emerald-300 px-2 py-0.5 rounded-full capitalize">
-              {currentQuote.category}
-            </span>
-          </div>
-
-          <hr className="my-2.5 border-t border-emerald-200/80 dark:border-white/10" />
-
-          {/* Footer with Navigation and Info */}
+          {/* Compact Footer with Author and Controls */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1">
-              <button onClick={previousQuote} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-300 rounded-lg hover:bg-emerald-100/50 dark:hover:bg-white/10 transition-colors" aria-label="Previous quote">
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button onClick={nextQuote} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-300 rounded-lg hover:bg-emerald-100/50 dark:hover:bg-white/10 transition-colors" aria-label="Next quote">
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              <ThemedButton
+                variant="ghost"
+                size="sm"
+                onClick={previousQuote}
+                aria-label="Previous quote"
+                style={{ padding: '4px' }}
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </ThemedButton>
+              <ThemedButton
+                variant="ghost"
+                size="sm"
+                onClick={nextQuote}
+                aria-label="Next quote"
+                style={{ padding: '4px' }}
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </ThemedButton>
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">
-              <span>Quote {currentQuote.id}</span>
-              {preferences.favoriteQuotes.length > 0 && (
-                <span className='ml-2'>• {preferences.favoriteQuotes.length} faved</span>
-              )}
+            <div className="flex items-center gap-2">
+              <cite className="text-xs font-medium not-italic" style={{ color: 'var(--color-primary)' }}>
+                — {currentQuote.author}
+              </cite>
+              <ThemedBadge variant="primary" size="sm" className="capitalize text-xs">
+                {currentQuote.category}
+              </ThemedBadge>
             </div>
           </div>
-        </div>
+        </ThemedCard>
       )}
     </div>
   );

@@ -271,10 +271,19 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
   
   const updateDuration = useCallback(() => {
     if (!startTimeRef.current) return;
-    
+
+    // Check if recording is still active - if not, clear interval
+    if (!state.isRecording) {
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
+        durationIntervalRef.current = null;
+      }
+      return;
+    }
+
     const elapsed = (Date.now() - startTimeRef.current) / 1000;
     const elapsedMs = Date.now() - startTimeRef.current;
-    
+
     // Update state with new duration
     setState(prev => {
       if (!prev.isRecording) return prev;
@@ -284,6 +293,13 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
     // Auto-stop at max duration
     if (elapsedMs >= AUDIO_CONFIG.MAX_DURATION_MS) {
       Logger.debug('🔴 Auto-stopping recording: Max duration reached')
+
+      // Clear the interval to stop spamming
+      if (durationIntervalRef.current) {
+        clearInterval(durationIntervalRef.current);
+        durationIntervalRef.current = null;
+      }
+
       // Use a timeout to avoid circular dependency
       setTimeout(() => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {

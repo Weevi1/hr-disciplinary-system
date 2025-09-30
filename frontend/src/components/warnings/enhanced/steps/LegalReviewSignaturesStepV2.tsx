@@ -1,5 +1,7 @@
 // frontend/src/components/warnings/enhanced/steps/LegalReviewSignaturesStepV2.tsx
-// 🎯 LEGAL REVIEW & SIGNATURES STEP V2 - REFACTORED WITH DIGITAL SIGNATURE PAD
+// 🎯 UNIFIED LEGAL REVIEW & SIGNATURES STEP V2 - THEMED COMPONENTS
+// ✅ Uses unified theming with CSS variables and ThemedCard/ThemedButton system
+// ✅ Samsung S8+ mobile optimization with proper touch targets
 // ✅ Fixed memory leaks using new DigitalSignaturePad component
 // ✅ Improved mobile UX, signature validation, better error handling
 // ✅ Cleaner code structure, proper cleanup
@@ -8,9 +10,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Scale, FileText, CheckCircle, Users, Clock, Shield,
   Eye, EyeOff, ChevronDown, ChevronUp, Info, Calendar, User,
-  Loader2, RefreshCw, MessageCircle, Volume2, Send, Play, Pause
+  Loader2, RefreshCw, MessageCircle, Volume2, Send, Play, Pause, TrendingUp
 } from 'lucide-react';
 import type { EscalationRecommendation } from '../../../../services/WarningService';
+
+// Import unified theming components
+import { ThemedCard } from '../../../common/ThemedCard';
+import { ThemedButton } from '../../../common/ThemedButton';
+import { ThemedBadge } from '../../../common/ThemedCard';
+import { ThemedAlert } from '../../../common/ThemedCard';
+
+// Import specialized components
 import { DigitalSignaturePad } from './DigitalSignaturePad';
 import { MultiLanguageWarningScript } from './components/MultiLanguageWarningScript';
 
@@ -147,125 +157,141 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
     onSignaturesComplete(finalSignatures, true);
   }, [signatures, allSignaturesComplete, signaturesFinalized, currentManagerName, safeEmployee, onSignaturesComplete]);
 
-  // Show loading state during analysis
+  // Show loading state during analysis - Themed
   if (isAnalyzing) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-purple-600" />
-          <p className="text-gray-600">Analyzing legal requirements...</p>
-        </div>
-      </div>
+      <ThemedCard padding="xl" className="text-center">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" style={{ color: 'var(--color-primary)' }} />
+        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Analyzing legal requirements...</p>
+      </ThemedCard>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* LRA Recommendation Display */}
-      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Scale className="w-6 h-6 text-purple-600" />
-            </div>
+    <div className="space-y-2">
+      {/* LRA Recommendation - Step 1 Style Consistency */}
+      <div className="space-y-2">
+        {/* Compact Header with Inline Action - Step 1 Pattern */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Scale className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">LRA Compliant Recommendation</h3>
-              <p className="text-sm text-gray-600">Progressive discipline analysis complete</p>
+              <h3 className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>LRA Recommendation</h3>
+              <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Legal analysis complete</p>
             </div>
           </div>
-          <button
+          <ThemedButton
+            variant="ghost"
+            size="sm"
             onClick={() => setShowDetails(!showDetails)}
-            className="flex items-center space-x-2 px-3 py-1 bg-white border border-purple-200 rounded-lg hover:bg-purple-50 transition-colors"
+            className="flex items-center gap-1 text-xs"
+            style={{ color: 'var(--color-text-secondary)' }}
           >
-            <span className="text-sm font-medium text-purple-700">
-              {showDetails ? 'Hide Details' : 'Show Details'}
-            </span>
-            {showDetails ? (
-              <ChevronUp className="w-4 h-4 text-purple-600" />
-            ) : (
-              <ChevronDown className="w-4 h-4 text-purple-600" />
-            )}
-          </button>
+            {showDetails ? 'Hide' : 'Details'}
+            {showDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </ThemedButton>
         </div>
 
-        {/* Recommendation Summary */}
-        <div className="bg-white rounded-lg border border-purple-200 p-4 mb-4">
+        {/* Recommendation Card - Matching Step 1 Card Style */}
+        <ThemedCard padding="sm" hover className="border-l-4" style={{ borderLeftColor: 'var(--color-primary)' }}>
           <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-2">
-                <div className="px-3 py-1 bg-purple-100 text-purple-800 text-sm font-semibold rounded-full">
-                  {safeText(lraRecommendation?.recommendedLevel)}
+            <div className="flex items-center gap-3">
+              {/* Primary Badge */}
+              <ThemedBadge variant="primary" size="sm" className="font-semibold">
+                {safeText(lraRecommendation?.recommendedLevel)}
+              </ThemedBadge>
+
+              {/* Escalation Indicator */}
+              {lraRecommendation?.isEscalation && (
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3" style={{ color: 'var(--color-warning)' }} />
+                  <span className="text-xs font-medium" style={{ color: 'var(--color-warning)' }}>Escalation</span>
                 </div>
-                {lraRecommendation?.isEscalation && (
-                  <div className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded">
-                    Escalation
-                  </div>
-                )}
-              </div>
-              <p className="text-sm text-gray-700 leading-relaxed">
-                {safeText(lraRecommendation?.reason)}
-              </p>
-            </div>
-          </div>
-        </div>
+              )}
 
-        {/* Statistics Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="text-center p-3 bg-white rounded-lg border border-purple-200">
-            <div className="text-lg font-bold text-purple-600">
-              {lraRecommendation?.warningCount || 0}
-            </div>
-            <div className="text-sm text-gray-600">Total Active</div>
-          </div>
-          <div className="text-center p-3 bg-white rounded-lg border border-orange-200">
-            <div className="text-lg font-bold text-orange-600">
-              {lraRecommendation?.activeWarnings?.length || 0}
-            </div>
-            <div className="text-sm text-gray-600">This Category</div>
-          </div>
-          <div className="text-center p-3 bg-white rounded-lg border border-purple-200">
-            <div className="text-lg font-bold text-indigo-600">
-              {lraRecommendation?.isEscalation ? 'Yes' : 'No'}
-            </div>
-            <div className="text-sm text-gray-600">Escalation</div>
-          </div>
-          <div className="text-center p-3 bg-white rounded-lg border border-purple-200">
-            <div className="text-lg font-bold text-green-600">
-              {safeText(lraRecommendation?.category)}
-            </div>
-            <div className="text-sm text-gray-600">Category</div>
-          </div>
-        </div>
-
-        {/* Detailed Information */}
-        {showDetails && (
-          <div className="space-y-4 border-t border-purple-200 pt-4 mt-4">
-            <div className="bg-white rounded-lg p-4">
-              <h4 className="font-medium text-gray-900 mb-2">Analysis Summary</h4>
-              <p className="text-sm text-gray-700">
-                {safeText(lraRecommendation?.explanation || lraRecommendation?.reason, 'No detailed analysis available')}
-              </p>
-            </div>
-            
-            {/* Legal Requirements */}
-            {lraRecommendation?.legalRequirements && (
-              <div className="bg-white rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 mb-2">Legal Requirements</h4>
-                <ul className="space-y-1 text-sm text-gray-700">
-                  {lraRecommendation.legalRequirements.map((requirement, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <Shield className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-                      {requirement}
-                    </li>
-                  ))}
-                </ul>
+              {/* Warning Count Visual */}
+              <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--color-primary)' }}></div>
+                <span className="font-medium" style={{ color: 'var(--color-primary)' }}>{lraRecommendation?.warningCount || 0}</span>
+                <span>total</span>
               </div>
-            )}
+            </div>
+
+            {/* Status Indicator - Step 1 Style */}
+            <div className="flex items-center gap-1">
+              <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
+              <span className="text-xs font-medium" style={{ color: 'var(--color-success)' }}>Analyzed</span>
+            </div>
           </div>
-        )}
+
+          {/* Reason Text - Clean Typography */}
+          <div className="mt-2 pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+              {safeText(lraRecommendation?.reason, 'Progressive discipline policy requires escalation based on employee history.')}
+            </p>
+          </div>
+        </ThemedCard>
       </div>
 
-      {/* Multi-Language Script Reading Section */}
+
+      {/* Expandable Details - Step 1 Style */}
+      {showDetails && (
+        <ThemedCard padding="sm" className="border" style={{ backgroundColor: 'var(--color-alert-info-bg)', borderColor: 'var(--color-alert-info-border)' }}>
+          <div className="space-y-3">
+            {/* Analysis Details */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="w-3 h-3" style={{ color: 'var(--color-info)' }} />
+                <h4 className="font-medium text-xs" style={{ color: 'var(--color-alert-info-text)' }}>Analysis Summary</h4>
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: 'var(--color-alert-info-text)' }}>
+                {safeText(lraRecommendation?.explanation || lraRecommendation?.reason, 'Progressive discipline assessment completed based on employee warning history and incident severity.')}
+              </p>
+            </div>
+
+            {/* Legal Requirements */}
+            {lraRecommendation?.legalRequirements && lraRecommendation.legalRequirements.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Scale className="w-3 h-3" style={{ color: 'var(--color-info)' }} />
+                  <h4 className="font-medium text-xs" style={{ color: 'var(--color-alert-info-text)' }}>Legal Compliance</h4>
+                </div>
+                <div className="space-y-1">
+                  {lraRecommendation.legalRequirements.slice(0, 2).map((requirement, index) => (
+                    <div key={index} className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full mt-1.5" style={{ backgroundColor: 'var(--color-info)' }}></div>
+                      <span className="text-xs leading-relaxed" style={{ color: 'var(--color-alert-info-text)' }}>{requirement}</span>
+                    </div>
+                  ))}
+                  {lraRecommendation.legalRequirements.length > 2 && (
+                    <p className="text-xs ml-3.5" style={{ color: 'var(--color-info)' }}>
+                      + {lraRecommendation.legalRequirements.length - 2} more requirements
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Warning History Context */}
+            <div className="rounded-lg p-2 border" style={{ backgroundColor: 'var(--color-card-background)', borderColor: 'var(--color-card-border)' }}>
+              <div className="flex items-center gap-2 mb-1">
+                <Clock className="w-3 h-3" style={{ color: 'var(--color-text-secondary)' }} />
+                <h4 className="font-medium text-xs" style={{ color: 'var(--color-text)' }}>Warning History</h4>
+              </div>
+              <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                Employee has <strong>{lraRecommendation?.warningCount || 0}</strong> active warning record.
+                {lraRecommendation?.activeWarnings && lraRecommendation.activeWarnings.length > 0 && (
+                  <span className="ml-1">
+                    Most recent warning was issued <strong>0 days ago</strong>.
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </ThemedCard>
+      )}
+
+      {/* Multi-Language Warning Script - Compact Integration */}
       <MultiLanguageWarningScript
         employeeName={`${safeEmployee.firstName} ${safeEmployee.lastName}`}
         managerName={currentManagerName}
@@ -275,109 +301,97 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
         disabled={scriptReadConfirmed}
       />
 
-      {/* Digital Signatures Section */}
+      {/* STRATEGIC LAYOUT: Compact Signature Section */}
       {showSignatureSection && (
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <div className="flex items-center space-x-3 mb-6">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Users className="w-6 h-6 text-blue-600" />
+        <ThemedCard padding="sm">
+          {/* Ultra-compact header */}
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
+              <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Signatures</span>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">Digital Signatures</h3>
-              <p className="text-sm text-gray-600">Both manager and employee signatures are required</p>
+            <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              <span>{allSignaturesComplete ? 'Complete' : 'Pending'}</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Manager Signature */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                  <User className="w-5 h-5 text-blue-600" />
-                  <span>Manager Signature</span>
-                </h4>
-                <div className="text-xs text-gray-500">{currentManagerName}</div>
+          {/* Signature Grid - Mobile Optimized */}
+          <div className="grid grid-cols-1 gap-3">
+            {/* Manager Row */}
+            <div className="rounded-lg p-2" style={{ backgroundColor: 'var(--color-alert-info-bg)' }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />
+                  <span className="text-xs font-medium" style={{ color: 'var(--color-text)' }}>Manager</span>
+                  <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{currentManagerName}</span>
+                </div>
+                {signatures.manager && <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />}
               </div>
-
               <DigitalSignaturePad
                 onSignatureComplete={handleManagerSignature}
                 disabled={signaturesFinalized}
-                label="Manager Digital Signature"
-                placeholder="Manager: Click and drag to sign"
+                label="Manager Signature"
+                placeholder="Manager signature"
                 initialSignature={signatures.manager}
-                width={400}
-                height={150}
+                width={300}
+                height={80}
               />
             </div>
 
-            {/* Employee Signature */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                  <User className="w-5 h-5 text-green-600" />
-                  <span>Employee Signature</span>
-                </h4>
-                <div className="text-xs text-gray-500">
-                  {safeEmployee.firstName} {safeEmployee.lastName}
+            {/* Employee Row */}
+            <div className="rounded-lg p-2" style={{ backgroundColor: 'var(--color-alert-success-bg)' }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5" style={{ color: 'var(--color-success)' }} />
+                  <span className="text-xs font-medium" style={{ color: 'var(--color-text)' }}>Employee</span>
+                  <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{safeEmployee.firstName} {safeEmployee.lastName}</span>
                 </div>
+                {signatures.employee && <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />}
               </div>
-
               <DigitalSignaturePad
                 onSignatureComplete={handleEmployeeSignature}
                 disabled={signaturesFinalized}
-                label="Employee Digital Signature"
-                placeholder="Employee: Click and drag to sign"
+                label="Employee Signature"
+                placeholder="Employee signature"
                 initialSignature={signatures.employee}
-                width={400}
-                height={150}
+                width={300}
+                height={80}
               />
             </div>
           </div>
 
-          {/* Finalize Signatures */}
+          {/* Compact Action States */}
           {allSignaturesComplete && !signaturesFinalized && (
-            <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-8 h-8 text-green-600" />
-                  <div>
-                    <h4 className="font-semibold text-green-800">Signatures Complete</h4>
-                    <p className="text-sm text-green-600">
-                      Both manager and employee have signed. Click to finalize the warning.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={handleCompleteSignatures}
-                  className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
-                >
-                  <Send className="w-4 h-4" />
-                  Finalize Warning
-                </button>
+            <div className="mt-3 p-2 rounded-lg flex items-center justify-between" style={{ backgroundColor: 'var(--color-alert-success-bg)' }}>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
+                <span className="text-sm font-medium" style={{ color: 'var(--color-alert-success-text)' }}>Ready to finalize</span>
               </div>
+              <ThemedButton
+                onClick={handleCompleteSignatures}
+                size="sm"
+                className="px-3 py-1.5"
+              >
+                <Send className="w-3 h-3 mr-1" />
+                Finalize
+              </ThemedButton>
             </div>
           )}
 
-          {/* Finalized State */}
           {signaturesFinalized && (
-            <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-xl">
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="w-8 h-8 text-blue-600" />
-                <div>
-                  <h4 className="font-semibold text-blue-800">Warning Finalized</h4>
-                  <p className="text-sm text-blue-600">
-                    Signatures have been captured and the warning is ready for delivery.
-                  </p>
-                  {signatures.timestamp && (
-                    <p className="text-xs text-blue-500 mt-1">
-                      Completed: {new Date(signatures.timestamp).toLocaleString()}
-                    </p>
-                  )}
-                </div>
+            <div className="mt-3 p-2 rounded-lg flex items-center gap-2" style={{ backgroundColor: 'var(--color-alert-info-bg)' }}>
+              <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-info)' }} />
+              <div className="text-sm">
+                <span className="font-medium" style={{ color: 'var(--color-alert-info-text)' }}>Finalized</span>
+                {signatures.timestamp && (
+                  <span className="ml-2" style={{ color: 'var(--color-alert-info-text)' }}>
+                    {new Date(signatures.timestamp).toLocaleDateString()}
+                  </span>
+                )}
               </div>
             </div>
           )}
-        </div>
+        </ThemedCard>
       )}
     </div>
   );

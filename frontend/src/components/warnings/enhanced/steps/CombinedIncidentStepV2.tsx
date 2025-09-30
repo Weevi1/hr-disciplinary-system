@@ -1,16 +1,23 @@
 // frontend/src/components/warnings/enhanced/steps/CombinedIncidentStepV2.tsx
-// 🎯 COMBINED INCIDENT STEP V2 - REFACTORED WITH FOCUSED COMPONENTS
-// ✅ Split into focused, reusable components for better maintainability
+// 🎯 UNIFIED COMBINED INCIDENT STEP V2 - REFACTORED WITH THEMED COMPONENTS
+// ✅ Unified theming with CSS variables and ThemedCard/ThemedButton system
+// ✅ Samsung S8+ mobile optimization with proper touch targets
 // ✅ Auto-save functionality, real-time validation, mobile-first design
 // ✅ Memory leak fixes, performance optimizations
 
 import React, { useMemo } from 'react';
-import type { 
+import { CheckCircle, AlertTriangle, ChevronRight } from 'lucide-react';
+import type {
   EscalationRecommendation,
   EmployeeWithContext,
   WarningCategory,
   EnhancedWarningFormData
 } from '../../../../services/WarningService';
+
+// Import unified theming components
+import { ThemedCard } from '../../../common/ThemedCard';
+import { ThemedAlert } from '../../../common/ThemedCard';
+import { ThemedBadge } from '../../../common/ThemedCard';
 
 // Import the focused components
 import { EmployeeSelector } from './components/EmployeeSelector';
@@ -90,29 +97,24 @@ export const CombinedIncidentStepV2: React.FC<CombinedIncidentStepV2Props> = ({
   }, [formData]);
 
   return (
-    <div className="space-y-8 pb-8">
-      {/* Progress Indicator */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="font-medium text-gray-900">Form Completion</h4>
-          <span className="text-sm font-medium text-blue-600">
-            {completionStatus.completed}/{completionStatus.total} completed
-          </span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div 
-            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${completionStatus.percentage}%` }}
-          />
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-3 text-xs">
-          {Object.entries(completionStatus.checks).map(([key, completed]) => (
-            <div key={key} className={`flex items-center gap-1 ${completed ? 'text-green-600' : 'text-gray-500'}`}>
-              <div className={`w-2 h-2 rounded-full ${completed ? 'bg-green-500' : 'bg-gray-300'}`} />
-              <span className="capitalize">{key}</span>
-            </div>
-          ))}
-        </div>
+    <div className="space-y-3">
+      {/* Progress Indicator - Mobile Optimized */}
+      <div className="flex items-center justify-between px-1">
+        <span className="text-xs font-medium" style={{ color: 'var(--color-text)' }}>
+          Progress
+        </span>
+        <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+          {completionStatus.completed}/{completionStatus.total}
+        </span>
+      </div>
+      <div className="w-full rounded h-1" style={{ backgroundColor: 'var(--color-surface)' }}>
+        <div
+          className="h-1 rounded transition-all duration-300"
+          style={{
+            width: `${completionStatus.percentage}%`,
+            backgroundColor: 'var(--color-primary)'
+          }}
+        />
       </div>
 
       {/* Employee Selection */}
@@ -141,117 +143,68 @@ export const CombinedIncidentStepV2: React.FC<CombinedIncidentStepV2Props> = ({
         disabled={isAnalyzing}
       />
 
-      {/* Analysis Status */}
+      {/* Analysis Status - Simplified */}
       {isAnalyzing && (
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-6">
-          <div className="flex items-center justify-center space-x-3">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
-            <div>
-              <h4 className="font-medium text-purple-900">Analyzing Incident</h4>
-              <p className="text-sm text-purple-700">
-                Generating LRA-compliant recommendation based on employee history and incident details...
-              </p>
-            </div>
+        <ThemedAlert variant="info">
+          <div className="flex items-center gap-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+            <span className="text-sm">Analyzing incident...</span>
           </div>
-        </div>
+        </ThemedAlert>
       )}
 
-      {/* 🚨 URGENT HR INTERVENTION ALERT */}
+      {/* HR Intervention Alert - Simplified */}
       {lraRecommendation && !isAnalyzing && lraRecommendation.requiresHRIntervention && (
-        <div className="bg-red-50 border-2 border-red-300 rounded-xl p-6 mb-4">
+        <ThemedAlert variant="error">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center shrink-0">
-              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-            </div>
+            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" style={{ color: 'var(--color-error)' }} />
             <div className="flex-1">
-              <h4 className="font-bold text-red-900 text-lg mb-2 flex items-center gap-2">
-                🚨 URGENT: Contact HR Immediately
-                <span className="px-2 py-1 bg-red-200 text-red-800 text-xs rounded-full animate-pulse">
-                  FINAL WARNING ALERT
-                </span>
+              <h4 className="font-semibold mb-1" style={{ color: 'var(--color-error)' }}>
+                Contact HR Required
               </h4>
-              <div className="bg-red-100 rounded-lg p-4 mb-3">
-                <p className="text-red-800 font-medium mb-2">
-                  This employee already has a final written warning on record.
-                </p>
-                <p className="text-red-700 text-sm">
-                  {lraRecommendation.interventionReason}
-                </p>
-              </div>
-              <div className="bg-white rounded-lg p-3 border border-red-200">
-                <h5 className="font-medium text-red-900 mb-2">Required Actions:</h5>
-                <ul className="text-sm text-red-800 space-y-1">
-                  <li className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-red-600 rounded-full"></span>
-                    Contact HR Department before proceeding
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-red-600 rounded-full"></span>
-                    Schedule disciplinary hearing
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-red-600 rounded-full"></span>
-                    Use HR intervention module for next steps
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-2 h-2 bg-red-600 rounded-full"></span>
-                    Document all decisions and rationale
-                  </li>
-                </ul>
-              </div>
+              <p className="text-sm mb-2" style={{ color: 'var(--color-text)' }}>
+                {lraRecommendation.interventionReason}
+              </p>
+              <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                Employee has final warning on record - HR intervention required before proceeding
+              </p>
             </div>
           </div>
-        </div>
+        </ThemedAlert>
       )}
 
-      {/* LRA Recommendation Preview */}
-      {lraRecommendation && !isAnalyzing && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+      {/* LRA Recommendation - Simplified */}
+      {lraRecommendation && !isAnalyzing && !lraRecommendation.requiresHRIntervention && (
+        <ThemedAlert variant="success">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center shrink-0">
-              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <div>
-              <h4 className="font-medium text-green-900 mb-1">
-                LRA Analysis Complete
+            <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" style={{ color: 'var(--color-success)' }} />
+            <div className="flex-1">
+              <h4 className="font-semibold mb-1" style={{ color: 'var(--color-text)' }}>
+                Recommended: {lraRecommendation.recommendedLevel}
               </h4>
-              <p className="text-sm text-green-700 mb-2">
-                Recommended action: <span className="font-medium">{lraRecommendation.recommendedLevel}</span>
-                {lraRecommendation.isEscalation && (
-                  <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">
-                    Escalation Required
-                  </span>
-                )}
-              </p>
-              <p className="text-sm text-green-600">
+              <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                 {lraRecommendation.reason}
               </p>
             </div>
           </div>
-        </div>
+        </ThemedAlert>
       )}
 
-      {/* Next Steps Hint */}
+      {/* Ready for Next Step - Simplified */}
       {completionStatus.percentage === 100 && !isAnalyzing && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </div>
-            <div>
-              <h4 className="font-medium text-blue-900">Ready for Next Step</h4>
-              <p className="text-sm text-blue-700">
-                All incident details have been completed. Click "Next" to proceed to legal review and signatures.
+        <ThemedAlert variant="info">
+          <div className="flex items-start gap-3">
+            <ChevronRight className="w-5 h-5 shrink-0 mt-0.5" style={{ color: 'var(--color-primary)' }} />
+            <div className="flex-1">
+              <h4 className="font-semibold mb-1" style={{ color: 'var(--color-text)' }}>
+                Ready for Legal Review
+              </h4>
+              <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                All details completed. Click "Next" to proceed.
               </p>
             </div>
           </div>
-        </div>
+        </ThemedAlert>
       )}
     </div>
   );

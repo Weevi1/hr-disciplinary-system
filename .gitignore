@@ -1,21 +1,17 @@
 # Dependencies
 node_modules/
-frontend/node_modules/
-functions/node_modules/
-.pnp
+/.pnp
 .pnp.js
 
 # Testing
-coverage/
+/coverage
 
-# Production builds
-dist/
-build/
-.firebase/
-frontend/dist/
-functions/lib/
+# Production
+/build
+/dist
 
-# Environment variables
+# Misc
+.DS_Store
 .env
 .env.local
 .env.development.local
@@ -23,61 +19,29 @@ functions/lib/
 .env.production.local
 
 # Logs
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
-database-debug.log
-firebase-debug.log
-firestore-debug.log
-hs_err_pid*.log
 
-# Editor directories
+# Firebase
+.firebase/
+.firebaserc
+
+# IDE
 .vscode/
 .idea/
+
+# Compiled Functions
+functions/lib/
+functions/node_modules/
+
+# System Files
+*.log
 *.swp
 *.swo
 *~
-
-# OS files
 .DS_Store
 Thumbs.db
-Desktop.ini
 
-# Backup folders
-**/backup_*/
-*.backup
-*.bak
-
-# Firebase
-firebase-export-*
-.firebaserc
-
-# TypeScript
-*.tsbuildinfo
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Yarn
-.yarn/cache
-.yarn/unplugged
-.yarn/build-state.yml
-.yarn/install-state.gz
-
-# Temporary files
-.tmp.driveupload/
-
-# Service account keys
-*-firebase-adminsdk*.json
-
-# Build scripts
-*.sh
-
-# Test results
-frontend/test-results/
+# Build artifacts
+*.js.map

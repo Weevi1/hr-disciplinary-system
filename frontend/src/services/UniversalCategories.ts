@@ -27,6 +27,7 @@ export interface UniversalCategory {
   name: string;
   description: string;
   severity: CategorySeverity;
+  icon: string;
   
   // LRA Compliance
   lraSection: string;
@@ -60,6 +61,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     name: 'Attendance & Punctuality',
     description: 'Late coming, unauthorized absence, early departure without permission',
     severity: 'minor',
+    icon: '⏰',
     lraSection: 'Section 188(1)(a) - Incapacity or poor work performance',
     schedule8Reference: 'Schedule 8, Item 10 - Incapacity/poor performance procedures',
     
@@ -115,6 +117,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     name: 'Performance Issues',
     description: 'Poor work quality, failure to meet targets, lack of required skills',
     severity: 'minor',
+    icon: '📈',
     lraSection: 'Section 188(1)(a) - Incapacity or poor work performance',
     schedule8Reference: 'Schedule 8, Item 10 - Poor performance procedures',
     
@@ -170,6 +173,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     name: 'Safety Violations',
     description: 'Failure to follow safety procedures, endangering self or others',
     severity: 'serious',
+    icon: '🚨',
     lraSection: 'Section 188(1)(b) - Misconduct',
     schedule8Reference: 'Schedule 8, Item 1 - Misconduct procedures',
     
@@ -226,6 +230,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     name: 'Insubordination & Disrespect',
     description: 'Refusal to follow instructions, disrespectful behavior, undermining authority',
     severity: 'serious',
+    icon: '🚫',
     lraSection: 'Section 188(1)(b) - Misconduct',
     schedule8Reference: 'Schedule 8, Item 1 - Misconduct procedures',
     
@@ -281,6 +286,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     name: 'Policy Violations',
     description: 'Breach of company policies, procedures, or workplace rules',
     severity: 'minor',
+    icon: '📋',
     lraSection: 'Section 188(1)(b) - Misconduct',
     schedule8Reference: 'Schedule 8, Item 1 - Misconduct procedures',
     
@@ -336,6 +342,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     name: 'Dishonesty & Theft',
     description: 'Stealing, fraud, falsifying records, dishonest behavior',
     severity: 'gross_misconduct',
+    icon: '💰',
     lraSection: 'Section 188(1)(b) - Misconduct',
     schedule8Reference: 'Schedule 8, Item 1 - Misconduct procedures',
     
@@ -393,6 +400,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     name: 'Substance Abuse',
     description: 'Use of alcohol or drugs affecting work performance or safety',
     severity: 'serious',
+    icon: '🍺',
     lraSection: 'Section 188(1)(b) - Misconduct',
     schedule8Reference: 'Schedule 8, Item 1 - Misconduct procedures',
     
@@ -443,12 +451,13 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     requiresImmediateAction: true
   },
 
-  // 8. 🔞 HARASSMENT & DISCRIMINATION - Zero Tolerance Approach
+  // 8. ⚖️ HARASSMENT & DISCRIMINATION - Zero Tolerance Approach
   {
     id: 'harassment_discrimination',
     name: 'Harassment & Discrimination',
     description: 'Sexual harassment, racial discrimination, bullying, or creating hostile work environment',
     severity: 'gross_misconduct',
+    icon: '⚖️',
     lraSection: 'Section 188(1)(b) - Misconduct',
     schedule8Reference: 'Schedule 8, Item 1 - Misconduct procedures',
     

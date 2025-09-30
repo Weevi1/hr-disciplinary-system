@@ -16,6 +16,10 @@ import { DatabaseShardingService } from '../../services/DatabaseShardingService'
 import { API } from '../../api';
 import type { Employee } from '../../types/core';
 
+// Import unified components
+import { ThemedSectionHeader } from '../common/ThemedCard';
+import { CustomDatePicker } from '../common/CustomDatePicker';
+
 // 🏢 SHARDED COLLECTIONS - Reports stored at /organizations/{orgId}/reports/{reportId}
 
 // 🌟 TYPES - Based on project knowledge structure
@@ -425,17 +429,17 @@ export const ReportAbsence: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 p-2 sm:p-4">
       <div className="max-w-2xl mx-auto">
-        
-        {/* 📱 HEADER */}
-        <div className="bg-gradient-to-r from-orange-600 to-red-700 rounded-2xl p-6 text-white shadow-xl mb-6">
+
+        {/* 📱 HEADER - Mobile Optimized */}
+        <div className="bg-gradient-to-r from-orange-600 to-red-700 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white shadow-xl mb-4 sm:mb-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <UserX className="w-8 h-8" />
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <UserX className="w-6 h-6 sm:w-8 sm:h-8" />
               <div>
-                <h1 className="text-2xl font-bold">Report Absence</h1>
-                <p className="text-orange-100">Log employee absence for HR notification</p>
+                <h1 className="text-xl sm:text-2xl font-bold">Report Absence</h1>
+                <p className="text-orange-100 text-sm sm:text-base">Log employee absence for HR notification</p>
                 
                 {/* 💾 V2: AUTO-SAVE INDICATOR */}
                 {(selectedEmployee || absenceDate || absenceType || reason) && (
@@ -464,35 +468,35 @@ export const ReportAbsence: React.FC = () => {
             </div>
             <button
               onClick={() => navigate('/dashboard')}
-              className="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+              className="p-3 sm:p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
         </div>
 
-        {/* ⚠️ ERROR ALERT */}
+        {/* ⚠️ ERROR ALERT - Mobile Optimized */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg sm:rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
             <div className="flex items-center space-x-2">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-              <span className="text-red-700 font-medium">Error</span>
+              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-500 flex-shrink-0" />
+              <span className="text-red-700 font-medium text-sm sm:text-base">Error</span>
             </div>
-            <p className="text-red-600 mt-1">{error}</p>
+            <p className="text-red-600 mt-1 text-sm sm:text-base">{error}</p>
           </div>
         )}
 
-        {/* ✅ SUCCESS STATE */}
+        {/* ✅ SUCCESS STATE - Mobile Optimized */}
         {success && (
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Absence Reported Successfully!</h2>
-            <p className="text-gray-600 mb-6">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-8 text-center">
+            <CheckCircle className="w-12 h-12 sm:w-16 sm:h-16 text-green-500 mx-auto mb-3 sm:mb-4" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Absence Reported Successfully!</h2>
+            <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">
               HR has been notified of this absence for payroll processing.
             </p>
             
-            <div className="bg-green-50 rounded-xl p-6 mb-6">
-              <div className="grid grid-cols-1 gap-4 text-sm">
+            <div className="bg-green-50 rounded-lg sm:rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
+              <div className="grid grid-cols-1 gap-3 sm:gap-4 text-xs sm:text-sm">
                 <div className="flex justify-between">
                   <span className="font-medium text-green-700">Employee:</span>
                   <span className="text-green-600">{selectedEmployee?.profile.firstName} {selectedEmployee?.profile.lastName}</span>
@@ -520,31 +524,32 @@ export const ReportAbsence: React.FC = () => {
               </div>
             </div>
 
-            <p className="text-sm text-gray-500">Redirecting to dashboard in 3 seconds...</p>
+            <p className="text-xs sm:text-sm text-gray-500">Redirecting to dashboard in 3 seconds...</p>
           </div>
         )}
 
-        {/* 📝 FORM */}
+        {/* 📝 FORM - Mobile Optimized */}
         {!success && (
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-orange-600" />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+            <div className="mb-6 sm:mb-8">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
                 Absence Information
               </h2>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 text-xs sm:text-sm">
                 ✅ Found {employees.length} team member{employees.length !== 1 ? 's' : ''} you can report absences for.
               </p>
             </div>
 
-            <div className="space-y-6">
-              
-              {/* 👤 EMPLOYEE SELECTION */}
+            <div className="space-y-4 sm:space-y-6">
+
+              {/* 👤 EMPLOYEE SELECTION - Unified Design */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <User className="w-4 h-4 inline mr-1" />
-                  Select Employee *
-                </label>
+                <ThemedSectionHeader
+                  icon={User}
+                  title="Select Employee"
+                  subtitle="Choose the team member to report absence for"
+                />
                 <select
                   value={selectedEmployee?.id || ''}
                   onChange={(e) => {
@@ -553,11 +558,20 @@ export const ReportAbsence: React.FC = () => {
                     setTouchedFields(prev => new Set(prev).add('selectedEmployee'));
                     validateField('selectedEmployee', emp);
                   }}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
+                  className={`w-full h-11 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm ${
                     touchedFields.has('selectedEmployee') && fieldErrors.selectedEmployee
                       ? 'border-red-300 bg-red-50'
                       : 'border-gray-300'
                   }`}
+                  style={{
+                    backgroundColor: touchedFields.has('selectedEmployee') && fieldErrors.selectedEmployee
+                      ? 'var(--color-alert-error-bg)'
+                      : 'var(--color-input-background)',
+                    borderColor: touchedFields.has('selectedEmployee') && fieldErrors.selectedEmployee
+                      ? 'var(--color-alert-error-border)'
+                      : 'var(--color-input-border)',
+                    color: 'var(--color-text)'
+                  }}
                   required
                 >
                   <option value="">Choose an employee...</option>
@@ -569,44 +583,31 @@ export const ReportAbsence: React.FC = () => {
                   ))}
                 </select>
                 {touchedFields.has('selectedEmployee') && fieldErrors.selectedEmployee && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
+                  <div className="flex items-center gap-1 text-xs mt-1" style={{ color: 'var(--color-error)' }}>
+                    <svg className="w-3 h-3" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
                     {fieldErrors.selectedEmployee}
-                  </p>
+                  </div>
                 )}
               </div>
 
-              {/* 📅 ABSENCE DATE */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Calendar className="w-4 h-4 inline mr-1" />
-                  Absence Date *
-                </label>
-                <input
-                  type="date"
-                  value={absenceDate}
-                  onChange={(e) => {
-                    setAbsenceDate(e.target.value);
-                    setTouchedFields(prev => new Set(prev).add('absenceDate'));
-                    validateField('absenceDate', e.target.value);
-                  }}
-                  max={new Date().toISOString().split('T')[0]}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors ${
-                    touchedFields.has('absenceDate') && fieldErrors.absenceDate
-                      ? 'border-red-300 bg-red-50'
-                      : 'border-gray-300'
-                  }`}
-                  required
-                />
-                {touchedFields.has('absenceDate') && fieldErrors.absenceDate && (
-                  <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    {fieldErrors.absenceDate}
-                  </p>
-                )}
-              </div>
+              {/* 📅 ABSENCE DATE - Unified Design */}
+              <CustomDatePicker
+                type="date"
+                label="Absence Date"
+                value={absenceDate}
+                onChange={(value) => {
+                  setAbsenceDate(value);
+                  setTouchedFields(prev => new Set(prev).add('absenceDate'));
+                  validateField('absenceDate', value);
+                }}
+                icon={Calendar}
+                required
+                error={touchedFields.has('absenceDate') && fieldErrors.absenceDate ? fieldErrors.absenceDate : undefined}
+              />
 
-              {/* 🏠 ABSENCE TYPE DROPDOWN - V2 ENHANCED */}
+              {/* 🏠 ABSENCE TYPE DROPDOWN - Mobile Optimized */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Clock className="w-4 h-4 inline mr-1" />
@@ -623,7 +624,7 @@ export const ReportAbsence: React.FC = () => {
                     setTouchedFields(prev => new Set(prev).add('absenceType'));
                     validateField('absenceType', absenceType);
                   }}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${
+                  className={`w-full px-3 sm:px-4 py-3 text-sm sm:text-base border rounded-lg focus:ring-2 transition-colors min-h-[44px] ${
                     touchedFields.has('absenceType') && fieldErrors.absenceType
                       ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
                       : 'border-gray-300 focus:border-orange-500 focus:ring-orange-500'
@@ -637,25 +638,25 @@ export const ReportAbsence: React.FC = () => {
                   ))}
                 </select>
                 
-                {/* Selected Type Details */}
+                {/* Selected Type Details - Mobile Optimized */}
                 {selectedAbsenceType && (
-                  <div className="mt-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="mt-3 p-3 sm:p-4 bg-orange-50 border border-orange-200 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{selectedAbsenceType.icon}</span>
-                        <span className="font-medium text-orange-900">{selectedAbsenceType.label}</span>
+                        <span className="text-base sm:text-lg">{selectedAbsenceType.icon}</span>
+                        <span className="font-medium text-orange-900 text-sm sm:text-base">{selectedAbsenceType.label}</span>
                       </div>
                       {selectedAbsenceType.payrollImpact && (
                         <span className="flex items-center text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
-                          <DollarSign className="w-3 h-3 mr-1" />
+                          <DollarSign className="w-3 h-3 mr-1 flex-shrink-0" />
                           Affects Pay
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-orange-700">{selectedAbsenceType.description}</p>
+                    <p className="text-xs sm:text-sm text-orange-700">{selectedAbsenceType.description}</p>
                     {selectedAbsenceType.payrollImpact && (
                       <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
+                        <AlertCircle className="w-3 h-3 flex-shrink-0" />
                         This absence type will affect the employee's payroll calculation
                       </p>
                     )}
@@ -663,14 +664,14 @@ export const ReportAbsence: React.FC = () => {
                 )}
                 
                 {touchedFields.has('absenceType') && fieldErrors.absenceType && (
-                  <p className="text-red-600 text-sm mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
+                  <p className="text-red-600 text-xs sm:text-sm mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
                     {fieldErrors.absenceType}
                   </p>
                 )}
               </div>
 
-              {/* 📝 REASON (OPTIONAL) */}
+              {/* 📝 REASON (OPTIONAL) - Mobile Optimized */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <FileText className="w-4 h-4 inline mr-1" />
@@ -687,7 +688,7 @@ export const ReportAbsence: React.FC = () => {
                   placeholder="Brief explanation if needed..."
                   rows={3}
                   maxLength={80}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors resize-none ${
+                  className={`w-full px-3 sm:px-4 py-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors resize-none min-h-[80px] ${
                     touchedFields.has('reason') && fieldErrors.reason
                       ? 'border-red-300 bg-red-50'
                       : 'border-gray-300'
@@ -696,23 +697,23 @@ export const ReportAbsence: React.FC = () => {
                 <div className="flex justify-between items-center text-xs mt-1">
                   {touchedFields.has('reason') && fieldErrors.reason && (
                     <p className="text-red-600 flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" />
+                      <AlertCircle className="w-3 h-3 flex-shrink-0" />
                       {fieldErrors.reason}
                     </p>
                   )}
-                  <div className={`text-sm ml-auto ${
+                  <div className={`text-xs sm:text-sm ml-auto ${
                     remainingChars < 10 ? 'text-red-500' : 'text-gray-500'
                   }`}>
-                    {remainingChars} characters remaining
+                    {remainingChars} chars left
                   </div>
                 </div>
               </div>
 
-              {/* 🚀 SUBMIT BUTTON */}
+              {/* 🚀 SUBMIT BUTTON - Mobile Optimized */}
               <button
                 onClick={submitAbsenceReport}
                 disabled={!isFormValid() || loading}
-                className={`w-full px-6 py-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${
+                className={`w-full px-4 sm:px-6 py-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 min-h-[48px] text-sm sm:text-base ${
                   isFormValid() && !loading
                     ? 'bg-orange-600 text-white hover:bg-orange-700'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -731,14 +732,14 @@ export const ReportAbsence: React.FC = () => {
                 )}
               </button>
 
-              {/* 📋 FORM SUMMARY */}
+              {/* 📋 FORM SUMMARY - Mobile Optimized */}
               {selectedEmployee && selectedAbsenceType && (
-                <div className="mt-6 p-4 bg-gray-50 rounded-xl">
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2 text-sm sm:text-base">
                     <FileText className="w-4 h-4" />
                     Report Summary
                   </h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                     <div>
                       <span className="font-medium text-gray-700">Employee:</span>
                       <p className="text-gray-600">{selectedEmployee.profile.firstName} {selectedEmployee.profile.lastName}</p>

@@ -15,8 +15,11 @@ import { ShardedDataService } from '../services/ShardedDataService';
 import { DatabaseShardingService } from '../services/DatabaseShardingService';
 import { WarningService } from '../services/WarningService';
 import CacheService from '../services/CacheService';
-import { where } from 'firebase/firestore';
+import { where, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import * as UniversalCategories from '../services/UniversalCategories';
+import { NestedDataService } from '../services/NestedDataService';
+import { isDualWriteEnabled, useNestedStructure } from '../config/features';
 import type { 
   Warning,
   WarningLevel,
@@ -54,35 +57,66 @@ export const warnings = {
   /**
    * Get all warnings with optional filters (SHARDED - excludes draft/incomplete warnings)
    */
-  async getAll(organizationId: string, filters?: { 
+  async getAll(organizationId: string, filters?: {
     status?: string;
     employeeId?: string;
     level?: WarningLevel;
   }): Promise<Warning[]> {
     try {
-      const result = await ShardedDataService.loadWarnings(organizationId);
-      const allWarnings = result.documents;
-      
-      // Filter out incomplete warnings only (remove draft concept)
-      const completedWarnings = allWarnings.filter(warning => {        
+      // Load warnings and all employees in parallel for better performance
+      const [warningsResult, allEmployees] = await Promise.all([
+        ShardedDataService.loadWarnings(organizationId),
+        ShardedDataService.loadEmployees(organizationId)
+      ]);
+
+      const allWarnings = warningsResult.documents;
+      const employees = allEmployees.documents;
+
+      // Enhance warnings with up-to-date employee information
+      const enhancedWarnings = allWarnings.map(warning => {
+        // Find the employee for this warning
+        const employee = employees.find(emp => emp.id === warning.employeeId);
+
+        if (employee) {
+          // Update warning with current employee data
+          const firstName = employee.profile?.firstName || '';
+          const lastName = employee.profile?.lastName || '';
+          const fullName = `${firstName} ${lastName}`.trim() || warning.employeeName || 'Unknown';
+
+          return {
+            ...warning,
+            employeeName: fullName, // Full name (first + last)
+            employeeLastName: lastName || warning.employeeLastName || '',
+            employeeNumber: employee.profile?.employeeNumber || warning.employeeNumber || 'Unknown',
+            employeeDepartment: employee.employment?.department || warning.employeeDepartment || 'Unknown',
+            employeePosition: employee.employment?.position || warning.employeePosition || 'Unknown',
+            department: employee.employment?.department || warning.department || 'Unknown', // Legacy field
+            position: employee.employment?.position || warning.position || 'Unknown', // Legacy field
+          };
+        }
+
+        return warning;
+      });
+
+      // Filter out incomplete warnings
+      const completedWarnings = enhancedWarnings.filter(warning => {
         // Must have required core fields for a complete warning
-        if (!warning.employeeName || !warning.level || !warning.description) {
+        if (!warning.level || !warning.description) {
           return false;
         }
-        
+
         // Filter out obvious placeholders for employee data
         if (warning.employeeName === 'Unknown Employee' ||
             warning.employeeName === 'Employee Not Selected') {
           return false;
         }
-        
-        // Allow warnings even if category shows as "Unknown" - this might be due to
-        // category loading issues, but the warning itself is still valid
+
+        // Allow warnings even if some fields show as "Unknown" - might be legacy data
         return true;
       });
-      
-      Logger.debug(`Filtered ${allWarnings.length - completedWarnings.length} incomplete warnings from display`)
-      
+
+      Logger.debug(`Enhanced ${enhancedWarnings.length} warnings with employee data, filtered ${allWarnings.length - completedWarnings.length} incomplete warnings`)
+
       return completedWarnings;
     } catch (error) {
       handleError('warnings.getAll', error);
@@ -161,10 +195,47 @@ export const warnings = {
         updatedAt: new Date()
       };
       
-      // Save using WarningService (the original working method)
-      const warningId = await WarningService.saveWarning(warning, warningData.organizationId);
-      Logger.success(5010)
-      
+      // Determine which data structure to use based on feature flags
+      let warningId: string;
+
+      if (useNestedStructure()) {
+        // Use nested structure
+        warningId = await NestedDataService.createWarning(
+          warningData.organizationId,
+          warningData.employeeId,
+          warning
+        );
+        Logger.success(`📁 [NESTED] Warning created: ${warningId}`);
+
+        // Dual-write to flat structure if enabled
+        if (isDualWriteEnabled()) {
+          try {
+            await WarningService.saveWarning(warning, warningData.organizationId);
+            Logger.debug(`📋 [DUAL-WRITE] Warning also saved to flat structure`);
+          } catch (error) {
+            Logger.warn(`⚠️ [DUAL-WRITE] Failed to save to flat structure:`, error);
+          }
+        }
+      } else {
+        // Use original flat structure
+        warningId = await WarningService.saveWarning(warning, warningData.organizationId);
+        Logger.success(`📋 [FLAT] Warning created: ${warningId}`);
+
+        // Dual-write to nested structure if enabled
+        if (isDualWriteEnabled()) {
+          try {
+            await NestedDataService.createWarning(
+              warningData.organizationId,
+              warningData.employeeId,
+              { ...warning, id: warningId }
+            );
+            Logger.debug(`📁 [DUAL-WRITE] Warning also saved to nested structure`);
+          } catch (error) {
+            Logger.warn(`⚠️ [DUAL-WRITE] Failed to save to nested structure:`, error);
+          }
+        }
+      }
+
       return warningId;
     } catch (error) {
       handleError('warnings.create', error);
@@ -174,17 +245,85 @@ export const warnings = {
   /**
    * Update warning
    */
-  async update(warningId: string, updates: Partial<Warning>): Promise<void> {
+  async update(warningId: string, updates: Partial<Warning>, organizationId?: string, employeeId?: string): Promise<void> {
     try {
-      // Use DataService for status updates
-      if (updates.status && updates.organizationId) {
-        await DataServiceV2.updateWarningStatus(warningId, updates.status, updates.organizationId);
+      // Require organizationId either from updates or as parameter
+      const orgId = organizationId || updates.organizationId;
+
+      if (!orgId) {
+        throw new Error('Organization ID required for warning update');
+      }
+
+      // Determine which data structure to use based on feature flags
+      if (useNestedStructure()) {
+        // Use nested structure
+        if (!employeeId) {
+          // If employeeId not provided, we need to get it from the warning
+          // For now, log a warning and fallback to flat structure
+          Logger.warn(`⚠️ [NESTED] Employee ID required for nested update, falling back to flat structure`);
+          await this.updateFlatStructure(warningId, updates, orgId);
+        } else {
+          await NestedDataService.updateWarning(orgId, employeeId, warningId, updates);
+          Logger.success(`📁 [NESTED] Warning ${warningId} updated successfully`);
+
+          // Dual-write to flat structure if enabled
+          if (isDualWriteEnabled()) {
+            try {
+              await this.updateFlatStructure(warningId, updates, orgId);
+              Logger.debug(`📋 [DUAL-WRITE] Warning also updated in flat structure`);
+            } catch (error) {
+              Logger.warn(`⚠️ [DUAL-WRITE] Failed to update flat structure:`, error);
+            }
+          }
+        }
       } else {
-        // TODO: Implement general updates when WarningService is integrated
-        Logger.warn('warnings.update only supports status updates for now')
+        // Use original flat structure
+        await this.updateFlatStructure(warningId, updates, orgId);
+        Logger.success(`📋 [FLAT] Warning ${warningId} updated successfully`);
+
+        // Dual-write to nested structure if enabled
+        if (isDualWriteEnabled() && employeeId) {
+          try {
+            await NestedDataService.updateWarning(orgId, employeeId, warningId, updates);
+            Logger.debug(`📁 [DUAL-WRITE] Warning also updated in nested structure`);
+          } catch (error) {
+            Logger.warn(`⚠️ [DUAL-WRITE] Failed to update nested structure:`, error);
+          }
+        }
       }
     } catch (error) {
       handleError('warnings.update', error);
+    }
+  },
+
+  /**
+   * Update warning in flat structure (helper method)
+   * @private
+   */
+  async updateFlatStructure(warningId: string, updates: Partial<Warning>, orgId: string): Promise<void> {
+    // Use ShardedDataService to update the warning with all fields
+    const warningRef = doc(db, `organizations/${orgId}/warnings`, warningId);
+
+    // Prepare update data with timestamp
+    const updateData = {
+      ...updates,
+      updatedAt: serverTimestamp(),
+      // Remove organizationId from updates as it shouldn't be changed
+      organizationId: undefined
+    };
+
+    // Remove undefined fields
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
+    await updateDoc(warningRef, updateData);
+
+    // If status was updated, also use DataService for compatibility
+    if (updates.status) {
+      await DataServiceV2.updateWarningStatus(warningId, updates.status, orgId);
     }
   },
 
@@ -249,14 +388,41 @@ export const warnings = {
   },
 
   /**
+   * Archive a warning (for appealed/overturned warnings)
+   */
+  async archive(warningId: string, organizationId: string, reason: 'appealed' | 'overturned' | 'expired' | 'manual'): Promise<void> {
+    try {
+      const warningRef = doc(db, `organizations/${organizationId}/warnings`, warningId);
+
+      await updateDoc(warningRef, {
+        isArchived: true,
+        archivedAt: serverTimestamp(),
+        archiveReason: reason,
+        updatedAt: serverTimestamp()
+      });
+
+      Logger.success(`Warning ${warningId} archived (reason: ${reason})`)
+    } catch (error) {
+      handleError('warnings.archive', error);
+    }
+  },
+
+  /**
    * Get archived warnings (for archived employees and expired warnings)
    */
   async getArchived(organizationId: string): Promise<Warning[]> {
     try {
-      // This method combines warnings from archived employees and expired warnings
-      // The WarningArchive component handles the logic for loading these
-      // For now, return empty array - the component loads data directly
-      return [];
+      // Load all warnings including archived ones
+      const result = await ShardedDataService.loadWarnings(organizationId);
+
+      // Filter to only archived warnings
+      const archivedWarnings = result.documents.filter(warning =>
+        warning.isArchived === true ||
+        warning.status === 'expired' ||
+        warning.status === 'overturned'
+      );
+
+      return archivedWarnings;
     } catch (error) {
       handleError('warnings.getArchived', error);
       return [];

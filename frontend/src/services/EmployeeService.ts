@@ -3,6 +3,7 @@ import Logger from '../utils/logger';
 import { DataService } from './DataService';
 import type { Employee } from '../types';
 import { WarningService } from './WarningService';
+import DepartmentService from './DepartmentService';
 
 
 // Define the EmployeeWithContext interface
@@ -73,6 +74,14 @@ export class EmployeeService {
     try {
       const organization = await DataService.getOrganization();
       await DataService.saveEmployee(organization.id, employee);
+
+      // Refresh department employee counts after saving
+      try {
+        await DepartmentService.refreshEmployeeCounts(organization.id);
+      } catch (deptError) {
+        Logger.warn('Failed to refresh department counts after employee save:', deptError);
+        // Don't fail the employee save if department count refresh fails
+      }
     } catch (error) {
       Logger.error('Error saving employee:', error)
       throw error;
@@ -86,6 +95,13 @@ export class EmployeeService {
     try {
       const organization = await DataService.getOrganization();
       await DataService.archiveEmployee(organization.id, employeeId, reason);
+
+      // Refresh department employee counts after archiving
+      try {
+        await DepartmentService.refreshEmployeeCounts(organization.id);
+      } catch (deptError) {
+        Logger.warn('Failed to refresh department counts after employee archive:', deptError);
+      }
     } catch (error) {
       Logger.error('Error archiving employee:', error)
       throw error;
@@ -99,6 +115,13 @@ export class EmployeeService {
     try {
       const organization = await DataService.getOrganization();
       await DataService.deleteEmployee(organization.id, employeeId);
+
+      // Refresh department employee counts after deletion
+      try {
+        await DepartmentService.refreshEmployeeCounts(organization.id);
+      } catch (deptError) {
+        Logger.warn('Failed to refresh department counts after employee delete:', deptError);
+      }
     } catch (error) {
       Logger.error('Error deleting employee:', error)
       throw error;
@@ -131,9 +154,10 @@ export class EmployeeService {
   static async getByDepartment(department: string): Promise<Employee[]> {
     try {
       const allEmployees = await this.getAll();
-      return allEmployees.filter(employee => 
-        employee.department === department && employee.isActive
-      );
+      return allEmployees.filter(employee => {
+        const employeeDept = employee.profile?.department || employee.employment?.department || '';
+        return employeeDept === department && employee.isActive;
+      });
     } catch (error) {
       Logger.error('Error loading department employees:', error)
       return [];
@@ -300,10 +324,10 @@ static async getEmployeesWithWarningContext(organizationId: string): Promise<Emp
           
           const employeeWithContext: EmployeeWithContext = {
             id: employee.id,
-            firstName: employee.firstName || '',
-            lastName: employee.lastName || '',
-            department: employee.department || 'Unknown',
-            position: employee.position || 'Unknown',
+            firstName: employee.profile?.firstName || employee.firstName || '',
+            lastName: employee.profile?.lastName || employee.lastName || '',
+            department: employee.profile?.department || employee.employment?.department || 'Unknown',
+            position: employee.profile?.position || employee.employment?.position || 'Unknown',
             deliveryPreference: deliveryPreference,
             recentWarnings: {
               count: recentWarnings.length,
@@ -325,10 +349,10 @@ static async getEmployeesWithWarningContext(organizationId: string): Promise<Emp
           // Return basic employee data if warning context fails
           return {
             id: employee.id,
-            firstName: employee.firstName || '',
-            lastName: employee.lastName || '',
-            department: employee.department || 'Unknown',
-            position: employee.position || 'Unknown',
+            firstName: employee.profile?.firstName || employee.firstName || '',
+            lastName: employee.profile?.lastName || employee.lastName || '',
+            department: employee.profile?.department || employee.employment?.department || 'Unknown',
+            position: employee.profile?.position || employee.employment?.position || 'Unknown',
             deliveryPreference: employee.preferredDeliveryMethod || 'email',
             recentWarnings: {
               count: 0,
@@ -389,7 +413,7 @@ static async getEmployeesWithWarningContext(organizationId: string): Promise<Emp
 
       // Count by department
       allEmployees.forEach(employee => {
-        const dept = employee.department || 'Unknown';
+        const dept = employee.profile?.department || employee.employment?.department || 'Unknown';
         stats.byDepartment[dept] = (stats.byDepartment[dept] || 0) + 1;
       });
 

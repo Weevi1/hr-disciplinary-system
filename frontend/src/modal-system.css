@@ -1,0 +1,2343 @@
+/* ============================================= */
+/* 🎯 ENHANCED WARNING WIZARD - PROFESSIONAL MOBILE-FIRST */
+/* Ultra-clean, minimal design with maximum professionalism */
+/* ============================================= */
+
+/* ============================================= */
+/* 📋 SECTION HEADERS - BRANDED STYLING */
+/* ============================================= */
+
+.unified-section-header {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 0.75rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.unified-section-header__icon {
+  flex-shrink: 0 !important;
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  color: var(--color-primary) !important;
+  margin-top: 0.125rem !important;
+}
+
+.unified-section-header__content {
+  flex: 1 !important;
+}
+
+.unified-section-header__title {
+  font-size: 1.125rem !important; /* 18px */
+  font-weight: 600 !important;
+  color: var(--color-text) !important;
+  margin: 0 !important;
+  line-height: 1.3 !important;
+}
+
+.unified-section-header__subtitle {
+  font-size: 0.875rem !important; /* 14px */
+  color: var(--color-text-secondary) !important;
+  margin: 0.25rem 0 0 0 !important;
+  line-height: 1.4 !important;
+}
+
+/* ============================================= */
+/* 📝 FORM FIELD STYLING - BRANDED INPUTS */
+/* ============================================= */
+
+.form-section {
+  margin-bottom: 1.5rem !important;
+}
+
+.unified-field-label {
+  display: block !important;
+  font-size: 0.875rem !important; /* 14px */
+  font-weight: 500 !important;
+  color: var(--color-text) !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.unified-field-required::after {
+  content: " *" !important;
+  color: var(--color-error) !important;
+}
+
+.unified-field-input {
+  width: 100% !important;
+  padding: 0.75rem !important;
+  border: 1px solid var(--color-input-border) !important;
+  border-radius: 6px !important;
+  background: var(--color-input-background) !important;
+  color: var(--color-text) !important;
+  font-size: 0.875rem !important;
+  line-height: 1.4 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.unified-field-input:focus {
+  outline: none !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px var(--color-primary-alpha) !important;
+}
+
+.unified-field-hint {
+  font-size: 0.75rem !important; /* 12px */
+  color: var(--color-text-secondary) !important;
+  margin-top: 0.25rem !important;
+}
+
+/* ============================================= */
+/* 📱 MODAL WRAPPER - FULL SCREEN NATIVE EXPERIENCE */
+/* ============================================= */
+
+/* Mobile/Desktop responsive utilities for modal system */
+.modal-responsive-hide-mobile {
+  display: none !important;
+}
+
+.modal-responsive-hide-desktop {
+  display: flex !important;
+}
+
+.modal-responsive-text-center {
+  text-align: center !important;
+}
+
+.modal-responsive-text-sm {
+  font-size: 0.875rem !important;
+}
+
+.modal-responsive-font-medium {
+  font-weight: 500 !important;
+}
+
+.modal-icon-w4-h4 {
+  width: 1rem !important;
+  height: 1rem !important;
+}
+
+.modal-icon-w5-h5 {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+}
+
+@media (min-width: 768px) {
+  .modal-responsive-hide-mobile {
+    display: flex !important;
+  }
+
+  .modal-responsive-hide-desktop {
+    display: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .modal-responsive-text-center {
+    text-align: center !important;
+  }
+}
+
+.modal-system {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  z-index: 9999 !important;
+  
+  /* Mobile-first: Clean full-screen experience */
+  background: var(--color-background) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  
+  /* Safe area support for modern devices */
+  padding-top: env(safe-area-inset-top) !important;
+  padding-left: env(safe-area-inset-left) !important;
+  padding-right: env(safe-area-inset-right) !important;
+  padding-bottom: 0 !important;
+}
+
+/* ============================================= */
+/* 📦 MODAL CONTAINER - SEAMLESS INTEGRATION */
+/* ============================================= */
+
+.modal-container {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: var(--color-card-background) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* ============================================= */
+/* 🎯 FUNCTIONAL HEADER - PROFESSIONAL & COMPLETE */
+/* Clean design with all essential functionality preserved */
+/* ============================================= */
+
+.modal-header {
+  background: var(--color-card-background) !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  padding: 0.375rem 0.625rem !important; /* Ultra-compact vertical padding */
+  flex-shrink: 0 !important;
+  min-height: 40px !important; /* Even smaller height */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+/* ============================================= */
+/* 🔴 CLOSE BUTTON - VISIBLE & FUNCTIONAL */
+/* ============================================= */
+
+.modal-header__left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+}
+
+/* Modal Title and Subtitle Styling */
+.modal-header__title {
+  font-size: 1.125rem !important; /* 18px */
+  font-weight: 600 !important;
+  color: var(--color-text) !important;
+  margin: 0 !important;
+  line-height: 1.25 !important;
+}
+
+.modal-header__subtitle {
+  font-size: 0.875rem !important; /* 14px */
+  color: var(--color-text-secondary) !important;
+  margin: 0.25rem 0 0 0 !important;
+  line-height: 1.4 !important;
+}
+
+.modal-header__close-button {
+  background: var(--color-background) !important;
+  border: 1px solid var(--color-input-border) !important;
+  border-radius: 4px !important; /* Even smaller radius */
+  padding: 0.25rem !important; /* Minimal padding */
+  color: var(--color-text-secondary) !important;
+  width: 28px !important; /* Ultra-compact button */
+  height: 28px !important; /* Ultra-compact button */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+}
+
+.modal-header__close-button:active {
+  background: var(--color-background-secondary) !important;
+  border-color: var(--color-border) !important;
+  transform: scale(0.96) !important;
+}
+
+/* ============================================= */
+/* 🟢 CLEAR PROGRESS INDICATORS */
+/* Numbered steps with clear visual hierarchy */
+/* ============================================= */
+
+/* ============================================= */
+/* 📱 MOBILE ENHANCED PROGRESS INDICATOR */
+/* ============================================= */
+
+.modal-header__progress-mobile {
+  flex: 1 !important;
+  padding: 0 0.25rem !important; /* Ultra-compact horizontal padding */
+}
+
+.mobile-step-indicator {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 0.125rem !important; /* Minimal vertical spacing */
+}
+
+.mobile-step-dots {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important; /* Tighter dot spacing */
+}
+
+.mobile-step-dot {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 20px !important; /* Smaller dots */
+  height: 20px !important; /* Smaller dots */
+  border-radius: 50% !important;
+  font-size: 0.6875rem !important; /* 11px */
+  font-weight: 600 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  flex-shrink: 0 !important;
+}
+
+.mobile-step-dot--active {
+  background: var(--color-primary) !important;
+  color: var(--color-text-inverse) !important;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3) !important;
+  transform: scale(1.1) !important;
+}
+
+.mobile-step-dot--completed {
+  background: var(--color-success) !important;
+  color: var(--color-text-inverse) !important;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.2) !important;
+}
+
+.mobile-step-dot--inactive {
+  background: var(--color-background-secondary) !important;
+  color: var(--color-text-tertiary) !important;
+  border: 1px solid var(--color-input-border) !important;
+}
+
+.mobile-step-info {
+  text-align: center !important;
+  min-height: 20px !important; /* Ultra-compact height */
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 0.125rem !important; /* Minimal gap */
+}
+
+.mobile-step-title-container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.375rem !important; /* Smaller gap */
+  cursor: pointer !important;
+  padding: 0.125rem 0.25rem !important; /* Minimal padding */
+  border-radius: 0.25rem !important; /* Smaller radius */
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.mobile-step-title-container:hover {
+  background-color: var(--color-muted) !important;
+}
+
+.mobile-step-title-container:active {
+  background-color: var(--color-muted-hover) !important;
+  transform: scale(0.98) !important;
+}
+
+.mobile-step-title {
+  font-size: 0.8125rem !important; /* 13px - smaller */
+  font-weight: 600 !important;
+  color: var(--color-text) !important;
+  line-height: 1.2 !important; /* Tighter */
+  margin: 0 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.mobile-step-expand-btn {
+  background: none !important;
+  border: none !important;
+  color: var(--color-text-secondary) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  padding: 0 !important;
+}
+
+.mobile-step-expand-btn:hover {
+  color: var(--color-primary) !important;
+}
+
+.mobile-step-expand-btn:active {
+  color: var(--color-primary-hover) !important;
+}
+
+.mobile-step-description {
+  background: var(--color-background) !important;
+  border: 1px solid var(--color-input-border) !important;
+  border-radius: 0.5rem !important;
+  padding: 0.75rem !important;
+  margin: 0.25rem 0.5rem 0 0.5rem !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 0.5rem !important;
+  text-align: left !important;
+  animation: mobile-slide-down 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.mobile-step-description p {
+  font-size: 0.8125rem !important; /* 13px */
+  line-height: 1.5 !important;
+  color: var(--color-text-secondary) !important;
+  margin: 0 !important;
+  flex: 1 !important;
+}
+
+@keyframes mobile-slide-down {
+  0% {
+    opacity: 0 !important;
+    transform: translateY(-10px) scale(0.95) !important;
+  }
+  100% {
+    opacity: 1 !important;
+    transform: translateY(0) scale(1) !important;
+  }
+}
+
+.mobile-step-meta {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important; /* Tighter spacing */
+  font-size: 0.75rem !important; /* 12px - smaller */
+  color: var(--color-text-secondary) !important;
+  margin-top: 0.0625rem !important; /* Minimal margin */
+}
+
+.mobile-audio-indicator {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+  font-weight: 500 !important;
+  color: var(--color-error) !important;
+}
+
+.mobile-recording-dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background: var(--color-error) !important;
+  animation: mobile-pulse 1.5s infinite !important;
+}
+
+@keyframes mobile-pulse {
+  0%, 100% {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+  }
+  50% {
+    opacity: 0.5 !important;
+    transform: scale(1.2) !important;
+  }
+}
+
+/* ============================================= */
+/* 🖥️ DESKTOP PROGRESS INDICATOR */
+/* ============================================= */
+
+.modal-header__progress {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  flex: 1 !important;
+  justify-content: center !important;
+  max-width: 120px !important;
+}
+
+.modal-header__step {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 50% !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  flex-shrink: 0 !important;
+}
+
+.modal-header__step--active {
+  background: var(--color-primary) !important;
+  color: var(--color-text-inverse) !important;
+  transform: scale(1.1) !important;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25) !important;
+}
+
+.modal-header__step--completed {
+  background: var(--color-success) !important;
+  color: var(--color-text-inverse) !important;
+}
+
+.modal-header__step--inactive {
+  background: var(--color-background-secondary) !important;
+  color: var(--color-text-tertiary) !important;
+  border: 1px solid var(--color-input-border) !important;
+}
+
+/* ============================================= */
+/* 🎤 AUDIO TIMER & RIGHT SIDE CONTROLS */
+/* Keep essential functionality visible */
+/* ============================================= */
+
+.modal-header__right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+/* Audio recording timer - keep visible and styled */
+.modal-header__right .font-mono {
+  background: var(--color-alert-warning-bg) !important;
+  color: var(--color-alert-warning-text) !important;
+  border: 1px solid var(--color-alert-warning-border) !important;
+  border-radius: 6px !important;
+  padding: 0.25rem 0.5rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+}
+
+/* Debug toggle buttons - make them more subtle but functional */
+.modal-header__right button[title*="Toggle"] {
+  background: var(--color-background) !important;
+  border: 1px solid var(--color-input-border) !important;
+  border-radius: 6px !important;
+  padding: 0.25rem !important;
+  color: var(--color-text-secondary) !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 12px !important;
+}
+
+.modal-header__right button[title*="Toggle"]:active {
+  background: var(--color-background-secondary) !important;
+  transform: scale(0.95) !important;
+}
+
+
+/* ============================================= */
+/* 🎯 CATEGORY CARD SYSTEM - CLEAN SELECTION CARDS */
+/* ============================================= */
+
+.category-card {
+  background: var(--color-card-background) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 0.75rem !important;
+  padding: 1rem !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+}
+
+.category-card:hover {
+  border-color: var(--color-primary) !important;
+  background: var(--color-primary-bg) !important;
+}
+
+.category-card--selected {
+  border-color: var(--color-primary) !important;
+  background: var(--color-primary-bg) !important;
+  box-shadow: 0 0 0 1px var(--color-primary) !important;
+}
+
+.category-card__content {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  width: 100% !important;
+}
+
+.category-card__icon {
+  font-size: 1.25rem !important;
+  flex-shrink: 0 !important;
+}
+
+.category-card__details {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.category-card__title {
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+  color: var(--color-text) !important;
+  line-height: 1.25 !important;
+}
+
+.category-card__description {
+  font-size: 0.75rem !important;
+  color: var(--color-text-secondary) !important;
+  margin: 0 !important;
+  line-height: 1.3 !important;
+}
+
+.category-card__badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0.125rem 0.375rem !important;
+  border-radius: 0.375rem !important;
+  font-size: 0.625rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.025em !important;
+}
+
+.category-card__badge--warning {
+  background: var(--color-warning-bg) !important;
+  color: var(--color-warning) !important;
+  border: 1px solid var(--color-warning) !important;
+}
+
+/* ============================================= */
+/* 📄 CONTENT AREA - MAXIMUM SPACE UTILIZATION */
+/* ============================================= */
+
+.modal-content {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  background: var(--color-card-background) !important;
+}
+
+.modal-content__scrollable {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  
+  /* Mobile-optimized padding - more comfortable spacing */
+  padding: 0.5rem 0.75rem 0 0.75rem !important;
+  
+  background: var(--color-card-background) !important;
+  
+  /* Premium iOS-style scrolling */
+  -webkit-overflow-scrolling: touch !important;
+  scroll-behavior: smooth !important;
+  overscroll-behavior: contain !important;
+  
+  /* Performance optimizations */
+  transform: translateZ(0) !important;
+  will-change: scroll-position !important;
+}
+
+/* Ultra-subtle scrollbar - almost invisible */
+.modal-content__scrollable::-webkit-scrollbar {
+  width: 1px !important;
+}
+
+.modal-content__scrollable::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.modal-content__scrollable::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2) !important;
+  border-radius: 0.5px !important;
+}
+
+/* ============================================= */
+/* 🎨 PROFESSIONAL TYPOGRAPHY SYSTEM - TIGHTENED */
+/* ============================================= */
+
+.modal-content__scrollable {
+  line-height: 1.5 !important;
+  color: var(--color-text) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* 🎯 SAMSUNG S8 OPTIMIZED HEADING SIZES - Ultra compact */
+.modal-content__scrollable h1 {
+  font-size: 1.25rem !important; /* 20px - reduced from 24px */
+  font-weight: 700 !important;
+  margin: 0 0 0.375rem 0 !important; /* Further reduced */
+  color: var(--color-text) !important;
+  line-height: 1.3 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.modal-content__scrollable h2 {
+  font-size: 1.125rem !important; /* 18px - reduced from 20px */
+  font-weight: 600 !important;
+  margin: 0.5rem 0 0.25rem 0 !important; /* Further reduced */
+  color: var(--color-text) !important;
+  line-height: 1.4 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.modal-content__scrollable h3 {
+  font-size: 1rem !important; /* 16px - reduced from 18px */
+  font-weight: 600 !important;
+  margin: 0.375rem 0 0.25rem 0 !important; /* Further reduced */
+  color: var(--color-text-secondary) !important;
+  line-height: 1.4 !important;
+}
+
+.modal-content__scrollable h4 {
+  font-size: 0.9375rem !important; /* 15px - reduced from 16px */
+  font-weight: 600 !important;
+  margin: 0.375rem 0 0.25rem 0 !important; /* Further reduced */
+  color: var(--color-text-secondary) !important;
+  line-height: 1.4 !important;
+}
+
+/* Body text - Samsung S8 optimized */
+.modal-content__scrollable p {
+  font-size: 0.875rem !important; /* 14px - reduced from 15px */
+  font-weight: 400 !important;
+  margin: 0 0 0.375rem 0 !important; /* Further reduced for S8 */
+  color: var(--color-text-secondary) !important;
+  line-height: 1.5 !important; /* Tighter line height */
+}
+
+/* Small text */
+.modal-content__scrollable .text-sm,
+.modal-content__scrollable small {
+  font-size: 0.8125rem !important; /* 13px */
+  line-height: 1.5 !important;
+}
+
+/* Extra small text */
+.modal-content__scrollable .text-xs {
+  font-size: 0.75rem !important; /* 12px */
+  line-height: 1.4 !important;
+}
+
+/* ============================================= */
+/* 🎪 FORM ELEMENTS - REFINED & PROFESSIONAL */
+/* ============================================= */
+
+.modal-content__scrollable input[type="text"],
+.modal-content__scrollable input[type="email"],
+.modal-content__scrollable input[type="tel"],
+.modal-content__scrollable input[type="url"],
+.modal-content__scrollable input[type="date"],
+.modal-content__scrollable input[type="time"],
+.modal-content__scrollable input[type="number"],
+.modal-content__scrollable textarea,
+.modal-content__scrollable select {
+  width: 100% !important;
+  border: 1px solid var(--color-input-border) !important;
+  border-radius: 8px !important;
+  padding: 0.75rem 0.875rem !important;
+  font-size: 0.9375rem !important; /* 15px - optimal for mobile */
+  line-height: 1.5 !important;
+  color: var(--color-text) !important;
+  background: var(--color-card-background) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+.modal-content__scrollable input:focus,
+.modal-content__scrollable textarea:focus,
+.modal-content__scrollable select:focus {
+  border-color: var(--color-input-border-focus) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08) !important;
+  outline: none !important;
+}
+
+/* Textarea specific styling - Samsung S8 optimized */
+.modal-content__scrollable textarea {
+  min-height: 80px !important; /* Reduced from 100px for S8 */
+  resize: vertical !important;
+}
+
+/* Select specific styling */
+.modal-content__scrollable select {
+  background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="%23475569"><path d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z"/></svg>') !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.75rem center !important;
+  background-size: 16px !important;
+  padding-right: 2.5rem !important;
+}
+
+/* ============================================= */
+/* 🎨 REFINED COLOR UTILITIES */
+/* ============================================= */
+
+.modal-content__scrollable .text-gray-500 { color: var(--color-text-secondary) !important; }
+.modal-content__scrollable .text-gray-600 { color: var(--color-text-secondary) !important; }
+.modal-content__scrollable .text-gray-700 { color: var(--color-text-secondary) !important; }
+.modal-content__scrollable .text-gray-800 { color: var(--color-text) !important; }
+.modal-content__scrollable .text-gray-900 { color: var(--color-text) !important; }
+
+.modal-content__scrollable .text-blue-600 { color: var(--color-primary) !important; }
+.modal-content__scrollable .text-green-600 { color: var(--color-success) !important; }
+.modal-content__scrollable .text-amber-600 { color: var(--color-warning) !important; }
+.modal-content__scrollable .text-red-600 { color: var(--color-error) !important; }
+
+/* Subtle background colors with compact padding */
+.modal-content__scrollable .bg-blue-50 {
+  background-color: var(--color-alert-info-bg) !important;
+  border: 1px solid var(--color-alert-info-border) !important;
+  border-radius: 8px !important;
+  padding: 0.75rem !important; /* Reduced from typical 1rem+ */
+}
+.modal-content__scrollable .bg-green-50 {
+  background-color: var(--color-alert-success-bg) !important;
+  border: 1px solid var(--color-alert-success-border) !important;
+  border-radius: 8px !important;
+  padding: 0.75rem !important; /* Reduced from typical 1rem+ */
+}
+.modal-content__scrollable .bg-amber-50 {
+  background-color: var(--color-alert-warning-bg) !important;
+  border: 1px solid var(--color-alert-warning-border) !important;
+  border-radius: 8px !important;
+  padding: 0.75rem !important; /* Reduced from typical 1rem+ */
+}
+.modal-content__scrollable .bg-red-50 {
+  background-color: var(--color-alert-error-bg) !important;
+  border: 1px solid var(--color-alert-error-border) !important;
+  border-radius: 8px !important;
+  padding: 0.75rem !important; /* Reduced from typical 1rem+ */
+}
+
+/* ============================================= */
+/* 📱 MOBILE FORM ENHANCEMENTS */
+/* Better spacing and touch targets for mobile */
+/* ============================================= */
+
+/* Form sections need more breathing room on mobile */
+.modal-content__scrollable .space-y-8 > *:not(:first-child) {
+  margin-top: 2.5rem !important;
+}
+
+/* Form inputs - larger touch targets */
+.modal-content__scrollable input[type="text"],
+.modal-content__scrollable input[type="email"],
+.modal-content__scrollable input[type="tel"],
+.modal-content__scrollable input[type="date"],
+.modal-content__scrollable input[type="time"],
+.modal-content__scrollable textarea,
+.modal-content__scrollable select {
+  min-height: 48px !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 1rem !important;
+  border-radius: 0.5rem !important;
+  border: 1.5px solid #e2e8f0 !important;
+  transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+
+.modal-content__scrollable input:focus,
+.modal-content__scrollable textarea:focus,
+.modal-content__scrollable select:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  outline: none !important;
+}
+
+/* Button improvements for mobile */
+.modal-content__scrollable button:not(.modal-footer__button) {
+  min-height: 48px !important;
+  padding: 0.75rem 1.5rem !important;
+  touch-action: manipulation !important;
+  border-radius: 0.5rem !important;
+  font-weight: 500 !important;
+  transition: all 0.15s ease !important;
+}
+
+/* Card and section spacing */
+.modal-content__scrollable .bg-gradient-to-r,
+.modal-content__scrollable .border,
+.modal-content__scrollable .rounded-xl {
+  margin-bottom: 1.5rem !important;
+  padding: 1.25rem !important;
+}
+
+/* Grid improvements for mobile */
+.modal-content__scrollable .grid {
+  gap: 1.25rem !important;
+}
+
+.modal-content__scrollable .grid-cols-2 {
+  grid-template-columns: 1fr !important;
+}
+
+@media (min-width: 640px) {
+  .modal-content__scrollable .grid-cols-2 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Better typography spacing for mobile readability */
+.modal-content__scrollable label {
+  font-size: 0.9375rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 0.5rem !important;
+  display: block !important;
+  color: #374151 !important;
+}
+
+.modal-content__scrollable .text-sm {
+  font-size: 0.875rem !important;
+  line-height: 1.6 !important;
+}
+
+/* ============================================= */
+/* 📱 MOBILE EMPLOYEE SELECTOR MODAL */
+/* Full-screen mobile-optimized employee selection */
+/* ============================================= */
+
+.mobile-employee-modal {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 9998 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.mobile-employee-modal-backdrop {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  z-index: 1 !important;
+}
+
+.mobile-employee-modal-content {
+  position: relative !important;
+  z-index: 2 !important;
+  background: var(--color-card-background) !important;
+  margin: auto 0 0 0 !important;
+  border-radius: 1rem 1rem 0 0 !important;
+  max-height: 90vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  animation: mobile-slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+@keyframes mobile-slide-up {
+  0% {
+    transform: translateY(100%) !important;
+  }
+  100% {
+    transform: translateY(0) !important;
+  }
+}
+
+.mobile-modal-header {
+  padding: 1.5rem 1.5rem 1rem 1.5rem !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-shrink: 0 !important;
+}
+
+.mobile-modal-close-btn {
+  background: var(--color-background) !important;
+  border: none !important;
+  border-radius: 0.5rem !important;
+  padding: 0.5rem !important;
+  color: var(--color-text-secondary) !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.mobile-modal-close-btn:active {
+  background: var(--color-background-secondary) !important;
+  transform: scale(0.95) !important;
+}
+
+.mobile-modal-search {
+  padding: 0 1.5rem 1.5rem 1.5rem !important;
+  flex-shrink: 0 !important;
+}
+
+.mobile-search-input {
+  width: 100% !important;
+  padding: 1rem 1rem 1rem 3.5rem !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 0.75rem !important;
+  font-size: 1rem !important;
+  background: var(--color-card-background) !important;
+  transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+
+.mobile-search-input:focus {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  outline: none !important;
+}
+
+.mobile-employee-list {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 0 1.5rem 2rem 1.5rem !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.mobile-employee-card {
+  width: 100% !important;
+  text-align: left !important;
+  background: var(--color-card-background) !important;
+  border: 1.5px solid #f1f5f9 !important;
+  border-radius: 0.75rem !important;
+  padding: 1.25rem !important;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+  display: block !important;
+}
+
+.mobile-employee-card:active {
+  background: var(--color-background) !important;
+  border-color: #e2e8f0 !important;
+  transform: scale(0.98) !important;
+}
+
+.mobile-employee-avatar {
+  width: 3rem !important;
+  height: 3rem !important;
+  background: #dbeafe !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+.mobile-no-results {
+  text-align: center !important;
+  padding: 3rem 1rem !important;
+  color: #6b7280 !important;
+}
+
+/* Hide desktop dropdown on mobile when modal is active */
+@media (max-width: 767px) {
+  .mobile-employee-modal ~ * .absolute.top-full {
+    display: none !important;
+  }
+}
+
+/* ============================================= */
+/* 📱 MOBILE CATEGORY SELECTOR MODAL */
+/* Full-screen mobile-optimized category selection with preview cards */
+/* ============================================= */
+
+.mobile-category-modal {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 9998 !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.mobile-category-modal-backdrop {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  z-index: 1 !important;
+}
+
+.mobile-category-modal-content {
+  position: relative !important;
+  z-index: 2 !important;
+  background: var(--color-card-background) !important;
+  margin: auto 0 0 0 !important;
+  border-radius: 1rem 1rem 0 0 !important;
+  max-height: 90vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  animation: mobile-slide-up 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.mobile-category-list {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 0 1.5rem 2rem 1.5rem !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.mobile-category-card {
+  width: 100% !important;
+  text-align: left !important;
+  background: var(--color-card-background) !important;
+  border: 1.5px solid #f1f5f9 !important;
+  border-radius: 1rem !important;
+  padding: 1.5rem !important;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+  display: block !important;
+}
+
+.mobile-category-card:active {
+  background: #faf5ff !important;
+  border-color: #e9d5ff !important;
+  transform: scale(0.98) !important;
+}
+
+.mobile-category-icon {
+  width: 3rem !important;
+  height: 3rem !important;
+  background: #f3e8ff !important;
+  border-radius: 0.75rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+.mobile-category-header {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 1rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.mobile-category-severity {
+  padding: 0.25rem 0.75rem !important;
+  border-radius: 9999px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  border-width: 1px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  flex-shrink: 0 !important;
+}
+
+/* Severity color mapping for mobile cards */
+.mobile-severity-red-100 {
+  background: #fef2f2 !important;
+}
+.mobile-severity-text-red-700 {
+  color: #b91c1c !important;
+}
+.mobile-severity-border-red-200 {
+  border-color: #fecaca !important;
+}
+
+.mobile-severity-amber-100 {
+  background: #fffbeb !important;
+}
+.mobile-severity-text-amber-700 {
+  color: #b45309 !important;
+}
+.mobile-severity-border-amber-200 {
+  border-color: #fed7aa !important;
+}
+
+.mobile-severity-green-100 {
+  background: #f0fdf4 !important;
+}
+.mobile-severity-text-green-700 {
+  color: #15803d !important;
+}
+.mobile-severity-border-green-200 {
+  border-color: #bbf7d0 !important;
+}
+
+.mobile-severity-gray-100 {
+  background: #f9fafb !important;
+}
+.mobile-severity-text-gray-700 {
+  color: #374151 !important;
+}
+.mobile-severity-border-gray-200 {
+  border-color: #e5e7eb !important;
+}
+
+.mobile-escalation-preview {
+  margin-top: 1rem !important;
+  padding: 0.75rem !important;
+  background: var(--color-background) !important;
+  border: 1px solid var(--color-input-border) !important;
+  border-radius: 0.5rem !important;
+}
+
+/* Line clamp utility for category descriptions */
+.line-clamp-2 {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+/* ============================================= */
+/* 📱 MOBILE SIGNATURE PAD OPTIMIZATIONS */
+/* Enhanced touch-friendly signature pads for mobile */
+/* ============================================= */
+
+@media (max-width: 767px) {
+  /* Make signature pads much larger on mobile */
+  .modal-content__scrollable canvas {
+    min-height: 200px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 0.75rem !important;
+    touch-action: none !important;
+  }
+
+  /* Signature pad container improvements */
+  .modal-content__scrollable .space-y-3 > div:has(canvas) {
+    padding: 1rem !important;
+    border-radius: 1rem !important;
+    background: var(--color-card-background) !important;
+    border: 2px solid #e5e7eb !important;
+    margin: 1rem 0 !important;
+  }
+
+  /* Better touch targets for signature controls */
+  .modal-content__scrollable button:has(.w-3) {
+    padding: 0.75rem 1rem !important;
+    min-height: 48px !important;
+    touch-action: manipulation !important;
+    border-radius: 0.5rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  /* Signature placeholder text larger on mobile */
+  .modal-content__scrollable .absolute.inset-0 span {
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+  }
+
+  /* Clear button more prominent on mobile */
+  .modal-content__scrollable .flex.items-center.gap-1:has(.w-3) {
+    background: #f3f4f6 !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 0.5rem !important;
+    padding: 0.5rem 0.75rem !important;
+    transition: all 0.2s !important;
+  }
+
+  .modal-content__scrollable .flex.items-center.gap-1:has(.w-3):hover:not(:disabled) {
+    background: #fee2e2 !important;
+    border-color: #fca5a5 !important;
+    color: var(--color-error) !important;
+  }
+
+  /* Success indicator more prominent */
+  .modal-content__scrollable .text-green-600:has(.w-3) {
+    background: #dcfce7 !important;
+    border: 1px solid #bbf7d0 !important;
+    border-radius: 0.5rem !important;
+    padding: 0.5rem 0.75rem !important;
+    font-weight: 600 !important;
+  }
+
+  /* Signature validation messages */
+  .modal-content__scrollable .bg-amber-100 {
+    padding: 0.75rem 1rem !important;
+    border-radius: 0.75rem !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+  }
+
+  /* Better mobile signature stroke width */
+  .modal-content__scrollable canvas {
+    /* This will be handled by the canvas context settings */
+  }
+}
+
+/* Signature pad mobile-specific enhancements for all screen sizes */
+.mobile-signature-enhancements {
+  /* Better touch response */
+  touch-action: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+/* Improved signature area focus states for mobile */
+@media (max-width: 767px) {
+  .modal-content__scrollable .border-dashed:focus-within {
+    border-color: #3b82f6 !important;
+    border-style: solid !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  }
+
+  /* Signature completed state on mobile */
+  .modal-content__scrollable .border-green-300 {
+    border-width: 3px !important;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1) !important;
+  }
+
+  /* Invalid signature state on mobile */
+  .modal-content__scrollable .border-amber-300 {
+    border-width: 3px !important;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1) !important;
+  }
+}
+
+/* ============================================= */
+/* 📱 MOBILE DELIVERY OPTIONS OPTIMIZATION */
+/* Enhanced touch-friendly delivery method cards */
+/* ============================================= */
+
+@media (max-width: 767px) {
+  /* Delivery method cards - larger and more prominent on mobile */
+  .modal-content__scrollable label:has(input[type="radio"]) {
+    padding: 1.5rem !important;
+    border-radius: 1rem !important;
+    border-width: 2px !important;
+    margin-bottom: 1rem !important;
+    min-height: 80px !important;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  /* Active delivery option state - more prominent on mobile */
+  .modal-content__scrollable label:has(input[type="radio"]:checked) {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+    border-color: #3b82f6 !important;
+    transform: scale(1.02) !important;
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15) !important;
+  }
+
+  /* Delivery option icons larger on mobile */
+  .modal-content__scrollable label:has(input[type="radio"]) .w-5.h-5 {
+    width: 2rem !important;
+    height: 2rem !important;
+    margin-right: 1rem !important;
+  }
+
+  /* Delivery option text larger and more readable */
+  .modal-content__scrollable label:has(input[type="radio"]) .font-medium {
+    font-size: 1.125rem !important;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
+  }
+
+  .modal-content__scrollable label:has(input[type="radio"]) .text-sm {
+    font-size: 0.9375rem !important;
+    line-height: 1.5 !important;
+    margin-top: 0.5rem !important;
+  }
+
+  /* Delivery method selection title */
+  .modal-content__scrollable h3:has(+ div > label) {
+    font-size: 1.25rem !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  /* Delivery options container */
+  .modal-content__scrollable .space-y-3 {
+    gap: 1rem !important;
+  }
+
+  /* Preview and action buttons larger on mobile */
+  .modal-content__scrollable button:has(.w-4.h-4) {
+    padding: 1rem 1.5rem !important;
+    border-radius: 0.75rem !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    min-height: 56px !important;
+  }
+
+  .modal-content__scrollable button:has(.w-4.h-4) .w-4.h-4 {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+  }
+
+  /* CheckCircle icon for selected option */
+  .modal-content__scrollable .w-5.h-5.text-blue-600 {
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+  }
+
+  /* Hover states for mobile (active touch feedback) */
+  .modal-content__scrollable label:has(input[type="radio"]):not(:has(input:checked)):active {
+    background: #f9fafb !important;
+    border-color: #9ca3af !important;
+    transform: scale(0.98) !important;
+  }
+
+  /* Disabled delivery option state */
+  .modal-content__scrollable label:has(input[type="radio"]:disabled) {
+    opacity: 0.6 !important;
+    transform: none !important;
+  }
+
+  /* Error messages more prominent on mobile */
+  .modal-content__scrollable .text-red-600.text-xs {
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    margin-top: 0.75rem !important;
+    padding: 0.5rem !important;
+    background: #fef2f2 !important;
+    border: 1px solid #fecaca !important;
+    border-radius: 0.5rem !important;
+  }
+
+  /* Final review section mobile optimization */
+  .modal-content__scrollable h3:has(+ div > button) {
+    font-size: 1.25rem !important;
+    margin-bottom: 1.5rem !important;
+  }
+
+  /* Ensure proper spacing between delivery cards */
+  .modal-content__scrollable .space-y-3 > *:not(:first-child) {
+    margin-top: 1rem !important;
+  }
+}
+
+/* Mobile delivery method card animations */
+@keyframes mobile-delivery-select {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1.02);
+  }
+}
+
+@media (max-width: 767px) {
+  .modal-content__scrollable label:has(input[type="radio"]:checked) {
+    animation: mobile-delivery-select 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+}
+
+/* ============================================= */
+/* 🎯 PROFESSIONAL FOOTER - CLEAN BUTTON LAYOUT */
+/* Account for wizard-footer__nav wrapper from component */
+/* ============================================= */
+
+.modal-footer {
+  background: var(--color-card-background) !important;
+  border-top: 1px solid #f1f5f9 !important;
+  padding: 0.625rem 0.75rem calc(0.625rem + env(safe-area-inset-bottom)) 0.75rem !important; /* Even more compact */
+  flex-shrink: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.25rem !important; /* Tighter gap */
+}
+
+/* The nav wrapper that contains the buttons */
+.modal-footer__nav {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 0.5rem !important; /* More compact button spacing */
+  align-items: stretch !important;
+  width: 100% !important;
+}
+
+.modal-footer__button {
+  min-height: 44px !important; /* More compact height */
+  border-radius: 8px !important; /* Smaller border radius */
+  font-size: 0.9375rem !important; /* Slightly smaller text */
+  font-weight: 600 !important;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.375rem !important; /* Tighter gap */
+  letter-spacing: -0.005em !important;
+  white-space: nowrap !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* Secondary button (Previous/Back) - Fixed width */
+.modal-footer__button--secondary {
+  flex: 0 0 auto !important;
+  padding: 0 1.5rem !important;
+  background: var(--color-background) !important;
+  color: var(--color-text-secondary) !important;
+  border: 1.5px solid #e2e8f0 !important;
+}
+
+.modal-footer__button--secondary:active:not(:disabled) {
+  background: var(--color-background-secondary) !important;
+  border-color: var(--color-border) !important;
+  transform: translateY(1px) !important;
+}
+
+.modal-footer__button--secondary:disabled {
+  background: var(--color-background) !important;
+  color: #cbd5e1 !important;
+  border-color: #f1f5f9 !important;
+  cursor: not-allowed !important;
+}
+
+/* Primary button (Next/Complete) - Takes remaining space */
+.modal-footer__button--primary {
+  flex: 1 !important;
+  min-width: 0 !important;
+  background: var(--color-primary) !important;
+  color: var(--color-text-inverse) !important;
+  border: 1.5px solid #3b82f6 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.modal-footer__button--primary:active:not(:disabled) {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  transform: translateY(1px) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+.modal-footer__button--primary:disabled {
+  background: #e2e8f0 !important;
+  color: #9ca3af !important;
+  border-color: #e2e8f0 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+
+/* Loading state for primary button */
+.modal-footer__button--loading {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.modal-footer__button--loading::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: 16px !important;
+  height: 16px !important;
+  margin: -8px 0 0 -8px !important;
+  border: 2px solid transparent !important;
+  border-top: 2px solid currentColor !important;
+  border-radius: 50% !important;
+  animation: smooth-spin 1s linear infinite !important;
+}
+
+/* Primary button */
+.modal-footer__button--primary {
+  background: var(--color-primary) !important;
+  color: var(--color-text-inverse) !important;
+}
+
+.modal-footer__button--primary:active:not(:disabled) {
+  background: var(--color-primary-hover) !important;
+  transform: scale(0.98) !important;
+}
+
+.modal-footer__button--primary:disabled {
+  background: #cbd5e1 !important;
+  color: var(--color-text-tertiary) !important;
+  cursor: not-allowed !important;
+}
+
+/* Secondary button */
+.modal-footer__button--secondary {
+  background: var(--color-background) !important;
+  color: var(--color-text-secondary) !important;
+  border: 1px solid var(--color-input-border) !important;
+}
+
+.modal-footer__button--secondary:active:not(:disabled) {
+  background: var(--color-muted) !important;
+  border-color: var(--color-border-secondary) !important;
+  transform: scale(0.98) !important;
+}
+
+.modal-footer__button--secondary:disabled {
+  background: var(--color-background) !important;
+  color: #cbd5e1 !important;
+  cursor: not-allowed !important;
+}
+
+/* ============================================= */
+/* 📘 ENHANCED TOUCH INTERACTIONS */
+/* ============================================= */
+
+/* Button touch feedback */
+.modal-content__scrollable button:not(.modal-footer__button):active {
+  transform: scale(0.98) !important;
+  transition: transform 0.1s ease !important;
+}
+
+/* Clickable card elements */
+.modal-content__scrollable .clickable:active,
+.modal-content__scrollable [role="button"]:active {
+  transform: scale(0.99) !important;
+  transition: transform 0.1s ease !important;
+}
+
+/* Prevent text selection on interactive elements */
+.modal-header,
+.modal-footer,
+.modal-content__scrollable button,
+.modal-content__scrollable .clickable,
+.modal-content__scrollable [role="button"] {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* ============================================= */
+/* 🎯 STEP 2 STRATEGIC LAYOUT REVOLUTION */
+/* Maximum information density with professional aesthetics */
+/* ============================================= */
+
+/* Combined LRA + Script Header - Revolutionary Design */
+.enhanced-warning-wizard-container .space-y-2 > div:first-child {
+  margin-bottom: 0.5rem !important;
+}
+
+/* Step-consistent ThemedBadge system */
+.enhanced-warning-wizard-container [class*="ThemedBadge"] {
+  font-size: 0.75rem !important;
+  padding: 0.25rem 0.5rem !important;
+  line-height: 1.2 !important;
+  border-radius: 0.375rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.025em !important;
+}
+
+/* LRA section Step 1 consistency */
+.enhanced-warning-wizard-container .border-l-4 {
+  border-left-width: 4px !important;
+}
+
+/* Status indicators Step 1 style */
+.enhanced-warning-wizard-container .w-1\\.5 {
+  width: 0.375rem !important;
+  height: 0.375rem !important;
+}
+
+/* Details card blue theme consistency */
+.enhanced-warning-wizard-container .bg-blue-50 {
+  background: rgba(59, 130, 246, 0.05) !important;
+}
+
+.enhanced-warning-wizard-container .border-blue-200 {
+  border-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Script section professional balance */
+.enhanced-warning-wizard-container [class*="bg-amber-50"] {
+  background: rgba(251, 191, 36, 0.1) !important;
+  border: 1px solid rgba(251, 191, 36, 0.2) !important;
+  padding: 0.75rem !important;
+  margin: 0.25rem 0 !important;
+  border-radius: 0.5rem !important;
+}
+
+/* Clear typography for script section */
+.enhanced-warning-wizard-container [class*="bg-amber-50"] h4 {
+  font-size: 0.875rem !important;
+  line-height: 1.25 !important;
+  margin-bottom: 0.125rem !important;
+}
+
+.enhanced-warning-wizard-container [class*="bg-amber-50"] p {
+  font-size: 0.75rem !important;
+  line-height: 1.3 !important;
+}
+
+/* Professional button styling */
+.enhanced-warning-wizard-container [class*="bg-amber-50"] button {
+  padding: 0.375rem 0.75rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  border-radius: 0.5rem !important;
+}
+
+/* Signature section grid optimization */
+.enhanced-warning-wizard-container [class*="grid-cols-1"]:has(> div:first-child > [class*="bg-blue-50"]) {
+  gap: 0.5rem !important;
+}
+
+/* Digital signature pads - Professional compact design */
+.enhanced-warning-wizard-container canvas {
+  border-radius: 0.375rem !important;
+  border: 1px solid #e5e7eb !important;
+  max-width: 100% !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Signature row backgrounds - Enhanced visual separation */
+.enhanced-warning-wizard-container [class*="bg-blue-50"],
+.enhanced-warning-wizard-container [class*="bg-green-50"] {
+  border: 1px solid rgba(59, 130, 246, 0.15) !important;
+  background: rgba(59, 130, 246, 0.06) !important;
+  padding: 0.5rem !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.2s ease !important;
+}
+
+.enhanced-warning-wizard-container [class*="bg-green-50"] {
+  border-color: rgba(34, 197, 94, 0.15) !important;
+  background: rgba(34, 197, 94, 0.06) !important;
+}
+
+/* Compact action states - Streamlined design */
+.enhanced-warning-wizard-container div:has([class*="Ready to finalize"]),
+.enhanced-warning-wizard-container div:has([class*="Finalized"]) {
+  padding: 0.375rem 0.5rem !important;
+  margin-top: 0.5rem !important;
+  border-radius: 0.5rem !important;
+}
+
+/* Step 2 Mobile Responsiveness Revolution */
+@media screen and (max-width: 428px) {
+  /* Ultra-efficient spacing for modern phones */
+  .enhanced-warning-wizard-container .space-y-2 > * {
+    margin-bottom: 0.375rem !important;
+  }
+
+  /* Signature pads optimized for mobile touch precision */
+  .enhanced-warning-wizard-container canvas {
+    height: 60px !important;
+    width: 100% !important;
+    min-height: 60px !important;
+  }
+
+  /* Signature headers ultra-compact */
+  .enhanced-warning-wizard-container [class*="bg-blue-50"] > div:first-child,
+  .enhanced-warning-wizard-container [class*="bg-green-50"] > div:first-child {
+    margin-bottom: 0.375rem !important;
+    padding: 0 !important;
+  }
+
+  /* LRA combined header maximum efficiency */
+  .enhanced-warning-wizard-container [class*="ThemedCard"][class*="space-y-2"] {
+    padding: 0.375rem !important;
+  }
+
+  /* Script section mobile ultra-compact */
+  .enhanced-warning-wizard-container [class*="bg-amber-50"] {
+    padding: 0.25rem !important;
+    margin: 0.125rem 0 !important;
+  }
+
+  .enhanced-warning-wizard-container [class*="bg-amber-50"] button {
+    padding: 0.2rem 0.4rem !important;
+    font-size: 0.6rem !important;
+  }
+
+  .enhanced-warning-wizard-container [class*="bg-amber-50"] select {
+    min-width: 50px !important;
+    font-size: 0.55rem !important;
+  }
+}
+
+@media screen and (max-width: 375px) {
+  /* Maximum density for legacy small screens */
+  .enhanced-warning-wizard-container [class*="ThemedCard"] {
+    padding: 0.25rem 0.375rem !important;
+  }
+
+  /* Script section hyper-compact */
+  .enhanced-warning-wizard-container [class*="bg-amber-50"] {
+    padding: 0.25rem 0.375rem !important;
+    margin: 0.125rem 0 !important;
+  }
+
+  /* Signature areas minimal yet functional */
+  .enhanced-warning-wizard-container [class*="bg-blue-50"],
+  .enhanced-warning-wizard-container [class*="bg-green-50"] {
+    padding: 0.375rem !important;
+  }
+
+  /* Text sizing for readability */
+  .enhanced-warning-wizard-container [class*="text-xs"] {
+    font-size: 0.65rem !important;
+  }
+}
+
+/* ============================================= */
+/* 🎯 STEP 3 DELIVERY OPTIMIZATION - MOBILE FIRST */
+/* Consistent with Step 1 design language and compact mobile layouts */
+/* ============================================= */
+
+/* Step 3 compact spacing */
+.enhanced-warning-wizard-container div[class*="space-y-4"] {
+  gap: 0.5rem !important;
+}
+
+/* Delivery cards mobile optimization */
+.enhanced-warning-wizard-container .grid-cols-1 > [class*="ThemedCard"] {
+  padding: 0.5rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+/* Step 3 section headers consistency */
+.enhanced-warning-wizard-container h3[class*="font-medium text-sm"] {
+  font-size: 0.875rem !important;
+  line-height: 1.25 !important;
+  margin-bottom: 0.125rem !important;
+}
+
+/* Delivery option cards - Step 1 style */
+.enhanced-warning-wizard-container .border-l-4 {
+  border-left-width: 4px !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Success/status indicators */
+.enhanced-warning-wizard-container .bg-blue-50 {
+  background: rgba(59, 130, 246, 0.05) !important;
+}
+
+.enhanced-warning-wizard-container .bg-green-50 {
+  background: rgba(34, 197, 94, 0.05) !important;
+}
+
+/* Mobile responsive adjustments for Step 3 */
+@media screen and (max-width: 428px) {
+  /* Ultra-compact for modern small screens */
+  .enhanced-warning-wizard-container .space-y-2 > div {
+    margin-bottom: 0.375rem !important;
+  }
+
+  /* Step headers more compact on mobile */
+  .enhanced-warning-wizard-container h3[class*="font-medium"] {
+    font-size: 0.8rem !important;
+  }
+
+  /* Delivery cards mobile touch targets */
+  .enhanced-warning-wizard-container [class*="ThemedCard"] {
+    min-height: 48px !important;
+  }
+
+  /* Action buttons mobile optimization */
+  .enhanced-warning-wizard-container [class*="cursor-pointer"] {
+    padding: 0.5rem !important;
+  }
+}
+
+@media screen and (max-width: 375px) {
+  /* Maximum density for legacy screens */
+  .enhanced-warning-wizard-container .space-y-2 > div {
+    margin-bottom: 0.25rem !important;
+  }
+
+  /* Text sizing for readability */
+  .enhanced-warning-wizard-container p[class*="text-xs"] {
+    font-size: 0.65rem !important;
+    line-height: 1.3 !important;
+  }
+
+  /* Icons slightly smaller for tiny screens */
+  .enhanced-warning-wizard-container .w-4 {
+    width: 0.875rem !important;
+    height: 0.875rem !important;
+  }
+}
+
+/* ============================================= */
+/* 📱 RESPONSIVE REFINEMENTS */
+/* ============================================= */
+
+/* Landscape optimization for small screens - wider content */
+@media (orientation: landscape) and (max-height: 500px) {
+  .modal-header {
+    padding: 0.25rem 0.75rem !important; /* Ultra-compact for landscape */
+    min-height: 36px !important; /* Minimal height in landscape */
+  }
+  
+  .modal-content__scrollable {
+    padding: 0.75rem 0.625rem 0 0.625rem !important; /* Consistent wider content */
+  }
+  
+  .modal-footer {
+    padding: 0.75rem 1rem !important;
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)) !important;
+  }
+  
+  .modal-footer__button {
+    min-height: 40px !important;
+  }
+}
+
+/* Extra small screen adjustments - maintain wider content */
+@media (max-width: 374px) {
+  .modal-content__scrollable {
+    padding: 0.75rem 0.5rem 0 0.5rem !important; /* Reduced horizontal padding */
+  }
+  
+  .modal-footer {
+    padding: 0.875rem !important;
+    padding-bottom: calc(0.875rem + env(safe-area-inset-bottom)) !important;
+  }
+  
+  .modal-footer__button {
+    font-size: 0.875rem !important;
+    min-height: 42px !important;
+  }
+}
+
+/* ============================================= */
+/* ♿ ACCESSIBILITY ENHANCEMENTS */
+/* ============================================= */
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .enhanced-warning-wizard-modal *,
+  .modal-footer__button,
+  .modal-content__scrollable input,
+  .modal-content__scrollable textarea,
+  .modal-content__scrollable select {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* Enhanced contrast support */
+@media (prefers-contrast: high) {
+  .modal-content__scrollable input,
+  .modal-content__scrollable textarea,
+  .modal-content__scrollable select {
+    border-width: 2px !important;
+  }
+  
+  .modal-footer__button--primary {
+    border: 2px solid #1d4ed8 !important;
+  }
+  
+  .modal-footer__button--secondary {
+    border: 2px solid #374151 !important;
+  }
+}
+
+/* Focus visibility for keyboard navigation */
+.modal-header__close-button:focus-visible,
+.modal-footer__button:focus-visible,
+.modal-content__scrollable input:focus-visible,
+.modal-content__scrollable textarea:focus-visible,
+.modal-content__scrollable select:focus-visible,
+.modal-content__scrollable button:focus-visible {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 2px !important;
+}
+
+/* ============================================= */
+/* 📱 LEGACY MOBILE DEVICE OPTIMIZATIONS (2017-2025) */
+/* Targeting older Android/iOS devices with smaller screens and limited resources */
+/* Covers Samsung S8, iPhone 8, Google Pixel, OnePlus 5, and similar era devices */
+/* ============================================= */
+
+@media only screen and (max-width: 428px) and (max-height: 926px) {
+
+  /* Ultra-compact spacing for legacy mobile devices */
+  .modal-content__scrollable {
+    padding: 0.5rem 0.5rem 0 0.5rem !important; /* Further reduced */
+  }
+
+  /* Reduce all form input heights and padding */
+  .modal-content__scrollable input[type="text"],
+  .modal-content__scrollable input[type="email"],
+  .modal-content__scrollable input[type="tel"],
+  .modal-content__scrollable input[type="url"],
+  .modal-content__scrollable input[type="date"],
+  .modal-content__scrollable input[type="time"],
+  .modal-content__scrollable input[type="number"],
+  .modal-content__scrollable select {
+    min-height: 40px !important; /* Reduced from 48px */
+    padding: 0.5rem 0.625rem !important; /* Much smaller padding */
+    font-size: 0.8125rem !important; /* 13px */
+    border-radius: 4px !important; /* Smaller radius */
+  }
+
+  /* Make textarea much more compact */
+  .modal-content__scrollable textarea {
+    min-height: 60px !important; /* Very small */
+    padding: 0.5rem 0.625rem !important;
+    font-size: 0.8125rem !important; /* 13px */
+    line-height: 1.3 !important; /* Tighter */
+  }
+
+  /* Reduce all heading sizes further */
+  .modal-content__scrollable h1 {
+    font-size: 1.125rem !important; /* 18px */
+    margin: 0 0 0.25rem 0 !important;
+  }
+
+  .modal-content__scrollable h2 {
+    font-size: 1rem !important; /* 16px */
+    margin: 0.375rem 0 0.25rem 0 !important;
+  }
+
+  .modal-content__scrollable h3 {
+    font-size: 0.9375rem !important; /* 15px */
+    margin: 0.25rem 0 0.125rem 0 !important;
+  }
+
+  .modal-content__scrollable h4 {
+    font-size: 0.875rem !important; /* 14px */
+    margin: 0.25rem 0 0.125rem 0 !important;
+  }
+
+  /* Reduce paragraph spacing */
+  .modal-content__scrollable p {
+    font-size: 0.8125rem !important; /* 13px */
+    margin: 0 0 0.25rem 0 !important;
+    line-height: 1.4 !important;
+  }
+
+  /* Compact background boxes */
+  .modal-content__scrollable .bg-blue-50,
+  .modal-content__scrollable .bg-green-50,
+  .modal-content__scrollable .bg-amber-50,
+  .modal-content__scrollable .bg-red-50 {
+    padding: 0.5rem !important; /* Much smaller */
+    margin-bottom: 0.75rem !important;
+  }
+
+  /* Reduce label text size */
+  .modal-content__scrollable label {
+    font-size: 0.8125rem !important; /* 13px */
+    margin-bottom: 0.375rem !important;
+  }
+
+  /* Make buttons more compact */
+  .modal-content__scrollable button:not(.modal-footer__button) {
+    min-height: 40px !important; /* Reduced */
+    padding: 0.5rem 1rem !important; /* Smaller padding */
+    font-size: 0.8125rem !important; /* 13px */
+  }
+
+  /* Reduce spacing between form sections */
+  .modal-content__scrollable .space-y-6 > *:not(:first-child),
+  .modal-content__scrollable .space-y-8 > *:not(:first-child) {
+    margin-top: 1rem !important; /* Much tighter */
+  }
+
+  /* Make step header ultra-compact for legacy devices */
+  .modal-header {
+    padding: 0.25rem 0.375rem !important; /* Ultra-compact for Samsung S8 era */
+    min-height: 38px !important; /* Minimal height for legacy devices */
+  }
+
+  /* More compact mobile step title for legacy devices */
+  .mobile-step-title {
+    font-size: 0.8125rem !important; /* 13px - smaller for legacy devices */
+  }
+
+  /* Smaller progress dots for legacy devices */
+  .mobile-step-dot {
+    width: 18px !important; /* Smaller for legacy screens */
+    height: 18px !important;
+    font-size: 0.625rem !important; /* 10px */
+  }
+
+  /* Very compact footer navigation for legacy devices */
+  .modal-footer {
+    padding: 0.375rem 0.5rem calc(0.375rem + env(safe-area-inset-bottom)) 0.5rem !important; /* Minimal padding for legacy */
+    gap: 0.125rem !important; /* Minimal gap */
+  }
+
+  .modal-footer__nav {
+    gap: 0.25rem !important; /* Very tight button spacing for legacy */
+  }
+
+  .modal-footer__button {
+    min-height: 38px !important; /* Very compact height for legacy devices */
+    padding: 0.375rem 0.75rem !important; /* Minimal padding for legacy */
+    font-size: 0.8125rem !important; /* 13px - smaller text for legacy */
+    border-radius: 4px !important; /* Smaller border radius for legacy */
+    gap: 0.1875rem !important; /* Very tight icon-text gap for legacy */
+  }
+}
+
+/* ============================================= */
+/* 📱 ADDITIONAL RESPONSIVE BREAKPOINTS */
+/* Ensure smooth scaling across device generations */
+/* ============================================= */
+
+/* Small phones (iPhone SE, older Androids) */
+@media only screen and (max-width: 375px) {
+  .modal-content__scrollable {
+    padding: 0.375rem !important; /* Even more compact for tiny screens */
+  }
+
+  .modal-content__scrollable input,
+  .modal-content__scrollable textarea,
+  .modal-content__scrollable select {
+    font-size: 0.75rem !important; /* 12px for very small screens */
+  }
+
+  /* Ultra-compact footer for tiny screens */
+  .modal-footer {
+    padding: 0.375rem 0.5rem calc(0.375rem + env(safe-area-inset-bottom)) 0.5rem !important; /* Minimal padding */
+    gap: 0.125rem !important;
+  }
+
+  .modal-footer__nav {
+    gap: 0.25rem !important; /* Minimal button spacing */
+  }
+
+  .modal-footer__button {
+    min-height: 36px !important; /* Very compact height for tiny screens */
+    padding: 0.375rem 0.75rem !important; /* Minimal padding */
+    font-size: 0.8125rem !important; /* 13px */
+    border-radius: 4px !important; /* Smaller border radius */
+  }
+}
+
+/* Modern large phones (iPhone 12+, Samsung S21+) */
+@media only screen and (min-width: 429px) and (max-width: 768px) {
+  .modal-content__scrollable {
+    padding: 0.75rem 1rem 0 1rem !important; /* More breathing room */
+  }
+
+  .modal-content__scrollable input,
+  .modal-content__scrollable textarea,
+  .modal-content__scrollable select {
+    min-height: 44px !important; /* Standard iOS touch target */
+    font-size: 0.9375rem !important; /* 15px */
+  }
+}
+
+/* ============================================= */
+/* 🎯 UTILITY CLASSES FOR CONSISTENCY - TIGHTENED */
+/* ============================================= */
+
+/* 🎯 ULTRA-COMPACT SPACING UTILITIES - Eliminate wasted space */
+.modal-content__scrollable .mb-2 { margin-bottom: 0.375rem !important; } /* Reduced from 0.5rem */
+.modal-content__scrollable .mb-3 { margin-bottom: 0.5rem !important; }   /* Reduced from 0.75rem */
+.modal-content__scrollable .mb-4 { margin-bottom: 0.625rem !important; } /* Reduced from 0.75rem */
+.modal-content__scrollable .mb-6 { margin-bottom: 0.75rem !important; }  /* Reduced from 1rem */
+
+.modal-content__scrollable .mt-2 { margin-top: 0.375rem !important; }    /* Reduced from 0.5rem */
+.modal-content__scrollable .mt-3 { margin-top: 0.5rem !important; }      /* Reduced from 0.75rem */
+.modal-content__scrollable .mt-4 { margin-top: 0.625rem !important; }    /* Reduced from 0.75rem */
+.modal-content__scrollable .mt-6 { margin-top: 0.75rem !important; }     /* Reduced from 1rem */
+
+/* 🎯 COMPACT STEP SPACING - Apply to all wizard steps uniformly */
+.modal-content__scrollable .space-y-4 > *:not(:first-child) { margin-top: 0.625rem !important; } /* Reduced from 1rem */
+.modal-content__scrollable .space-y-3 > *:not(:first-child) { margin-top: 0.5rem !important; }   /* Reduced from 0.75rem */
+.modal-content__scrollable .space-y-2 > *:not(:first-child) { margin-top: 0.375rem !important; } /* Reduced from 0.5rem */
+.modal-content__scrollable .space-y-1 > *:not(:first-child) { margin-top: 0.25rem !important; }  /* Reduced from 0.25rem */
+
+/* Compact grid spacing */
+.modal-content__scrollable .gap-4 { gap: 0.625rem !important; } /* Reduced from 1rem */
+.modal-content__scrollable .gap-3 { gap: 0.5rem !important; }   /* Reduced from 0.75rem */
+.modal-content__scrollable .gap-2 { gap: 0.375rem !important; } /* Reduced from 0.5rem */
+
+/* 🎯 COMPACT PADDING UTILITIES - Optimized for card content */
+.modal-content__scrollable .p-3 { padding: 0.625rem !important; } /* Reduced from 0.75rem */
+.modal-content__scrollable .p-4 { padding: 0.75rem !important; }  /* Reduced from 1rem */
+.modal-content__scrollable .px-3 { padding-left: 0.625rem !important; padding-right: 0.625rem !important; }
+.modal-content__scrollable .px-4 { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+.modal-content__scrollable .py-2 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+.modal-content__scrollable .py-3 { padding-top: 0.625rem !important; padding-bottom: 0.625rem !important; }
+
+/* 🎯 COMPACT THEMEDCARD OVERRIDES - Make steps 2 & 3 match step 1 */
+/* Target ThemedCard components specifically through their styling */
+.modal-content__scrollable > div[style*="var(--color-card-background)"] {
+  padding: 0.625rem !important; /* Override all ThemedCard default padding */
+}
+
+/* Target specific text-center cards that might have larger padding */
+.modal-content__scrollable .text-center {
+  padding: 0.5rem !important; /* Compact padding for centered content */
+}
+
+/* Override any large padding areas in steps 2 & 3 */
+.modal-content__scrollable > div > div:first-child {
+  padding-top: 0.375rem !important; /* Reduce top padding on step containers */
+}
+
+/* 🎯 ULTRA-COMPACT SPACE-Y UTILITIES - Fix those huge gaps! */
+.modal-content__scrollable .space-y-2 > * + * { margin-top: 0.375rem !important; } /* Reduced from 0.5rem */
+.modal-content__scrollable .space-y-3 > * + * { margin-top: 0.5rem !important; }   /* Reduced from 0.75rem */
+.modal-content__scrollable .space-y-4 > * + * { margin-top: 0.625rem !important; } /* Reduced from 1rem */
+.modal-content__scrollable .space-y-6 > * + * { margin-top: 0.75rem !important; }  /* Reduced from 1.5rem */
+
+/* 🎯 FORM SECTION SPACING - Target the main culprits */
+.modal-content__scrollable .form-section,
+.modal-content__scrollable > div:not(.space-y-0) {
+  margin-bottom: 0.5rem !important; /* Ultra-compact section spacing for uniform steps */
+}
+
+/* 🎯 STEP-SPECIFIC COMPACT OVERRIDES - Ensure uniform compact styling */
+/* Compact margin and padding for all step content areas */
+.modal-content__scrollable .mb-4 { margin-bottom: 0.5rem !important; }
+.modal-content__scrollable .mt-4 { margin-top: 0.5rem !important; }
+.modal-content__scrollable .my-4 { margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
+
+/* Compact grid column gaps */
+.modal-content__scrollable .grid {
+  gap: 0.5rem !important; /* Much tighter grid spacing */
+}
+
+/* Compact border top spacing */
+.modal-content__scrollable .border-t {
+  padding-top: 0.375rem !important; /* Compact border-top padding */
+  margin-top: 0.375rem !important; /* Compact border-top margin */
+}
+
+/* Compact list spacing */
+.modal-content__scrollable ul,
+.modal-content__scrollable ol {
+  margin: 0.375rem 0 !important; /* Compact list margins */
+}
+
+.modal-content__scrollable li {
+  margin: 0.125rem 0 !important; /* Very tight list item spacing */
+}
+
+.modal-content__scrollable .form-section:last-child,
+.modal-content__scrollable > div:last-child {
+  margin-bottom: 0.5rem !important; /* Even tighter for last element */
+}
+
+/* Clean border utilities */
+.modal-content__scrollable .border { border: 1px solid #e2e8f0 !important; }
+.modal-content__scrollable .border-blue-200 { border-color: #bfdbfe !important; }
+.modal-content__scrollable .border-green-200 { border-color: #bbf7d0 !important; }
+.modal-content__scrollable .border-amber-200 { border-color: #fde68a !important; }
+.modal-content__scrollable .border-red-200 { border-color: #fecaca !important; }
+
+.modal-content__scrollable .rounded { border-radius: 0.375rem !important; }
+.modal-content__scrollable .rounded-lg { border-radius: 0.5rem !important; }
+.modal-content__scrollable .rounded-xl { border-radius: 0.75rem !important; }
+
+/* Text alignment and weights */
+.modal-content__scrollable .text-center { text-align: center !important; }
+.modal-content__scrollable .text-left { text-align: left !important; }
+.modal-content__scrollable .text-right { text-align: right !important; }
+
+.modal-content__scrollable .font-medium { font-weight: 500 !important; }
+.modal-content__scrollable .font-semibold { font-weight: 600 !important; }
+.modal-content__scrollable .font-bold { font-weight: 700 !important; }
+
+/* ============================================= */
+/* 🎭 LOADING STATES & ANIMATIONS */
+/* ============================================= */
+
+@keyframes subtle-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes smooth-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.wizard-loading {
+  animation: subtle-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.wizard-spinner {
+  animation: smooth-spin 1s linear infinite;
+}
+
+/* Loading spinner for buttons */
+.modal-footer__button .wizard-spinner {
+  width: 16px !important;
+  height: 16px !important;
+  border: 2px solid transparent !important;
+  border-top: 2px solid currentColor !important;
+  border-radius: 50% !important;
+}
+
+/* ============================================= */
+/* 📅 DATE INPUT STYLING - ENHANCED CALENDAR */
+/* ============================================= */
+
+/* Date input field improvements */
+.enhanced-warning-wizard-container input[type="date"],
+.enhanced-warning-wizard-container input[type="time"] {
+  /* Enhanced visual styling */
+  background-color: var(--color-input-background) !important;
+  border: 1px solid var(--color-input-border) !important;
+  color: var(--color-text) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.025em !important;
+
+  /* Improved hover and focus states */
+  transition: all 0.2s ease !important;
+}
+
+.enhanced-warning-wizard-container input[type="date"]:hover,
+.enhanced-warning-wizard-container input[type="time"]:hover {
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 1px var(--color-primary-light) !important;
+}
+
+.enhanced-warning-wizard-container input[type="date"]:focus,
+.enhanced-warning-wizard-container input[type="time"]:focus {
+  outline: none !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: 0 0 0 2px var(--color-primary-light) !important;
+  background-color: var(--color-card-background) !important;
+}
+
+/* Date picker calendar icon styling */
+.enhanced-warning-wizard-container input[type="date"]::-webkit-calendar-picker-indicator,
+.enhanced-warning-wizard-container input[type="time"]::-webkit-calendar-picker-indicator {
+  background-color: var(--color-primary) !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  padding: 4px !important;
+  margin-right: 4px !important;
+  opacity: 0.8 !important;
+  transition: opacity 0.2s ease !important;
+}
+
+.enhanced-warning-wizard-container input[type="date"]::-webkit-calendar-picker-indicator:hover,
+.enhanced-warning-wizard-container input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1 !important;
+  background-color: var(--color-primary) !important;
+}
+
+/* Date input text styling for better readability */
+.enhanced-warning-wizard-container input[type="date"]::-webkit-datetime-edit,
+.enhanced-warning-wizard-container input[type="time"]::-webkit-datetime-edit {
+  color: var(--color-text) !important;
+  font-weight: 500 !important;
+}
+
+.enhanced-warning-wizard-container input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+.enhanced-warning-wizard-container input[type="time"]::-webkit-datetime-edit-fields-wrapper {
+  color: var(--color-text) !important;
+}
+
+.enhanced-warning-wizard-container input[type="date"]::-webkit-datetime-edit-text,
+.enhanced-warning-wizard-container input[type="time"]::-webkit-datetime-edit-text {
+  color: var(--color-text-secondary) !important;
+  font-weight: 400 !important;
+}
+
+/* Placeholder styling for empty date inputs */
+.enhanced-warning-wizard-container input[type="date"]:invalid,
+.enhanced-warning-wizard-container input[type="time"]:invalid {
+  color: var(--color-text-tertiary) !important;
+}
+
+/* Mobile-specific date input improvements */
+@media screen and (max-width: 768px) {
+  .enhanced-warning-wizard-container input[type="date"],
+  .enhanced-warning-wizard-container input[type="time"] {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    min-height: 48px !important; /* Better touch targets */
+  }
+
+  .enhanced-warning-wizard-container input[type="date"]::-webkit-calendar-picker-indicator,
+  .enhanced-warning-wizard-container input[type="time"]::-webkit-calendar-picker-indicator {
+    padding: 6px !important;
+    margin-right: 6px !important;
+  }
+}

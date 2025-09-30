@@ -4,9 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { API } from '../../api';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
-import { createEmployeeFromForm, createFormFromEmployee } from '../../types';
+import { createEmployeeFromForm, createFormFromEmployee, generateEmployeeNumber } from '../../types';
 import type { Employee, User } from '../../types';
-import type { EmployeeFormData, DeliveryMethod } from '../../types';
+import type { EmployeeFormData } from '../../types';
 import { X, User as UserIcon, Building, Settings, Save, Loader2 } from 'lucide-react';
 
 // Helper function to get role ID from either string or object role format
@@ -18,14 +18,16 @@ interface EmployeeFormModalProps {
   employee?: Employee | null;
   onClose: () => void;
   onSave: () => void;
+  basicMode?: boolean; // For HOD managers - only essential fields
 }
 
-export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ 
-  employee, 
-  onClose, 
-  onSave 
+export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
+  employee,
+  onClose,
+  onSave,
+  basicMode = false
 }) => {
-  const { organization } = useAuth();
+  const { organization, user } = useAuth();
   const [formData, setFormData] = useState<EmployeeFormData>({
     employeeNumber: '',
     firstName: '',
@@ -38,7 +40,6 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
     startDate: '',
     contractType: 'permanent',
     probationEndDate: '',
-    preferredDeliveryMethod: 'email',
     managerId: ''
   });
   
@@ -95,8 +96,19 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
     if (employee) {
       const formFromEmployee = createFormFromEmployee(employee);
       setFormData(formFromEmployee);
+    } else if (basicMode && organization) {
+      // Auto-generate employee number for new basic entries
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+      setFormData(prev => ({
+        ...prev,
+        employeeNumber: generateEmployeeNumber(organization.id),
+        department: user?.departmentIds?.[0] || user?.profile?.department || 'Operations', // Pre-fill with manager's department or default
+        startDate: today, // Default to today
+        managerId: user?.id, // Assign to current user as manager
+        isActive: true
+      }));
     }
-  }, [employee]);
+  }, [employee, basicMode, organization, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,7 +133,6 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
             department: formData.department,
             position: formData.position,
             startDate: formData.startDate ? new Date(formData.startDate) : new Date(),
-            preferredDeliveryMethod: formData.preferredDeliveryMethod
           },
           employment: {
             ...employee.employment,
@@ -168,10 +179,13 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
         <div className="flex items-center justify-between p-6 border-b border-slate-200 flex-shrink-0">
           <div>
             <h2 className="text-xl font-bold text-slate-800">
-              {employee ? 'Edit Employee' : 'Add New Employee'}
+              {employee ? 'Edit Employee' : basicMode ? 'Quick Add Employee' : 'Add New Employee'}
             </h2>
             <p className="text-sm text-slate-600 mt-1">
-              Fill in the employee details below
+              {basicMode
+                ? 'Basic details only - HR can complete the full profile later'
+                : 'Fill in the employee details below'
+              }
             </p>
           </div>
           <button
@@ -209,8 +223,10 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                     required
                     value={formData.employeeNumber}
                     onChange={(e) => setFormData({ ...formData, employeeNumber: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                    className={`w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none ${basicMode ? 'bg-slate-50' : ''}`}
                     placeholder="EMP001"
+                    readOnly={basicMode}
+                    title={basicMode ? 'Auto-generated - HR can change this later' : ''}
                   />
                 </div>
 
@@ -271,7 +287,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Phone Number
+                    Phone Number {basicMode ? '(Optional)' : ''}
                   </label>
                   <input
                     type="tel"
@@ -337,6 +353,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                   </select>
                 </div>
 
+                {!basicMode && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Manager
@@ -358,6 +375,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                     <div className="text-sm text-gray-500 mt-1">Loading managers...</div>
                   )}
                 </div>
+                )}
 
                 {formData.contractType !== 'permanent' && (
                   <div className="md:col-span-2">
@@ -375,7 +393,8 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
               </div>
             </div>
 
-            {/* Communication Preferences Section */}
+            {/* Communication Preferences Section - Hidden in basic mode */}
+            {!basicMode && (
             <div className="bg-amber-50 rounded-lg p-4">
               <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
                 <Settings className="w-5 h-5 text-amber-600" />
@@ -396,24 +415,10 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Preferred Delivery Method *
-                  </label>
-                  <select
-                    required
-                    value={formData.preferredDeliveryMethod}
-                    onChange={(e) => setFormData({ ...formData, preferredDeliveryMethod: e.target.value as DeliveryMethod })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="email">Email</option>
-                    <option value="whatsapp">WhatsApp</option>
-                    <option value="printed">Printed Copy</option>
-                  </select>
-                </div>
 
               </div>
             </div>
+            )}
           </div>
 
           {/* Footer */}

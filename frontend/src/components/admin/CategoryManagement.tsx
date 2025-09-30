@@ -84,6 +84,7 @@ interface CustomCategory {
   name: string;
   description: string;
   severity: CategorySeverity;
+  icon: string;
   escalationPath: WarningLevel[];
   examples: string[];
   organizationId: string;
@@ -228,6 +229,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
     name: '',
     description: '',
     severity: 'serious',
+    icon: '📋',
     escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
     examples: [],
     isActive: true
@@ -461,9 +463,10 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
       const categoryData = {
         name: newCustomCategory.name!,
         description: newCustomCategory.description || '',
+        icon: newCustomCategory.icon || '📋',
         escalationPath: newCustomCategory.escalationPath || ['verbal', 'first_written', 'final_written'],
         examples: newCustomCategory.examples || [],
-        severity: newCustomCategory.severity === 'minor' ? 'low' : 
+        severity: newCustomCategory.severity === 'minor' ? 'low' :
                  newCustomCategory.severity === 'serious' ? 'medium' : 'high'
       };
       
@@ -475,6 +478,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
         name: '',
         description: '',
         severity: 'serious',
+        icon: '📋',
         escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
         examples: [],
         isActive: true
@@ -2029,7 +2033,62 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
                     <option value="gross_misconduct">Gross Misconduct - Severe violations</option>
                   </select>
                 </div>
-                
+
+                {/* Icon */}
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    color: '#374151',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Category Icon
+                  </label>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(8, 1fr)',
+                    gap: '0.5rem',
+                    padding: '1rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    backgroundColor: '#f9fafb'
+                  }}>
+                    {['📋', '⚠️', '📊', '🔒', '👔', '💼', '🏢', '📞', '🖥️', '📝', '🗂️', '📅', '🔧', '⚡', '🎯', '📈'].map((icon) => (
+                      <button
+                        key={icon}
+                        type="button"
+                        onClick={() => setNewCustomCategory(prev => ({ ...prev, icon }))}
+                        style={{
+                          width: '3rem',
+                          height: '3rem',
+                          border: newCustomCategory.icon === icon ? '2px solid #8b5cf6' : '1px solid #d1d5db',
+                          borderRadius: '0.375rem',
+                          backgroundColor: newCustomCategory.icon === icon ? '#f3f4f6' : 'white',
+                          fontSize: '1.25rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (newCustomCategory.icon !== icon) {
+                            e.currentTarget.style.backgroundColor = '#f3f4f6';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (newCustomCategory.icon !== icon) {
+                            e.currentTarget.style.backgroundColor = 'white';
+                          }
+                        }}
+                      >
+                        {icon}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Examples */}
                 <div>
                   <label style={{
@@ -2082,6 +2141,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
                       name: '',
                       description: '',
                       severity: 'serious',
+                      icon: '📋',
                       escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
                       examples: [],
                       isActive: true

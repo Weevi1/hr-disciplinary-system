@@ -18,8 +18,8 @@ export const useEmployeeFilters = (employees: Employee[], user: any) => {
   }, [user]);
 
   const filteredEmployees = useMemo(() => {
-    return filterEmployees(employees, filters, permissions, user?.departmentIds);
-  }, [employees, filters, permissions, user?.departmentIds]);
+    return filterEmployees(employees, filters, permissions, user?.role?.id, user?.id);
+  }, [employees, filters, permissions, user?.role?.id, user?.id]);
 
   return {
     filters,

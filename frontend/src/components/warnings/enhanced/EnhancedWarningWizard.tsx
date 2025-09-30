@@ -13,7 +13,7 @@ import Logger from '../../../utils/logger';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
-import { Check, ChevronLeft, ChevronRight, X, FileText, Scale, Send, Mic } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, X, FileText, Scale, Send, Mic, ChevronDown, ChevronUp, Info } from 'lucide-react';
 // Import debugging components
 import { useWizardLogging } from '../../../hooks/useWizardLogging';
 
@@ -30,12 +30,16 @@ import { useAudioRecording } from '../../../hooks/warnings/useAudioRecording';
 
 // Use API layer instead of direct service imports
 import { API } from '@/api';
-import type { 
+import type {
   EscalationRecommendation,
   EmployeeWithContext,
   WarningCategory,
   EnhancedWarningFormData
 } from '@/services/WarningService';
+
+// Import progressive enhancement utilities
+import { detectDeviceCapabilities } from '../../../utils/deviceDetection';
+import type { DeviceCapabilities } from '../../../utils/deviceDetection';
 
 // Import services and hooks
 import { useOrganization } from '@/contexts/OrganizationContext';
@@ -155,6 +159,8 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   const [showPermissionHandler, setShowPermissionHandler] = useState(true);
   const [completedSteps, setCompletedSteps] = useState<Set<WizardStep>>(new Set());
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isStepDetailsExpanded, setIsStepDetailsExpanded] = useState(false);
+  const [deviceCapabilities] = useState<DeviceCapabilities>(() => detectDeviceCapabilities());
   // Form data
   const [formData, setFormData] = useState<FormData>({
     employeeId: preSelectedEmployeeId || null,
@@ -241,7 +247,7 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
 useEffect(() => {
   Logger.debug('🔍 Step changed, attempting scroll to top:', currentStep)
   
-  const contentElement = document.querySelector('.wizard-content__scrollable');
+  const contentElement = document.querySelector('.modal-content__scrollable');
   Logger.debug('🔍 Content element found:', !!contentElement)
   
   if (contentElement) {
@@ -362,14 +368,18 @@ useEffect(() => {
     } catch (error) {
       logging.trackError(error as Error, { employeeId, categoryId, formData });
       
-      // 🔧 FIXED: Fallback using EscalationRecommendation format
+      // 🔧 FIXED: Fallback using EscalationRecommendation format with category's escalation path
+      const categoryEscalationPath = selectedCategory?.escalationPath || ['counselling', 'verbal', 'first_written', 'final_written'];
       const fallbackRecommendation: EscalationRecommendation = {
         // Core Recommendation
-        suggestedLevel: 'counselling',
-        recommendedLevel: 'Counselling Session',
+        suggestedLevel: categoryEscalationPath[0] || 'counselling',
+        recommendedLevel: categoryEscalationPath[0] === 'counselling' ? 'Counselling Session' :
+                         categoryEscalationPath[0] === 'verbal' ? 'Verbal Warning' :
+                         categoryEscalationPath[0] === 'first_written' ? 'First Written Warning' :
+                         'Counselling Session',
         reason: 'Fallback recommendation due to analysis error. Manual review required.',
         activeWarnings: [],
-        escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
+        escalationPath: categoryEscalationPath,
         isEscalation: false,
         
         // Essential LRA Compliance
@@ -785,16 +795,19 @@ useEffect(() => {
     [WizardStep.INCIDENT_DETAILS]: {
       title: 'Incident Details',
       subtitle: `Step ${WizardStep.INCIDENT_DETAILS + 1} of 3`,
+      description: 'Select employee, choose violation category, and document the incident with all relevant details.',
       icon: FileText,
     },
     [WizardStep.LEGAL_REVIEW_SIGNATURES]: {
       title: 'Review & Sign',
       subtitle: `Step ${WizardStep.LEGAL_REVIEW_SIGNATURES + 1} of 3`,
+      description: 'Review escalation recommendation, read warning script, and collect required signatures.',
       icon: Scale,
     },
     [WizardStep.DELIVERY_COMPLETION]: {
       title: 'Deliver & Complete',
       subtitle: `Step ${WizardStep.DELIVERY_COMPLETION + 1} of 3`,
+      description: 'Choose delivery method, generate warning document, and complete the warning process.',
       icon: Send,
     }
   }), []);
@@ -984,48 +997,111 @@ const warningDataForDebugger = useMemo(() => ({
 
 return (
   <div className={`
-    enhanced-warning-wizard-modal
-    ${isFullScreen ? 'enhanced-warning-wizard-modal--fullscreen' : ''}
+    modal-system
+    ${isFullScreen ? 'modal-system--fullscreen' : ''}
+    ${deviceCapabilities.isLegacyDevice ? 'legacy-device' : ''}
+    ${deviceCapabilities.hasGoodPerformance ? 'perf-high' : 'perf-low'}
+    ${deviceCapabilities.hasModernCSS ? 'css-modern' : 'css-legacy'}
   `}>
     <div className={`
-      enhanced-warning-wizard-container
-      ${isFullScreen ? 'enhanced-warning-wizard-container--fullscreen' : ''}
+      modal-container
+      ${isFullScreen ? 'modal-container--fullscreen' : ''}
+      ${deviceCapabilities.browserInfo.isAndroid4x ? 'android-4x' : ''}
+      ${deviceCapabilities.browserInfo.isIOS6to7 ? 'ios-6-7' : ''}
     `}>
-      
-{/* 🎯 SIMPLIFIED WIZARD HEADER */}
-<div className="wizard-header">
-  
-  {/* Left: Close Button */}
-  <div className="wizard-header__left">
-    <button
-      onClick={handleWizardCancel}
-      className="wizard-header__close-button"
-      title="Cancel and close wizard"
-    >
-      <X className="w-5 h-5" />
-    </button>
-  </div>
 
-  {/* Center: Progress - Mobile vs Desktop */}
-  <div className="wizard-header__center">
-    
-    {/* MOBILE: Simple Progress Bar + Text */}
-    <div className="wizard-header__progress-mobile md:hidden">
-      <div className="progress-bar">
-        <div 
-          className="progress-fill" 
-          style={{
-            width: `${(currentStep / Object.keys(stepConfig).length) * 100}%`
-          }} 
-        />
+      {/* 🎯 UNIFIED MODAL HEADER - Matches other modals */}
+      <div className="modal-header">
+        <div className="modal-header__left">
+          <div>
+            <h2 className="modal-header__title">Issue Warning</h2>
+            <p className="modal-header__subtitle">Document disciplinary action and intervention</p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleWizardCancel}
+          className="modal-header__close-button"
+          title="Cancel and close wizard"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
-      <span className="progress-text">
-        Step {currentStep + 1} of {Object.keys(stepConfig).length}
-      </span>
+
+      {/* Progress indicator below header */}
+      <div className="modal-header__center">
+        {/* MOBILE: Enhanced Progress with Step Context */}
+        <div className="modal-header__progress-mobile md:hidden">
+      {/* Interactive Step Indicator */}
+      <div className="mobile-step-indicator">
+        <div className="mobile-step-dots">
+          {Object.entries(stepConfig).map(([step, config]) => {
+            const stepNum = parseInt(step);
+            const isActive = stepNum === currentStep;
+            const isCompleted = completedSteps.has(stepNum);
+
+            return (
+              <div
+                key={step}
+                className={`mobile-step-dot ${
+                  isActive ? 'mobile-step-dot--active' : ''
+                } ${isCompleted ? 'mobile-step-dot--completed' : ''} ${
+                  !isActive && !isCompleted ? 'mobile-step-dot--inactive' : ''
+                }`}
+                title={config.title}
+              >
+                {isCompleted ? (
+                  <Check className="w-3 h-3" />
+                ) : (
+                  stepNum + 1
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Current Step Info */}
+        <div className="mobile-step-info">
+          <div
+            className="mobile-step-title-container"
+            onClick={() => setIsStepDetailsExpanded(!isStepDetailsExpanded)}
+          >
+            <div className="mobile-step-title">
+              {stepConfig[currentStep]?.title || 'Loading...'}
+            </div>
+            <button className="mobile-step-expand-btn">
+              {isStepDetailsExpanded ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+
+          {/* Collapsible Step Description */}
+          {isStepDetailsExpanded && (
+            <div className="mobile-step-description">
+              <Info className="w-4 h-4 text-blue-500" />
+              <p>{stepConfig[currentStep]?.description}</p>
+            </div>
+          )}
+
+          <div className="mobile-step-meta">
+            Step {currentStep + 1} of {Object.keys(stepConfig).length}
+            {/* Audio Recording Status - Mobile */}
+            {audioRecording.isRecording && (
+              <span className="mobile-audio-indicator">
+                <div className="mobile-recording-dot" />
+                Recording
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
 
     {/* DESKTOP: Rich Dots System */}
-    <div className="wizard-header__progress-desktop hidden md:flex">
+    <div className="modal-header__progress-desktop hidden md:flex">
       {Object.entries(stepConfig).map(([step, config]) => {
         const stepNum = parseInt(step);
         const isActive = stepNum === currentStep;
@@ -1059,58 +1135,25 @@ return (
           </div>
         );
       })}
-    </div>
+        </div>
+      </div>
 
-    {/* Title & Subtitle - Desktop Only */}
-    <div className="wizard-header__title-section hidden md:block">
-      <h2 className="wizard-header__title">
-        {stepConfig[currentStep]?.title}
-      </h2>
-      <p className="wizard-header__subtitle">
-        {stepConfig[currentStep]?.subtitle}
-      </p>
-    </div>
-  </div>
-
-  {/* Right: Debug Tools & Session Info - Desktop Only */}
-  <div className="wizard-header__right hidden md:flex">
-    {/* Audio Recording Indicator */}
-    <div className={`
-      audio-indicator
-      ${audioRecording.isRecording ? 'audio-indicator--recording' : 'audio-indicator--idle'}
-    `}>
-      <div className={`
-        recording-dot
-        ${audioRecording.isRecording ? 'recording-dot--active' : 'recording-dot--inactive'}
-      `} />
-      <span>{audioRecording.isRecording ? 'Recording' : 'Ready'}</span>
-    </div>
-    
-    {/* Debug Tools - Removed for production */}
-    
-    {/* Session ID */}
-    <div className="session-id" title={`Session ID: ${logging.sessionId}`}>
-      {logging.sessionId.slice(-6)}
-    </div>
-  </div>
-</div>
-      
       {/* 🎯 WIZARD CONTENT - The key fix for scrolling */}
-      <div className="wizard-content">
-        <div className="wizard-content__scrollable">
+      <div className="modal-content">
+        <div className="modal-content__scrollable">
           {renderStepContent()}
         </div>
       </div>
       
       {/* 🎯 WIZARD FOOTER - Now using semantic classes */}
-      <div className="wizard-footer">
-        <div className="wizard-footer__nav">
+      <div className="modal-footer">
+        <div className="modal-footer__nav">
           {/* Previous Button */}
           <button
             onClick={previousStep}
             disabled={currentStep === WizardStep.INCIDENT_DETAILS || isNavigating}
             className={`
-              wizard-footer__button wizard-footer__button--secondary
+              modal-footer__button modal-footer__button--secondary
               ${(currentStep === WizardStep.INCIDENT_DETAILS || isNavigating) ? 'opacity-50' : ''}
             `}
           >
@@ -1124,8 +1167,8 @@ return (
               onClick={nextStep}
               disabled={nextButtonState.disabled}
               className={`
-                wizard-footer__button wizard-footer__button--primary
-                ${nextButtonState.loading ? 'wizard-footer__button--loading' : ''}
+                modal-footer__button modal-footer__button--primary
+                ${nextButtonState.loading ? 'modal-footer__button--loading' : ''}
               `}
             >
               {!nextButtonState.loading && (
@@ -1145,7 +1188,7 @@ return (
           </span>
         </div>
       </div>
-      
+
       {/* Debug Panels - Removed for production */}
     </div>
   </div>

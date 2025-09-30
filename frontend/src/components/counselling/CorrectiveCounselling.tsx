@@ -26,6 +26,10 @@ import type {
 } from '../../types/counselling';
 import { COUNSELLING_TYPES } from '../../types/counselling';
 
+// Import unified theming components
+import { ThemedSectionHeader } from '../common/ThemedCard';
+import { CustomDatePicker } from '../common/CustomDatePicker';
+
 // 🏢 SHARDED COLLECTIONS - Counselling stored at /organizations/{orgId}/reports/{reportId}
 // (Counselling is a type of report in the sharded structure)
 
@@ -174,30 +178,26 @@ const PromiseItem: React.FC<PromiseItemProps> = ({ promise, index, onUpdate, onR
             value={promise.description}
             onChange={(e) => onUpdate(index, { ...promise, description: e.target.value })}
             placeholder="e.g., 'I will arrive to work on time every day' or 'I will complete the customer service training course'"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            rows={2}
+            className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base sm:text-sm"
+            rows={3}
             required
           />
         </div>
-        
+
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Target / Follow-up Date *
-          </label>
-          <input
+          <CustomDatePicker
             type="date"
+            label="Target / Follow-up Date"
             value={promise.targetDate}
-            onChange={(e) => onUpdate(index, { ...promise, targetDate: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            min={new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // Min 3 days from now
-            max={new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // Max 90 days from now
+            onChange={(value) => onUpdate(index, { ...promise, targetDate: value })}
+            icon={Calendar}
             required
           />
           <p className="text-xs text-gray-500 mt-1">
             <strong>Dual purpose:</strong> Target completion date + Follow-up review date (3-90 days from today)
           </p>
         </div>
-        
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Success Criteria & Notes
@@ -207,7 +207,7 @@ const PromiseItem: React.FC<PromiseItemProps> = ({ promise, index, onUpdate, onR
             value={promise.notes || ''}
             onChange={(e) => onUpdate(index, { ...promise, notes: e.target.value })}
             placeholder="How will success be measured? Any additional context or resources needed?"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base sm:text-sm"
           />
         </div>
       </div>
@@ -283,7 +283,7 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
           setEmployees(transformedEmployees);
           
           // Load warning categories using the same method as HODDashboardSection
-          let categoriesData = await DataService.getWarningCategories(organization.id);
+          let categoriesData = await API.organizations.getCategories(organization.id);
           
           // 🔥 FALLBACK: If no categories from service, use manufacturing defaults (same as HODDashboardSection)
           if (!categoriesData || categoriesData.length === 0) {
@@ -515,23 +515,30 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
   // 🎨 RENDER MAIN FORM
   if (step === 'form') {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          {/* Header */}
-          <div className="sticky top-0 bg-white border-b px-6 py-4">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+          {/* Header - Mobile Optimized */}
+          <div className="sticky top-0 bg-white border-b px-3 py-3 sm:px-6 sm:py-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
-                <BookOpen className="w-8 h-8 text-blue-600" />
-                Corrective Counselling Session
-              </h2>
+              <div className="flex items-center gap-2 sm:gap-3">
+                <BookOpen className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
+                <div>
+                  <h2 className="text-lg sm:text-2xl font-bold text-gray-800">
+                    Corrective Counselling
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-600 sm:hidden">
+                    Document training & coaching
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={onClose || (() => navigate('/dashboard'))}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 p-2 -mr-2"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
-            <p className="text-gray-600 mt-2">Document training, coaching, and discussions with team members</p>
+            <p className="text-gray-600 mt-2 hidden sm:block">Document training, coaching, and discussions with team members</p>
           </div>
 
           {error && (
@@ -541,7 +548,7 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
             </div>
           )}
 
-          <div className="p-6 space-y-6">
+          <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
             {/* Active Counselling Warning */}
             {activeCounselling.length > 0 && selectedEmployee && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -582,12 +589,14 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
               </div>
             )}
 
-            {/* Employee Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Employee Selection - Unified Design */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Employee *
-                </label>
+                <ThemedSectionHeader
+                  icon={UserCheck}
+                  title="Select Employee"
+                  subtitle="Choose the team member for counselling"
+                />
                 <select
                   value={selectedEmployee?.id || ''}
                   onChange={(e) => {
@@ -599,7 +608,12 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
                       setActiveCounselling([]);
                     }
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full h-11 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                  style={{
+                    backgroundColor: 'var(--color-input-background)',
+                    borderColor: 'var(--color-input-border)',
+                    color: 'var(--color-text)'
+                  }}
                   required
                 >
                   <option value="">
@@ -623,7 +637,7 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
                     const cat = categories.find(cat => cat.id === e.target.value);
                     setSelectedCategory(cat || null);
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base sm:text-sm"
                   required
                 >
                   <option value="">Choose a category...</option>
@@ -636,32 +650,36 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
               </div>
             </div>
 
-            {/* Counselling Type */}
+            {/* Counselling Type - Mobile Optimized */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Counselling Type *
               </label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {COUNSELLING_TYPES.map(type => (
                   <button
                     key={type.id}
                     type="button"
                     onClick={() => setCounsellingType(type.id)}
-                    className={`p-3 border-2 rounded-lg text-left transition-all ${
+                    className={`p-4 sm:p-3 border-2 rounded-lg text-left transition-all min-h-[80px] sm:min-h-[70px] ${
                       counsellingType === type.id
                         ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <div className="text-lg mb-1">{type.icon}</div>
-                    <div className="font-medium text-sm">{type.label}</div>
-                    <div className="text-xs text-gray-500">{type.description}</div>
+                    <div className="flex items-start gap-3 sm:block">
+                      <div className="text-2xl sm:text-lg mb-0 sm:mb-1 flex-shrink-0">{type.icon}</div>
+                      <div className="min-w-0">
+                        <div className="font-medium text-base sm:text-sm mb-1">{type.label}</div>
+                        <div className="text-sm sm:text-xs text-gray-500 leading-snug">{type.description}</div>
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Issue Description */}
+            {/* Issue Description - Mobile Optimized */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Issue/Topic Description *
@@ -670,8 +688,8 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
                 value={issueDescription}
                 onChange={(e) => setIssueDescription(e.target.value)}
                 placeholder="Describe the issue, topic, or area for improvement that prompted this counselling session..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={3}
+                className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base sm:text-sm"
+                rows={4}
                 minLength={20}
                 maxLength={500}
                 required
@@ -681,7 +699,7 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
               </p>
             </div>
 
-            {/* Intervention Details */}
+            {/* Intervention Details - Mobile Optimized */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Intervention Details *
@@ -690,7 +708,7 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
                 value={interventionDetails}
                 onChange={(e) => setInterventionDetails(e.target.value)}
                 placeholder="Describe what was discussed, taught, or addressed during the counselling session..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base sm:text-sm"
                 rows={4}
                 minLength={30}
                 maxLength={1000}
@@ -701,8 +719,8 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
               </p>
             </div>
 
-            {/* Training & Resources */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Training & Resources - Mobile Optimized */}
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Training Provided
@@ -711,8 +729,8 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
                   value={trainingProvided}
                   onChange={(e) => setTrainingProvided(e.target.value)}
                   placeholder="Describe any specific training provided..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={2}
+                  className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base sm:text-sm"
+                  rows={3}
                 />
               </div>
 
@@ -728,13 +746,13 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
                         value={resource}
                         onChange={(e) => updateResource(index, e.target.value)}
                         placeholder="Resource name or description"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base sm:text-sm"
                       />
                       {resourcesProvided.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeResource(index)}
-                          className="text-red-500 hover:text-red-700"
+                          className="text-red-500 hover:text-red-700 p-2 -mr-1"
                         >
                           <Minus className="w-5 h-5" />
                         </button>
@@ -744,7 +762,7 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
                   <button
                     type="button"
                     onClick={addResource}
-                    className="text-blue-500 hover:text-blue-700 text-sm flex items-center gap-1"
+                    className="text-blue-500 hover:text-blue-700 text-sm flex items-center gap-1 py-2"
                   >
                     <Plus className="w-4 h-4" />
                     Add Resource
@@ -801,7 +819,7 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
               </div>
             </div>
 
-            {/* Employee Comments */}
+            {/* Employee Comments - Mobile Optimized */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Employee Comments
@@ -810,27 +828,27 @@ export const CorrectiveCounselling: React.FC<CorrectiveCounsellingProps> = ({ on
                 value={employeeComments}
                 onChange={(e) => setEmployeeComments(e.target.value)}
                 placeholder="Optional comments from the employee..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={2}
+                className="w-full px-3 py-3 sm:py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base sm:text-sm"
+                rows={3}
               />
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-between pt-6 border-t">
+            {/* Action Buttons - Mobile Optimized */}
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-0 pt-6 border-t">
               <button
                 type="button"
                 onClick={onClose || (() => navigate('/dashboard'))}
-                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                className="w-full sm:w-auto px-6 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2 text-base sm:text-sm"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Cancel
               </button>
-              
+
               <button
                 type="button"
                 onClick={() => setStep('manager-sign')}
                 disabled={!isFormValid()}
-                className="px-8 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="w-full sm:w-auto px-8 py-3 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-base sm:text-sm font-medium"
               >
                 Continue to Signatures
                 <CheckCircle className="w-4 h-4" />

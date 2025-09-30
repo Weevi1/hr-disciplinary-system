@@ -6,23 +6,26 @@ import Logger from '../../utils/logger';
 // ✅ Proper error boundaries and data handling
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  Search, Filter, Calendar, Download, Eye, Printer, AlertTriangle, 
+import {
+  Search, Filter, Calendar, Download, Eye, Printer, AlertTriangle,
   CheckCircle, Clock, Shield, RefreshCw, ChevronDown, ChevronUp,
   X, FileText, Users, Building, TrendingUp, Archive, Mail,
   MessageCircle, FileSignature, Info, AlertCircle, Award,
-  Send, Scale
+  Send, Scale, ArchiveIcon
 } from 'lucide-react';
 
 // Use API layer with proper warning types
 import { API } from '../../api';
 import { useAuth } from '../../auth/AuthContext';
+import { NestedDataService } from '../../services/NestedDataService';
+import { useNestedStructure, useCollectionGroup } from '../../config/features';
 import type { Warning } from '../../types/warning';
 
 // Import the working modal
 import WarningDetailsModal from './modals/WarningDetailsModal';
 import { ProofOfDeliveryModal } from './modals/ProofOfDeliveryModal';
 import { AppealModal } from './modals/AppealModal';
+import { AppealReviewModal } from './modals/AppealReviewModal';
 import { WarningArchive } from './WarningArchive';
 
 // Warning interface imported from API layer types
@@ -107,6 +110,10 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
   const [showAppealModal, setShowAppealModal] = useState(false);
   const [appealWarning, setAppealWarning] = useState<Warning | null>(null);
 
+  // Appeal Review Modal State (HR Decision Making)
+  const [showAppealReview, setShowAppealReview] = useState(false);
+  const [appealReviewWarning, setAppealReviewWarning] = useState<Warning | null>(null);
+
   // View mode state - archive or main warnings
   const [viewMode, setViewMode] = useState<'warnings' | 'archive'>('warnings');
 
@@ -132,19 +139,50 @@ const loadWarnings = useCallback(async () => {
   try {
     setLoading(true);
     setError(null);
-    
-    Logger.debug('🔄 Loading warnings via API layer for org:', organizationId)
-    const data = await API.warnings.getAll(organizationId);
-    
+
+    let data: Warning[];
+
+    if (useNestedStructure()) {
+      // Use nested structure with collection group queries
+      Logger.debug('🔄 Loading warnings via NestedDataService for org:', organizationId)
+
+      if (useCollectionGroup()) {
+        // Use collection group query for organization-wide warnings
+        const result = await NestedDataService.getOrganizationWarnings(
+          organizationId,
+          { /* filters */ },
+          { pageSize: 500, orderField: 'issueDate', orderDirection: 'desc' }
+        );
+        data = result.warnings;
+        Logger.debug(`📁 [NESTED] Loaded ${data.length} warnings via collection group`);
+      } else {
+        // Fallback to flat structure
+        Logger.debug('📋 [FALLBACK] Collection group disabled, using flat structure');
+        data = await API.warnings.getAll(organizationId);
+      }
+    } else {
+      // Use original flat structure
+      Logger.debug('🔄 Loading warnings via API layer for org:', organizationId)
+      data = await API.warnings.getAll(organizationId);
+    }
+
+    // Filter out archived warnings from main view
+    const activeWarnings = data.filter(warning =>
+      !warning.isArchived &&
+      warning.status !== 'expired' &&
+      warning.status !== 'overturned'
+    );
+
     // Sort by creation date (newest first)
-    const sortedWarnings = data.sort((a, b) => 
+    const sortedWarnings = activeWarnings.sort((a, b) =>
       new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
     );
-    
+
     setWarnings(sortedWarnings);
     setFilteredWarnings(sortedWarnings);
-    Logger.success(4367)
-    
+
+    Logger.success(`📊 Loaded ${sortedWarnings.length} active warnings (${useNestedStructure() ? 'NESTED' : 'FLAT'} structure)`);
+
   } catch (error) {
     Logger.error('❌ Failed to load warnings:', error)
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -272,8 +310,9 @@ const loadWarnings = useCallback(async () => {
           submittedAt: new Date(),
           submittedBy: user?.email || 'Employee'
         }
-      });
-      
+      }, organizationId);
+
+      // Don't archive yet - wait until appeal is resolved
       Logger.success(`Legal appeal submitted for warning ${appealData.warningId}`)
       await loadWarnings(); // Refresh the list
       
@@ -302,7 +341,7 @@ const loadWarnings = useCallback(async () => {
         status: outcome === 'overturned' ? 'expired' : 'acknowledged',
         appealOutcome: outcome,
         appealDate: new Date()
-      });
+      }, organizationId);
       
       Logger.success(`Appeal ${outcome} for warning ${warningId}`)
       await loadWarnings(); // Refresh the list
@@ -314,12 +353,96 @@ const loadWarnings = useCallback(async () => {
     }
   }, [loadWarnings]);
 
+  // Enhanced Appeal Review Handler
+  const handleAppealDecision = useCallback(async (decisionData: {
+    warningId: string;
+    decision: 'upheld' | 'overturned' | 'modified' | 'reduced';
+    reasoning: string;
+    newLevel?: string;
+    newDescription?: string;
+    hrNotes: string;
+    followUpRequired: boolean;
+    followUpDate?: Date;
+  }) => {
+    try {
+      setLoading(true);
+
+      // Determine new status based on decision
+      let newStatus = 'acknowledged';
+      if (decisionData.decision === 'overturned') {
+        newStatus = 'overturned'; // Changed from 'expired' to 'overturned'
+      }
+
+      // Prepare update data
+      const updateData: any = {
+        status: newStatus,
+        appealOutcome: decisionData.decision,
+        appealDecisionDate: new Date(),
+        appealReasoning: decisionData.reasoning,
+        hrNotes: decisionData.hrNotes,
+        followUpRequired: decisionData.followUpRequired,
+        followUpDate: decisionData.followUpDate
+      };
+
+      // Add level and description changes if modified/reduced
+      if (decisionData.decision === 'reduced' || decisionData.decision === 'modified') {
+        if (decisionData.newLevel) {
+          updateData.level = decisionData.newLevel;
+        }
+        if (decisionData.newDescription) {
+          updateData.description = decisionData.newDescription;
+        }
+      }
+
+      // Update warning with appeal decision
+      await API.warnings.update(decisionData.warningId, updateData, organizationId);
+
+      // Archive warnings based on appeal outcome
+      if (decisionData.decision === 'overturned') {
+        // Archive overturned warnings
+        await API.warnings.archive(decisionData.warningId, organizationId, 'overturned');
+        Logger.success('Warning overturned and archived')
+      } else if (decisionData.decision === 'upheld') {
+        // Keep upheld warnings active but mark appeal as processed
+        Logger.info('Warning upheld - remains active')
+      }
+
+      // Refresh warnings list
+      await loadWarnings();
+
+      Logger.success('Appeal decision recorded successfully')
+
+    } catch (error) {
+      Logger.error('Failed to record appeal decision:', error)
+      throw new Error('Failed to record appeal decision. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [loadWarnings]);
+
   // View warning details handler
   const handleViewWarning = useCallback((warning: any) => {
     Logger.debug('Opening warning details:', warning.id)
     setSelectedWarning(warning);
     setShowDetails(true);
   }, []);
+
+  // Manual archive warning handler
+  const handleArchiveWarning = useCallback(async (warningId: string) => {
+    try {
+      if (confirm('Are you sure you want to archive this warning? It will be moved to the archive.')) {
+        setLoading(true);
+        await API.warnings.archive(warningId, organizationId, 'manual');
+        Logger.success('Warning archived successfully')
+        await loadWarnings(); // Refresh the list
+      }
+    } catch (error) {
+      Logger.error('Failed to archive warning:', error)
+      setError('Failed to archive warning');
+    } finally {
+      setLoading(false);
+    }
+  }, [organizationId, loadWarnings]);
 
   // Loading state
   if (loading) {
@@ -430,10 +553,15 @@ const loadWarnings = useCallback(async () => {
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="all">All Levels</option>
+            <option value="counselling">Counselling</option>
             <option value="verbal">Verbal</option>
-            <option value="written">Written</option>
-            <option value="final">Final</option>
-            <option value="dismissal">Dismissal</option>
+            <option value="first_written">First Written</option>
+            <option value="second_written">Second Written</option>
+            <option value="final_written">Final Written</option>
+            {/* Legacy support */}
+            <option value="written">Written (Legacy)</option>
+            <option value="final">Final (Legacy)</option>
+            <option value="dismissal">Dismissal (Legacy)</option>
           </select>
           
           <button
@@ -597,16 +725,27 @@ const loadWarnings = useCallback(async () => {
                   </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                      warning.level === 'counselling' ? 'bg-green-100 text-green-800' :
                       warning.level === 'verbal' ? 'bg-blue-100 text-blue-800' :
+                      warning.level === 'first_written' ? 'bg-yellow-100 text-yellow-800' :
+                      warning.level === 'second_written' ? 'bg-orange-100 text-orange-800' :
+                      warning.level === 'final_written' ? 'bg-red-100 text-red-800' :
+                      // Legacy support
                       warning.level === 'written' ? 'bg-yellow-100 text-yellow-800' :
                       warning.level === 'final' ? 'bg-red-100 text-red-800' :
                       warning.level === 'dismissal' ? 'bg-red-100 text-red-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {warning.level === 'verbal' ? 'Verbal' :
+                      {warning.level === 'counselling' ? 'Counselling' :
+                       warning.level === 'verbal' ? 'Verbal' :
+                       warning.level === 'first_written' ? 'First Written' :
+                       warning.level === 'second_written' ? 'Second Written' :
+                       warning.level === 'final_written' ? 'Final Written' :
+                       // Legacy support
                        warning.level === 'written' ? 'Written' :
                        warning.level === 'final' ? 'Final' :
-                       warning.level === 'dismissal' ? 'Dismissal' : 'Unknown'}
+                       warning.level === 'dismissal' ? 'Dismissal' :
+                       safeRenderText(warning.level, 'Unknown')}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
@@ -642,24 +781,19 @@ const loadWarnings = useCallback(async () => {
                         View
                       </button>
                       
-                      {/* Appeal Management - HR Only */}
+                      {/* Enhanced Appeal Review - HR Only */}
                       {warning.status === 'appealed' && (
-                        <>
-                          <button
-                            onClick={() => handleAppealOutcome(warning.id, 'upheld')}
-                            className="text-green-600 hover:text-green-800 text-xs px-2 py-1 hover:bg-green-50 rounded transition-colors"
-                            title="Uphold Warning"
-                          >
-                            Uphold
-                          </button>
-                          <button
-                            onClick={() => handleAppealOutcome(warning.id, 'overturned')}
-                            className="text-red-600 hover:text-red-800 text-xs px-2 py-1 hover:bg-red-50 rounded transition-colors"
-                            title="Overturn Warning"
-                          >
-                            Overturn
-                          </button>
-                        </>
+                        <button
+                          onClick={() => {
+                            setAppealReviewWarning(warning);
+                            setShowAppealReview(true);
+                          }}
+                          className="text-purple-600 hover:text-purple-800 text-xs px-2 py-1 hover:bg-purple-50 rounded transition-colors flex items-center gap-1"
+                          title="Review Appeal with Enhanced Decision Options"
+                        >
+                          <Scale className="w-3 h-3" />
+                          Review Appeal
+                        </button>
                       )}
                       
                       {warning.deliveryStatus !== 'delivered' && warning.status !== 'appealed' && (
@@ -698,6 +832,18 @@ const loadWarnings = useCallback(async () => {
                         <span className="text-gray-500 text-xs px-2 py-1" title="Appeal period has expired">
                           Appeal Expired
                         </span>
+                      )}
+
+                      {/* Archive button - available for resolved warnings */}
+                      {(warning.status === 'acknowledged' || warning.status === 'expired' ||
+                        !isWithinAppealPeriod(warning)) && (
+                        <button
+                          onClick={() => handleArchiveWarning(warning.id)}
+                          className="text-gray-600 hover:text-gray-800 text-xs px-2 py-1 hover:bg-gray-50 rounded transition-colors"
+                          title="Archive this warning"
+                        >
+                          <Archive className="w-3 h-3" />
+                        </button>
                       )}
                     </div>
                   </td>
@@ -818,6 +964,28 @@ const loadWarnings = useCallback(async () => {
             description: appealWarning.description || 'No description provided'
           }}
           onAppealSubmit={handleAppealSubmission}
+        />
+      )}
+
+      {/* Enhanced Appeal Review Modal - HR Decision Making */}
+      {showAppealReview && appealReviewWarning && (
+        <AppealReviewModal
+          isOpen={showAppealReview}
+          onClose={() => {
+            setShowAppealReview(false);
+            setAppealReviewWarning(null);
+          }}
+          warning={{
+            id: appealReviewWarning.id,
+            employeeName: appealReviewWarning.employeeName,
+            employeeNumber: appealReviewWarning.employeeNumber,
+            category: appealReviewWarning.category,
+            level: appealReviewWarning.level,
+            issueDate: appealReviewWarning.issueDate,
+            description: appealReviewWarning.description || 'No description provided',
+            appealDetails: appealReviewWarning.appealDetails
+          }}
+          onDecisionSubmit={handleAppealDecision}
         />
       )}
         </>

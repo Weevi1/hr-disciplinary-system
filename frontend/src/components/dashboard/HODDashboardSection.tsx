@@ -7,24 +7,31 @@
 
 import React, { memo, useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  AlertTriangle, 
-  MessageCircle, 
-  UserX, 
-  Users, 
+import {
+  AlertTriangle,
+  MessageCircle,
+  UserX,
+  Users,
   TrendingUp,
   Calendar,
   Target,
   ChevronRight,
   Mic, // NEW: Audio recording icon
-  BookOpen // NEW: Corrective Counselling icon
+  BookOpen, // NEW: Corrective Counselling icon
+  RefreshCw // NEW: Refresh button for cache issues
 } from 'lucide-react';
 
 // Import enhanced warning wizard (now includes audio consent)
 import { EnhancedWarningWizard } from '../warnings/enhanced/EnhancedWarningWizard';
+// Import simplified wizard for 2012-era devices
+import { SimplifiedWarningWizard } from '../warnings/SimplifiedWarningWizard';
+// Import device detection for legacy support
+import { globalDeviceCapabilities } from '../../utils/deviceDetection';
 
-// Import corrective counselling modal
-import { CorrectiveCounselling } from '../counselling/CorrectiveCounselling';
+// Import unified modal components
+import { UnifiedCorrectiveCounselling } from '../counselling/UnifiedCorrectiveCounselling';
+import { UnifiedBookHRMeeting } from '../meetings/UnifiedBookHRMeeting';
+import { UnifiedReportAbsence } from '../absences/UnifiedReportAbsence';
 import { CounsellingFollowUp } from '../counselling/CounsellingFollowUp';
 
 // Import hooks and services
@@ -34,12 +41,18 @@ import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
 import { useDashboardData } from '../../hooks/dashboard/useDashboardData';
 import { API } from '../../api';
 import { DataServiceV2 } from '../../services/DataServiceV2';
+import { NestedDataService } from '../../services/NestedDataService';
+import { useNestedStructure, useCollectionGroup, useIndexes } from '../../config/features';
 
 // Import employee management
 import { EmployeeManagement } from '../employees/EmployeeManagement';
 
 // Import skeleton components for progressive loading
 import { SkeletonCard, SkeletonStats } from '../common/SkeletonLoader';
+
+// Import themed components
+import { ThemedCard, ThemedBadge, ThemedAlert } from '../common/ThemedCard';
+import { ThemedButton } from '../common/ThemedButton';
 
 // --- A Reusable Breakpoint Hook (for responsive rendering) ---
 const useBreakpoint = (breakpoint: number) => {
@@ -72,8 +85,29 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
     followUps: dueFollowUps,
     loading: dashboardLoading,
     error: dashboardError,
-    isReady
+    isReady,
+    refreshData
   } = useDashboardData({ role: 'hod' });
+
+  // 🔄 CACHE FIX: Refresh data when user role/permissions are properly established
+  useEffect(() => {
+    // If user is a manager but has no employees, and data loading is complete, try refreshing
+    if (user?.id && organization?.id && isReady &&
+        dashboardEmployees.length === 0 &&
+        !dashboardLoading.employees &&
+        !dashboardLoading.overall) {
+
+      Logger.debug('[HODDashboard] 🔄 Manager has no employees - checking if cache refresh needed...');
+
+      // Add a slight delay to ensure all auth/role data is properly loaded
+      const refreshTimer = setTimeout(() => {
+        Logger.debug('[HODDashboard] 🔄 Refreshing employee data for manager...');
+        refreshData();
+      }, 2000); // 2 second delay to ensure user auth is fully established
+
+      return () => clearTimeout(refreshTimer);
+    }
+  }, [user?.id, organization?.id, isReady, dashboardEmployees.length, dashboardLoading.employees, dashboardLoading.overall, refreshData]);
 
   // Create followUpCounts from dueFollowUps for compatibility
   const followUpCounts = {
@@ -96,6 +130,8 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
   const [showWarningWizard, setShowWarningWizard] = useState(false);
 
   const [showCorrectiveCounselling, setShowCorrectiveCounselling] = useState(false);
+  const [showBookHRMeeting, setShowBookHRMeeting] = useState(false);
+  const [showReportAbsence, setShowReportAbsence] = useState(false);
   const [showEmployeeManagement, setShowEmployeeManagement] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [selectedFollowUpSession, setSelectedFollowUpSession] = useState<any>(null);
@@ -196,6 +232,26 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
     setShowCorrectiveCounselling(false);
   }, []);
 
+  const handleOpenBookHRMeeting = useCallback(() => {
+    console.log('📅 Opening book HR meeting modal');
+    setShowBookHRMeeting(true);
+  }, []);
+
+  const handleBookHRMeetingClose = useCallback(() => {
+    console.log('❌ Book HR meeting modal closed');
+    setShowBookHRMeeting(false);
+  }, []);
+
+  const handleOpenReportAbsence = useCallback(() => {
+    console.log('🚫 Opening report absence modal');
+    setShowReportAbsence(true);
+  }, []);
+
+  const handleReportAbsenceClose = useCallback(() => {
+    console.log('❌ Report absence modal closed');
+    setShowReportAbsence(false);
+  }, []);
+
 
   // ============================================
   // COUNSELLING FOLLOW-UP HANDLERS
@@ -229,22 +285,53 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
 
     setLoadingFinalWarnings(true);
     try {
-      const warnings = await API.warnings.getActiveWarnings(organization.id);
+      let warnings;
+
+      if (useNestedStructure() && useIndexes()) {
+        // Use index collection for fast final warnings lookup
+        const indexEntries = await NestedDataService.getActiveWarningsIndex(organization.id, 100);
+        warnings = indexEntries
+          .filter(entry => entry.priority === 'high') // Final warnings are high priority
+          .map(entry => ({
+            ...entry.metadata,
+            id: entry.id,
+            employeeId: entry.employeeId,
+            level: entry.metadata.level,
+            employeeName: entry.metadata.employeeName
+          }));
+      } else if (useNestedStructure() && useCollectionGroup()) {
+        // Use collection group query for organization-wide warnings
+        const result = await NestedDataService.getOrganizationWarnings(
+          organization.id,
+          { level: 'final_written' },
+          { pageSize: 100, orderField: 'issueDate', orderDirection: 'desc' }
+        );
+        warnings = result.warnings;
+      } else {
+        // Use original flat structure
+        warnings = await API.warnings.getAll(organization.id);
+      }
+
+      // Load ALL employees for final warnings watch list (not just HOD's direct reports)
+      const allEmployees = await API.employees.getAll(organization.id);
 
       // Filter for final written warnings and group by employee
       const finalWarnings = warnings.filter((warning: any) => warning.level === 'final_written');
+
       const employeesWithFinal = finalWarnings.reduce((acc: any[], warning: any) => {
         const existing = acc.find(emp => emp.employeeId === warning.employeeId);
         if (existing) {
           existing.warnings.push(warning);
         } else {
-          const employee = employees.find(emp => emp.id === warning.employeeId);
+          const employee = allEmployees.find(emp => emp.id === warning.employeeId);
           if (employee) {
             acc.push({
               ...employee,
               employeeId: warning.employeeId,
               warnings: [warning],
-              latestFinalWarning: warning
+              latestFinalWarning: warning,
+              // Ensure name field for UI display
+              name: employee.name || `${employee.profile?.firstName || ''} ${employee.profile?.lastName || ''}`.trim()
             });
           }
         }
@@ -263,27 +350,27 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
     } finally {
       setLoadingFinalWarnings(false);
     }
-  }, [organization?.id, employees, loadingFinalWarnings]);
+  }, [organization?.id]);
 
   // Fetch final warning employees when dashboard loads
   useEffect(() => {
     if (isReady && employees.length > 0) {
       fetchFinalWarningEmployees();
     }
-  }, [isReady, employees.length, fetchFinalWarningEmployees]);
+  }, [isReady, employees.length, organization?.id]);
 
   // ============================================
   // TOOL ACTIONS CONFIGURATION
   // ============================================
   
-  // 🎯 UPDATED: Issue Warning action now shows consent modal
+  // 🎯 UNIFIED: All tool actions now use consistent modal system
   const toolActions = [
     {
       id: 'create-warning',
       title: 'Issue Warning',
       icon: AlertTriangle,
       color: 'orange',
-      action: handleIssueWarning, // Updated to show consent modal
+      action: handleIssueWarning, // Modal system with audio consent
       enabled: canCreateWarnings(),
       hasAudioRecording: true // NEW: Flag for audio recording
     },
@@ -292,7 +379,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
       title: 'HR Meeting',
       icon: MessageCircle,
       color: 'purple',
-      action: () => navigate('/book-hr-meeting'),
+      action: handleOpenBookHRMeeting, // Updated to use modal
       enabled: true,
       hasAudioRecording: false
     },
@@ -301,7 +388,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
       title: 'Report Absence',
       icon: UserX,
       color: 'red',
-      action: () => navigate('/report-absence'),
+      action: handleOpenReportAbsence, // Updated to use modal
       enabled: true,
       hasAudioRecording: false
     },
@@ -310,7 +397,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
       title: 'Counselling',
       icon: BookOpen,
       color: 'blue',
-      action: handleOpenCorrectiveCounselling,
+      action: handleOpenCorrectiveCounselling, // Already using modal
       enabled: true,
       hasAudioRecording: false
     },
@@ -367,170 +454,226 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
   return (
     <>
       <div className={`space-y-4 ${className}`}>
-        {/* --- Compact Section Header --- */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <h3 className="text-xl font-bold text-gray-900">HOD Dashboard</h3>
-            <div className="text-sm text-gray-500">Department management tools</div>
-          </div>
-          <span className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
-            Head of Department
-          </span>
-        </div>
 
-        {/* 🎯 Compact Audio Notice */}
-        {canCreateWarnings() && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-            <div className="flex items-center gap-2">
-              <Mic className="w-4 h-4 text-blue-600" />
-              <span className="text-sm text-blue-900 font-medium">Warning processes include audio recording</span>
-              <span className="text-xs text-blue-700">(consent required)</span>
-            </div>
-          </div>
-        )}
 
-        {/* --- Compact Tools Grid --- */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        {/* --- Mobile-Optimized Compact Tools Grid --- */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
           {toolActions.map((tool) => (
-            <button 
-              key={tool.id} 
+            <ThemedCard
+              key={tool.id}
+              hover
+              padding="sm"
+              className="cursor-pointer transition-all duration-200"
               onClick={tool.action}
-              disabled={tool.id === 'create-warning' && (dashboardLoading.overall || dashboardLoading.employees)}
-              className={`p-3 rounded-lg cursor-pointer transition-all duration-200 flex flex-col items-center gap-2 ${getToolButtonColorClasses(tool.color)} ${
-                (dashboardLoading.overall || dashboardLoading.employees) && tool.id === 'create-warning' ? 'opacity-50 cursor-not-allowed' : ''
-              } hover:shadow-md`}
+              style={{
+                opacity: (dashboardLoading.overall || dashboardLoading.employees) && tool.id === 'create-warning' ? 0.5 : 1,
+                background: tool.color === 'orange' ? 'linear-gradient(135deg, var(--color-warning), var(--color-warning))' :
+                           tool.color === 'purple' ? 'linear-gradient(135deg, var(--color-accent), var(--color-accent))' :
+                           tool.color === 'red' ? 'linear-gradient(135deg, var(--color-error), var(--color-error))' :
+                           tool.color === 'blue' ? 'linear-gradient(135deg, var(--color-primary), var(--color-primary))' :
+                           'linear-gradient(135deg, var(--color-primary), var(--color-primary))',
+                color: 'var(--color-text-inverse)',
+                minHeight: '80px' // Ensure consistent mobile touch targets
+              }}
             >
-              <tool.icon className="w-4 h-4" />
-              <span className="font-medium text-sm">{tool.title}</span>
-              {tool.hasAudioRecording && <Mic className="w-3 h-3 opacity-60" />}
-              {(dashboardLoading.overall || dashboardLoading.employees) && tool.id === 'create-warning' && (
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
-              )}
-            </button>
+              <div className="flex flex-col items-center gap-1.5 py-1">
+                <tool.icon className="w-5 h-5" />
+                <span className="font-medium text-xs text-center leading-tight">{tool.title}</span>
+                {tool.hasAudioRecording && <Mic className="w-3 h-3 opacity-60" />}
+                {(dashboardLoading.overall || dashboardLoading.employees) && tool.id === 'create-warning' && (
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+                )}
+              </div>
+            </ThemedCard>
           ))}
         </div>
 
-        {/* --- Follow-up Section --- */}
+        {/* --- Mobile-Optimized Follow-up Section --- */}
         {followUpCounts.total > 0 && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-3">
-              <Calendar className="w-4 h-4 text-orange-600" />
+          <ThemedCard padding="sm">
+            <h4 className="text-sm font-semibold flex items-center gap-2 mb-2" style={{ color: 'var(--color-text)' }}>
+              <Calendar className="w-4 h-4" style={{ color: 'var(--color-warning)' }} />
               Follow-ups Due ({followUpCounts.due})
             </h4>
-            <div className="space-y-2">
+            <div className="space-y-1">
               {dueFollowUps.slice(0, 3).map((session) => (
-                <button
+                <ThemedButton
                   key={session.id}
+                  variant="ghost"
                   onClick={() => handleOpenFollowUp(session)}
-                  className="w-full text-left p-2 bg-orange-50 hover:bg-orange-100 rounded-lg transition-all text-sm"
+                  className="w-full text-left p-2 text-sm"
                 >
-                  <div className="font-medium text-gray-900">{session.employeeName}</div>
-                  <div className="text-xs text-gray-600">{session.sessionType}</div>
-                </button>
+                  <div className="font-medium" style={{ color: 'var(--color-text)' }}>{session.employeeName}</div>
+                  <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{session.sessionType}</div>
+                </ThemedButton>
               ))}
             </div>
-          </div>
+          </ThemedCard>
         )}
 
-        {/* --- 🚨 Final Warnings Watch List --- */}
+        {/* --- 🚨 Mobile-Optimized Final Warnings Watch List --- */}
         {finalWarningEmployees.length > 0 && (
-          <div className="bg-red-50 border-2 border-red-200 rounded-lg shadow-sm p-4">
-            <h4 className="text-sm font-semibold text-red-900 flex items-center gap-2 mb-3">
-              <AlertTriangle className="w-4 h-4 text-red-600" />
+          <ThemedAlert variant="error" className="border-2">
+            <h4 className="text-sm font-semibold flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-4 h-4" />
               Final Warnings Watch List ({finalWarningEmployees.length})
-              <span className="px-2 py-0.5 bg-red-200 text-red-700 text-xs rounded-full animate-pulse">
+              <ThemedBadge variant="error" size="sm" className="animate-pulse hidden sm:inline-block">
                 MONITOR CLOSELY
-              </span>
+              </ThemedBadge>
             </h4>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {finalWarningEmployees.slice(0, 4).map((employee) => {
+                // Handle Firestore Timestamp or Date object conversion
+                let issueDate;
+                if (employee.latestFinalWarning.issueDate?.toDate) {
+                  // Firestore Timestamp
+                  issueDate = employee.latestFinalWarning.issueDate.toDate();
+                } else if (employee.latestFinalWarning.issueDate?.seconds) {
+                  // Firestore Timestamp in seconds format
+                  issueDate = new Date(employee.latestFinalWarning.issueDate.seconds * 1000);
+                } else {
+                  // Regular Date string or Date object
+                  issueDate = new Date(employee.latestFinalWarning.issueDate);
+                }
+
                 const daysSince = Math.floor(
-                  (Date.now() - new Date(employee.latestFinalWarning.issueDate).getTime()) / (1000 * 60 * 60 * 24)
+                  (Date.now() - issueDate.getTime()) / (1000 * 60 * 60 * 24)
                 );
                 return (
-                  <div
+                  <ThemedCard
                     key={employee.employeeId}
-                    className="w-full p-3 bg-white border border-red-200 rounded-lg"
+                    padding="md"
+                    className="border-2"
+                    style={{ borderColor: 'var(--color-alert-error-border)' }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <div className="font-medium text-red-900">{employee.name}</div>
-                        <div className="text-xs text-red-700">
+                        <div className="font-medium" style={{ color: 'var(--color-alert-error-text)' }}>{employee.name}</div>
+                        <div className="text-xs" style={{ color: 'var(--color-alert-error-text)', opacity: 0.8 }}>
                           {employee.latestFinalWarning.category} • {daysSince} days ago
                         </div>
-                        <div className="text-xs text-red-600 mt-1">
+                        <div className="text-xs mt-1" style={{ color: 'var(--color-alert-error-text)' }}>
                           ⚠️ Next offense requires HR intervention
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-xs font-medium text-red-800 bg-red-100 px-2 py-1 rounded">
+                        <ThemedBadge variant="error" size="sm">
                           {employee.warnings.length} warning{employee.warnings.length > 1 ? 's' : ''}
-                        </div>
+                        </ThemedBadge>
                       </div>
                     </div>
-                  </div>
+                  </ThemedCard>
                 );
               })}
               {finalWarningEmployees.length > 4 && (
-                <div className="text-xs text-red-600 text-center py-2">
+                <div className="text-xs text-center py-2" style={{ color: 'var(--color-alert-error-text)', opacity: 0.8 }}>
                   +{finalWarningEmployees.length - 4} more employees with final warnings
                 </div>
               )}
             </div>
-            <div className="mt-3 p-2 bg-red-100 rounded text-xs text-red-800">
-              💡 <strong>Tip:</strong> Monitor these employees closely. Any new offenses will trigger urgent HR intervention alerts.
-            </div>
-          </div>
+            <ThemedCard padding="sm" className="mt-3" style={{ backgroundColor: 'var(--color-alert-error-bg)', opacity: 0.7 }}>
+              <div className="text-xs" style={{ color: 'var(--color-alert-error-text)' }}>
+                💡 <strong>Tip:</strong> Monitor these employees closely. Any new offenses will trigger urgent HR intervention alerts.
+              </div>
+            </ThemedCard>
+          </ThemedAlert>
         )}
 
         {loadingFinalWarnings && (
-          <div className="bg-gray-50 rounded-lg shadow-sm border border-gray-200 p-4">
+          <ThemedCard padding="md">
             <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-              <span className="text-sm text-gray-600">Loading final warnings watch list...</span>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2" style={{ borderColor: 'var(--color-primary)' }}></div>
+              <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Loading final warnings watch list...</span>
             </div>
-          </div>
+          </ThemedCard>
         )}
 
-        {/* --- Team Overview --- */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <button 
+        {/* --- Mobile-Optimized Team Overview --- */}
+        <ThemedCard padding="sm">
+          <ThemedButton
+            variant="ghost"
             onClick={() => setShowEmployeeManagement(true)}
-            className="w-full flex items-center justify-between p-3 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-all"
+            className="w-full flex items-center justify-between p-2"
+            style={{
+              backgroundColor: 'var(--color-success)',
+              color: 'var(--color-text-inverse)',
+              minHeight: '48px' // Ensure mobile touch target
+            }}
           >
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-emerald-600" />
-              <span className="text-sm font-medium text-gray-900">Team Members</span>
+              <Users className="w-4 h-4" />
+              <span className="text-sm font-medium">Team Members</span>
             </div>
-            <span className="text-lg font-bold text-emerald-600">
+            <span className="text-lg font-bold">
               {dashboardLoading.employees ? (
-                <div className="animate-pulse h-6 w-8 bg-emerald-200 rounded"></div>
+                <div className="animate-pulse h-5 w-6 rounded" style={{ backgroundColor: 'var(--color-success-light)' }}></div>
               ) : (
                 employees.length
               )}
             </span>
-          </button>
-        </div>
+          </ThemedButton>
+        </ThemedCard>
       </div>
 
       {/* Audio consent is now integrated into the wizard as first step */}
 
-      {/* Enhanced Warning Wizard - Conditional rendering with stable props */}
+      {/* Warning Wizard - Enhanced or Simplified based on device capability */}
       {showWarningWizard && (
-        <EnhancedWarningWizard
-          key="enhanced-warning-wizard"
-          employees={employees}
-          categories={categories}
-          currentManagerName={currentManagerName}
-          organizationName={organizationName}
-          onComplete={handleWarningWizardComplete}
-          onCancel={handleWarningWizardCancel}
-        />
+        globalDeviceCapabilities?.isLegacyDevice ? (
+          <SimplifiedWarningWizard
+            key="simplified-warning-wizard"
+            isOpen={showWarningWizard}
+            onClose={handleWarningWizardCancel}
+            onSubmit={async (warningData) => {
+              // Convert simplified data to enhanced format
+              try {
+                await API.warnings.create(warningData);
+                handleWarningWizardComplete();
+              } catch (error) {
+                console.error('Failed to create warning:', error);
+                throw error;
+              }
+            }}
+            employees={employees}
+            categories={categories}
+          />
+        ) : (
+          <EnhancedWarningWizard
+            key="enhanced-warning-wizard"
+            employees={employees}
+            categories={categories}
+            currentManagerName={currentManagerName}
+            organizationName={organizationName}
+            onComplete={handleWarningWizardComplete}
+            onCancel={handleWarningWizardCancel}
+          />
+        )
       )}
+
+      {/* Unified Modal Components */}
 
       {/* Corrective Counselling Modal */}
       {showCorrectiveCounselling && (
-        <CorrectiveCounselling onClose={handleCorrectiveCounsellingClose} />
+        <UnifiedCorrectiveCounselling
+          isOpen={showCorrectiveCounselling}
+          onClose={handleCorrectiveCounsellingClose}
+        />
+      )}
+
+      {/* Book HR Meeting Modal */}
+      {showBookHRMeeting && (
+        <UnifiedBookHRMeeting
+          isOpen={showBookHRMeeting}
+          onClose={handleBookHRMeetingClose}
+        />
+      )}
+
+      {/* Report Absence Modal */}
+      {showReportAbsence && (
+        <UnifiedReportAbsence
+          isOpen={showReportAbsence}
+          onClose={handleReportAbsenceClose}
+        />
       )}
 
       {/* Counselling Follow-up Modal */}
@@ -544,21 +687,22 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
 
       {/* Employee Management Modal */}
       {showEmployeeManagement && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-7xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-slate-200">
-              <h2 className="text-xl font-bold text-slate-800">Team Management</h2>
-              <button
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
+          <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] overflow-hidden" shadow="xl">
+            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--color-border)' }}>
+              <h2 className="text-xl font-bold" style={{ color: 'var(--color-text)' }}>Team Management</h2>
+              <ThemedButton
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowEmployeeManagement(false)}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
               >
                 ×
-              </button>
+              </ThemedButton>
             </div>
             <div className="overflow-y-auto">
               <EmployeeManagement />
             </div>
-          </div>
+          </ThemedCard>
         </div>
       )}
 

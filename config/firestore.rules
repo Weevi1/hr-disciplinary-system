@@ -849,6 +849,124 @@ service cloud.firestore {
     match /warnings/{warningId} {
       allow list: if isAuthenticated() && isSuperUser();
     }
+
+    // ===================================
+    // NESTED DATA STRUCTURE RULES
+    // ===================================
+
+    // Employee subcollections - nested under employees
+    match /organizations/{organizationId}/employees/{employeeId}/warnings/{warningId} {
+      allow read, list: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(organizationId) ||
+        resellerManagesOrganization(organizationId)
+      );
+
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager())
+      );
+    }
+
+    match /organizations/{organizationId}/employees/{employeeId}/meetings/{meetingId} {
+      allow read, list, write: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(organizationId)
+      );
+    }
+
+    match /organizations/{organizationId}/employees/{employeeId}/absences/{absenceId} {
+      allow read, list, write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager())
+      );
+    }
+
+    // Employee summary documents
+    match /organizations/{organizationId}/employees/{employeeId}/summary/{document} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(organizationId)
+      );
+
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager())
+      );
+    }
+
+    // Index collections for fast queries
+    match /organizations/{organizationId}/indexes/activeWarnings/{entryId} {
+      allow read, list: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(organizationId)
+      );
+
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager())
+      );
+    }
+
+    match /organizations/{organizationId}/indexes/upcomingMeetings/{entryId} {
+      allow read, list: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(organizationId)
+      );
+
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager())
+      );
+    }
+
+    match /organizations/{organizationId}/indexes/recentAbsences/{entryId} {
+      allow read, list: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(organizationId)
+      );
+
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager())
+      );
+    }
+
+    // Analytics and summary documents
+    match /organizations/{organizationId}/analytics/{document} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager())
+      );
+
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isHRManager())
+      );
+    }
+
+    // Collection group queries - need special rules
+    match /{path=**}/warnings/{warningId} {
+      allow read, list: if isAuthenticated() && (
+        isSuperUser() ||
+        // Allow collection group queries if user belongs to the organization
+        resource.data.organizationId != null && belongsToOrganization(resource.data.organizationId)
+      );
+    }
+
+    match /{path=**}/meetings/{meetingId} {
+      allow read, list: if isAuthenticated() && (
+        isSuperUser() ||
+        resource.data.organizationId != null && belongsToOrganization(resource.data.organizationId)
+      );
+    }
+
+    match /{path=**}/absences/{absenceId} {
+      allow read, list: if isAuthenticated() && (
+        isSuperUser() ||
+        resource.data.organizationId != null && belongsToOrganization(resource.data.organizationId)
+      );
+    }
     
     match /employees/{employeeId} {
       allow list: if isAuthenticated() && isSuperUser();

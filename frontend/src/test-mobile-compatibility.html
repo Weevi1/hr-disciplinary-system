@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Compatibility Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .pass { background-color: #d4edda; color: #155724; }
+        .fail { background-color: #f8d7da; color: #721c24; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .touch-target {
+            min-height: 48px;
+            min-width: 48px;
+            padding: 12px;
+            margin: 5px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        .css-variables-test {
+            background: #ff0000;
+            background: var(--test-color, #00ff00);
+            padding: 10px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚨 2012-Era Phone Compatibility Test</h1>
+
+    <div id="results"></div>
+
+    <div class="test-result">
+        <h3>Touch Target Test</h3>
+        <button class="touch-target">48px Touch Target</button>
+        <p>Button should be at least 48px × 48px for Android 4.x compatibility</p>
+    </div>
+
+    <div class="test-result css-variables-test">
+        <h3>CSS Variables Test</h3>
+        <p>This should be GREEN on modern browsers, RED on Android 4.x (fallback working)</p>
+    </div>
+
+    <script>
+        // Test device detection capabilities
+        function runCompatibilityTests() {
+            const results = document.getElementById('results');
+            const tests = [];
+
+            // Test 1: MediaRecorder API
+            tests.push({
+                name: 'Audio Recording',
+                test: () => 'MediaRecorder' in window,
+                description: 'MediaRecorder API for audio recording'
+            });
+
+            // Test 2: CSS Grid Support
+            tests.push({
+                name: 'CSS Grid',
+                test: () => CSS.supports('display', 'grid'),
+                description: 'CSS Grid layout support'
+            });
+
+            // Test 3: CSS Variables
+            tests.push({
+                name: 'CSS Variables',
+                test: () => CSS.supports('color', 'var(--test)'),
+                description: 'CSS custom properties support'
+            });
+
+            // Test 4: Device Memory
+            tests.push({
+                name: 'Device Memory',
+                test: () => navigator.deviceMemory > 1,
+                description: 'Device has more than 1GB RAM'
+            });
+
+            // Test 5: Hardware Concurrency
+            tests.push({
+                name: 'CPU Cores',
+                test: () => navigator.hardwareConcurrency > 2,
+                description: 'Device has more than 2 CPU cores'
+            });
+
+            // Test 6: Viewport Support
+            tests.push({
+                name: 'Viewport Units',
+                test: () => CSS.supports('height', '100vh'),
+                description: 'CSS viewport units support'
+            });
+
+            // Device Information
+            const deviceInfo = {
+                userAgent: navigator.userAgent,
+                screenWidth: screen.width,
+                screenHeight: screen.height,
+                viewportWidth: window.innerWidth,
+                viewportHeight: window.innerHeight,
+                devicePixelRatio: window.devicePixelRatio || 1
+            };
+
+            // Check if this looks like an Android 4.x device
+            const isAndroid4x = /Android [234]\./.test(navigator.userAgent);
+            const isIOS6to7 = /OS [67]_/.test(navigator.userAgent);
+            const isLegacyDevice = isAndroid4x || isIOS6to7;
+
+            // Display results
+            let html = '<h2>Test Results</h2>';
+
+            if (isLegacyDevice) {
+                html += '<div class="test-result warning"><strong>⚠️ Legacy Device Detected!</strong><br>';
+                if (isAndroid4x) html += 'Android 4.x browser detected';
+                if (isIOS6to7) html += 'iOS 6-7 Safari detected';
+                html += '</div>';
+            }
+
+            tests.forEach(test => {
+                const passed = test.test();
+                const cssClass = passed ? 'pass' : 'fail';
+                const icon = passed ? '✅' : '❌';
+
+                html += `<div class="test-result ${cssClass}">
+                    ${icon} <strong>${test.name}:</strong> ${passed ? 'SUPPORTED' : 'NOT SUPPORTED'}<br>
+                    <small>${test.description}</small>
+                </div>`;
+            });
+
+            html += '<h2>Device Information</h2>';
+            html += '<div class="test-result">';
+            Object.entries(deviceInfo).forEach(([key, value]) => {
+                html += `<strong>${key}:</strong> ${value}<br>`;
+            });
+            html += '</div>';
+
+            results.innerHTML = html;
+        }
+
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', runCompatibilityTests);
+    </script>
+</body>
+</html>

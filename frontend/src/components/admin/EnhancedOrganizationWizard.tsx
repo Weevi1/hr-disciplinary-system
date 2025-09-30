@@ -24,6 +24,7 @@ import Logger from '../../utils/logger';
 import StripeService from '../../services/StripeService';
 import { DataService } from '../../services/DataService';
 import { ShardedOrganizationService } from '../../services/ShardedOrganizationService';
+import DepartmentService from '../../services/DepartmentService';
 import { UNIVERSAL_SA_CATEGORIES } from '../../services/UniversalCategories';
 import type { 
   SubscriptionTier, 
@@ -39,6 +40,7 @@ interface OrganizationCategory {
   description: string;
   level: WarningLevel;
   color: string;
+  icon?: string;
   isActive: boolean;
   isDefault: boolean;
   escalationPath?: WarningLevel[];
@@ -56,6 +58,7 @@ const getDefaultCategories = (): OrganizationCategory[] => {
     id: universalCat.id,
     name: universalCat.name,
     description: universalCat.description,
+    icon: universalCat.icon,
     level: universalCat.escalationPath[0] || 'verbal', // Start with first step of escalation path
     color: severityColors[universalCat.severity],
     isActive: true,
@@ -104,12 +107,17 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ category, onUpdate, onR
     <div className="border border-gray-200 rounded-lg p-4 bg-white">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 flex-1">
-          {/* Color indicator */}
-          <div 
-            className="w-4 h-4 rounded-full border border-gray-300"
-            style={{ backgroundColor: localCategory.color }}
-          />
-          
+          {/* Icon and color indicator */}
+          <div className="flex items-center gap-2">
+            {localCategory.icon && (
+              <span className="text-lg">{localCategory.icon}</span>
+            )}
+            <div
+              className="w-4 h-4 rounded-full border border-gray-300"
+              style={{ backgroundColor: localCategory.color }}
+            />
+          </div>
+
           {/* Category name and description */}
           <div className="flex-1">
             <div className="font-medium text-gray-900">
@@ -199,7 +207,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ category, onUpdate, onR
                 className="w-full h-10 border border-gray-300 rounded-lg"
               />
             </div>
-            
+
             <div className="flex items-center">
               <label className="flex items-center">
                 <input
@@ -212,7 +220,33 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ category, onUpdate, onR
               </label>
             </div>
           </div>
-          
+
+          {/* Icon Picker */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Category Icon</label>
+            <div className="grid grid-cols-8 gap-2 p-4 border border-gray-300 rounded-lg bg-gray-50">
+              {['📋', '⚠️', '📊', '🔒', '👔', '💼', '🏢', '📞', '🖥️', '📝', '🗂️', '📅', '🔧', '⚡', '🎯', '📈'].map((icon) => (
+                <button
+                  key={icon}
+                  type="button"
+                  onClick={() => handleLocalUpdate({ icon })}
+                  className={`w-12 h-12 rounded-lg border-2 text-xl flex items-center justify-center transition-all duration-200 hover:bg-gray-100 ${
+                    localCategory.icon === icon
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 bg-white'
+                  }`}
+                >
+                  {icon}
+                </button>
+              ))}
+            </div>
+            {localCategory.icon && (
+              <div className="mt-2 text-sm text-gray-600">
+                Selected: <span className="text-lg">{localCategory.icon}</span>
+              </div>
+            )}
+          </div>
+
           {/* Escalation Path Editor */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -677,6 +711,15 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
       Logger.success(`📧 Admin email: ${formData.adminEmail}`);
       Logger.success(`🔑 Admin password: ${devPassword}`);
 
+      // Create default departments for the new organization
+      try {
+        await DepartmentService.createDefaultDepartments(organizationId);
+        Logger.success('✅ Default departments created successfully');
+      } catch (deptError) {
+        Logger.warn('Failed to create default departments:', deptError);
+        // Don't fail the whole deployment for department creation issues
+      }
+
       // For resellers, log the deployment for audit trail and rate limiting
       if (isReseller && user?.id) {
         try {
@@ -915,17 +958,14 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                  <select
+                  <label className="block text-sm font-medium text-gray-700 mb-2">City / Town</label>
+                  <input
+                    type="text"
                     value={formData.city}
                     onChange={e => updateFormData({ city: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Select city</option>
-                    {SA_PROVINCES[formData.province]?.cities.map(city => (
-                      <option key={city} value={city}>{city}</option>
-                    ))}
-                  </select>
+                    placeholder="Enter city or town"
+                  />
                 </div>
 
                 <div>
@@ -1161,6 +1201,7 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
                         description: '',
                         level: 'verbal',
                         color: '#6366f1',
+                        icon: '📋',
                         isActive: true,
                         isDefault: false,
                         escalationPath: ['verbal', 'first_written', 'final_written']

@@ -1,11 +1,18 @@
 // frontend/src/components/warnings/enhanced/steps/components/EmployeeSelector.tsx
-// 🎯 FOCUSED EMPLOYEE SELECTOR - V2 TREATMENT
+// 🎯 UNIFIED EMPLOYEE SELECTOR - THEMED V2 TREATMENT
+// ✅ Uses unified theming with CSS variables and ThemedCard/ThemedButton
+// ✅ Samsung S8+ mobile optimization with proper touch targets
+// ✅ Real-time search, warning history integration, mobile-first design
 // ✅ Extracted from CombinedIncidentStep, optimized for performance
-// ✅ Mobile-first design, real-time search, warning history integration
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { User, Search, AlertTriangle, ChevronDown, ChevronUp, Clock, Shield } from 'lucide-react';
+import { User, Search, AlertTriangle, ChevronDown, ChevronUp, Clock, Shield, X } from 'lucide-react';
 import type { EmployeeWithContext } from '../../../../../services/WarningService';
+
+// Import unified theming components
+import { ThemedCard, ThemedSectionHeader } from '../../../../common/ThemedCard';
+import { ThemedButton } from '../../../../common/ThemedButton';
+import { ThemedBadge } from '../../../../common/ThemedCard';
 
 interface EmployeeSelectorProps {
   employees: EmployeeWithContext[];
@@ -27,8 +34,9 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   className = ""
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [showDetails, setShowDetails] = useState(!!selectedEmployeeId);
+  const [showDetails, setShowDetails] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobileModal, setIsMobileModal] = useState(false);
 
   // Filter employees based on search
   const filteredEmployees = useMemo(() => {
@@ -56,10 +64,30 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   // Handle employee selection
   const handleEmployeeSelect = useCallback((employeeId: string) => {
     onEmployeeSelect(employeeId);
-    setShowDetails(true);
+    setShowDetails(false);
     setIsOpen(false);
+    setIsMobileModal(false);
     setSearchTerm("");
   }, [onEmployeeSelect]);
+
+  // Handle opening selector (mobile vs desktop)
+  const handleOpenSelector = useCallback(() => {
+    if (disabled) return;
+
+    // Check if mobile view
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      setIsMobileModal(true);
+    } else {
+      setIsOpen(!isOpen);
+    }
+  }, [disabled, isOpen]);
+
+  // Handle mobile modal close
+  const handleMobileModalClose = useCallback(() => {
+    setIsMobileModal(false);
+    setSearchTerm("");
+  }, []);
 
   // Get risk assessment
   const getRiskLevel = (employee: EmployeeWithContext) => {
@@ -78,81 +106,83 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Section Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-100 rounded-lg">
-            <User className="w-5 h-5 text-blue-600" />
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Employee Selection</h3>
-            <p className="text-sm text-gray-600">Choose the employee involved in this incident</p>
-          </div>
-        </div>
-        <div className="text-sm text-gray-500">
-          {filteredEmployees.length} employees
-        </div>
-      </div>
+      <ThemedSectionHeader
+        icon={User}
+        title="Employee Selection"
+        subtitle="Choose the employee involved in this incident"
+        rightContent={
+          <ThemedBadge variant="secondary" size="sm">
+            {filteredEmployees.length}
+          </ThemedBadge>
+        }
+      />
 
       {/* Employee Selector Dropdown */}
       <div className="relative">
         <div className="space-y-2">
-          {/* Search/Selected Employee Display */}
-          <div 
-            className={`
-              relative border rounded-lg cursor-pointer transition-all
-              ${isOpen ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-gray-300 hover:border-gray-400'}
-              ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-            `}
-            onClick={() => !disabled && setIsOpen(!isOpen)}
+          {/* Search/Selected Employee Display - Themed */}
+          <ThemedCard
+            hover
+            padding="sm"
+            className={`cursor-pointer transition-all min-h-[48px] ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            style={{
+              borderWidth: '1px',
+              borderColor: isOpen ? 'var(--color-primary)' : 'var(--color-border)',
+              boxShadow: isOpen ? '0 0 0 2px var(--color-primary-light)' : undefined
+            }}
+            onClick={handleOpenSelector}
           >
             {selectedEmployee ? (
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-blue-600 font-semibold text-sm">
-                        {selectedEmployee.firstName?.charAt(0)}{selectedEmployee.lastName?.charAt(0)}
-                      </span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center"
+                       style={{ backgroundColor: 'var(--color-primary-light)' }}>
+                    <span className="font-semibold text-xs" style={{ color: 'var(--color-primary)' }}>
+                      {selectedEmployee.firstName?.charAt(0)}{selectedEmployee.lastName?.charAt(0)}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                      {selectedEmployee.firstName} {selectedEmployee.lastName}
                     </div>
-                    <div>
-                      <div className="font-medium text-gray-900">
-                        {selectedEmployee.firstName} {selectedEmployee.lastName}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {selectedEmployee.id} • {selectedEmployee.department}
-                      </div>
+                    <div className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
+                      {selectedEmployee.position} • {selectedEmployee.department}
                     </div>
                   </div>
-                  <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </div>
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                />
               </div>
             ) : (
-              <div className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <User className="w-5 h-5 text-gray-400" />
-                  <span className="text-gray-500">Select an employee...</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4" style={{ color: 'var(--color-text-tertiary)' }} />
+                  <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                    Select an employee...
+                  </span>
                 </div>
-                <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                  style={{ color: 'var(--color-text-tertiary)' }}
+                />
               </div>
             )}
-          </div>
+          </ThemedCard>
 
           {/* Dropdown Content */}
           {isOpen && (
             <div className="absolute top-full left-0 right-0 z-20 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden">
               {/* Search Input */}
               <div className="p-3 border-b border-gray-200">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search by name, employee number, or department..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    autoFocus
-                  />
-                </div>
+                <input
+                  type="text"
+                  placeholder="Search employees..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                />
               </div>
 
               {/* Employee List */}
@@ -167,41 +197,10 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                         <button
                           key={employee.id}
                           onClick={() => handleEmployeeSelect(employee.id)}
-                          className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors"
+                          className="w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors"
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                                <span className="text-gray-600 font-medium text-xs">
-                                  {employee.firstName?.charAt(0)}{employee.lastName?.charAt(0)}
-                                </span>
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <div className="font-medium text-gray-900 truncate">
-                                  {employee.firstName} {employee.lastName}
-                                </div>
-                                <div className="text-sm text-gray-600 truncate">
-                                  {employee.id} • {employee.position}
-                                </div>
-                                <div className="text-xs text-gray-500 truncate">
-                                  {employee.department}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 ml-4">
-                              {/* Risk Indicator */}
-                              {riskLevel === 'high' && (
-                                <div className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">
-                                  High Risk
-                                </div>
-                              )}
-                              {/* Warning Count */}
-                              {warningsSummary && warningsSummary.count > 0 && (
-                                <div className="px-2 py-1 bg-amber-100 text-amber-700 text-xs rounded-full">
-                                  {warningsSummary.count} warnings
-                                </div>
-                              )}
-                            </div>
+                          <div className="font-medium text-gray-900 text-sm">
+                            {employee.firstName} {employee.lastName} - {employee.position}
                           </div>
                         </button>
                       );
@@ -219,18 +218,80 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         </div>
       </div>
 
-      {/* Selected Employee Details */}
+      {/* Mobile Modal for Employee Selection */}
+      {isMobileModal && (
+        <div className="mobile-employee-modal">
+          <div className="mobile-employee-modal-backdrop" onClick={handleMobileModalClose} />
+          <div className="mobile-employee-modal-content">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Select Employee</h3>
+              <button
+                onClick={handleMobileModalClose}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Mobile Search */}
+            <div className="p-4">
+              <input
+                type="text"
+                placeholder="Search employees..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              />
+            </div>
+
+            {/* Mobile Employee List */}
+            <div className="mobile-category-list">
+              {filteredEmployees.length > 0 ? (
+                <div>
+                  {filteredEmployees.map(employee => (
+                    <button
+                      key={employee.id}
+                      onClick={() => handleEmployeeSelect(employee.id)}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="font-medium text-gray-900 text-base">
+                        {employee.firstName} {employee.lastName} - {employee.position}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="px-4 py-8 text-center text-gray-500">
+                  <p>No employees found</p>
+                  {searchTerm && (
+                    <p className="text-sm text-gray-400 mt-1">
+                      matching "{searchTerm}"
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Selected Employee Details - Themed */}
       {selectedEmployee && showDetails && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+        <ThemedCard padding="md" className="border-2" style={{ borderColor: 'var(--color-primary-light)' }}>
           <div className="flex items-center justify-between mb-4">
-            <h4 className="font-semibold text-gray-900">Employee Details</h4>
-            <button
+            <h4 className="font-semibold text-base" style={{ color: 'var(--color-text)' }}>
+              Employee Details
+            </h4>
+            <ThemedButton
+              variant="ghost"
+              size="sm"
               onClick={() => setShowDetails(!showDetails)}
-              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+              className="flex items-center gap-1"
             >
               {showDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               {showDetails ? 'Hide' : 'Show'}
-            </button>
+            </ThemedButton>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -281,20 +342,20 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                 )}
               </div>
 
-              {/* Risk Indicators */}
+              {/* Risk Indicators - Themed */}
               {selectedEmployee.riskIndicators && (
                 <div>
-                  <div className="text-sm font-medium text-gray-700 mb-2">Risk Assessment</div>
-                  <div className={`
-                    inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm
-                    ${selectedEmployee.riskIndicators.highRisk 
-                      ? 'bg-red-100 text-red-700' 
-                      : 'bg-green-100 text-green-700'
-                    }
-                  `}>
+                  <div className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
+                    Risk Assessment
+                  </div>
+                  <ThemedBadge
+                    variant={selectedEmployee.riskIndicators.highRisk ? "error" : "success"}
+                    size="md"
+                    className="inline-flex items-center gap-2"
+                  >
                     <Shield className="w-4 h-4" />
                     {selectedEmployee.riskIndicators.highRisk ? 'High Risk' : 'Low Risk'}
-                  </div>
+                  </ThemedBadge>
                   {selectedEmployee.riskIndicators.reasons.length > 0 && (
                     <div className="mt-2">
                       <ul className="text-xs text-gray-600 space-y-1">
@@ -311,7 +372,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               )}
             </div>
           </div>
-        </div>
+        </ThemedCard>
       )}
     </div>
   );
