@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.initializeSuperUser = exports.getSuperUserInfo = exports.manageSuperUser = exports.refreshOrganizationUserClaims = exports.getUserClaims = exports.refreshUserClaims = exports.setCustomClaimsOnSignIn = exports.createPortalSession = exports.processMonthlyCommissions = exports.stripeWebhook = exports.createCheckoutSession = exports.previewAudioCleanup = exports.getGlobalAudioStats = exports.getCleanupStats = exports.manualAudioCleanup = exports.cleanupExpiredAudio = exports.createResellerUser = exports.resetUserPassword = exports.createOrganizationUsers = exports.createOrganizationAdmin = exports.cleanupExpiredTokens = exports.revokeTemporaryToken = exports.validateTemporaryToken = exports.downloadTempFile = exports.generateTemporaryDownloadLink = void 0;
+exports.initializeSuperUser = exports.getSuperUserInfo = exports.manageSuperUser = exports.refreshOrganizationUserClaims = exports.getUserClaims = exports.refreshUserClaims = exports.setCustomClaimsOnSignIn = exports.createPortalSession = exports.processMonthlyCommissions = exports.stripeWebhook = exports.createCheckoutSession = exports.previewAudioCleanup = exports.getGlobalAudioStats = exports.getCleanupStats = exports.manualAudioCleanup = exports.cleanupExpiredAudio = exports.createOrganizationUser = exports.createResellerUser = exports.resetUserPassword = exports.createOrganizationUsers = exports.createOrganizationAdmin = exports.cleanupExpiredTokens = exports.revokeTemporaryToken = exports.validateTemporaryToken = exports.downloadTempFile = exports.generateTemporaryDownloadLink = void 0;
 // functions/src/index.ts
 // Main Firebase Functions entry point
 const userCreationService_1 = require("./Auth/userCreationService");
@@ -39,4 +39,7 @@ const superUserManagement_1 = require("./superUserManagement");
 Object.defineProperty(exports, "manageSuperUser", { enumerable: true, get: function () { return superUserManagement_1.manageSuperUser; } });
 Object.defineProperty(exports, "getSuperUserInfo", { enumerable: true, get: function () { return superUserManagement_1.getSuperUserInfo; } });
 Object.defineProperty(exports, "initializeSuperUser", { enumerable: true, get: function () { return superUserManagement_1.initializeSuperUser; } });
+// 👥 ADD ORGANIZATION USER CREATION
+const createOrganizationUser_1 = require("./createOrganizationUser");
+Object.defineProperty(exports, "createOrganizationUser", { enumerable: true, get: function () { return createOrganizationUser_1.createOrganizationUser; } });
 //# sourceMappingURL=index.js.map

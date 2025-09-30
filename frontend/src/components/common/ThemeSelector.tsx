@@ -84,7 +84,7 @@ export const ThemeSelector: React.FC = () => {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg
+        <div className="absolute right-0 bottom-full mb-2 w-56 rounded-lg shadow-lg
                         bg-[var(--color-card-background)] border border-[var(--color-border)]
                         overflow-hidden z-50 animate-fade-in">
           <div className="p-1">

@@ -48,14 +48,18 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
   const [managers, setManagers] = useState<User[]>([]);
   const [loadingManagers, setLoadingManagers] = useState(false);
 
-  // Disable body scroll when modal is open
+  // Disable body scroll when modal is open and scroll to top
   useEffect(() => {
-    // Save original body style
+    // Save original body style and scroll position
     const originalStyle = window.getComputedStyle(document.body).overflow;
-    
+    const originalScrollY = window.scrollY;
+
+    // Scroll to top to ensure modal is visible
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     // Disable body scroll
     document.body.style.overflow = 'hidden';
-    
+
     // Cleanup function to restore scroll
     return () => {
       document.body.style.overflow = originalStyle;

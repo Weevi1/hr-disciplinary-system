@@ -74,9 +74,9 @@ export const createOrganizationUser = onCall<CreateUserRequest>(
       const callerData = callerDoc.data();
       const callerRole = typeof callerData?.role === 'string' ? callerData.role : callerData?.role?.id;
 
-      // Only business owners can create HR/HOD managers
-      if (callerRole !== 'business-owner') {
-        throw new HttpsError('permission-denied', 'Only business owners can create managers');
+      // Business owners and HR managers can create HR/HOD managers
+      if (callerRole !== 'business-owner' && callerRole !== 'hr-manager') {
+        throw new HttpsError('permission-denied', 'Only business owners and HR managers can create managers');
       }
 
       // Create Firebase Auth user (server-side, won't affect client session)

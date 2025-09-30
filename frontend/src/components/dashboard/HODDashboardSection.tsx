@@ -43,6 +43,7 @@ import { API } from '../../api';
 import { DataServiceV2 } from '../../services/DataServiceV2';
 import { NestedDataService } from '../../services/NestedDataService';
 import { useNestedStructure, useCollectionGroup, useIndexes } from '../../config/features';
+import Logger from '../../utils/logger';
 
 // Import employee management
 import { EmployeeManagement } from '../employees/EmployeeManagement';

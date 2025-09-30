@@ -233,6 +233,14 @@ export interface Warning {
   status: WarningStatus;
   createdAt: string | Date;
   updatedAt: string | Date;
+
+  // 📄 HISTORICAL ENTRY TRACKING - For warnings created outside the system
+  isHistoricalEntry?: boolean;        // Flag indicating manual entry from physical document
+  enteredBy?: string;                 // User ID who entered the historical warning
+  enteredAt?: Date;                   // Timestamp when warning was entered into system
+  hasPhysicalCopy?: boolean;          // Confirmation that physical signed document exists
+  physicalCopyLocation?: string;      // Where physical copy is stored (e.g., "Filing Cabinet A3")
+  historicalNotes?: string;           // Additional context about the historical entry
 }
 
 export interface WarningCategory {

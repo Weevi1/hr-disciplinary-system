@@ -22,19 +22,25 @@ import DepartmentService from '../../services/DepartmentService';
 import { ThemedCard } from '../common/ThemedCard';
 import { ThemedButton } from '../common/ThemedButton';
 import { UnifiedModal } from '../common/UnifiedModal';
+import { LoadingState } from '../common/LoadingState';
 import Logger from '../../utils/logger';
 import type { Department, DepartmentFormData, DepartmentStats } from '../../types/department';
 
 interface DepartmentManagementProps {
   isOpen: boolean;
   onClose: () => void;
+  organizationId?: string;
+  inline?: boolean; // New prop for inline rendering in tabs
 }
 
 export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
   isOpen,
-  onClose
+  onClose,
+  organizationId: propOrgId,
+  inline = false
 }) => {
   const { organization } = useOrganization();
+  const orgId = propOrgId || organization?.id;
   const [departments, setDepartments] = useState<Department[]>([]);
   const [stats, setStats] = useState<DepartmentStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,7 +58,7 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
 
   // Load departments
   useEffect(() => {
-    if (!organization?.id || !isOpen) return;
+    if (!orgId || (!isOpen && !inline)) return;
 
     const loadDepartments = async () => {
       try {
@@ -60,8 +66,8 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
         setError(null);
 
         const [deptData, statsData] = await Promise.all([
-          DepartmentService.getDepartments(organization.id),
-          DepartmentService.getDepartmentStats(organization.id)
+          DepartmentService.getDepartments(orgId),
+          DepartmentService.getDepartmentStats(orgId)
         ]);
 
         setDepartments(deptData);
@@ -75,21 +81,21 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
     };
 
     loadDepartments();
-  }, [organization?.id, isOpen]);
+  }, [orgId, isOpen, inline]);
 
   // Real-time subscription
   useEffect(() => {
-    if (!organization?.id || !isOpen) return;
+    if (!orgId || (!isOpen && !inline)) return;
 
     const unsubscribe = DepartmentService.subscribeToDepartments(
-      organization.id,
+      orgId,
       (updatedDepartments) => {
         setDepartments(updatedDepartments);
       }
     );
 
     return unsubscribe;
-  }, [organization?.id, isOpen]);
+  }, [orgId, isOpen, inline]);
 
   const handleCreateDepartment = () => {
     setEditingDepartment(null);
@@ -108,7 +114,7 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
   };
 
   const handleDeleteDepartment = async (department: Department) => {
-    if (!organization?.id) return;
+    if (!orgId) return;
 
     if (department.isDefault) {
       alert('Cannot delete default departments (Operations, Admin)');
@@ -120,7 +126,7 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
     }
 
     try {
-      await DepartmentService.deleteDepartment(organization.id, department.id);
+      await DepartmentService.deleteDepartment(orgId, department.id);
 
       // Update local state
       setDepartments(prev => prev.filter(d => d.id !== department.id));
@@ -134,7 +140,7 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!organization?.id) return;
+    if (!orgId) return;
 
     try {
       setFormLoading(true);
@@ -142,7 +148,7 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
       if (editingDepartment) {
         // Update existing department
         await DepartmentService.updateDepartment(
-          organization.id,
+          orgId,
           editingDepartment.id,
           formData
         );
@@ -158,7 +164,7 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
       } else {
         // Create new department
         const newDepartment = await DepartmentService.createDepartment(
-          organization.id,
+          orgId,
           formData
         );
 
@@ -182,174 +188,140 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
     setFormData({ name: '', description: '', managerId: '' });
   };
 
-  if (!isOpen) return null;
+  if (!inline && !isOpen) return null;
 
-  return createPortal(
-    <UnifiedModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Department Management"
-      subtitle="Manage organizational departments and assignments"
-      size="lg"
-    >
-      {/* Stats Overview */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <ThemedCard padding="md">
-            <div className="flex items-center gap-3">
-              <Building2 className="w-8 h-8" style={{ color: 'var(--color-primary)' }} />
-              <div>
-                <div className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
-                  {stats.totalDepartments}
-                </div>
-                <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                  Total Departments
-                </div>
+  // Content to be rendered (either in modal or inline)
+  const content = (
+    <>
+      {/* Compact Header with Stats and Actions */}
+      <div className="bg-white border border-gray-200 rounded-lg p-3 mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-4">
+            <h3 className="text-base font-bold text-gray-900">Departments</h3>
+            {stats && (
+              <div className="flex items-center gap-3 text-xs text-gray-600">
+                <span className="flex items-center gap-1">
+                  <Building2 className="w-3 h-3" />
+                  {stats.totalDepartments} total
+                </span>
+                <span className="flex items-center gap-1">
+                  <Crown className="w-3 h-3" />
+                  {stats.departmentsWithManagers} with managers
+                </span>
+                <span className="flex items-center gap-1">
+                  <Users className="w-3 h-3" />
+                  {stats.totalEmployeesAcrossDepartments} employees
+                </span>
               </div>
-            </div>
-          </ThemedCard>
+            )}
+          </div>
 
-          <ThemedCard padding="md">
-            <div className="flex items-center gap-3">
-              <Crown className="w-8 h-8" style={{ color: 'var(--color-success)' }} />
-              <div>
-                <div className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
-                  {stats.departmentsWithManagers}
-                </div>
-                <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                  With Managers
-                </div>
-              </div>
-            </div>
-          </ThemedCard>
-
-          <ThemedCard padding="md">
-            <div className="flex items-center gap-3">
-              <Users className="w-8 h-8" style={{ color: 'var(--color-info)' }} />
-              <div>
-                <div className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
-                  {stats.totalEmployeesAcrossDepartments}
-                </div>
-                <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                  Total Employees
-                </div>
-              </div>
-            </div>
-          </ThemedCard>
+          <button
+            onClick={handleCreateDepartment}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 rounded-md transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Department
+          </button>
         </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
-          Departments
-        </h3>
-        <ThemedButton variant="primary" onClick={handleCreateDepartment}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add Department
-        </ThemedButton>
       </div>
 
       {/* Loading State */}
-      {loading && (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--color-primary)' }} />
-          <span className="ml-2" style={{ color: 'var(--color-text-secondary)' }}>
-            Loading departments...
-          </span>
-        </div>
-      )}
+      {loading && <LoadingState message="Loading departments..." />}
 
       {/* Error State */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-600" />
-            <span className="text-red-800">{error}</span>
+            <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+            <span className="text-sm text-red-800">{error}</span>
           </div>
         </div>
       )}
 
       {/* Departments List */}
       {!loading && !error && (
-        <div className="space-y-4">
+        <div className="space-y-1.5">
           {departments.map((department) => (
-            <ThemedCard key={department.id} padding="md" className="hover:shadow-md transition-shadow">
+            <div key={department.id} className="bg-white border border-gray-200 rounded-lg p-2.5">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h4 className="font-semibold" style={{ color: 'var(--color-text)' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="font-semibold text-sm text-gray-900">
                       {department.name}
                     </h4>
                     {department.isDefault && (
-                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                      <span className="px-1.5 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">
                         Default
                       </span>
                     )}
                   </div>
 
                   {department.description && (
-                    <p className="text-sm mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                    <p className="text-xs text-gray-600 mb-1.5">
                       {department.description}
                     </p>
                   )}
 
-                  <div className="flex items-center gap-4 text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      <span>{department.employeeCount} employees</span>
-                    </div>
+                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      {department.employeeCount} employees
+                    </span>
 
                     {department.managerName ? (
-                      <div className="flex items-center gap-1">
-                        <Crown className="w-4 h-4" />
-                        <span>Manager: {department.managerName}</span>
-                      </div>
+                      <span className="flex items-center gap-1">
+                        <Crown className="w-3 h-3" />
+                        {department.managerName}
+                      </span>
                     ) : (
-                      <div className="flex items-center gap-1">
-                        <AlertTriangle className="w-4 h-4 text-orange-500" />
-                        <span className="text-orange-600">No manager assigned</span>
-                      </div>
+                      <span className="flex items-center gap-1 text-orange-600">
+                        <AlertTriangle className="w-3 h-3" />
+                        No manager
+                      </span>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <button
                     onClick={() => handleEditDepartment(department)}
-                    className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
+                    className="p-1.5 text-gray-400 hover:text-blue-600 rounded hover:bg-blue-50"
                     title="Edit department"
                   >
-                    <Edit className="w-4 h-4" />
+                    <Edit className="w-3.5 h-3.5" />
                   </button>
 
                   {!department.isDefault && (
                     <button
                       onClick={() => handleDeleteDepartment(department)}
-                      className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                      className="p-1.5 text-gray-400 hover:text-red-600 rounded hover:bg-red-50"
                       title="Delete department"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
               </div>
-            </ThemedCard>
+            </div>
           ))}
 
           {departments.length === 0 && !loading && (
-            <div className="text-center py-8">
-              <Building2 className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--color-text-tertiary)' }} />
-              <p className="text-lg font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+              <Building2 className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+              <p className="text-sm font-medium text-gray-900 mb-1">
                 No departments found
               </p>
-              <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
+              <p className="text-xs text-gray-600 mb-3">
                 Create your first department to get started with organizational structure.
               </p>
-              <ThemedButton variant="primary" onClick={handleCreateDepartment}>
-                <Plus className="w-4 h-4 mr-2" />
+              <button
+                onClick={handleCreateDepartment}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 rounded-md transition-colors mx-auto"
+              >
+                <Plus className="w-3.5 h-3.5" />
                 Create Department
-              </ThemedButton>
+              </button>
             </div>
           )}
         </div>
@@ -364,74 +336,81 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
           subtitle={editingDepartment ? 'Update department information' : 'Add a new department to your organization'}
           size="md"
         >
-          <form onSubmit={handleFormSubmit} className="space-y-4">
+          <form onSubmit={handleFormSubmit} className="space-y-3">
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+              <label className="block text-xs font-medium mb-1.5 text-gray-700">
                 Department Name *
               </label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  backgroundColor: 'var(--color-input-background)',
-                  color: 'var(--color-text)'
-                }}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="e.g., Operations, Admin, Sales"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+              <label className="block text-xs font-medium mb-1.5 text-gray-700">
                 Description
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 rows={3}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  backgroundColor: 'var(--color-input-background)',
-                  color: 'var(--color-text)'
-                }}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Brief description of the department's role and responsibilities"
               />
             </div>
 
-            <div className="flex justify-end gap-3 pt-4">
-              <ThemedButton
+            <div className="flex justify-end gap-2 pt-3">
+              <button
                 type="button"
-                variant="outline"
                 onClick={handleCloseForm}
                 disabled={formLoading}
+                className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancel
-              </ThemedButton>
-              <ThemedButton
+              </button>
+              <button
                 type="submit"
-                variant="primary"
                 disabled={formLoading || !formData.name.trim()}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
                 {formLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     {editingDepartment ? 'Updating...' : 'Creating...'}
                   </>
                 ) : (
                   <>
-                    <Save className="w-4 h-4 mr-2" />
-                    {editingDepartment ? 'Update Department' : 'Create Department'}
+                    <Save className="w-3.5 h-3.5" />
+                    {editingDepartment ? 'Update' : 'Create'}
                   </>
                 )}
-              </ThemedButton>
+              </button>
             </div>
           </form>
         </UnifiedModal>
       )}
+    </>
+  );
+
+  // Render inline or as modal
+  if (inline) {
+    return <div className="space-y-4">{content}</div>;
+  }
+
+  return createPortal(
+    <UnifiedModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Department Management"
+      subtitle="Manage organizational departments and assignments"
+      size="lg"
+    >
+      {content}
     </UnifiedModal>,
     document.body
   );

@@ -1,0 +1,10 @@
+<testsuites id="" name="" tests="1" failures="0" skipped="0" errors="0" time="13.826842999999998">
+<testsuite name="comprehensive-health-check.spec.ts" timestamp="2025-09-22T09:36:23.317Z" hostname="chromium" tests="1" failures="0" skipped="0" time="12.98" errors="0">
+<testcase name="🏥 HR System Comprehensive Health Check › Console Health › No critical console errors" classname="comprehensive-health-check.spec.ts" time="12.98">
+<system-out>
+<![CDATA[Console errors found: 0
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

@@ -36,9 +36,10 @@ import type { Employee } from '../../types';
 
 interface EmployeeTableBrowserProps {
   employees: Employee[];
-  onEmployeeSelect?: (employee: Employee) => void;
+  onEmployeeSelect?: (employee: Employee | null) => void;
   onEmployeeEdit?: (employee: Employee) => void;
   onEmployeeDelete?: (employee: Employee) => void;
+  onEmployeePromote?: (employee: Employee) => void;
   onBulkAction?: (action: string, employees: Employee[]) => void;
   selectedEmployee?: Employee | null;
   loading?: boolean;
@@ -60,6 +61,7 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
   onEmployeeSelect,
   onEmployeeEdit,
   onEmployeeDelete,
+  onEmployeePromote,
   onBulkAction,
   selectedEmployee,
   loading = false
@@ -511,155 +513,258 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedEmployees.map((employee) => (
-                <tr
-                  key={employee.id}
-                  className={`
-                    hover:bg-gray-50 transition-colors cursor-pointer
-                    ${selectedEmployee?.id === employee.id ? 'bg-blue-50' : ''}
-                    ${selectedRows.has(employee.id) ? 'bg-blue-25' : ''}
-                  `}
-                  onClick={() => onEmployeeSelect?.(employee)}
-                >
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRowSelect(employee.id);
-                      }}
-                    >
-                      {selectedRows.has(employee.id) ? (
-                        <CheckSquare className="w-4 h-4 text-blue-600" />
-                      ) : (
-                        <Square className="w-4 h-4 text-gray-400" />
-                      )}
-                    </button>
-                  </td>
-                  
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-gray-900">
-                          {employee.profile.firstName} {employee.profile.lastName}
+                <React.Fragment key={employee.id}>
+                  <tr
+                    className={`
+                      hover:bg-gray-50 transition-colors cursor-pointer
+                      ${selectedEmployee?.id === employee.id ? 'bg-blue-50' : ''}
+                      ${selectedRows.has(employee.id) ? 'bg-blue-25' : ''}
+                    `}
+                    onClick={() => onEmployeeSelect?.(employee)}
+                  >
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRowSelect(employee.id);
+                        }}
+                      >
+                        {selectedRows.has(employee.id) ? (
+                          <CheckSquare className="w-4 h-4 text-blue-600" />
+                        ) : (
+                          <Square className="w-4 h-4 text-gray-400" />
+                        )}
+                      </button>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <User className="w-4 h-4 text-blue-600" />
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {employee.profile.employeeNumber}
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {employee.profile.firstName} {employee.profile.lastName}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {employee.profile.employeeNumber}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  <td className="px-4 py-3 text-sm font-mono text-gray-900">
-                    {employee.profile.employeeNumber}
-                  </td>
+                    <td className="px-4 py-3 text-sm font-mono text-gray-900">
+                      {employee.profile.employeeNumber}
+                    </td>
 
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Building className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-900">{employee.employment.department}</span>
-                    </div>
-                  </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Building className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-900">{employee.employment.department}</span>
+                      </div>
+                    </td>
 
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {employee.employment.position}
-                  </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {employee.employment.position}
+                    </td>
 
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {getManagerName(employee.employment.managerId)}
-                  </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {getManagerName(employee.employment.managerId)}
+                    </td>
 
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-center gap-2">
-                      {employee.profile.email && (
-                        <Mail 
-                          className="w-4 h-4 text-green-600" 
-                          title={`Email: ${employee.profile.email}`}
-                        />
-                      )}
-                      {employee.profile.phoneNumber && (
-                        <Phone 
-                          className="w-4 h-4 text-blue-600" 
-                          title={`Phone: ${employee.profile.phoneNumber}`}
-                        />
-                      )}
-                      {!employee.profile.email && !employee.profile.phoneNumber && (
-                        <span className="text-sm text-gray-400">—</span>
-                      )}
-                    </div>
-                  </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-2">
+                        {employee.profile.email && (
+                          <Mail
+                            className="w-4 h-4 text-green-600"
+                            title={`Email: ${employee.profile.email}`}
+                          />
+                        )}
+                        {employee.profile.phoneNumber && (
+                          <Phone
+                            className="w-4 h-4 text-blue-600"
+                            title={`Phone: ${employee.profile.phoneNumber}`}
+                          />
+                        )}
+                        {!employee.profile.email && !employee.profile.phoneNumber && (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
+                      </div>
+                    </td>
 
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm text-gray-900">
-                        {(() => {
-                          // Handle various date formats safely
-                          const startDate = employee.employment?.startDate || employee.profile?.startDate;
-                          if (!startDate) return 'Not set';
-                          
-                          try {
-                            // Handle Firestore Timestamp objects
-                            if (startDate && typeof startDate.toDate === 'function') {
-                              return startDate.toDate().toLocaleDateString();
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-900">
+                          {(() => {
+                            // Handle various date formats safely
+                            const startDate = employee.employment?.startDate || employee.profile?.startDate;
+                            if (!startDate) return 'Not set';
+
+                            try {
+                              // Handle Firestore Timestamp objects
+                              if (startDate && typeof startDate.toDate === 'function') {
+                                return startDate.toDate().toLocaleDateString();
+                              }
+
+                              // Handle Date objects
+                              if (startDate instanceof Date) {
+                                return startDate.toLocaleDateString();
+                              }
+
+                              // Handle date strings/numbers
+                              const parsed = new Date(startDate);
+                              if (!isNaN(parsed.getTime())) {
+                                return parsed.toLocaleDateString();
+                              }
+
+                              return 'Invalid date';
+                            } catch (error) {
+                              return 'Invalid date';
                             }
-                            
-                            // Handle Date objects
-                            if (startDate instanceof Date) {
-                              return startDate.toLocaleDateString();
-                            }
-                            
-                            // Handle date strings/numbers
-                            const parsed = new Date(startDate);
-                            if (!isNaN(parsed.getTime())) {
-                              return parsed.toLocaleDateString();
-                            }
-                            
-                            return 'Invalid date';
-                          } catch (error) {
-                            return 'Invalid date';
-                          }
-                        })()}
+                          })()}
+                        </span>
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <span className={`
+                        inline-flex px-2 py-1 text-xs font-medium rounded-full
+                        ${employee.isActive
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                        }
+                      `}>
+                        {employee.isActive ? 'Active' : 'Inactive'}
                       </span>
-                    </div>
-                  </td>
+                    </td>
 
-                  <td className="px-4 py-3">
-                    <span className={`
-                      inline-flex px-2 py-1 text-xs font-medium rounded-full
-                      ${employee.isActive 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                      }
-                    `}>
-                      {employee.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEmployeeEdit?.(employee);
+                          }}
+                          className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEmployeeSelect?.(employee);
+                          }}
+                          className="p-1 text-gray-400 hover:text-green-600 transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
 
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEmployeeEdit?.(employee);
-                        }}
-                        className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEmployeeSelect?.(employee);
-                        }}
-                        className="p-1 text-gray-400 hover:text-green-600 transition-colors"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                  {/* Inline Expanded Details Row */}
+                  {selectedEmployee?.id === employee.id && (
+                    <tr className="bg-blue-50/50">
+                      <td colSpan={10} className="px-4 py-4">
+                        <div className="bg-white rounded-lg border border-blue-200 shadow-sm p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                              <Eye className="w-5 h-5 text-blue-600" />
+                              Employee Details
+                            </h4>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEmployeeSelect?.(null as any);
+                              }}
+                              className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                              ✕
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                              <h5 className="font-medium text-gray-900 mb-2 text-sm">Personal Information</h5>
+                              <div className="space-y-2 text-sm">
+                                <p><span className="font-medium">Name:</span> {employee.profile.firstName} {employee.profile.lastName}</p>
+                                <p><span className="font-medium">ID:</span> {employee.profile.employeeNumber}</p>
+                                <p><span className="font-medium">Email:</span> {employee.profile.email}</p>
+                                <p><span className="font-medium">Phone:</span> {employee.profile.phoneNumber || 'Not provided'}</p>
+                              </div>
+                            </div>
+                            <div>
+                              <h5 className="font-medium text-gray-900 mb-2 text-sm">Employment Details</h5>
+                              <div className="space-y-2 text-sm">
+                                <p><span className="font-medium">Department:</span> {employee.employment.department}</p>
+                                <p><span className="font-medium">Position:</span> {employee.employment.position}</p>
+                                <p><span className="font-medium">Manager:</span> {getManagerName(employee.employment.managerId)}</p>
+                                <p><span className="font-medium">Start Date:</span> {(() => {
+                                  const startDate = employee.employment?.startDate || employee.profile?.startDate;
+                                  if (!startDate) return 'Not set';
+
+                                  try {
+                                    if (startDate && typeof startDate.toDate === 'function') {
+                                      return startDate.toDate().toLocaleDateString();
+                                    }
+                                    if (startDate instanceof Date) {
+                                      return startDate.toLocaleDateString();
+                                    }
+                                    const parsed = new Date(startDate);
+                                    return !isNaN(parsed.getTime()) ? parsed.toLocaleDateString() : 'Invalid date';
+                                  } catch (error) {
+                                    return 'Invalid date';
+                                  }
+                                })()}</p>
+                                <p><span className="font-medium">Status:</span>
+                                  <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                                    employee.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {employee.isActive ? 'Active' : 'Inactive'}
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-3 mt-4 pt-4 border-t border-gray-200">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEmployeeEdit?.(employee);
+                              }}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                            >
+                              Edit Employee
+                            </button>
+                            {(user?.role?.id === 'hr-manager' || user?.role?.id === 'business-owner') && onEmployeePromote && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEmployeePromote(employee);
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                              >
+                                <UserPlus className="w-4 h-4" />
+                                Promote to Manager
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEmployeeDelete?.(employee);
+                              }}
+                              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                            >
+                              Archive Employee
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

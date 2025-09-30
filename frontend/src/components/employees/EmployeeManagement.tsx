@@ -18,6 +18,7 @@ import { EmployeeFormModal } from './EmployeeFormModal';
 import { EmployeeImportModal } from './EmployeeImportModal';
 import { EmployeeArchiveModal } from './EmployeeArchiveModal';
 import { EmployeeArchive } from './EmployeeArchive';
+import { EmployeePromotionModal } from './EmployeePromotionModal';
 import EmployeeOrganogram from './EmployeeOrganogram';
 import EmployeeTableBrowser from './EmployeeTableBrowser';
 import { MobileEmployeeManagement } from './MobileEmployeeManagement';
@@ -25,10 +26,11 @@ import { calculateEmployeePermissions } from '../../types';
 import type { Employee } from '../../types';
 import {
   Users, Plus, Upload, Grid, List, ChevronDown,
-  Workflow, FileSpreadsheet, Eye, Layout, Archive
+  Workflow, FileSpreadsheet, Eye, Layout, Archive, UserCheck
 } from 'lucide-react';
 // Import legacy skeleton loaders for 2012-era devices
 import { LegacySkeletonDashboard, LegacyLoadingMessage } from '../common/LegacySkeletonLoader';
+import { LoadingState } from '../common/LoadingState';
 
 export const EmployeeManagement: React.FC = () => {
   const { user, organization } = useAuth();
@@ -88,6 +90,7 @@ export const EmployeeManagement: React.FC = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [archivingEmployee, setArchivingEmployee] = useState<Employee | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [promotingEmployee, setPromotingEmployee] = useState<Employee | null>(null);
 
   const permissions = calculateEmployeePermissions(user?.role.id, user?.departmentIds);
 
@@ -144,15 +147,7 @@ export const EmployeeManagement: React.FC = () => {
     }
 
     // Full loading experience for modern devices
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center p-4">
-        <div className="text-center bg-white p-8 rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full">
-          <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
-          <h3 className="text-xl font-bold text-slate-800 mb-2">Loading Employees</h3>
-          <p className="text-slate-600">Fetching your team data...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState message="Loading employees..." size="lg" />;
   }
 
   return (
@@ -301,6 +296,7 @@ export const EmployeeManagement: React.FC = () => {
           onEmployeeSelect={handleEmployeeSelect}
           onEmployeeEdit={handleEmployeeEdit}
           onEmployeeDelete={handleEmployeeDelete}
+          onEmployeePromote={(employee) => setPromotingEmployee(employee)}
           onBulkAction={handleBulkAction}
           selectedEmployee={selectedEmployee}
           loading={loading}
@@ -392,82 +388,6 @@ export const EmployeeManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Compact Selected Employee Panel */}
-      {selectedEmployee && (
-        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-white/50 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Eye className="w-5 h-5 text-blue-600" />
-                Selected Employee
-              </h3>
-              <button
-                onClick={() => setSelectedEmployee(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Personal Information</h4>
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-medium">Name:</span> {selectedEmployee.profile.firstName} {selectedEmployee.profile.lastName}</p>
-                  <p><span className="font-medium">ID:</span> {selectedEmployee.profile.employeeNumber}</p>
-                  <p><span className="font-medium">Email:</span> {selectedEmployee.profile.email}</p>
-                  <p><span className="font-medium">Phone:</span> {selectedEmployee.profile.phoneNumber || 'Not provided'}</p>
-                </div>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Employment Details</h4>
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-medium">Department:</span> {selectedEmployee.employment.department}</p>
-                  <p><span className="font-medium">Position:</span> {selectedEmployee.employment.position}</p>
-                  <p><span className="font-medium">Start Date:</span> {(() => {
-                    const startDate = selectedEmployee.employment?.startDate || selectedEmployee.profile?.startDate;
-                    if (!startDate) return 'Not set';
-                    
-                    try {
-                      if (startDate && typeof startDate.toDate === 'function') {
-                        return startDate.toDate().toLocaleDateString();
-                      }
-                      if (startDate instanceof Date) {
-                        return startDate.toLocaleDateString();
-                      }
-                      const parsed = new Date(startDate);
-                      return !isNaN(parsed.getTime()) ? parsed.toLocaleDateString() : 'Invalid date';
-                    } catch (error) {
-                      return 'Invalid date';
-                    }
-                  })()}</p>
-                  <p><span className="font-medium">Status:</span> 
-                    <span className={`ml-2 px-2 py-1 rounded text-xs ${
-                      selectedEmployee.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {selectedEmployee.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            </div>
-            {permissions.canEdit && (
-              <div className="flex gap-3 mt-6 pt-4 border-t">
-                <button
-                  onClick={() => handleEmployeeEdit(selectedEmployee)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Edit Employee
-                </button>
-                <button
-                  onClick={() => handleEmployeeDelete(selectedEmployee)}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  Archive Employee
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
       {/* Compact Empty State */}
       {!loading && filteredEmployees.length === 0 && (
         <div className="bg-white/95 backdrop-blur-sm rounded-lg p-6 text-center shadow-lg border border-white/50">
@@ -517,6 +437,19 @@ export const EmployeeManagement: React.FC = () => {
             employee={archivingEmployee}
             onClose={() => setArchivingEmployee(null)}
             onArchive={handleEmployeeArchived}
+          />
+        )}
+
+        {promotingEmployee && organization && (
+          <EmployeePromotionModal
+            isOpen={true}
+            onClose={() => setPromotingEmployee(null)}
+            employee={promotingEmployee}
+            organizationId={organization.id}
+            onSuccess={() => {
+              loadEmployees();
+              setPromotingEmployee(null);
+            }}
           />
         )}
     </div>

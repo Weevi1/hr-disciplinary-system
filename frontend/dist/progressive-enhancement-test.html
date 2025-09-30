@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progressive Enhancement Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .test-result {
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        .premium {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            border-color: #28a745;
+            color: #155724;
+        }
+        .standard {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            border-color: #ffc107;
+            color: #856404;
+        }
+        .simplified {
+            background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+        .feature-box {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px dashed #ccc;
+        }
+        .modern-features {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));
+            border-color: #3b82f6;
+        }
+        .legacy-features {
+            background: #f8f9fa;
+            border-color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Progressive Enhancement Verification</h1>
+    <p><strong>Purpose:</strong> Verify that 2025 devices get cutting-edge features while 2012 devices get functional excellence</p>
+
+    <div id="results"></div>
+
+    <div class="feature-box modern-features" id="modern-box">
+        <h3>🌟 Modern Device Features (2025)</h3>
+        <p>These features should only appear on high-performance devices:</p>
+        <ul id="modern-features"></ul>
+    </div>
+
+    <div class="feature-box legacy-features" id="legacy-box">
+        <h3>📱 Legacy Device Features (2012)</h3>
+        <p>Simplified, functional features for older devices:</p>
+        <ul id="legacy-features"></ul>
+    </div>
+
+    <script>
+        // Import the progressive enhancement utilities
+        function runProgressiveEnhancementTest() {
+            const results = document.getElementById('results');
+            const modernFeatures = document.getElementById('modern-features');
+            const legacyFeatures = document.getElementById('legacy-features');
+
+            // Device Information
+            const deviceInfo = {
+                userAgent: navigator.userAgent,
+                hardwareConcurrency: navigator.hardwareConcurrency || 'Unknown',
+                deviceMemory: navigator.deviceMemory || 'Unknown',
+                connectionType: navigator.connection?.effectiveType || 'Unknown',
+                screenWidth: screen.width,
+                screenHeight: screen.height,
+                devicePixelRatio: window.devicePixelRatio || 1
+            };
+
+            // Capability Tests
+            const capabilities = {
+                hasModernJS: testModernJS(),
+                hasAdvancedCSS: testAdvancedCSS(),
+                hasWebRTC: testWebRTC(),
+                hasAdvancedGraphics: testAdvancedGraphics(),
+                hasMediaRecorder: 'MediaRecorder' in window,
+                hasServiceWorker: 'serviceWorker' in navigator,
+                hasWebGL: testWebGL(),
+                hasTouchEvents: 'ontouchstart' in window
+            };
+
+            // Determine device tier
+            const isLegacyDevice = /Android [234]\./.test(navigator.userAgent) ||
+                                  /OS [67]_/.test(navigator.userAgent);
+            const cores = navigator.hardwareConcurrency || 2;
+            const memory = navigator.deviceMemory || 2;
+
+            let deviceTier = 'simplified';
+            let cssClasses = ['perf-low', 'memory-low', 'visual-simplified', 'anim-minimal'];
+
+            if (!isLegacyDevice) {
+                if (cores >= 8 && memory >= 8) {
+                    deviceTier = 'premium';
+                    cssClasses = ['perf-high', 'memory-high', 'visual-premium', 'anim-full', 'modern-css', 'webrtc', 'advanced-graphics'];
+                } else if (cores >= 4 && memory >= 4) {
+                    deviceTier = 'standard';
+                    cssClasses = ['perf-medium', 'memory-medium', 'visual-standard', 'anim-reduced'];
+                }
+            }
+
+            // Apply CSS classes to document
+            document.documentElement.classList.add(...cssClasses);
+
+            // Display results
+            let html = '<h2>🔍 Device Analysis Results</h2>';
+
+            // Device tier result
+            const tierClass = deviceTier === 'premium' ? 'premium' :
+                             deviceTier === 'standard' ? 'standard' : 'simplified';
+
+            html += `<div class="test-result ${tierClass}">
+                <h3>🎯 Device Tier: ${deviceTier.toUpperCase()}</h3>
+                <p><strong>CSS Classes Applied:</strong> ${cssClasses.join(', ')}</p>
+                <p><strong>Experience Level:</strong> ${getExperienceDescription(deviceTier)}</p>
+            </div>`;
+
+            // Capability results
+            html += '<div class="test-result info"><h3>📊 Device Capabilities</h3>';
+            Object.entries(capabilities).forEach(([key, value]) => {
+                const icon = value ? '✅' : '❌';
+                html += `<div><strong>${key}:</strong> ${icon} ${value}</div>`;
+            });
+            html += '</div>';
+
+            // Device info
+            html += '<div class="test-result info"><h3>🔧 Device Information</h3>';
+            Object.entries(deviceInfo).forEach(([key, value]) => {
+                html += `<div><strong>${key}:</strong> ${value}</div>`;
+            });
+            html += '</div>';
+
+            results.innerHTML = html;
+
+            // Populate feature lists
+            populateFeatureLists(deviceTier, capabilities);
+        }
+
+        function testModernJS() {
+            try {
+                eval('const test = () => {}; class Test {}; async function asyncTest() {}');
+                return typeof WeakMap !== 'undefined' &&
+                       typeof Symbol !== 'undefined' &&
+                       typeof Promise !== 'undefined';
+            } catch {
+                return false;
+            }
+        }
+
+        function testAdvancedCSS() {
+            if (!CSS || !CSS.supports) return false;
+            return CSS.supports('display', 'grid') &&
+                   CSS.supports('color', 'var(--test)') &&
+                   CSS.supports('backdrop-filter', 'blur(10px)');
+        }
+
+        function testWebRTC() {
+            return !!(navigator.mediaDevices?.getUserMedia) &&
+                   typeof RTCPeerConnection !== 'undefined' &&
+                   'MediaRecorder' in window;
+        }
+
+        function testAdvancedGraphics() {
+            const canvas = document.createElement('canvas');
+            const webgl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            return !!(webgl && window.requestAnimationFrame);
+        }
+
+        function testWebGL() {
+            const canvas = document.createElement('canvas');
+            return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+        }
+
+        function getExperienceDescription(tier) {
+            switch(tier) {
+                case 'premium':
+                    return '🚀 Cutting-edge features: Glass morphism, advanced animations, WebRTC, full audio recording, premium UI';
+                case 'standard':
+                    return '⚡ Enhanced features: Modern layouts, smooth animations, responsive design, good performance';
+                case 'simplified':
+                    return '📱 Functional excellence: Clean interface, essential features, optimized for performance and reliability';
+                default:
+                    return 'Unknown tier';
+            }
+        }
+
+        function populateFeatureLists(tier, capabilities) {
+            const modernFeatures = document.getElementById('modern-features');
+            const legacyFeatures = document.getElementById('legacy-features');
+
+            if (tier === 'premium') {
+                modernFeatures.innerHTML = `
+                    <li>✨ Glass morphism UI effects</li>
+                    <li>🎬 Advanced animations and micro-interactions</li>
+                    <li>🎤 Full WebRTC audio recording</li>
+                    <li>🖼️ GPU-accelerated graphics</li>
+                    <li>📊 Virtualized lists for large datasets</li>
+                    <li>🌙 Premium dark theme with neon effects</li>
+                    <li>🎯 Advanced touch gestures</li>
+                    <li>💎 Premium typography with ligatures</li>
+                `;
+                legacyFeatures.innerHTML = '<li><em>Legacy features disabled on premium devices</em></li>';
+            } else if (tier === 'standard') {
+                modernFeatures.innerHTML = `
+                    <li>⚡ Smooth animations</li>
+                    <li>📱 Responsive grid layouts</li>
+                    <li>🎨 Enhanced themes</li>
+                    <li>🔄 Progressive loading</li>
+                `;
+                legacyFeatures.innerHTML = `
+                    <li>📄 Pagination instead of virtualization</li>
+                    <li>🎯 Standard touch targets</li>
+                    <li>⏱️ Reduced animation duration</li>
+                `;
+            } else {
+                modernFeatures.innerHTML = '<li><em>Advanced features disabled for optimal performance</em></li>';
+                legacyFeatures.innerHTML = `
+                    <li>📱 48px touch targets for Android 4.x</li>
+                    <li>🎯 Simplified layouts</li>
+                    <li>⚡ Minimal animations</li>
+                    <li>💾 Memory-optimized components</li>
+                    <li>📄 Text-only PDF generation</li>
+                    <li>📞 Phone/SMS fallbacks for audio</li>
+                    <li>🎨 Solid colors instead of gradients</li>
+                    <li>⌨️ Keyboard-optimized inputs</li>
+                `;
+            }
+        }
+
+        // Run test when page loads
+        document.addEventListener('DOMContentLoaded', runProgressiveEnhancementTest);
+    </script>
+</body>
+</html>

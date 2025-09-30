@@ -11,9 +11,14 @@ import { useHRReportsData } from '../../hooks/dashboard/useHRReportsData';
 import { useEnhancedHRDashboard } from '../../hooks/dashboard/useEnhancedHRDashboard';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
 import { useDashboardData } from '../../hooks/dashboard/useDashboardData';
+import { useHistoricalWarningCountdown } from '../../hooks/useHistoricalWarningCountdown';
+import { useAuth } from '../../auth/AuthContext';
+import { useOrganization } from '../../contexts/OrganizationContext';
 import { CategoryManagement } from '../admin/CategoryManagement';
+import { DepartmentManagement } from '../admin/DepartmentManagement';
 import WarningsReviewDashboard from '../warnings/ReviewDashboard';
 import { EmployeeManagement } from '../employees/EmployeeManagement';
+import { ManualWarningEntry } from '../warnings/ManualWarningEntry';
 
 // Import themed components
 import { ThemedCard, ThemedBadge, ThemedAlert } from '../common/ThemedCard';
@@ -49,6 +54,10 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
   const { hrReportsCount, hrCountsLoading, hrCountsError, refreshHRCounts, lastUpdated } = useHRReportsData();
   const { canManageCategories } = useMultiRolePermissions();
 
+  // Auth and Organization context for manual warning entry
+  const { user } = useAuth();
+  const { organization, categories } = useOrganization();
+
   // Calculate stats from unified data
   const warningStats = {
     totalActive: warnings?.length || 0,
@@ -65,12 +74,21 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
       return created > thirtyDaysAgo;
     })?.length || 0
   };
-  
+
   // State management
   const [showCategoryManagement, setShowCategoryManagement] = useState(false);
+  const [showDepartmentManagement, setShowDepartmentManagement] = useState(false);
+  const [showManualWarningEntry, setShowManualWarningEntry] = useState(false);
   const [activeView, setActiveView] = useState<'urgent' | 'actions' | 'warnings' | 'employees'>('urgent');
   const [selectedDeliveryNotification, setSelectedDeliveryNotification] = useState<any>(null);
   const [showDeliveryWorkflow, setShowDeliveryWorkflow] = useState(false);
+
+  // 📅 Historical Warning 60-Day Countdown (must be after activeView state)
+  const countdown = useHistoricalWarningCountdown(
+    user?.uid,
+    organization?.id,
+    activeView === 'warnings'
+  );
 
   // Enhanced delivery workflow handlers
   const handleStartDeliveryWorkflow = (notification: any) => {
@@ -319,6 +337,92 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
               </div>
             </ThemedCard>
           )}
+
+          {/* 📄 MANUAL WARNING ENTRY CARD - MOBILE */}
+          {!countdown.isExpired && (
+            <ThemedCard
+              padding="md"
+              shadow="sm"
+              hover
+              onClick={() => setShowManualWarningEntry(true)}
+              className={`cursor-pointer text-left ${
+                countdown.urgencyLevel === 'urgent' ? 'border-2 border-red-500' :
+                countdown.urgencyLevel === 'warning' ? 'border-2 border-orange-500' : ''
+              }`}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    countdown.urgencyLevel === 'urgent' ? 'bg-red-100 dark:bg-red-900/30' :
+                    countdown.urgencyLevel === 'warning' ? 'bg-orange-100 dark:bg-orange-900/30' :
+                    'bg-amber-100 dark:bg-amber-900/30'
+                  }`}>
+                    <FileText className={`w-5 h-5 ${
+                      countdown.urgencyLevel === 'urgent' ? 'text-red-600 dark:text-red-400' :
+                      countdown.urgencyLevel === 'warning' ? 'text-orange-600 dark:text-orange-400' :
+                      'text-amber-600 dark:text-amber-400'
+                    }`} />
+                  </div>
+                  <div>
+                    <div className="font-semibold" style={{ color: 'var(--color-text)' }}>Manual Warning Entry</div>
+                    <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      {countdown.daysRemaining !== null ? (
+                        <span className={
+                          countdown.urgencyLevel === 'urgent' ? 'text-red-600 font-semibold' :
+                          countdown.urgencyLevel === 'warning' ? 'text-orange-600 font-semibold' :
+                          'text-amber-600'
+                        }>
+                          {countdown.daysRemaining === 0 ? 'Last day!' :
+                           countdown.daysRemaining === 1 ? '1 day left!' :
+                           countdown.daysRemaining <= 7 ? `${countdown.daysRemaining} days left - Hurry!` :
+                           `${countdown.daysRemaining} days left`}
+                        </span>
+                      ) : 'Enter historical warnings'}
+                    </div>
+                  </div>
+                </div>
+                <ThemedBadge
+                  variant={
+                    countdown.urgencyLevel === 'urgent' ? 'error' :
+                    countdown.urgencyLevel === 'warning' ? 'warning' : 'warning'
+                  }
+                  size="sm"
+                >
+                  {countdown.urgencyLevel === 'urgent' ? 'Urgent!' : 'Historical'}
+                </ThemedBadge>
+              </div>
+              <div className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+                Capture warnings from physical documents
+              </div>
+            </ThemedCard>
+          )}
+
+          {/* 🏢 DEPARTMENT MANAGEMENT CARD - MOBILE */}
+          <ThemedCard
+            padding="md"
+            shadow="sm"
+            hover
+            onClick={() => setShowDepartmentManagement(true)}
+            className="cursor-pointer text-left"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-accent)', opacity: 0.1 }}>
+                  <Building2 className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
+                </div>
+                <div>
+                  <div className="font-semibold" style={{ color: 'var(--color-text)' }}>Department Management</div>
+                  <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Manage departments</div>
+                </div>
+              </div>
+              <ThemedBadge variant="success" size="sm">
+                HR Access
+              </ThemedBadge>
+            </div>
+            <div className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+              Create, edit, and assign department managers
+            </div>
+          </ThemedCard>
         </div>
 
         {/* Category Management Modal - Mobile */}
@@ -326,6 +430,31 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
           <CategoryManagement
             onClose={() => setShowCategoryManagement(false)}
             initialTab="overview"
+          />
+        )}
+
+        {/* Manual Warning Entry Modal - Mobile & Desktop */}
+        {showManualWarningEntry && user && organization && (
+          <ManualWarningEntry
+            isOpen={showManualWarningEntry}
+            onClose={() => setShowManualWarningEntry(false)}
+            onSuccess={() => {
+              setShowManualWarningEntry(false);
+              refreshData();
+            }}
+            employees={employees || []}
+            categories={categories || []}
+            currentUserId={user.uid}
+            organizationId={organization.id}
+          />
+        )}
+
+        {/* Department Management Modal - Mobile & Desktop */}
+        {showDepartmentManagement && organization && (
+          <DepartmentManagement
+            isOpen={showDepartmentManagement}
+            onClose={() => setShowDepartmentManagement(false)}
+            organizationId={organization.id}
           />
         )}
 
@@ -718,6 +847,31 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
           {/* Warnings Tab Content */}
           {activeView === 'warnings' && (
             <div className="space-y-4">
+              {/* Manual Warning Entry Button with Countdown */}
+              {!countdown.isExpired && (
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900">Warnings Management</h3>
+                    <p className="text-sm text-gray-600">Digital and historical warning records</p>
+                  </div>
+                  <ThemedButton
+                    variant="outline"
+                    size="md"
+                    icon={FileText}
+                    onClick={() => setShowManualWarningEntry(true)}
+                    className={`${
+                      countdown.urgencyLevel === 'urgent'
+                        ? 'border-red-500 text-red-700 hover:bg-red-50 font-semibold animate-pulse'
+                        : countdown.urgencyLevel === 'warning'
+                        ? 'border-orange-500 text-orange-700 hover:bg-orange-50 font-semibold'
+                        : 'border-amber-500 text-amber-700 hover:bg-amber-50'
+                    }`}
+                  >
+                    {countdown.loading ? 'Enter Historical Warning' : countdown.displayText}
+                  </ThemedButton>
+                </div>
+              )}
+
               {/* Compact Warnings Overview */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
@@ -730,7 +884,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-red-50 rounded-lg p-4 border border-red-200">
                   <div className="flex items-center gap-3">
                     <Shield className="w-8 h-8 text-red-600" />
@@ -741,7 +895,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                   <div className="flex items-center gap-3">
                     <FileText className="w-8 h-8 text-blue-600" />
