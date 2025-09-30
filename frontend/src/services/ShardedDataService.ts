@@ -77,8 +77,13 @@ export class ShardedDataService {
 
       // Filter out metadata documents and keep only active employees
       const activeEmployees = result.documents.filter(employee => {
-        // Exclude metadata documents (they don't have profile or employment data)
-        if (!employee.profile || employee.id === 'metadata') {
+        // Exclude metadata documents by ID
+        if (employee.id === 'metadata') {
+          return false;
+        }
+        // Keep employees even with partial profile data (e.g., newly created HR managers)
+        // Only exclude if completely missing critical data
+        if (!employee.profile && !employee.firstName && !employee.lastName) {
           return false;
         }
         // Consider employee active if isActive is true or null/undefined (default to active)

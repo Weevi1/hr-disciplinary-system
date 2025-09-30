@@ -70,35 +70,42 @@ export const EmployeeImportModal: React.FC<EmployeeImportModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+      <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-xl">
         {/* Header */}
-        <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">📊 Import Employees from CSV</h2>
-            <p className="text-green-100 mt-1">
-              Bulk import multiple employees at once
-            </p>
+        <div className="bg-white border-b border-gray-200 p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center flex-shrink-0">
+              <span className="text-lg">📊</span>
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-gray-900">Import Employees from CSV</h2>
+              <p className="text-xs text-gray-600">
+                Bulk import multiple employees
+              </p>
+            </div>
           </div>
           {!isImporting && (
             <button
               onClick={handleClose}
-              className="text-green-100 hover:text-white transition-colors text-2xl leading-none"
+              className="text-gray-400 hover:text-gray-600 transition-colors"
             >
-              ×
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           )}
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-4">
           {currentStep === 'upload' && (
-            <div className="space-y-6">
+            <div className="space-y-3">
               {/* Instructions */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-900 mb-2">
-                  📋 Import Instructions
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <h3 className="text-xs font-semibold text-blue-900 mb-1.5 flex items-center gap-1">
+                  <span>📋</span> Import Instructions
                 </h3>
-                <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
+                <ol className="list-decimal list-inside space-y-0.5 text-xs text-blue-800">
                   <li>Download the CSV template below</li>
                   <li>Fill in employee information following the template format</li>
                   <li>Save the file as CSV (comma-separated values)</li>
@@ -110,9 +117,9 @@ export const EmployeeImportModal: React.FC<EmployeeImportModalProps> = ({
               <div className="text-center">
                 <button
                   onClick={downloadTemplate}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                   Download CSV Template
@@ -120,7 +127,7 @@ export const EmployeeImportModal: React.FC<EmployeeImportModalProps> = ({
               </div>
 
               {/* File Upload */}
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
                 <input
                   type="file"
                   accept=".csv"
@@ -129,28 +136,28 @@ export const EmployeeImportModal: React.FC<EmployeeImportModalProps> = ({
                   id="csv-upload"
                 />
                 <label htmlFor="csv-upload" className="cursor-pointer">
-                  <div className="text-6xl mb-4">📁</div>
-                  <p className="text-lg font-medium text-gray-700 mb-2">
+                  <div className="text-4xl mb-2">📁</div>
+                  <p className="text-sm font-medium text-gray-700 mb-1">
                     Click to upload CSV file
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-xs text-gray-500">
                     or drag and drop your file here
                   </p>
                 </label>
               </div>
 
               {/* Sample Data */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 mb-2">Sample CSV Format:</h4>
-                <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+              <div className="bg-gray-50 rounded-lg p-3">
+                <h4 className="text-xs font-semibold text-gray-900 mb-2">Sample CSV Format:</h4>
+                <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
                   <strong>💡 Tip:</strong> Leave employeeNumber empty to auto-generate next available number
                 </div>
-                <pre className="text-xs bg-white p-3 rounded border overflow-x-auto">
+                <pre className="text-[10px] bg-white p-2 rounded border overflow-x-auto leading-relaxed">
 {`employeeNumber,firstName,lastName,email,phoneNumber,whatsappNumber,department,position,startDate,contractType,preferredDeliveryMethod
 EMP001,John,Doe,john.doe@company.com,+27123456789,+27123456789,Engineering,Software Developer,2024-01-15,permanent,email
 ,Jane,Smith,jane.smith@company.com,+27987654321,+27987654321,Human Resources,HR Manager,2023-06-01,permanent,whatsapp`}
                 </pre>
-                <p className="text-xs text-gray-600 mt-2">
+                <p className="text-[10px] text-gray-600 mt-1.5">
                   Notice: Jane Smith has an empty employee number - the system will auto-generate one
                 </p>
               </div>
@@ -158,35 +165,35 @@ EMP001,John,Doe,john.doe@company.com,+27123456789,+27123456789,Engineering,Softw
           )}
 
           {currentStep === 'preview' && csvData.length > 0 && (
-            <div className="space-y-6">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-green-800">
+            <div className="space-y-3">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-2.5">
+                <p className="text-xs text-green-800">
                   ✅ Found <strong>{csvData.length}</strong> employees ready to import
                 </p>
               </div>
 
               {/* Preview Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                <table className="w-full text-xs">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-2 text-left font-medium text-gray-700">Employee #</th>
-                      <th className="px-4 py-2 text-left font-medium text-gray-700">Name</th>
-                      <th className="px-4 py-2 text-left font-medium text-gray-700">Email</th>
-                      <th className="px-4 py-2 text-left font-medium text-gray-700">Department</th>
-                      <th className="px-4 py-2 text-left font-medium text-gray-700">Position</th>
-                      <th className="px-4 py-2 text-left font-medium text-gray-700">Start Date</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-700">Employee #</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-700">Name</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-700">Email</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-700">Department</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-700">Position</th>
+                      <th className="px-3 py-2 text-left font-medium text-gray-700">Start Date</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {csvData.slice(0, 10).map((row, index) => (
                       <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-4 py-2">{row.employeeNumber}</td>
-                        <td className="px-4 py-2">{row.firstName} {row.lastName}</td>
-                        <td className="px-4 py-2">{row.email}</td>
-                        <td className="px-4 py-2">{row.department}</td>
-                        <td className="px-4 py-2">{row.position}</td>
-                        <td className="px-4 py-2">{row.startDate}</td>
+                        <td className="px-3 py-2">{row.employeeNumber}</td>
+                        <td className="px-3 py-2">{row.firstName} {row.lastName}</td>
+                        <td className="px-3 py-2">{row.email}</td>
+                        <td className="px-3 py-2">{row.department}</td>
+                        <td className="px-3 py-2">{row.position}</td>
+                        <td className="px-3 py-2">{row.startDate}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -194,25 +201,25 @@ EMP001,John,Doe,john.doe@company.com,+27123456789,+27123456789,Engineering,Softw
               </div>
 
               {csvData.length > 10 && (
-                <p className="text-center text-gray-500 text-sm">
+                <p className="text-center text-gray-500 text-xs">
                   ... and {csvData.length - 10} more employees
                 </p>
               )}
 
               {/* Actions */}
-              <div className="flex gap-4 justify-end">
+              <div className="flex gap-2 justify-end">
                 <button
                   onClick={() => {
                     setCurrentStep('upload');
                     resetImport();
                   }}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  className="px-3 py-1.5 text-xs border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
                 >
                   Upload Different File
                 </button>
                 <button
                   onClick={handleImportClick}
-                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                  className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
                 >
                   Import {csvData.length} Employees
                 </button>
@@ -221,35 +228,35 @@ EMP001,John,Doe,john.doe@company.com,+27123456789,+27123456789,Engineering,Softw
           )}
 
           {currentStep === 'importing' && (
-            <div className="space-y-6 text-center">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <div className="text-6xl mb-4">⚡</div>
-                <h3 className="text-xl font-bold text-blue-900 mb-2">
+            <div className="space-y-3 text-center">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="text-4xl mb-3">⚡</div>
+                <h3 className="text-sm font-bold text-blue-900 mb-1">
                   Importing Employees
                 </h3>
-                <p className="text-blue-700 mb-4">
+                <p className="text-xs text-blue-700 mb-3">
                   Please wait while we create your employees...
                 </p>
-                
+
                 {/* Progress Bar */}
-                <div className="w-full bg-blue-200 rounded-full h-4 mb-4">
-                  <div 
-                    className="bg-blue-600 h-4 rounded-full transition-all duration-300 ease-out"
+                <div className="w-full bg-blue-200 rounded-full h-3 mb-3">
+                  <div
+                    className="bg-blue-600 h-3 rounded-full transition-all duration-300 ease-out"
                     style={{ width: `${importProgress}%` }}
                   ></div>
                 </div>
-                
-                <div className="space-y-2">
-                  <p className="text-lg font-semibold text-blue-800">
+
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-blue-800">
                     {importProgress}% Complete
                   </p>
-                  <p className="text-sm text-blue-600 min-h-[1.5rem]">
+                  <p className="text-xs text-blue-600 min-h-[1rem]">
                     {currentImportStep}
                   </p>
                 </div>
               </div>
-              
-              <div className="text-xs text-gray-500">
+
+              <div className="text-[10px] text-gray-500 space-y-0.5">
                 <p>⏱️ This may take a few moments depending on the number of employees</p>
                 <p>🔄 Please don't close this window during the import process</p>
               </div>
@@ -257,9 +264,9 @@ EMP001,John,Doe,john.doe@company.com,+27123456789,+27123456789,Engineering,Softw
           )}
 
           {currentStep === 'result' && importResult && (
-            <div className="space-y-6">
+            <div className="space-y-3">
               {/* Summary */}
-              <div className={`border rounded-lg p-6 ${
+              <div className={`border rounded-lg p-4 ${
                 importResult.success && importResult.failed === 0
                   ? 'bg-green-50 border-green-200'
                   : importResult.imported > 0
@@ -267,18 +274,18 @@ EMP001,John,Doe,john.doe@company.com,+27123456789,+27123456789,Engineering,Softw
                   : 'bg-red-50 border-red-200'
               }`}>
                 <div className="text-center">
-                  <div className="text-6xl mb-4">
-                    {importResult.success && importResult.failed === 0 ? '✅' : 
+                  <div className="text-4xl mb-2">
+                    {importResult.success && importResult.failed === 0 ? '✅' :
                      importResult.imported > 0 ? '⚠️' : '❌'}
                   </div>
-                  <h3 className="text-xl font-bold mb-2">
-                    {importResult.success && importResult.failed === 0 
-                      ? 'Import Successful!' 
-                      : importResult.imported > 0 
-                      ? 'Partial Import Complete' 
+                  <h3 className="text-sm font-bold mb-2">
+                    {importResult.success && importResult.failed === 0
+                      ? 'Import Successful!'
+                      : importResult.imported > 0
+                      ? 'Partial Import Complete'
                       : 'Import Failed'}
                   </h3>
-                  <div className="space-y-1">
+                  <div className="space-y-0.5 text-xs">
                     <p className="text-green-700">
                       ✅ Successfully imported: <strong>{importResult.imported}</strong> employees
                     </p>
@@ -293,11 +300,11 @@ EMP001,John,Doe,john.doe@company.com,+27123456789,+27123456789,Engineering,Softw
 
               {/* Errors */}
               {importResult.errors.length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-red-900 mb-2">Import Errors:</h4>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <h4 className="text-xs font-semibold text-red-900 mb-1.5">Import Errors:</h4>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
                     {importResult.errors.map((error, index) => (
-                      <div key={index} className="text-sm text-red-700">
+                      <div key={index} className="text-xs text-red-700">
                         <strong>Row {error.row}:</strong> {error.message}
                       </div>
                     ))}
@@ -309,7 +316,7 @@ EMP001,John,Doe,john.doe@company.com,+27123456789,+27123456789,Engineering,Softw
               <div className="flex justify-center">
                 <button
                   onClick={handleClose}
-                  className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium"
+                  className="px-4 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 font-medium"
                 >
                   Close
                 </button>

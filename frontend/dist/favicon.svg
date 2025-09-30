@@ -1,0 +1,17 @@
+<svg width="32" height="32" viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simplified logo for favicon -->
+  <g fill="none" stroke="#1f2937" stroke-width="4">
+    <!-- Main folder -->
+    <path d="M25 45 L175 45 Q185 45 185 55 L185 120 Q185 130 175 130 L45 130 Q35 130 35 120 L35 55 Q35 45 45 45 Z" 
+          fill="#f8fafc" opacity="0.95"/>
+    
+    <!-- Folder tab -->
+    <path d="M35 45 L35 35 Q35 25 45 25 L85 25 Q95 25 95 35 L95 45" 
+          fill="none"/>
+  </g>
+  
+  <!-- Simplified "File" text -->
+  <text x="100" y="90" text-anchor="middle" fill="#1f2937" font-family="monospace" font-size="20" font-weight="bold">
+    &lt; F &gt;
+  </text>
+</svg>

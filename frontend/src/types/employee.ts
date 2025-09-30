@@ -301,19 +301,19 @@ const safeDateToString = (date: any): string => {
 
 export const createFormFromEmployee = (employee: Employee): EmployeeFormData => {
   return {
-    employeeNumber: employee.profile.employeeNumber,
-    firstName: employee.profile.firstName,
-    lastName: employee.profile.lastName,
-    email: employee.profile.email,
-    phoneNumber: employee.profile.phoneNumber || '',
-    whatsappNumber: employee.profile.whatsappNumber || '',
-    department: employee.profile.department,
-    position: employee.profile.position,
-    startDate: safeDateToString(employee.profile.startDate),
-    contractType: employee.employment.contractType,
-    probationEndDate: safeDateToString(employee.employment.probationEndDate),
-    managerId: employee.employment.managerId || '',
-    isActive: employee.isActive
+    employeeNumber: employee.profile?.employeeNumber || '',
+    firstName: employee.profile?.firstName || '',
+    lastName: employee.profile?.lastName || '',
+    email: employee.profile?.email || '',
+    phoneNumber: employee.profile?.phoneNumber || '',
+    whatsappNumber: employee.profile?.whatsappNumber || '',
+    department: employee.profile?.department || '',
+    position: employee.profile?.position || '',
+    startDate: safeDateToString(employee.profile?.startDate),
+    contractType: employee.employment?.contractType || 'permanent',
+    probationEndDate: safeDateToString(employee.employment?.probationEndDate),
+    managerId: employee.employment?.managerId || '',
+    isActive: employee.isActive ?? true
   };
 };
 
@@ -418,9 +418,19 @@ export const filterEmployees = (
   currentUserId?: string
 ): Employee[] => {
   return employees.filter(employee => {
-    // Defensive check for employee structure
-    if (!employee || !employee.profile) {
+    // Defensive check for employee structure - be more lenient
+    if (!employee) {
       return false;
+    }
+
+    // Log employee structure for debugging HOD manager issues
+    if (userRole === 'hod-manager' && !employee.profile) {
+      console.warn('🔍 [FILTER DEBUG] Employee missing profile:', {
+        id: employee.id,
+        hasEmployment: !!employee.employment,
+        managerId: employee.employment?.managerId,
+        currentUserId
+      });
     }
 
     // For HOD users, filter by manager relationship only
@@ -437,7 +447,7 @@ export const filterEmployees = (
       // HR can later assign specific managers to employees
     } else if (!permissions.canViewAll && permissions.canViewDepartments.length > 0) {
       // For other roles (like department heads), still use department filtering
-      const employeeDepartment = employee.profile.department;
+      const employeeDepartment = employee.profile?.department;
       if (!employeeDepartment || !permissions.canViewDepartments.includes(employeeDepartment)) {
         return false;
       }
@@ -454,15 +464,15 @@ export const filterEmployees = (
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       const matchesSearch =
-        (employee.profile.firstName?.toLowerCase() || '').includes(searchLower) ||
-        (employee.profile.lastName?.toLowerCase() || '').includes(searchLower) ||
-        (employee.profile.employeeNumber?.toLowerCase() || '').includes(searchLower) ||
-        (employee.profile.email?.toLowerCase() || '').includes(searchLower);
+        (employee.profile?.firstName?.toLowerCase() || '').includes(searchLower) ||
+        (employee.profile?.lastName?.toLowerCase() || '').includes(searchLower) ||
+        (employee.profile?.employeeNumber?.toLowerCase() || '').includes(searchLower) ||
+        (employee.profile?.email?.toLowerCase() || '').includes(searchLower);
 
       if (!matchesSearch) return false;
     }
 
-    if (filters.department && employee.profile.department !== filters.department) {
+    if (filters.department && employee.profile?.department !== filters.department) {
       return false;
     }
 

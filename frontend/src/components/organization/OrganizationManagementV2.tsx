@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Users, UserPlus, Settings, Building2, Shield,
   Plus, Eye, Edit, Trash2, AlertCircle, CheckCircle,
-  Crown, TrendingUp, Calendar, Mail, Phone, Archive, RotateCcw, X
+  Crown, Calendar, Mail, Phone, Archive, RotateCcw, X
 } from 'lucide-react';
 
 import { useAuth } from '../../auth/AuthContext';
@@ -21,6 +21,7 @@ import { userCreationManager } from '../../utils/userCreationContext';
 import DepartmentService from '../../services/DepartmentService';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../config/firebase';
+import { LoadingState } from '../common/LoadingState';
 import Logger from '../../utils/logger';
 
 // Types
@@ -51,7 +52,6 @@ interface OrganizationStats {
   totalEmployees: number;
   totalDepartments: number;
   activeWarnings: number;
-  monthlyGrowth: number;
 }
 
 // V2 Add User Modal Component
@@ -460,8 +460,7 @@ export const OrganizationManagementV2 = memo(() => {
     totalUsers: 0,
     totalEmployees: 0,
     totalDepartments: 0,
-    activeWarnings: 0,
-    monthlyGrowth: 0
+    activeWarnings: 0
   });
   const [loading, setLoading] = useState(true);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
@@ -536,8 +535,7 @@ export const OrganizationManagementV2 = memo(() => {
         totalUsers: organizationUsers.length,
         totalEmployees: employeesResult.documents.length,
         totalDepartments: realDepartments.length,
-        activeWarnings,
-        monthlyGrowth: 12.5 // Mock growth - replace with real calculation
+        activeWarnings
       };
 
       setUsers(organizationUsers);
@@ -716,24 +714,12 @@ export const OrganizationManagementV2 = memo(() => {
   };
 
   if (loading) {
-    return (
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 rounded w-1/3"></div>
-          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="h-20 bg-gray-200 rounded"></div>
-            <div className="h-20 bg-gray-200 rounded"></div>
-            <div className="h-20 bg-gray-200 rounded"></div>
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingState message="Loading organization..." />;
   }
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-3">
         {/* Success Message */}
         {successMessage && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 animate-in fade-in duration-300">
@@ -752,211 +738,146 @@ export const OrganizationManagementV2 = memo(() => {
           </div>
         )}
 
-        {/* Header with Stats */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 text-white">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Building2 className="w-8 h-8" />
-              <div>
-                <h2 className="text-2xl font-bold">Organization Management</h2>
-                <p className="text-blue-100">Manage users, departments, and organizational structure</p>
+        {/* Compact Header with Actions */}
+        <div className="bg-white border border-gray-200 rounded-lg p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-4">
+              <h2 className="text-base font-bold text-gray-900">Organization Management</h2>
+              <div className="flex items-center gap-3 text-xs text-gray-600">
+                <span className="flex items-center gap-1">
+                  <Users className="w-3 h-3" />
+                  {stats.totalUsers} users
+                </span>
+                <span className="flex items-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  {stats.totalEmployees} employees
+                </span>
+                <span className="flex items-center gap-1">
+                  <Building2 className="w-3 h-3" />
+                  {stats.totalDepartments} depts
+                </span>
               </div>
             </div>
-            <div className="text-xs bg-white/20 backdrop-blur px-4 py-2 rounded-full font-semibold">
-              V2 Architecture
+
+            <div className="flex items-center gap-2">
+              {canCreateHRManagers() && (
+                <button
+                  onClick={() => handleAddUser('hr-manager')}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 rounded-md transition-colors"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Add HR Manager
+                </button>
+              )}
+              {canCreateHODManagers() && (
+                <button
+                  onClick={() => handleAddUser('hod-manager')}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 rounded-md transition-colors"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  Add Dept Manager
+                </button>
+              )}
+              {canManageUsers() && (
+                <button
+                  onClick={() => navigate('/users')}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 rounded-md transition-colors"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  User Management
+                </button>
+              )}
             </div>
           </div>
-
-          {/* Key Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
-              <Users className="w-6 h-6 mx-auto mb-2 text-blue-200" />
-              <div className="text-2xl font-bold">{stats.totalUsers}</div>
-              <div className="text-xs text-blue-200">System Users</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
-              <Shield className="w-6 h-6 mx-auto mb-2 text-blue-200" />
-              <div className="text-2xl font-bold">{stats.totalEmployees}</div>
-              <div className="text-xs text-blue-200">Employees</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
-              <Building2 className="w-6 h-6 mx-auto mb-2 text-blue-200" />
-              <div className="text-2xl font-bold">{stats.totalDepartments}</div>
-              <div className="text-xs text-blue-200">Departments</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
-              <TrendingUp className="w-6 h-6 mx-auto mb-2 text-blue-200" />
-              <div className="text-2xl font-bold">+{stats.monthlyGrowth}%</div>
-              <div className="text-xs text-blue-200">Growth</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {canCreateHRManagers() && (
-            <button
-              onClick={() => handleAddUser('hr-manager')}
-              className="group bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-dashed border-blue-300 hover:border-blue-500 rounded-2xl p-6 transition-all duration-200 hover:shadow-lg"
-            >
-              <div className="flex flex-col items-center gap-3">
-                <div className="p-4 bg-blue-100 group-hover:bg-blue-200 rounded-xl transition-colors">
-                  <UserPlus className="w-8 h-8 text-blue-600" />
-                </div>
-                <div className="text-center">
-                  <h3 className="font-semibold text-gray-900">Add HR Manager</h3>
-                  <p className="text-sm text-gray-600 mt-1">Create new HR management role</p>
-                </div>
-              </div>
-            </button>
-          )}
-
-          {canCreateHODManagers() && (
-            <button
-              onClick={() => handleAddUser('hod-manager')}
-              className="group bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-dashed border-green-300 hover:border-green-500 rounded-2xl p-6 transition-all duration-200 hover:shadow-lg"
-            >
-              <div className="flex flex-col items-center gap-3">
-                <div className="p-4 bg-green-100 group-hover:bg-green-200 rounded-xl transition-colors">
-                  <Users className="w-8 h-8 text-green-600" />
-                </div>
-                <div className="text-center">
-                  <h3 className="font-semibold text-gray-900">Add Department Manager</h3>
-                  <p className="text-sm text-gray-600 mt-1">Create department head role</p>
-                </div>
-              </div>
-            </button>
-          )}
-
-          {canManageUsers() && (
-            <button
-              onClick={() => navigate('/users')}
-              className="group bg-gradient-to-br from-purple-50 to-violet-50 border-2 border-dashed border-purple-300 hover:border-purple-500 rounded-2xl p-6 transition-all duration-200 hover:shadow-lg"
-            >
-              <div className="flex flex-col items-center gap-3">
-                <div className="p-4 bg-purple-100 group-hover:bg-purple-200 rounded-xl transition-colors">
-                  <Settings className="w-8 h-8 text-purple-600" />
-                </div>
-                <div className="text-center">
-                  <h3 className="font-semibold text-gray-900">User Management</h3>
-                  <p className="text-sm text-gray-600 mt-1">Manage all system users</p>
-                </div>
-              </div>
-            </button>
-          )}
         </div>
 
         {/* Business Owner Section */}
         {businessOwner && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-3 mb-4">
-              <Crown className="w-6 h-6 text-yellow-600" />
-              Business Owner
-            </h3>
-
-            <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl p-4 border border-yellow-200">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
-                    <Crown className="w-6 h-6 text-yellow-600" />
+          <div className="bg-white border border-gray-200 rounded-lg p-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Crown className="w-4 h-4 text-yellow-600" />
+                </div>
+                <div>
+                  <div className="font-semibold text-sm text-gray-900">
+                    {businessOwner.firstName} {businessOwner.lastName}
                   </div>
-                  <div>
-                    <div className="font-semibold text-gray-900">
-                      {businessOwner.firstName} {businessOwner.lastName}
-                    </div>
-                    <div className="text-sm text-gray-600 flex items-center gap-1">
-                      <Mail className="w-3 h-3" />
-                      {businessOwner.email}
-                    </div>
-                    {businessOwner.lastLogin && (
-                      <div className="text-xs text-gray-500 flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        Last login: {new Date(businessOwner.lastLogin).toLocaleDateString()}
-                      </div>
-                    )}
-                    <div className="text-xs text-yellow-700 font-medium mt-1">
-                      👑 Organization Owner • Full Access
-                    </div>
+                  <div className="text-xs text-gray-500">
+                    {businessOwner.email} • Business Owner
                   </div>
                 </div>
-
-                {/* Super Users and Resellers can manage business owners */}
-                {(user?.role === 'super-user' || user?.role === 'reseller') && (
-                  <div className="flex items-center gap-2">
-                    {businessOwner.isActive ? (
-                      <button
-                        onClick={() => handleArchiveUser(businessOwner.id)}
-                        className="p-2 hover:bg-red-100 rounded-lg transition-colors group"
-                        title="Archive business owner"
-                      >
-                        <Archive className="w-4 h-4 text-gray-500 group-hover:text-red-600" />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleRestoreUser(businessOwner.id)}
-                        className="p-2 hover:bg-green-100 rounded-lg transition-colors group"
-                        title="Restore business owner"
-                      >
-                        <RotateCcw className="w-4 h-4 text-gray-500 group-hover:text-green-600" />
-                      </button>
-                    )}
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      businessOwner.isActive
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {businessOwner.isActive ? 'Active' : 'Archived'}
-                    </div>
-                  </div>
-                )}
-
-                {/* Business owners cannot manage themselves */}
-                {user?.role === 'business-owner' && (
-                  <div className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                    Current User
-                  </div>
-                )}
               </div>
+
+              {/* Super Users and Resellers can manage business owners */}
+              {(user?.role === 'super-user' || user?.role === 'reseller') && (
+                <div className="flex items-center gap-1">
+                  {businessOwner.isActive ? (
+                    <button
+                      onClick={() => handleArchiveUser(businessOwner.id)}
+                      className="p-1.5 hover:bg-red-100 rounded transition-colors group"
+                      title="Archive business owner"
+                    >
+                      <Archive className="w-3.5 h-3.5 text-gray-500 group-hover:text-red-600" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleRestoreUser(businessOwner.id)}
+                      className="p-1.5 hover:bg-green-100 rounded transition-colors group"
+                      title="Restore business owner"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-gray-500 group-hover:text-green-600" />
+                    </button>
+                  )}
+                  <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    businessOwner.isActive
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {businessOwner.isActive ? 'Active' : 'Archived'}
+                  </div>
+                </div>
+              )}
+
+              {/* Business owners cannot manage themselves */}
+              {user?.role === 'business-owner' && (
+                <div className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  Current User
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {/* Current Users */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {/* HR Managers */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-3 mb-4">
-              <Shield className="w-6 h-6 text-blue-600" />
+          <div className="bg-white border border-gray-200 rounded-lg p-2.5">
+            <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1.5 mb-2">
+              <Shield className="w-4 h-4 text-blue-600" />
               HR Managers ({users.filter(u => getRoleId(u.role) === 'hr-manager').length})
             </h3>
-            
-            <div className="space-y-3">
+
+            <div className="space-y-1.5">
               {users.filter(u => getRoleId(u.role) === 'hr-manager').map(user => (
-                <div key={user.id} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div key={user.id} className="bg-gray-50 rounded p-2 border border-gray-100">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="font-semibold text-blue-600 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="font-semibold text-blue-600 text-xs">
                           {user.firstName?.[0]}{user.lastName?.[0]}
                         </span>
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-xs text-gray-900">
                           {user.firstName} {user.lastName}
                         </div>
-                        <div className="text-sm text-gray-600 flex items-center gap-1">
-                          <Mail className="w-3 h-3" />
+                        <div className="text-xs text-gray-500">
                           {user.email}
                         </div>
-                        {user.lastLogin && (
-                          <div className="text-xs text-gray-500 flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            Last login: {new Date(user.lastLogin).toLocaleDateString()}
-                          </div>
-                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       {user.isActive ? (
                         <button
                           onClick={() => handleArchiveUser(user.id)}
@@ -996,40 +917,39 @@ export const OrganizationManagementV2 = memo(() => {
           </div>
 
           {/* Department Managers */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-3 mb-4">
-              <Users className="w-6 h-6 text-green-600" />
+          <div className="bg-white border border-gray-200 rounded-lg p-2.5">
+            <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1.5 mb-2">
+              <Users className="w-4 h-4 text-green-600" />
               Department Managers ({users.filter(u => getRoleId(u.role) === 'hod-manager').length})
             </h3>
-            
-            <div className="space-y-3">
+
+            <div className="space-y-1.5">
               {users.filter(u => getRoleId(u.role) === 'hod-manager').map(user => (
-                <div key={user.id} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div key={user.id} className="bg-gray-50 rounded p-2 border border-gray-100">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                        <span className="font-semibold text-green-600 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="font-semibold text-green-600 text-xs">
                           {user.firstName?.[0]}{user.lastName?.[0]}
                         </span>
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-xs text-gray-900">
                           {user.firstName} {user.lastName}
                         </div>
-                        <div className="text-sm text-gray-600 flex items-center gap-1">
-                          <Mail className="w-3 h-3" />
+                        <div className="text-xs text-gray-500">
                           {user.email}
+                          {user.departmentIds && user.departmentIds.length > 0 && (
+                            <span className="ml-1 text-green-600">
+                              • {user.departmentIds.map(id =>
+                                departments.find(d => d.id === id)?.name || id
+                              ).join(', ')}
+                            </span>
+                          )}
                         </div>
-                        {user.departmentIds && user.departmentIds.length > 0 && (
-                          <div className="text-xs text-green-600 font-medium">
-                            Manages: {user.departmentIds.map(id => 
-                              departments.find(d => d.id === id)?.name || id
-                            ).join(', ')}
-                          </div>
-                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       {user.isActive ? (
                         <button
                           onClick={() => handleArchiveUser(user.id)}
@@ -1071,17 +991,17 @@ export const OrganizationManagementV2 = memo(() => {
 
         {/* Departments Overview */}
         {canManageDepartments() && departments.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-3 mb-4">
-              <Building2 className="w-6 h-6 text-orange-600" />
+          <div className="bg-white border border-gray-200 rounded-lg p-2.5">
+            <h3 className="text-sm font-bold text-gray-900 flex items-center gap-1.5 mb-2">
+              <Building2 className="w-4 h-4 text-orange-600" />
               Departments ({departments.length})
             </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {departments.map(dept => (
-                <div key={dept.id} className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-4 border border-orange-200">
-                  <div className="mb-3">
-                    <h4 className="font-semibold text-gray-900">{dept.name}</h4>
+                <div key={dept.id} className="bg-orange-50 rounded p-2 border border-orange-200">
+                  <div className="mb-1">
+                    <h4 className="font-semibold text-xs text-gray-900">{dept.name}</h4>
                   </div>
                   
                   {dept.managerName ? (
