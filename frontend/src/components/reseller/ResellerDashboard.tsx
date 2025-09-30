@@ -23,7 +23,6 @@ import Logger from '../../utils/logger';
 import { DataService } from '../../services/DataService';
 import CommissionService from '../../services/CommissionService';
 import type { Reseller, CommissionStatement, Organization } from '../../types/billing';
-import { ThemeSelector } from '../common/ThemeSelector';
 
 interface ResellerMetrics {
   totalClients: number;
@@ -140,10 +139,6 @@ export const ResellerDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       
-      {/* Theme Selector */}
-      <div className="flex justify-end mb-4">
-        <ThemeSelector />
-      </div>
 
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl p-6 text-white">

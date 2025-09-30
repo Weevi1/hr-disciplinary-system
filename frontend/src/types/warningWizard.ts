@@ -309,9 +309,7 @@ export interface WizardActions {
   updateFormData: (updates: Partial<EnhancedWarningFormData>) => void;
   updateSignatures: (signatures: SignatureCollection) => void;
   
-  // AI interactions
-  analyzeDiscipline: () => void;
-  generateSmartSuggestions: () => void;
+  // Escalation interactions
   acceptRecommendation: (recommendation: EscalationRecommendation) => void;
   
   // Completion

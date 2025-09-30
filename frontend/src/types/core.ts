@@ -127,7 +127,6 @@ export interface EmployeeProfile {
   department: string;
   position: string;
   startDate: Date;
-  preferredDeliveryMethod: DeliveryMethod;
 }
 
 export interface EmploymentDetails {
@@ -202,7 +201,6 @@ export interface EmployeeFormData {
   startDate: string;
   contractType: ContractType;
   probationEndDate?: string;
-  preferredDeliveryMethod: DeliveryMethod;
   managerId?: string;
   isActive: boolean;
 }
@@ -323,7 +321,6 @@ export interface EmployeeLegacyMapping {
   // Legacy: employeeCode -> New: profile.employeeNumber
   // Legacy: firstName -> New: profile.firstName
   // Legacy: phone -> New: profile.phoneNumber
-  // Legacy: deliveryPreference.type -> New: profile.preferredDeliveryMethod
   // Legacy: warningCount -> New: disciplinaryRecord.activeWarnings
   // Legacy: lastWarningDate -> New: disciplinaryRecord.lastWarningDate
 }

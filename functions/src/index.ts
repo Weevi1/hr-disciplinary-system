@@ -42,6 +42,9 @@ import {
   initializeSuperUser
 } from './superUserManagement';
 
+// 👥 ADD ORGANIZATION USER CREATION
+import { createOrganizationUser } from './createOrganizationUser';
+
 // Export all cloud functions
 export {
   // User/Auth functions
@@ -49,6 +52,7 @@ export {
   createOrganizationUsers,
   resetUserPassword,
   createResellerUser,
+  createOrganizationUser,
   
   // Audio cleanup functions
   cleanupExpiredAudio,

@@ -15,7 +15,7 @@ export class EncryptionService {
   private static readonly ALGORITHM = 'AES';
 
   // In production, this should come from environment variables
-  private static readonly ENCRYPTION_KEY = process.env.VITE_ENCRYPTION_KEY || 'your-super-secret-key-here-32-chars';
+  private static readonly ENCRYPTION_KEY = import.meta.env.VITE_ENCRYPTION_KEY || 'your-super-secret-key-here-32-chars';
 
   /**
    * Encrypt sensitive string data

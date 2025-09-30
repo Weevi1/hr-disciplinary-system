@@ -1,5 +1,5 @@
 /* Import component-specific styles - MUST come first */
-@import "./warning-wizard.css";
+@import "./modal-system.css";
 @import "./warning-wizard-desktop.css";
 @import "./main-layout.css";
 
@@ -15,6 +15,7 @@
 
 :root {
   /* DEFAULT LIGHT THEME - Hardcoded for fast initial load */
+  /* 🚨 2012-ERA PHONE FALLBACKS - Static colors first, then CSS variables */
   /* Theme colors - will be dynamically updated when theme changes */
   --color-background: #f8fafc;
   --color-background-secondary: #f1f5f9;
@@ -44,6 +45,53 @@
   --color-warning: #f59e0b;
   --color-error: #ef4444;
   --color-info: #3b82f6;
+
+  /* Extended color palette for comprehensive theming */
+  --color-muted: #f3f4f6;
+  --color-muted-hover: #e5e7eb;
+  --color-subtle: #f9fafb;
+  --color-emphasis: #1f2937;
+  --color-highlight: #fef3c7;
+  --color-selection: #dbeafe;
+
+  /* Navigation colors */
+  --color-nav-bg: #ffffff;
+  --color-nav-text: #374151;
+  --color-nav-hover: #f3f4f6;
+  --color-nav-active: #eff6ff;
+
+  /* Button variants */
+  --color-btn-ghost: transparent;
+  --color-btn-ghost-hover: #f3f4f6;
+  --color-btn-outline: transparent;
+  --color-btn-outline-border: #d1d5db;
+  --color-btn-outline-hover: #f9fafb;
+
+  /* Alert variants */
+  --color-alert-info-bg: #eff6ff;
+  --color-alert-info-border: #bfdbfe;
+  --color-alert-info-text: #1e40af;
+  --color-alert-success-bg: #ecfdf5;
+  --color-alert-success-border: #a7f3d0;
+  --color-alert-success-text: #065f46;
+  --color-alert-warning-bg: #fffbeb;
+  --color-alert-warning-border: #fed7aa;
+  --color-alert-warning-text: #92400e;
+  --color-alert-error-bg: #fef2f2;
+  --color-alert-error-border: #fecaca;
+  --color-alert-error-text: #991b1b;
+
+  /* Badge variants */
+  --color-badge-default: #f3f4f6;
+  --color-badge-default-text: #374151;
+  --color-badge-primary: #eff6ff;
+  --color-badge-primary-text: #1e40af;
+  --color-badge-success: #ecfdf5;
+  --color-badge-success-text: #065f46;
+  --color-badge-warning: #fffbeb;
+  --color-badge-warning-text: #92400e;
+  --color-badge-error: #fef2f2;
+  --color-badge-error-text: #991b1b;
 
   /* Brand colors - dynamically updated by organization (kept for backward compatibility) */
   --brand-primary: #3b82f6;
@@ -89,13 +137,13 @@
   --duration: 300ms;
   --duration-slow: 500ms;
 
-  /* Mobile typography variables */
-  --mobile-text-xs: 0.75rem;
-  --mobile-text-sm: 0.8125rem;
-  --mobile-text-base: 0.9375rem;
-  --mobile-text-lg: 1.0625rem;
-  --mobile-text-xl: 1.1875rem;
-  --mobile-text-2xl: 1.375rem;
+  /* Mobile typography variables - 2012-era optimized */
+  --mobile-text-xs: 0.875rem; /* 14px minimum for 2012 phones */
+  --mobile-text-sm: 1rem; /* 16px for readability */
+  --mobile-text-base: 1.125rem; /* 18px base size */
+  --mobile-text-lg: 1.25rem; /* 20px for headers */
+  --mobile-text-xl: 1.375rem; /* 22px for large headers */
+  --mobile-text-2xl: 1.5rem; /* 24px for titles */
 }
 
 /* ============================================= */
@@ -119,8 +167,11 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
-  color: var(--color-text);
-  background: var(--color-background);
+  /* 🚨 2012-ERA FALLBACKS - Static colors first */
+  color: #0f172a;
+  color: var(--color-text, #0f172a);
+  background: #f8fafc;
+  background: var(--color-background, #f8fafc);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -529,9 +580,749 @@ body {
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
-    
+
     .main-layout__mobile-header {
       transition: none !important;
     }
   }
 }
+
+/* ============================================= */
+/* 🚨 2012-ERA PHONE COMPATIBILITY FIXES */
+/* ============================================= */
+
+/* Critical CSS Variable Fallbacks for older browsers */
+.hr-button--primary {
+  background: #3b82f6; /* Fallback */
+  background: var(--color-primary, #3b82f6);
+  color: #ffffff; /* Fallback */
+  color: var(--color-text-inverse, #ffffff);
+}
+
+.hr-button--secondary {
+  background: #ffffff; /* Fallback */
+  background: var(--color-card-background, #ffffff);
+  border: 1px solid #e2e8f0; /* Fallback */
+  border: 1px solid var(--color-border, #e2e8f0);
+  color: #0f172a; /* Fallback */
+  color: var(--color-text, #0f172a);
+}
+
+.hr-card {
+  background: #ffffff; /* Fallback */
+  background: var(--color-card-background, #ffffff);
+  border: 1px solid #e2e8f0; /* Fallback */
+  border: 1px solid var(--color-card-border, #e2e8f0);
+}
+
+/* Touch Target Improvements for 2012 devices */
+.touch-target,
+button,
+[role="button"],
+.hr-button,
+a.hr-button,
+.wizard-header__close-button {
+  min-height: 48px !important; /* Android 4.x minimum */
+  min-width: 48px !important;
+  padding: 12px !important;
+  touch-action: manipulation; /* Prevent 300ms delay */
+  -webkit-touch-callout: none; /* iOS specific */
+}
+
+/* Typography Fallbacks for Small Screens */
+@media (max-width: 480px) {
+  body {
+    font-size: 16px; /* Prevent iOS zoom on input focus */
+    line-height: 1.5;
+  }
+
+  .text-xs { font-size: 14px !important; } /* Increase from 12px */
+  .text-sm { font-size: 16px !important; } /* Increase from 14px */
+  .text-base { font-size: 18px !important; } /* Increase from 16px */
+}
+
+/* Replace CSS Grid with Flexbox for Android 4.x */
+@media (max-width: 600px) {
+  .hr-grid,
+  .hr-grid--2,
+  .hr-grid--3,
+  .hr-grid--4 {
+    display: -webkit-flex !important; /* iOS 6 support */
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 0; /* Remove gap property - not supported */
+  }
+
+  .hr-grid--2 > * {
+    width: calc(50% - 12px);
+    margin-right: 12px;
+    margin-bottom: 12px;
+  }
+
+  .hr-grid--2 > *:nth-child(2n) {
+    margin-right: 0;
+  }
+
+  .hr-grid--3 > *,
+  .hr-grid--4 > * {
+    width: 100%;
+    margin-bottom: 12px;
+  }
+}
+
+/* Fix 100vh Issues on Older Mobile Safari */
+@media (max-width: 768px) {
+  .min-h-screen,
+  .h-screen {
+    min-height: 100% !important;
+    height: auto !important; /* Remove 100vh */
+  }
+
+  /* Use JavaScript for proper viewport height */
+  .js-full-height {
+    height: 100%;
+  }
+}
+
+/* Performance Optimizations for Limited Hardware */
+@media (max-width: 480px) and (max-device-width: 480px) {
+  /* Reduce animation complexity */
+  * {
+    transition-duration: 0.2s !important;
+    animation-duration: 0.2s !important;
+  }
+
+  /* Disable backdrop filters - not supported */
+  .backdrop-blur-sm,
+  .backdrop-blur {
+    backdrop-filter: none !important;
+    background-color: rgba(15, 23, 42, 0.8) !important;
+  }
+
+  /* Force hardware acceleration where possible */
+  .enhanced-warning-wizard-modal,
+  .main-layout__mobile-nav {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Android 4.x Specific Fixes */
+@media screen and (-webkit-device-pixel-ratio: 1) {
+  /* Ensure fixed positioning works */
+  .fixed {
+    position: absolute !important;
+  }
+
+  /* Simplify complex layouts */
+  .wizard-content__scrollable {
+    -webkit-overflow-scrolling: touch;
+    overflow-scrolling: touch;
+  }
+}
+
+/* Breakpoint Adjustments for Very Small Screens */
+@media (max-width: 320px) {
+  /* Ultra-compact layout for oldest devices */
+  .container {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  .p-4 { padding: 8px !important; }
+  .p-6 { padding: 12px !important; }
+  .gap-4 { gap: 8px !important; }
+  .gap-6 { gap: 12px !important; }
+
+  /* Make text larger on tiny screens */
+  body { font-size: 18px !important; }
+}
+
+/* Print Styles for Document Delivery */
+@media print {
+  .no-print { display: none !important; }
+  .print-break { page-break-after: always; }
+
+  body {
+    color: #000000 !important;
+    background: #ffffff !important;
+  }
+}
+
+/* ============================================= */
+/* 🚀 PROGRESSIVE ENHANCEMENT STYLES */
+/* ============================================= */
+
+/* Performance Tier Enhancements */
+.perf-high {
+  /* Premium performance features for 2025 devices */
+  will-change: transform, opacity;
+  contain: layout style;
+}
+
+.perf-high .enhanced-transitions {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.perf-high .enhanced-animations {
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.perf-medium {
+  /* Balanced features for mid-range devices */
+  transition-duration: 0.2s;
+}
+
+.perf-low {
+  /* Minimal features for 2012 devices */
+  transition: none !important;
+  animation: none !important;
+  transform: none !important;
+}
+
+/* Visual Enhancement Levels */
+.visual-premium {
+  /* Cutting-edge visual features for 2025 devices */
+  backdrop-filter: blur(20px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25),
+              0 0 0 1px rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg,
+    var(--color-card-background, #ffffff) 0%,
+    color-mix(in srgb, var(--color-card-background, #ffffff) 95%, var(--color-primary, #3b82f6) 5%) 100%);
+}
+
+.visual-premium .enhanced-gradients {
+  background: conic-gradient(from 45deg,
+    var(--color-primary, #3b82f6),
+    var(--color-secondary, #6366f1),
+    var(--color-accent, #10b981),
+    var(--color-primary, #3b82f6));
+}
+
+.visual-premium .glass-effect {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.visual-standard {
+  /* Standard visual features */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  background: var(--color-card-background, #ffffff);
+}
+
+.visual-simplified {
+  /* Simple visual features for 2012 devices */
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Animation Enhancement Levels */
+.anim-full {
+  /* Premium animations for 2025 devices */
+}
+
+.anim-full .bounce-enter {
+  animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.anim-full .slide-enter {
+  animation: slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.anim-full .fade-enter {
+  animation: fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.3) translateY(100px); opacity: 0; }
+  50% { transform: scale(1.05) translateY(-10px); }
+  70% { transform: scale(0.9) translateY(0); }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes slideInUp {
+  0% { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fadeInScale {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.anim-reduced {
+  /* Simple animations for mid-range devices */
+}
+
+.anim-reduced .simple-fade {
+  transition: opacity 0.2s ease;
+}
+
+.anim-minimal {
+  /* No animations for 2012 devices */
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Interaction Enhancement Levels */
+.interact-advanced {
+  /* Advanced interactions for 2025 devices */
+}
+
+.interact-advanced .enhanced-hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+}
+
+.interact-advanced .ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.interact-advanced .ripple-effect::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s;
+}
+
+.interact-advanced .ripple-effect:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+.interact-standard {
+  /* Standard interactions */
+}
+
+.interact-standard .standard-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.interact-basic {
+  /* Basic interactions for 2012 devices */
+}
+
+.interact-basic .basic-hover:hover {
+  background-color: #f3f4f6 !important;
+}
+
+/* Memory Tier Optimizations */
+.memory-high {
+  /* Can handle large datasets and complex operations */
+}
+
+.memory-high .large-dataset {
+  /* No restrictions */
+}
+
+.memory-medium {
+  /* Moderate restrictions */
+}
+
+.memory-medium .large-dataset {
+  /* Pagination enforced */
+}
+
+.memory-low {
+  /* Heavy restrictions for 2012 devices */
+}
+
+.memory-low .large-dataset {
+  /* Strict pagination */
+}
+
+.memory-low img {
+  /* Lazy load images */
+  loading: lazy;
+}
+
+/* Network Tier Optimizations */
+.network-fast {
+  /* Can load high-quality assets */
+}
+
+.network-medium {
+  /* Moderate quality assets */
+}
+
+.network-slow {
+  /* Minimal assets for 2012 devices */
+}
+
+.network-slow img {
+  /* Lower quality images */
+  image-rendering: optimizeSpeed;
+}
+
+/* Modern Feature Support */
+.webrtc .audio-controls {
+  /* Full audio recording UI */
+}
+
+.advanced-css .modern-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.modern-js .async-operations {
+  /* Can use modern JavaScript features */
+}
+
+.advanced-graphics .gpu-accelerated {
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+/* Component-Specific Progressive Enhancement */
+.warning-wizard.perf-high {
+  /* Premium warning wizard for 2025 devices */
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(20px);
+}
+
+.employee-management.memory-high {
+  /* Can show all employees with advanced filtering */
+}
+
+.employee-management.memory-low {
+  /* Paginated view only */
+}
+
+.pdf-generation.memory-high {
+  /* Full-featured PDF with images and complex layouts */
+}
+
+.pdf-generation.memory-low {
+  /* Text-only PDF */
+}
+
+/* Dark Mode Progressive Enhancement */
+.visual-premium[data-theme="dark"] {
+  background: linear-gradient(135deg,
+    rgba(15, 23, 42, 0.95),
+    rgba(30, 41, 59, 0.9));
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.visual-simplified[data-theme="dark"] {
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+  border: 1px solid #334155 !important;
+}
+
+/* Device-Specific CSS Classes (Applied by JavaScript) */
+.legacy-device * {
+  /* Simplify all animations for performance */
+  transition-duration: 0.1s !important;
+  animation-duration: 0.1s !important;
+}
+
+.android-4x .fixed {
+  /* Fix positioning issues on Android 4.x */
+  position: absolute !important;
+}
+
+.ios-6-7 input[type="text"],
+.ios-6-7 input[type="email"],
+.ios-6-7 input[type="password"] {
+  /* Prevent iOS zoom on input focus */
+  font-size: 16px !important;
+}
+
+.no-modern-audio .audio-recording-section {
+  /* Hide audio recording UI if not supported */
+  display: none !important;
+}
+
+.no-modern-css {
+  /* Use only solid colors, no gradients or advanced CSS */
+}
+
+.no-modern-css .gradient-bg {
+  background: #3b82f6 !important; /* Solid fallback */
+}
+
+/* JavaScript Viewport Height Fix */
+.js-viewport-fixed .min-h-screen,
+.js-viewport-fixed .h-screen {
+  height: calc(var(--vh, 1vh) * 100) !important;
+}
+
+/* Additional Utility Classes for Legacy Support */
+.legacy-touch-target {
+  min-height: 48px !important;
+  min-width: 48px !important;
+  padding: 12px !important;
+}
+
+.legacy-text-size {
+  font-size: 16px !important;
+  line-height: 1.5 !important;
+}
+
+.legacy-simple-layout {
+  display: block !important;
+  float: none !important;
+  width: 100% !important;
+  margin-bottom: 12px !important;
+}
+
+/* 🚀 2025 CUTTING-EDGE FEATURES (Zero Impact on Legacy) */
+
+/* Advanced Visual Effects for Modern Devices */
+.visual-premium.modern-css {
+  /* Glass morphism effects */
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+.visual-premium .modern-card {
+  background: linear-gradient(145deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(255, 255, 255, 0.8));
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  box-shadow:
+    0 4px 15px 0 rgba(31, 38, 135, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Advanced Animations for High-Performance Devices */
+.anim-full .smooth-entrance {
+  animation: smooth-entrance 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center bottom;
+}
+
+@keyframes smooth-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.anim-full .micro-interactions {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.anim-full .micro-interactions:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Modern Grid Layouts */
+.modern-css .premium-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  grid-auto-rows: minmax(200px, auto);
+}
+
+/* Advanced Typography for Premium Devices */
+.visual-premium .modern-typography {
+  font-variant-ligatures: common-ligatures;
+  font-feature-settings: "liga" 1, "calt" 1;
+  text-rendering: optimizeLegibility;
+  font-smooth: always;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* WebRTC and Modern Audio Features */
+.webrtc-enabled .audio-visualizer {
+  background: linear-gradient(90deg,
+    rgba(59, 130, 246, 0.5),
+    rgba(147, 51, 234, 0.5));
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+}
+
+.modern-audio .recording-interface {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Advanced Button Styles for Modern Devices */
+.visual-premium .premium-button {
+  background: linear-gradient(135deg,
+    rgba(59, 130, 246, 1),
+    rgba(147, 51, 234, 1));
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  color: white;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.visual-premium .premium-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent);
+  transition: left 0.5s;
+}
+
+.visual-premium .premium-button:hover::before {
+  left: 100%;
+}
+
+/* Modern Dark Theme Enhancements */
+.visual-premium[data-theme="dark"] .dark-glass {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.visual-premium[data-theme="dark"] .dark-neon {
+  box-shadow:
+    0 0 20px rgba(59, 130, 246, 0.3),
+    0 0 40px rgba(59, 130, 246, 0.1);
+}
+
+/* Performance-Optimized Animations */
+.perf-high .gpu-accelerated {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.perf-high .smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Memory-Optimized Components */
+.memory-high .virtualized-list {
+  /* Enable virtualization for large lists */
+  contain: strict;
+  height: 400px;
+  overflow-y: auto;
+}
+
+.memory-low .simple-pagination {
+  /* Use simple pagination instead of virtualization */
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Network-Optimized Loading */
+.network-fast .preload-images {
+  /* Preload images for fast connections */
+}
+
+.network-slow .lazy-load-only {
+  /* Only load images when visible */
+}
+
+/* Touch and Interaction Enhancements */
+.interact-advanced .gesture-controls {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.interact-advanced .swipe-enabled {
+  /* Enable swipe gestures on advanced devices */
+}
+
+/* Accessibility Enhancements for Modern Devices */
+.visual-premium .a11y-enhanced {
+  /* Enhanced accessibility features */
+}
+
+.visual-premium .focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.8);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Print Optimizations */
+@media print {
+  .perf-high .print-optimized {
+    color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+
+/* 🎯 DEVICE-SPECIFIC OPTIMIZATIONS */
+
+/* High-end 2025 Devices (iPhone 15 Pro, Samsung S24 Ultra) */
+.perf-high.memory-high.visual-premium {
+  /* Ultimate performance - use all features */
+}
+
+/* Mid-range 2020-2024 Devices */
+.perf-medium.memory-medium.visual-standard {
+  /* Balanced approach - some premium features */
+}
+
+/* Legacy 2012-2016 Devices (Galaxy S3, iPhone 5) */
+.perf-low.memory-low.visual-simplified {
+  /* Maximum compatibility - functional excellence */
+}
+
+/* 📱 FINAL MOBILE OPTIMIZATIONS */
+
+/* Prevent zoom on input focus for legacy iOS */
+.ios-legacy input,
+.ios-legacy textarea,
+.ios-legacy select {
+  font-size: 16px !important;
+}
+
+/* Android 4.x specific fixes */
+.android-4x .position-fixed {
+  position: absolute !important;
+}
+
+.android-4x .transform-3d {
+  transform: none !important;
+}
+
+/* Touch target accessibility */
+.legacy-device button,
+.legacy-device .clickable {
+  min-height: 48px;
+  min-width: 48px;
+  padding: 12px;
+}
+
+/* ✨ PROGRESSIVE ENHANCEMENT COMPLETE ✨ */

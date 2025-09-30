@@ -1,6 +1,8 @@
 import Logger from '../../../../utils/logger';
 // frontend/src/components/warnings/enhanced/steps/DeliveryCompletionStep.tsx
-// 🏆 COMPLETE DELIVERY COMPLETION STEP WITH AUDIO URL FIX
+// 🎯 UNIFIED DELIVERY COMPLETION STEP - THEMED COMPONENTS
+// ✅ Uses unified theming with CSS variables and ThemedCard/ThemedButton system
+// ✅ Samsung S8+ mobile optimization with proper touch targets
 // ✅ Proper audio URL storage after Firebase upload
 // ✅ PDF preview modal integration
 // ✅ Comprehensive error handling and status tracking
@@ -37,12 +39,18 @@ import {
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../../../config/firebase';
 
+// Import unified theming components
+import { ThemedCard } from '../../../common/ThemedCard';
+import { ThemedButton } from '../../../common/ThemedButton';
+import { ThemedBadge } from '../../../common/ThemedCard';
+import { ThemedAlert } from '../../../common/ThemedCard';
+
 // Import services
 import { useAuth } from '@/auth/AuthContext';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { API } from '@/api';
 import { DeliveryNotificationService, DeliveryInstructionsService } from '@/services/DeliveryNotificationService';
-import type { 
+import type {
   AudioRecordingData,
   EscalationRecommendation,
   EnhancedWarningFormData
@@ -270,62 +278,67 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
 
   if (warningCreated) {
     return (
-      <div className="max-w-2xl mx-auto text-center">
+      <ThemedCard padding="xl" className="max-w-2xl mx-auto text-center">
         <div className="mb-8">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="w-8 h-8 text-green-600" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+               style={{ backgroundColor: 'var(--color-success-light)' }}>
+            <CheckCircle className="w-8 h-8 sm:w-10 sm:h-10" style={{ color: 'var(--color-success)' }} />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Warning Issued Successfully!</h2>
-          <p className="text-gray-600">
+          <h2 className="text-xl sm:text-2xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>
+            Warning Issued Successfully!
+          </h2>
+          <p style={{ color: 'var(--color-text-secondary)' }}>
             Warning {createdWarningId ? `#${createdWarningId.slice(-8)}` : ''} has been created.
           </p>
-          <p className="text-blue-600 font-medium mt-2">
+          <p className="font-medium mt-2" style={{ color: 'var(--color-primary)' }}>
             📬 HR has been notified to deliver via {selectedDeliveryMethod}
           </p>
           
           {audioRecording?.audioUrl && !audioUploadError && (
-            <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
-              <div className="flex items-center justify-center gap-2 text-green-700">
+            <ThemedAlert variant="success" className="mt-4 text-center">
+              <div className="flex items-center justify-center gap-2">
                 <Mic className="w-4 h-4" />
                 <span className="text-sm font-medium">Audio recording saved successfully</span>
               </div>
-            </div>
+            </ThemedAlert>
           )}
-          
-          {/* HR Notification Status */}
+
+          {/* HR Notification Status - Themed */}
           {deliveryNotificationId && (
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-center justify-center gap-2 text-blue-700">
+            <ThemedAlert variant="info" className="mt-4 text-center">
+              <div className="flex items-center justify-center gap-2">
                 <Send className="w-4 h-4" />
                 <span className="text-sm font-medium">HR Team Notified</span>
               </div>
-              <p className="text-xs text-blue-600 mt-1">
+              <p className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
                 Delivery notification #{deliveryNotificationId.slice(-8)} created for HR team
               </p>
-            </div>
+            </ThemedAlert>
           )}
           
-          {/* Delivery Instructions Button */}
+          {/* Delivery Instructions Button - Themed */}
           <div className="mt-6">
-            <button
+            <ThemedButton
+              variant="ghost"
+              size="sm"
               onClick={() => setShowDeliveryInstructions(!showDeliveryInstructions)}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium underline"
+              className="text-sm font-medium underline min-h-[40px]" // Mobile touch target
             >
               {showDeliveryInstructions ? 'Hide' : 'View'} Delivery Instructions for HR
-            </button>
+            </ThemedButton>
           </div>
           
           {/* Delivery Instructions */}
           {showDeliveryInstructions && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
-              <h4 className="font-semibold text-gray-900 mb-3">
+              <h4 className="font-semibold mb-3" style={{ color: 'var(--color-text)' }}>
                 {DeliveryInstructionsService.getDeliveryInstructions(selectedDeliveryMethod).title}
               </h4>
               
               <div className="space-y-3">
                 <div>
-                  <h5 className="text-sm font-medium text-gray-700 mb-1">Steps to Follow:</h5>
-                  <ol className="text-sm text-gray-600 list-decimal list-inside space-y-1">
+                  <h5 className="text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>Steps to Follow:</h5>
+                  <ol className="text-sm list-decimal list-inside space-y-1" style={{ color: 'var(--color-text-secondary)' }}>
                     {DeliveryInstructionsService.getDeliveryInstructions(selectedDeliveryMethod).steps.map((step, index) => (
                       <li key={index}>{step}</li>
                     ))}
@@ -333,8 +346,8 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
                 </div>
                 
                 <div>
-                  <h5 className="text-sm font-medium text-gray-700 mb-1">Requirements:</h5>
-                  <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
+                  <h5 className="text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>Requirements:</h5>
+                  <ul className="text-sm list-disc list-inside space-y-1" style={{ color: 'var(--color-text-secondary)' }}>
                     {DeliveryInstructionsService.getDeliveryInstructions(selectedDeliveryMethod).requirements.map((req, index) => (
                       <li key={index}>{req}</li>
                     ))}
@@ -342,8 +355,8 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
                 </div>
                 
                 <div>
-                  <h5 className="text-sm font-medium text-gray-700 mb-1">Documentation Needed:</h5>
-                  <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
+                  <h5 className="text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>Documentation Needed:</h5>
+                  <ul className="text-sm list-disc list-inside space-y-1" style={{ color: 'var(--color-text-secondary)' }}>
                     {DeliveryInstructionsService.getDeliveryInstructions(selectedDeliveryMethod).documentation.map((doc, index) => (
                       <li key={index}>{doc}</li>
                     ))}
@@ -354,274 +367,237 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
           )}
 
           {audioUploadError && (
-            <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-              <div className="flex items-center justify-center gap-2 text-yellow-700">
+            <div className="mt-4 p-3 rounded-lg border" style={{
+              backgroundColor: 'var(--color-alert-warning-bg)',
+              borderColor: 'var(--color-alert-warning-border)'
+            }}>
+              <div className="flex items-center justify-center gap-2" style={{ color: 'var(--color-alert-warning-text)' }}>
                 <AlertTriangle className="w-4 h-4" />
                 <span className="text-sm font-medium">Warning created, but audio upload had issues</span>
               </div>
-              <p className="text-xs text-yellow-600 mt-1">{audioUploadError}</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--color-alert-warning-text)' }}>{audioUploadError}</p>
             </div>
           )}
         </div>
-      </div>
+      </ThemedCard>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Notify HR for Delivery</h2>
-        <p className="text-gray-600">
-          Choose delivery method and notify HR team to deliver the warning
-        </p>
+    <div className="space-y-4">
+      {/* Header - Simplified */}
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Delivery & Completion</h2>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Left Column - Delivery Options */}
-        <div className="lg:col-span-2">
-          
-          {/* Warning Summary */}
-          <div className="bg-white rounded-xl border shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600" />
-              Warning Summary
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Employee</p>
-                <p className="font-medium text-gray-900">
-                  {selectedEmployee?.firstName} {selectedEmployee?.lastName}
-                </p>
-              </div>
-              
-              <div>
-                <p className="text-sm text-gray-600">Warning Level</p>
-                <p className="font-medium text-gray-900">
-                  {lraRecommendation?.recommendedLevel || 'Counselling Session'}
-                </p>
-              </div>
-              
-              <div>
-                <p className="text-sm text-gray-600">Category</p>
-                <p className="font-medium text-gray-900">
-                  {lraRecommendation?.category || formData.categoryId}
-                </p>
-              </div>
-              
-              <div>
-                <p className="text-sm text-gray-600">Valid Until</p>
-                <p className="font-medium text-gray-900">
-                  {new Date(new Date(formData.issueDate).setMonth(
-                    new Date(formData.issueDate).getMonth() + formData.validityPeriod
-                  )).toLocaleDateString()}
-                </p>
+      {/* Step 1 Style Warning Summary */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <FileText className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+          <div>
+            <h3 className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>Warning Summary</h3>
+            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Employee: {selectedEmployee?.firstName} {selectedEmployee?.lastName}</p>
+          </div>
+        </div>
+
+        {/* Compact Summary Card - Step 1 Style */}
+        <ThemedCard padding="sm" hover className="border-l-4" style={{ borderLeftColor: 'var(--color-success)' }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <ThemedBadge variant="success" size="sm" className="font-semibold">
+                {lraRecommendation?.recommendedLevel || 'Counselling Session'}
+              </ThemedBadge>
+              <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--color-success)' }}></div>
+                <span className="font-medium" style={{ color: 'var(--color-success)' }}>#{warningId?.slice(-8)} created</span>
+                {audioRecording?.audioUrl && <span>• Audio included</span>}
               </div>
             </div>
-
-            {/* Warning Status - Already Completed in Step 2 */}
-            <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
-              <div className="flex items-center gap-2 text-green-700">
-                <CheckCircle className="w-4 h-4" />
-                <span className="text-sm font-medium">
-                  Warning #{warningId?.slice(-8)} created successfully
-                </span>
-              </div>
-              {audioRecording?.audioUrl && (
-                <p className="text-xs text-green-600 mt-1">
-                  Audio recording and signatures saved
-                </p>
-              )}
+            <div className="flex items-center gap-1">
+              <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
+              <span className="text-xs font-medium" style={{ color: 'var(--color-success)' }}>Ready</span>
             </div>
           </div>
+        </ThemedCard>
+      </div>
 
-          {/* Delivery Method Selection */}
-          <div className="bg-white rounded-xl border shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Send className="w-5 h-5 text-green-600" />
-              Choose Delivery Method
-            </h3>
-            
-            <div className="space-y-3">
-              {deliveryOptions.map((option) => {
-                const Icon = option.icon;
-                return (
-                  <label
-                    key={option.id}
-                    className={`flex items-center p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                      selectedDeliveryMethod === option.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : option.available
-                        ? 'border-gray-200 hover:border-gray-300'
-                        : 'border-gray-100 bg-gray-50 cursor-not-allowed'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="deliveryMethod"
-                      value={option.id}
-                      checked={selectedDeliveryMethod === option.id}
-                      onChange={(e) => setSelectedDeliveryMethod(e.target.value as 'email' | 'whatsapp' | 'printed')}
-                      disabled={!option.available}
-                      className="sr-only"
-                    />
-                    
-                    <Icon className={`w-5 h-5 mr-3 ${
-                      option.available ? 'text-gray-600' : 'text-gray-400'
-                    }`} />
-                    
-                    <div className="flex-1">
-                      <p className={`font-medium ${
-                        option.available ? 'text-gray-900' : 'text-gray-500'
-                      }`}>
+      {/* Delivery Method - Step 1 Style Compact */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Send className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
+          <div>
+            <h3 className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>Delivery Method</h3>
+            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Choose how HR will deliver this warning</p>
+          </div>
+        </div>
+
+        {/* Compact Delivery Options */}
+        <div className="grid grid-cols-1 gap-2">
+          {deliveryOptions.map((option) => {
+            const Icon = option.icon;
+            return (
+              <ThemedCard
+                key={option.id}
+                padding="sm"
+                hover={option.available}
+                className={`cursor-pointer transition-all border-l-4 ${
+                  !option.available ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                style={{
+                  borderLeftColor: selectedDeliveryMethod === option.id ? 'var(--color-primary)' : 'transparent',
+                  backgroundColor: selectedDeliveryMethod === option.id ? 'var(--color-alert-info-bg)' : 'transparent'
+                }}
+                onClick={() => option.available && setSelectedDeliveryMethod(option.id)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-4 h-4" style={{ color: 'var(--color-text)' }} />
+                    <div>
+                      <p className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>
                         {option.name}
                       </p>
-                      <p className={`text-sm ${
-                        option.available ? 'text-gray-600' : 'text-gray-400'
-                      }`}>
+                      <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                         {option.description}
                       </p>
                       {!option.available && option.id === 'whatsapp' && (
-                        <p className="text-xs text-red-600 mt-1">
-                          No phone number available for this employee
-                        </p>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--color-error)' }}>No phone number available</p>
                       )}
                     </div>
-                    
-                    {selectedDeliveryMethod === option.id && (
-                      <CheckCircle className="w-5 h-5 text-blue-600" />
-                    )}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
+                  </div>
 
-          {/* Preview and Actions */}
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Eye className="w-5 h-5 text-purple-600" />
-              Final Review
-            </h3>
-            
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={handlePreviewPDF}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                <Eye className="w-4 h-4" />
-                Preview Warning Document
-              </button>
-            </div>
-          </div>
-        </div>
+                  {selectedDeliveryMethod === option.id && (
+                    <div className="flex items-center gap-1">
+                      <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+                      <span className="text-xs font-medium" style={{ color: 'var(--color-primary)' }}>Selected</span>
+                    </div>
+                  )}
 
-        {/* Right Column - Actions */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl border shadow-sm p-6 sticky top-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Notify HR Team</h3>
-            
-            {/* Status Checks */}
-            <div className="space-y-3 mb-6">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600" />
-                <span className="text-sm text-gray-700">Warning created successfully</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600" />
-                <span className="text-sm text-gray-700">Audio & signatures saved</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {selectedDeliveryMethod ? (
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                ) : (
-                  <Clock className="w-4 h-4 text-gray-400" />
-                )}
-                <span className="text-sm text-gray-700">Delivery method selected</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {deliveryNotificationId ? (
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                ) : (
-                  <Clock className="w-4 h-4 text-gray-400" />
-                )}
-                <span className="text-sm text-gray-700">HR notification {deliveryNotificationId ? 'sent' : 'pending'}</span>
-              </div>
-            </div>
-
-            {/* Error Display */}
-            {audioUploadError && (
-              <div className="mb-4 p-3 bg-red-50 rounded-lg border border-red-200">
-                <div className="flex items-center gap-2 text-red-700">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span className="text-sm font-medium">Error</span>
+                  <input
+                    type="radio"
+                    name="deliveryMethod"
+                    value={option.id}
+                    checked={selectedDeliveryMethod === option.id}
+                    onChange={() => {}} // Handled by card click
+                    disabled={!option.available}
+                    className="sr-only"
+                  />
                 </div>
-                <p className="text-xs text-red-600 mt-1">{audioUploadError}</p>
-              </div>
-            )}
-
-            {/* Upload Status */}
-            {isUploadingAudio && (
-              <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center gap-2 text-blue-700">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm font-medium">Uploading audio recording...</span>
-                </div>
-              </div>
-            )}
-            
-            {/* Delivery Notification Status */}
-            {isCreatingDeliveryNotification && (
-              <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="flex items-center gap-2 text-purple-700">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-sm font-medium">Notifying HR about delivery requirements...</span>
-                </div>
-              </div>
-            )}
-
-            {/* Complete Button */}
-            <button
-              onClick={handleCreateWarning}
-              disabled={!canCompleteDelivery || isCreatingWarning}
-              className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
-                canCompleteDelivery && !isCreatingWarning
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {isCreatingWarning ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Notifying HR...
-                </>
-              ) : deliveryNotificationId ? (
-                <>
-                  <CheckCircle className="w-4 h-4" />
-                  HR Notified Successfully
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  Notify HR for Delivery
-                </>
-              )}
-            </button>
-            
-            <p className="text-xs text-gray-500 mt-2 text-center">
-              {deliveryNotificationId 
-                ? 'HR has been notified to deliver this warning'
-                : `This will notify HR to deliver via ${selectedOption?.name}`
-              }
-            </p>
-          </div>
+              </ThemedCard>
+            );
+          })}
         </div>
       </div>
+
+      {/* Final Review - Step 1 Style Compact */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <Eye className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+          <div>
+            <h3 className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>Final Review</h3>
+            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Preview document and complete delivery process</p>
+          </div>
+        </div>
+
+        {/* Compact Action Cards */}
+        <div className="grid grid-cols-1 gap-2">
+          {/* Preview Button */}
+          <ThemedCard
+            padding="sm"
+            hover
+            className="cursor-pointer border-l-4"
+            style={{ borderLeftColor: 'var(--color-secondary)' }}
+            onClick={handlePreviewPDF}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Eye className="w-4 h-4" style={{ color: 'var(--color-secondary)' }} />
+                <div>
+                  <p className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>Preview Document</p>
+                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Review warning before sending to HR</p>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4" style={{ color: 'var(--color-text-tertiary)' }} />
+            </div>
+          </ThemedCard>
+
+          {/* Notify HR Button */}
+          <ThemedCard
+            padding="sm"
+            hover={!isCreatingWarning && canCompleteDelivery}
+            className={`transition-all border-l-4 ${
+              canCompleteDelivery && !deliveryNotificationId ? 'cursor-pointer' : ''
+            } ${!canCompleteDelivery && !deliveryNotificationId ? 'opacity-50' : ''}`}
+            style={{
+              borderLeftColor: deliveryNotificationId
+                ? 'var(--color-success)'
+                : canCompleteDelivery
+                  ? 'var(--color-primary)'
+                  : 'var(--color-border)',
+              backgroundColor: deliveryNotificationId ? 'var(--color-alert-success-bg)' : 'transparent'
+            }}
+            onClick={!isCreatingWarning && canCompleteDelivery ? handleCreateWarning : undefined}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {isCreatingWarning ? (
+                  <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--color-primary)' }} />
+                ) : deliveryNotificationId ? (
+                  <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
+                ) : (
+                  <Send className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+                )}
+                <div>
+                  <p className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>
+                    {isCreatingWarning ? 'Notifying HR...' :
+                     deliveryNotificationId ? 'HR Notified' :
+                     'Notify HR'}
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                    {deliveryNotificationId
+                      ? `Delivery notification sent via ${selectedDeliveryMethod}`
+                      : 'Send delivery instructions to HR team'
+                    }
+                  </p>
+                </div>
+              </div>
+              {!deliveryNotificationId && canCompleteDelivery && !isCreatingWarning && (
+                <ArrowRight className="w-4 h-4" style={{ color: 'var(--color-text-tertiary)' }} />
+              )}
+            </div>
+          </ThemedCard>
+        </div>
+      </div>
+
+      {/* Status and Errors - Simplified */}
+      {audioUploadError && (
+        <ThemedAlert variant="error">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 mt-0.5" style={{ color: 'var(--color-error)' }} />
+            <div>
+              <span className="text-sm font-medium">Error</span>
+              <p className="text-xs mt-1">{audioUploadError}</p>
+            </div>
+          </div>
+        </ThemedAlert>
+      )}
+
+      {isUploadingAudio && (
+        <ThemedAlert variant="info">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">Uploading audio...</span>
+          </div>
+        </ThemedAlert>
+      )}
+
+      {isCreatingDeliveryNotification && (
+        <ThemedAlert variant="info">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">Notifying HR...</span>
+          </div>
+        </ThemedAlert>
+      )}
 
       {/* PDF Preview Modal */}
       {showPDFPreview && (

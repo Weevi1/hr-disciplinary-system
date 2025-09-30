@@ -4,22 +4,16 @@
 // 📱 Headers stay, but content area is completely flexible
 // 🎨 Uses CSS variables for all styling - no conflicts with index.css
 
-import React, { useState, useEffect, Fragment } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { globalDeviceCapabilities } from '../utils/deviceDetection';
 import { useOrganization, OrganizationProvider } from '../contexts/OrganizationContext';
-import { 
-  Menu, 
-  X, 
+import {
   LogOut,
-  Home,
   Users,
-  Settings,
-  FileText,
-  ChevronLeft,
-  ChevronRight
+  Settings
 } from 'lucide-react';
-import { Dialog, Transition } from '@headlessui/react';
 import { Logo } from '../components/common/Logo';
 import { BrandedLogo } from '../components/common/BrandedLogo';
 import { BrandingProvider } from '../contexts/BrandingContext';
@@ -78,8 +72,6 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
 
   // State Management
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // WordPress-style sidebar - collapsed by default
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // 🎨 Effect to update CSS variables when organization branding changes
   useEffect(() => {
@@ -114,20 +106,27 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
 
   // Compact Top Navigation Component
   const TopNavigation = () => (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-      <div className="max-w-7xl mx-auto px-6 py-3">
+    <header
+      className="border-b sticky top-0 z-30"
+      style={{
+        backgroundColor: 'var(--color-nav-bg)',
+        borderColor: 'var(--color-border)'
+      }}
+    >
+      <div className="max-w-7xl mx-auto px-4 py-2 sm:px-6 sm:py-3">
         <div className="flex items-center justify-between">
-          
+
           {/* Left Side - Logo & Navigation */}
-          <div className="flex items-center space-x-6">
-            {/* Clickable Logo */}
-            <button 
+          <div className="flex items-center space-x-4 sm:space-x-6">
+            {/* Clickable Logo - more compact on mobile */}
+            <button
               onClick={() => onNavigate?.('dashboard')}
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
-              <BrandedLogo size="small" showText={true} />
+              <BrandedLogo size="small" showText={false} className="sm:hidden" />
+              <BrandedLogo size="small" showText={true} className="hidden sm:flex" />
             </button>
-            
+
             {/* Compact Navigation Pills */}
             <nav className="hidden md:flex items-center space-x-1">
               {getNavigationItems().map((item) => {
@@ -136,11 +135,31 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
                   <button
                     key={item.id}
                     onClick={() => onNavigate?.(item.id)}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200"
+                    style={
                       isActive
-                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                    }`}
+                        ? {
+                            background: `linear-gradient(to right, var(--color-primary), var(--color-primary-hover))`,
+                            color: 'var(--color-text-inverse)',
+                            boxShadow: 'var(--shadow-sm)'
+                          }
+                        : {
+                            color: 'var(--color-nav-text)',
+                            backgroundColor: 'transparent'
+                          }
+                    }
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.backgroundColor = 'var(--color-nav-hover)';
+                        e.currentTarget.style.color = 'var(--color-emphasis)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'var(--color-nav-text)';
+                      }
+                    }}
                   >
                     <item.icon className="w-3 h-3" />
                     <span>{item.label}</span>
@@ -150,59 +169,139 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
             </nav>
           </div>
 
+          {/* Center - Organization Name */}
+          {organization?.name && (
+            <div className="flex flex-1 justify-center">
+              <div className="text-center">
+                <div className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                  {organization.name}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Right Side - User Menu */}
-          <div className="flex items-center gap-3">
-            
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 md:hidden"
-            >
-              <Menu className="w-4 h-4 text-gray-600" />
-            </button>
-            
-            {/* Compact User Menu */}
+          <div className="flex items-center gap-2 sm:gap-3">
+
+            {/* Compact User Menu - mobile optimized */}
             <div className="relative">
-              <button 
-                onClick={() => setUserMenuOpen(!userMenuOpen)} 
-                className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-1.5 sm:gap-2 p-1.5 rounded-lg transition-colors"
+                style={{ minHeight: '40px' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--color-nav-hover)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
               >
-                <div className="w-7 h-7 bg-gradient-to-r from-slate-500 to-slate-600 rounded-full flex items-center justify-center text-xs font-medium text-white">
+                <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-r from-slate-500 to-slate-600 rounded-full flex items-center justify-center text-xs font-medium text-white">
                   {user?.firstName?.charAt(0) || 'U'}
                 </div>
                 <div className="hidden sm:block text-left">
-                  <div className="text-sm font-medium text-gray-900">
+                  <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
                     {user?.firstName} {user?.lastName}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
                     {user?.role?.name || user?.role?.id?.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </div>
                 </div>
               </button>
 
-              {/* User Dropdown */}
+              {/* User Dropdown - Mobile optimized */}
               {userMenuOpen && (
-                <div className="absolute right-0 top-12 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50">
-                  <div className="px-4 py-3 border-b border-gray-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-r from-slate-500 to-slate-600 rounded-full flex items-center justify-center text-sm font-medium text-white">
+                <div
+                  className={`absolute right-0 top-12 w-56 sm:w-64 py-1.5 sm:py-2 z-50 ${
+                    globalDeviceCapabilities?.browserInfo?.isAndroid4x
+                      ? 'bg-white border border-gray-200 rounded legacy-simple-layout'
+                      : 'rounded-xl'
+                  }`}
+                  style={
+                    globalDeviceCapabilities?.browserInfo?.isAndroid4x
+                      ? {} // Use static styles for Android 4.x
+                      : {
+                          backgroundColor: 'var(--color-card-background)',
+                          boxShadow: 'var(--shadow-lg)',
+                          border: '1px solid var(--color-card-border)'
+                        }
+                  }
+                >
+                  <div className="px-3 py-2 sm:px-4 sm:py-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div
+                        className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm font-medium text-white"
+                        style={{ background: `linear-gradient(to right, var(--color-primary), var(--color-primary-hover))` }}
+                      >
                         {user?.firstName?.charAt(0) || 'U'}
                       </div>
-                      <div>
-                        <div className="font-medium text-gray-900">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-sm sm:text-base truncate" style={{ color: 'var(--color-text)' }}>
                           {user?.firstName} {user?.lastName}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-xs sm:text-sm truncate" style={{ color: 'var(--color-text-secondary)' }}>
                           {user?.email}
                         </div>
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="py-2">
-                    <button 
-                      onClick={logout} 
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+
+                  <div className="py-1 sm:py-2">
+                    {/* Navigation items for mobile (shown on all screen sizes now) */}
+                    {getNavigationItems().map((item) => {
+                      const isActive = currentView === item.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            onNavigate?.(item.id);
+                            setUserMenuOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:px-4 sm:py-2 text-sm transition-colors"
+                          style={{
+                            color: isActive ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                            backgroundColor: isActive ? 'var(--color-primary-bg)' : 'transparent',
+                            minHeight: '44px'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isActive) {
+                              e.currentTarget.style.backgroundColor = 'var(--color-nav-hover)';
+                              e.currentTarget.style.color = 'var(--color-text)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isActive) {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                              e.currentTarget.style.color = 'var(--color-text-secondary)';
+                            }
+                          }}
+                        >
+                          <item.icon className="w-4 h-4" />
+                          <span>{item.label}</span>
+                        </button>
+                      );
+                    })}
+
+                    {/* Divider if navigation items exist */}
+                    {getNavigationItems().length > 0 && (
+                      <div className="border-t mx-2 my-1" style={{ borderColor: 'var(--color-border)' }}></div>
+                    )}
+
+                    <button
+                      onClick={logout}
+                      className="w-full flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:px-4 sm:py-2 text-sm transition-colors"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                        minHeight: '44px' // Mobile touch target
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--color-alert-error-bg)';
+                        e.currentTarget.style.color = 'var(--color-alert-error-text)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'var(--color-text-secondary)';
+                      }}
                     >
                       <LogOut className="w-4 h-4" />
                       <span>Sign out</span>
@@ -217,122 +316,20 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
     </header>
   );
 
-  // Mobile Sidebar Component
-  const MobileSidebar = () => (
-    <Transition.Root show={mobileMenuOpen} as={Fragment}>
-      <Dialog as="div" className="fixed inset-0 z-50 lg:hidden" onClose={setMobileMenuOpen}>
-        <Transition.Child
-          as={Fragment}
-          enter="transition-opacity ease-linear duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="transition-opacity ease-linear duration-300"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-slate-900/80" />
-        </Transition.Child>
-
-        <div className="fixed inset-0 flex">
-          <Transition.Child
-            as={Fragment}
-            enter="transition ease-in-out duration-300 transform"
-            enterFrom="-translate-x-full"
-            enterTo="translate-x-0"
-            leave="transition ease-in-out duration-300 transform"
-            leaveFrom="translate-x-0"
-            leaveTo="-translate-x-full"
-          >
-            <Dialog.Panel className="relative flex w-full max-w-xs flex-1 flex-col bg-slate-900">
-              {/* Close Button */}
-              <div className="absolute top-0 right-0 -mr-12 pt-2">
-                <button
-                  type="button"
-                  className="ml-1 flex h-10 w-10 items-center justify-center rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <X className="h-6 w-6 text-white" />
-                </button>
-              </div>
-
-              {/* Mobile Sidebar Content */}
-              <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
-                <button 
-                  onClick={() => {
-                    onNavigate?.('dashboard');
-                    setMobileMenuOpen(false);
-                  }}
-                  className="flex-shrink-0 flex items-center px-4 hover:opacity-80 transition-opacity"
-                >
-                  <BrandedLogo size="small" showText={false} />
-                  <span className="ml-3 text-white font-semibold text-lg">&lt;File&gt;</span>
-                </button>
-                <nav className="mt-5 px-2 space-y-1">
-                  {getNavigationItems().map((item) => {
-                    const isActive = currentView === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => {
-                          onNavigate?.(item.id);
-                          setMobileMenuOpen(false);
-                        }}
-                        className={`w-full group flex items-center px-2 py-2 text-base font-medium rounded-md transition-colors ${
-                          isActive
-                            ? 'bg-slate-700 text-white'
-                            : 'text-slate-300 hover:text-white hover:bg-slate-700'
-                        }`}
-                      >
-                        <item.icon className="mr-4 h-6 w-6" />
-                        {item.label}
-                      </button>
-                    );
-                  })}
-                </nav>
-              </div>
-              
-              {/* Mobile User Section */}
-              <div className="flex-shrink-0 flex border-t border-slate-700 p-4">
-                <div className="flex-shrink-0">
-                  <div className="w-10 h-10 bg-slate-600 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-white">
-                      {user?.firstName?.charAt(0) || 'U'}
-                    </span>
-                  </div>
-                </div>
-                <div className="ml-3">
-                  <p className="text-base font-medium text-white">
-                    {user?.firstName} {user?.lastName}
-                  </p>
-                  <button
-                    onClick={logout}
-                    className="text-sm font-medium text-slate-400 hover:text-white"
-                  >
-                    Sign out
-                  </button>
-                </div>
-              </div>
-            </Dialog.Panel>
-          </Transition.Child>
-        </div>
-      </Dialog>
-    </Transition.Root>
-  );
 
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
       {/* Modern Top Navigation */}
       <TopNavigation />
 
-      {/* Mobile Sidebar */}
-      <MobileSidebar />
 
       {/* Main Content Area - Full width */}
-      <main 
-        id="main-content" 
+      <main
+        id="main-content"
         className="min-h-screen"
         role="main"
+        style={{ backgroundColor: 'var(--color-background)' }}
       >
         {children}
       </main>

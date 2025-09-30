@@ -2,7 +2,6 @@
 import React from 'react';
 import type { Employee } from '../../types';
 import type { EmployeePermissions } from '../../types';
-import { getDeliveryMethodIcon, getDeliveryMethodText } from '../../utils/employees/employeeHelpers';
 
 interface EmployeeTableProps {
   employees: Employee[];
@@ -22,15 +21,14 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
       <div className="w-full max-w-full">
         {/* Grid-based header */}
         <div className={`grid gap-1 bg-gradient-to-r from-gray-50 to-gray-100 border-b-2 border-gray-200 p-2 ${
-          permissions.canEdit 
-            ? 'grid-cols-8' 
-            : 'grid-cols-7'
+          permissions.canEdit
+            ? 'grid-cols-7'
+            : 'grid-cols-6'
         }`}>
           <div className="text-xs font-bold text-gray-700 truncate">👤 Employee</div>
           <div className="text-xs font-bold text-gray-700 truncate">🏢 Dept</div>
           <div className="text-xs font-bold text-gray-700 truncate">💼 Pos</div>
           <div className="text-xs font-bold text-gray-700 truncate text-center">📋</div>
-          <div className="text-xs font-bold text-gray-700 truncate text-center">🏆</div>
           <div className="text-xs font-bold text-gray-700 truncate text-center">⚠️</div>
           <div className="text-xs font-bold text-gray-700 truncate text-center">✅</div>
           {permissions.canEdit && (
@@ -44,9 +42,9 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
             <div 
               key={employee.id}
               className={`grid gap-1 hover:bg-gray-50 transition-colors p-2 items-center ${
-                permissions.canEdit 
-                  ? 'grid-cols-8' 
-                  : 'grid-cols-7'
+                permissions.canEdit
+                  ? 'grid-cols-7'
+                  : 'grid-cols-6'
               }`}
             >
               {/* Employee - Column 1 */}
@@ -85,14 +83,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
                 </span>
               </div>
               
-              {/* Delivery Method - Column 5 */}
-              <div className="text-center">
-                <span className="text-sm" title={getDeliveryMethodText(employee.profile.preferredDeliveryMethod)}>
-                  {getDeliveryMethodIcon(employee.profile.preferredDeliveryMethod)}
-                </span>
-              </div>
-              
-              {/* Warnings - Column 6 */}
+              {/* Warnings - Column 5 */}
               <div className="text-center">
                 <span className={`
                   inline-block w-5 h-5 text-xs font-bold rounded text-center leading-5

@@ -19,14 +19,14 @@ export const EmployeeStats: React.FC<EmployeeStatsProps> = ({ employees }) => {
   ];
 
   return (
-    <div className="grid grid-cols-5 gap-3">
+    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
       {statCards.map((stat, index) => (
         <div
           key={index}
-          className="bg-white/95 backdrop-blur-sm rounded-lg p-3 text-center shadow-md hover:shadow-lg transition-all duration-200"
+          className="bg-white/95 backdrop-blur-sm rounded-lg p-2 sm:p-3 text-center shadow-md hover:shadow-lg transition-all duration-200"
         >
-          <div className="text-xl mb-1">{stat.icon}</div>
-          <div className={`text-xl font-bold text-${stat.color}-600 mb-1`}>
+          <div className="text-lg sm:text-xl mb-0.5 sm:mb-1">{stat.icon}</div>
+          <div className={`text-lg sm:text-xl font-bold text-${stat.color}-600 mb-0.5 sm:mb-1`}>
             {stat.value}
           </div>
           <div className="text-xs text-gray-600 font-medium leading-tight">

@@ -5,8 +5,9 @@
 // ✅ Role-based visibility
 // ✅ Interactive employee selection
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../../auth/AuthContext';
+import { globalDeviceCapabilities, getPerformanceLimits } from '../../utils/deviceDetection';
 import { useEmployees } from '../../hooks/employees/useEmployees';
 import { useEmployeeFilters } from '../../hooks/employees/useEmployeeFilters';
 import { EmployeeStats } from './EmployeeStats';
@@ -19,16 +20,27 @@ import { EmployeeArchiveModal } from './EmployeeArchiveModal';
 import { EmployeeArchive } from './EmployeeArchive';
 import EmployeeOrganogram from './EmployeeOrganogram';
 import EmployeeTableBrowser from './EmployeeTableBrowser';
+import { MobileEmployeeManagement } from './MobileEmployeeManagement';
 import { calculateEmployeePermissions } from '../../types';
 import type { Employee } from '../../types';
 import {
   Users, Plus, Upload, Grid, List, ChevronDown,
   Workflow, FileSpreadsheet, Eye, Layout, Archive
 } from 'lucide-react';
+// Import legacy skeleton loaders for 2012-era devices
+import { LegacySkeletonDashboard, LegacyLoadingMessage } from '../common/LegacySkeletonLoader';
 
 export const EmployeeManagement: React.FC = () => {
   const { user, organization } = useAuth();
-  
+
+  // Check if we should use mobile version
+  const isMobile = window.innerWidth < 768; // Mobile breakpoint
+
+  // Use mobile component for small screens
+  if (isMobile) {
+    return <MobileEmployeeManagement />;
+  }
+
   // Check if user is an HOD manager - if so, only load their team members
   const isHODManager = user?.role?.id === 'hod-manager';
   const organizationId = organization?.id;
@@ -46,7 +58,29 @@ export const EmployeeManagement: React.FC = () => {
     pagination 
   } = useEmployees(organizationId, isHODManager ? user?.id : undefined);
   const { filters, setFilters, filteredEmployees } = useEmployeeFilters(employees, user);
-  
+
+  // Device-aware pagination for 2012-era phones
+  const performanceLimits = useMemo(() =>
+    getPerformanceLimits(globalDeviceCapabilities || { isLegacyDevice: false }),
+    []
+  );
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = globalDeviceCapabilities?.isLegacyDevice ? performanceLimits.employeeListLimit : 50;
+
+  // Paginated employees for legacy devices
+  const paginatedEmployees = useMemo(() => {
+    if (!globalDeviceCapabilities?.isLegacyDevice) {
+      return filteredEmployees;
+    }
+
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredEmployees.slice(startIndex, endIndex);
+  }, [filteredEmployees, currentPage, pageSize, globalDeviceCapabilities?.isLegacyDevice]);
+
+  const totalPages = Math.ceil(filteredEmployees.length / pageSize);
+
   // UI State - Enhanced with new views
   const [viewMode, setViewMode] = useState<'organogram' | 'table' | 'cards' | 'archive'>('table'); // Default to table for better data overview
   const [showAddModal, setShowAddModal] = useState(false);
@@ -97,6 +131,19 @@ export const EmployeeManagement: React.FC = () => {
   }, []);
 
   if (loading) {
+    // Use simplified loading for legacy devices
+    if (globalDeviceCapabilities?.isLegacyDevice) {
+      return (
+        <div className="w-full p-4">
+          <LegacyLoadingMessage message="Loading Employees..." />
+          <div className="mt-4">
+            <LegacySkeletonDashboard />
+          </div>
+        </div>
+      );
+    }
+
+    // Full loading experience for modern devices
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex items-center justify-center p-4">
         <div className="text-center bg-white p-8 rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full">
@@ -111,53 +158,55 @@ export const EmployeeManagement: React.FC = () => {
   return (
     <div className="w-full space-y-3">
         
-      {/* Compact Header */}
+      {/* Mobile-Optimized Header */}
       <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-white/50 overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-600 via-purple-700 to-indigo-800 p-3">
+        <div className="bg-gradient-to-r from-indigo-600 via-purple-700 to-indigo-800 p-2 sm:p-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                <Users className="w-5 h-5 text-white" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="bg-white/20 p-1.5 sm:p-2 rounded-lg backdrop-blur-sm">
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-white tracking-tight">
+                <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
                   Employee Management
                 </h3>
                 <p className="text-indigo-100 text-xs font-medium">
-                  {filteredEmployees.length} employees
+                  {globalDeviceCapabilities?.isLegacyDevice
+                    ? `${paginatedEmployees.length} of ${filteredEmployees.length} employees`
+                    : `${filteredEmployees.length} employees`}
                 </p>
               </div>
             </div>
-            
-            {/* Compact Action Buttons */}
-            <div className="flex gap-2">
+
+            {/* Mobile-Optimized Action Buttons */}
+            <div className="flex gap-1 sm:gap-2">
               {permissions.canCreate && (
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-lg font-medium border border-white/30 hover:border-white/50 transition-all text-sm"
+                  className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-lg font-medium border border-white/30 hover:border-white/50 transition-all text-sm"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Add</span>
+                  <span className="hidden sm:inline">Add</span>
                 </button>
               )}
-              
+
               {permissions.canBulkImport && (
                 <button
                   onClick={() => setShowImportModal(true)}
-                  className="flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow-md transition-all text-sm"
+                  className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow-md transition-all text-sm"
                 >
                   <Upload className="w-4 h-4" />
-                  <span>Import</span>
+                  <span className="hidden sm:inline">Import</span>
                 </button>
               )}
 
               {permissions.canViewArchived && (
                 <button
                   onClick={() => setViewMode('archive')}
-                  className="flex items-center gap-2 px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium shadow-md transition-all text-sm"
+                  className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium shadow-md transition-all text-sm"
                 >
                   <Archive className="w-4 h-4" />
-                  <span>Archive</span>
+                  <span className="hidden sm:inline">Archive</span>
                 </button>
               )}
             </div>
@@ -248,7 +297,7 @@ export const EmployeeManagement: React.FC = () => {
 
       {viewMode === 'table' && (
         <EmployeeTableBrowser
-          employees={filteredEmployees}
+          employees={paginatedEmployees}
           onEmployeeSelect={handleEmployeeSelect}
           onEmployeeEdit={handleEmployeeEdit}
           onEmployeeDelete={handleEmployeeDelete}
@@ -260,7 +309,7 @@ export const EmployeeManagement: React.FC = () => {
 
       {viewMode === 'cards' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredEmployees.map((employee) => (
+          {paginatedEmployees.map((employee) => (
             <EmployeeCard
               key={employee.id}
               employee={employee}
@@ -269,6 +318,44 @@ export const EmployeeManagement: React.FC = () => {
               onArchive={setArchivingEmployee}
             />
           ))}
+        </div>
+      )}
+
+      {/* Legacy Device Pagination Controls */}
+      {globalDeviceCapabilities?.isLegacyDevice && totalPages > 1 && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4 mt-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600 legacy-text-size">
+              Page {currentPage} of {totalPages} ({filteredEmployees.length} total employees)
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className={`px-3 py-2 rounded-md legacy-touch-target legacy-text-size ${
+                  currentPage === 1
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                }`}
+              >
+                Previous
+              </button>
+              <div className="flex items-center px-3 py-2 text-sm text-gray-600 legacy-text-size">
+                {Math.max(1, currentPage - 1)}-{Math.min(totalPages, currentPage + 1)}
+              </div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className={`px-3 py-2 rounded-md legacy-touch-target legacy-text-size ${
+                  currentPage === totalPages
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                }`}
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

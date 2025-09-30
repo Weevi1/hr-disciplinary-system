@@ -25,6 +25,7 @@ import {
 import { db } from '../config/firebase';
 import { DataService } from './DataService';
 import { TimeService } from './TimeService';
+import { DatabaseShardingService } from './DatabaseShardingService';
 
 // Import from UniversalCategories - our single source of truth
 import type { 
@@ -106,6 +107,7 @@ export interface WarningCategory {
   name: string;
   description: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
+  icon: string;
   escalationPath: WarningLevel[];
   legalRequirements: string[];
   examples: string[];
@@ -218,25 +220,58 @@ export class WarningService {
       // Get all active warnings for employee
       const allActiveWarnings = await this.getActiveWarnings(employeeId, organizationId);
       
-      // Get category from UniversalCategories
-      const universalCategory = getCategoryById(categoryId);
-      if (!universalCategory) {
-        Logger.warn('⚠️ [ESCALATION] Category not found in UniversalCategories, using fallback')
+      // 🔧 NEW: First try to get category from organization, then fallback to universal
+      let categoryEscalationPath: string[] | null = null;
+      let categoryFound = false;
+      let universalCategory: any = null;
+      let orgCategory: any = null;
+
+      // Try to get escalation path from organization's categories
+      if (organizationId) {
+        try {
+          const orgCategories = await DatabaseShardingService.queryDocuments(organizationId, 'categories', []);
+          orgCategory = orgCategories.documents.find((cat: any) => cat.id === categoryId);
+          if (orgCategory?.escalationPath) {
+            categoryEscalationPath = orgCategory.escalationPath;
+            categoryFound = true;
+            Logger.debug(`📋 [ESCALATION] Using organization category escalation path:`, categoryEscalationPath);
+          }
+        } catch (error) {
+          Logger.warn('⚠️ [ESCALATION] Failed to load organization categories, falling back to universal');
+        }
+      }
+
+      // Fallback to UniversalCategories if no organization-specific escalation path
+      if (!categoryFound) {
+        universalCategory = getCategoryById(categoryId);
+        if (universalCategory) {
+          categoryEscalationPath = universalCategory.escalationPath || ['counselling', 'verbal', 'first_written', 'final_written'];
+          categoryFound = true;
+          Logger.debug(`📋 [ESCALATION] Using universal category escalation path:`, categoryEscalationPath);
+        }
+      }
+
+      // Set the category for use in recommendations (prefer org category, fallback to universal)
+      const categoryForRecommendation = orgCategory || universalCategory;
+
+      // If still no category found, use fallback
+      if (!categoryFound || !categoryEscalationPath) {
+        Logger.warn('⚠️ [ESCALATION] Category not found in organization or universal categories, using fallback')
         return this.getFallbackRecommendation(categoryId, organizationId);
       }
-      
+
       // 🔥 CRITICAL FIX: Filter warnings to only this category
-      const categorySpecificWarnings = allActiveWarnings.filter(warning => 
+      const categorySpecificWarnings = allActiveWarnings.filter(warning =>
         warning.categoryId === categoryId
       );
-      
+
       Logger.debug('📋 [ESCALATION] All active warnings:', allActiveWarnings.length)
       Logger.debug('📋 [ESCALATION] Category-specific warnings:', categorySpecificWarnings.length)
       Logger.debug('📋 [ESCALATION] Category ID filter:', categoryId)
-      
-      // Get escalation path from UniversalCategories
-      const escalationPath = getEscalationPath(categoryId);
-      Logger.debug('📋 [ESCALATION] Using escalation path:', escalationPath)
+
+      // Use the found escalation path
+      const escalationPath = categoryEscalationPath;
+      Logger.debug('📋 [ESCALATION] Final escalation path:', escalationPath)
       
       // Determine suggested level based ONLY on category-specific warnings
       const suggestedLevel = this.determineSuggestedLevel(categorySpecificWarnings, escalationPath);
@@ -250,14 +285,14 @@ export class WarningService {
         // Core recommendation
         suggestedLevel: finalLevel,
         recommendedLevel: requiresHRIntervention ? 'HR INTERVENTION REQUIRED' : getLevelLabel(finalLevel),
-        reason: requiresHRIntervention 
-          ? this.generateHRInterventionReason(categorySpecificWarnings, universalCategory)
-          : this.generateEscalationReason(categorySpecificWarnings, finalLevel, universalCategory),
+        reason: requiresHRIntervention
+          ? this.generateHRInterventionReason(categorySpecificWarnings, categoryForRecommendation)
+          : this.generateEscalationReason(categorySpecificWarnings, finalLevel, categoryForRecommendation),
         
         // HR Intervention System
         requiresHRIntervention,
         interventionReason: requiresHRIntervention
-          ? `Employee has active final written warning for ${universalCategory.name}. Next offense requires manual HR decision through dedicated intervention module.`
+          ? `Employee has active final written warning for ${categoryForRecommendation?.name || 'this category'}. Next offense requires manual HR decision through dedicated intervention module.`
           : undefined,
         interventionLevel: requiresHRIntervention ? 'urgent' : undefined,
         
@@ -267,17 +302,17 @@ export class WarningService {
         isEscalation: categorySpecificWarnings.length > 0,
         
         // LRA Compliance
-        category: universalCategory.name,
-        categoryId: universalCategory.id,
-        legalBasis: universalCategory.lraSection,
-        legalRequirements: universalCategory.proceduralRequirements,
-        
+        category: categoryForRecommendation?.name || 'Unknown Category',
+        categoryId: categoryForRecommendation?.id || categoryId,
+        legalBasis: categoryForRecommendation?.lraSection || 'Schedule 8 Item 3',
+        legalRequirements: categoryForRecommendation?.proceduralRequirements || [],
+
         // Progressive discipline context - 🔥 FIXED: Now counts only category warnings
         warningCount: allActiveWarnings.length, // Total for context
         categoryWarningCount: categorySpecificWarnings.length, // New field for category-specific count
-        nextExpiryDate: this.calculateNextExpiryDate(suggestedLevel, universalCategory.defaultValidityPeriod),
-        examples: universalCategory.commonExamples,
-        explanation: universalCategory.escalationRationale,
+        nextExpiryDate: this.calculateNextExpiryDate(suggestedLevel, categoryForRecommendation?.defaultValidityPeriod || 6),
+        examples: categoryForRecommendation?.commonExamples || [],
+        explanation: categoryForRecommendation?.escalationRationale || 'Progressive discipline according to LRA Schedule 8',
         previousWarnings: categorySpecificWarnings,
         
       };
@@ -349,10 +384,10 @@ export class WarningService {
   private static generateEscalationReason(
     activeWarnings: Warning[],
     suggestedLevel: WarningLevel,
-    category: UniversalCategory
+    category: any
   ): string {
     if (activeWarnings.length === 0) {
-      return `First incident of ${category.name}. Starting with ${getLevelLabel(suggestedLevel)} follows standard progressive discipline procedures.`;
+      return `First incident of ${category?.name || 'this category'}. Starting with ${getLevelLabel(suggestedLevel)} follows standard progressive discipline procedures.`;
     }
 
     const warningCount = activeWarnings.length;
@@ -367,17 +402,17 @@ export class WarningService {
    */
   private static generateHRInterventionReason(
     activeWarnings: Warning[],
-    category: UniversalCategory
+    category: any
   ): string {
     const finalWarning = activeWarnings.find(w => w.level === 'final_written');
     if (!finalWarning) {
-      return `🚨 URGENT: Employee requires HR intervention for ${category.name} violation.`;
+      return `🚨 URGENT: Employee requires HR intervention for ${category?.name || 'this category'} violation.`;
     }
 
     const daysSinceFinal = Math.floor((Date.now() - finalWarning.issueDate.getTime()) / (1000 * 60 * 60 * 24));
     const warningCount = activeWarnings.length;
 
-    return `🚨 URGENT HR INTERVENTION REQUIRED: Employee has active final written warning for ${category.name} (issued ${daysSinceFinal} days ago) and has committed another offense. Total active warnings: ${warningCount}. HR must use dedicated intervention module to decide next steps. System cannot escalate beyond final written warning.`;
+    return `🚨 URGENT HR INTERVENTION REQUIRED: Employee has active final written warning for ${category?.name || 'this category'} (issued ${daysSinceFinal} days ago) and has committed another offense. Total active warnings: ${warningCount}. HR must use dedicated intervention module to decide next steps. System cannot escalate beyond final written warning.`;
   }
 
   /**
@@ -594,65 +629,3 @@ export class WarningService {
   }
 }
 
-// ============================================
-// 🎯 SIMPLIFIED AI SERVICE
-// ============================================
-
-export class SimplifiedAIService {
-  /**
-   * Generate smart suggestions for incident description
-   */
-  static generateSmartSuggestions(
-    categoryId: string, 
-    employeeHistory: Warning[] = []
-  ): string[] {
-    const category = getCategoryById(categoryId);
-    
-    if (!category) {
-      return [
-        'Include date, time, and location of the incident',
-        'Describe the observed behavior objectively',
-        'Note any witnesses present during the incident',
-        'Reference any relevant company policies violated'
-      ];
-    }
-
-    const suggestions = [
-      `Consider these common ${category.name.toLowerCase()} examples:`,
-      ...category.commonExamples.slice(0, 3),
-      'Include specific details with dates and times',
-      'Note any witnesses present during the incident'
-    ];
-
-    if (employeeHistory.length > 0) {
-      suggestions.push(
-        'Reference any patterns from previous incidents',
-        'Note if this represents an escalation in severity'
-      );
-    }
-
-    return suggestions;
-  }
-
-  /**
-   * Generate category-specific legal guidance
-   */
-  static generateLegalGuidance(categoryId: string, level: WarningLevel): string[] {
-    const category = getCategoryById(categoryId);
-    
-    if (!category) {
-      return [
-        'Ensure fair and consistent application of disciplinary procedures',
-        'Maintain confidentiality throughout the process',
-        'Allow employee opportunity to respond',
-        'Document all interactions thoroughly'
-      ];
-    }
-
-    return [
-      ...category.proceduralRequirements.slice(0, 4),
-      `Level: ${getLevelLabel(level)} - ensure appropriate escalation`,
-      'Document all interactions thoroughly'
-    ];
-  }
-}

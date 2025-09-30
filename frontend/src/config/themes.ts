@@ -38,6 +38,71 @@ export interface ThemeColors {
   error: string;
   info: string;
 
+  // Extended color palette
+  muted: string;
+  mutedHover: string;
+  subtle: string;
+  emphasis: string;
+  highlight: string;
+  selection: string;
+
+  // Navigation colors
+  navBg: string;
+  navText: string;
+  navHover: string;
+  navActive: string;
+
+  // Button variants
+  btnGhost: string;
+  btnGhostHover: string;
+  btnOutline: string;
+  btnOutlineBorder: string;
+  btnOutlineHover: string;
+
+  // Alert variants
+  alertInfoBg: string;
+  alertInfoBorder: string;
+  alertInfoText: string;
+  alertSuccessBg: string;
+  alertSuccessBorder: string;
+  alertSuccessText: string;
+  alertWarningBg: string;
+  alertWarningBorder: string;
+  alertWarningText: string;
+  alertErrorBg: string;
+  alertErrorBorder: string;
+  alertErrorText: string;
+
+  // Badge variants
+  badgeDefault: string;
+  badgeDefaultText: string;
+  badgePrimary: string;
+  badgePrimaryText: string;
+  badgeSuccess: string;
+  badgeSuccessText: string;
+  badgeWarning: string;
+  badgeWarningText: string;
+  badgeError: string;
+  badgeErrorText: string;
+
+  // Navigation tab states
+  navTabActive: string;
+  navTabInactive: string;
+  navTabHover: string;
+
+  // Dashboard-specific colors
+  statCardBg: string;
+  metricPositive: string;
+  metricNegative: string;
+  urgentBg: string;
+  urgentBorder: string;
+  urgentText: string;
+
+  // Interactive states
+  hoverOverlay: string;
+  focusRing: string;
+  loadingBg: string;
+
   // Shadows (with transparency)
   shadowSm: string;
   shadow: string;
@@ -80,6 +145,71 @@ export const lightTheme: ThemeColors = {
   error: '#ef4444',
   info: '#3b82f6',
 
+  // Extended color palette
+  muted: '#f3f4f6',
+  mutedHover: '#e5e7eb',
+  subtle: '#f9fafb',
+  emphasis: '#1f2937',
+  highlight: '#fef3c7',
+  selection: '#dbeafe',
+
+  // Navigation colors
+  navBg: '#ffffff',
+  navText: '#374151',
+  navHover: '#f3f4f6',
+  navActive: '#eff6ff',
+
+  // Button variants
+  btnGhost: 'transparent',
+  btnGhostHover: '#f3f4f6',
+  btnOutline: 'transparent',
+  btnOutlineBorder: '#d1d5db',
+  btnOutlineHover: '#f9fafb',
+
+  // Alert variants
+  alertInfoBg: '#eff6ff',
+  alertInfoBorder: '#bfdbfe',
+  alertInfoText: '#1e40af',
+  alertSuccessBg: '#ecfdf5',
+  alertSuccessBorder: '#a7f3d0',
+  alertSuccessText: '#065f46',
+  alertWarningBg: '#fffbeb',
+  alertWarningBorder: '#fed7aa',
+  alertWarningText: '#92400e',
+  alertErrorBg: '#fef2f2',
+  alertErrorBorder: '#fecaca',
+  alertErrorText: '#991b1b',
+
+  // Badge variants
+  badgeDefault: '#f3f4f6',
+  badgeDefaultText: '#374151',
+  badgePrimary: '#eff6ff',
+  badgePrimaryText: '#1e40af',
+  badgeSuccess: '#ecfdf5',
+  badgeSuccessText: '#065f46',
+  badgeWarning: '#fffbeb',
+  badgeWarningText: '#92400e',
+  badgeError: '#fef2f2',
+  badgeErrorText: '#991b1b',
+
+  // Navigation tab states
+  navTabActive: '#3b82f6',
+  navTabInactive: '#6b7280',
+  navTabHover: '#4b5563',
+
+  // Dashboard-specific colors
+  statCardBg: '#ffffff',
+  metricPositive: '#10b981',
+  metricNegative: '#ef4444',
+  urgentBg: '#fef2f2',
+  urgentBorder: '#fecaca',
+  urgentText: '#991b1b',
+
+  // Interactive states
+  hoverOverlay: 'rgba(0, 0, 0, 0.05)',
+  focusRing: '#3b82f6',
+  loadingBg: '#f9fafb',
+
   // Shadows
   shadowSm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
   shadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
@@ -88,45 +218,110 @@ export const lightTheme: ThemeColors = {
 };
 
 export const darkTheme: ThemeColors = {
-  // Backgrounds
-  background: '#0f172a', // gray-900
-  backgroundSecondary: '#1e293b', // gray-800
-  backgroundTertiary: '#334155', // gray-700
+  // Rich dark backgrounds with depth
+  background: '#0a0e1a', // Deep dark blue-black
+  backgroundSecondary: '#151b2e', // Rich dark blue
+  backgroundTertiary: '#1f2937', // Elevated dark surface
 
-  // Text
-  text: '#f1f5f9', // gray-100
-  textSecondary: '#cbd5e1', // gray-300
-  textTertiary: '#94a3b8', // gray-400
-  textInverse: '#0f172a',
+  // High contrast text for readability
+  text: '#f8fafc', // Pure white-ish
+  textSecondary: '#e2e8f0', // Light gray
+  textTertiary: '#94a3b8', // Medium gray
+  textInverse: '#0a0e1a',
 
-  // Borders
-  border: '#334155', // gray-700
-  borderSecondary: '#475569', // gray-600
+  // Subtle borders with blue tint
+  border: '#374151', // Subtle blue-gray
+  borderSecondary: '#4b5563', // More visible blue-gray
 
-  // Components
-  cardBackground: '#1e293b',
-  cardBorder: '#334155',
-  inputBackground: '#1e293b',
-  inputBorder: '#475569',
-  inputBorderFocus: '#60a5fa',
+  // Premium dark components
+  cardBackground: '#1a202c', // Rich dark blue
+  cardBorder: '#2d3748', // Visible blue-gray border
+  inputBackground: '#1a202c', // Match card background
+  inputBorder: '#4a5568', // Clear input borders
+  inputBorderFocus: '#63b3ed', // Bright blue focus
 
-  // Semantic colors (slightly adjusted for dark mode)
-  primary: '#60a5fa', // Brighter for dark background
-  primaryHover: '#3b82f6',
-  secondary: '#a78bfa', // Brighter for dark background
-  secondaryHover: '#8b5cf6',
-  accent: '#34d399', // Brighter for dark background
-  accentHover: '#10b981',
-  success: '#34d399',
-  warning: '#fbbf24',
-  error: '#f87171',
-  info: '#60a5fa',
+  // Vibrant accent colors that pop in dark
+  primary: '#60a5fa', // Bright blue
+  primaryHover: '#3b82f6', // Darker blue
+  secondary: '#a78bfa', // Bright purple
+  secondaryHover: '#8b5cf6', // Darker purple
+  accent: '#34d399', // Bright green
+  accentHover: '#10b981', // Darker green
+  success: '#48cc8b', // Vibrant green
+  warning: '#f6ad55', // Warm orange
+  error: '#fc8181', // Bright red
+  info: '#63b3ed', // Bright blue
 
-  // Shadows (darker with more opacity)
-  shadowSm: '0 1px 2px 0 rgb(0 0 0 / 0.3)',
-  shadow: '0 4px 6px -1px rgb(0 0 0 / 0.4)',
-  shadowLg: '0 10px 15px -3px rgb(0 0 0 / 0.5)',
-  shadowXl: '0 20px 25px -5px rgb(0 0 0 / 0.6)',
+  // Extended dark palette
+  muted: '#374151',
+  mutedHover: '#4b5563',
+  subtle: '#1f2937',
+  emphasis: '#f9fafb',
+  highlight: '#365314',
+  selection: '#1e3a8a',
+
+  // Dark navigation colors
+  navBg: '#1a202c',
+  navText: '#e2e8f0',
+  navHover: '#2d3748',
+  navActive: '#2c5282',
+
+  // Dark button variants
+  btnGhost: 'transparent',
+  btnGhostHover: '#2d3748',
+  btnOutline: 'transparent',
+  btnOutlineBorder: '#4a5568',
+  btnOutlineHover: '#2d3748',
+
+  // Dark alert variants
+  alertInfoBg: '#1e3a8a',
+  alertInfoBorder: '#3b82f6',
+  alertInfoText: '#93c5fd',
+  alertSuccessBg: '#065f46',
+  alertSuccessBorder: '#059669',
+  alertSuccessText: '#a7f3d0',
+  alertWarningBg: '#92400e',
+  alertWarningBorder: '#d97706',
+  alertWarningText: '#fcd34d',
+  alertErrorBg: '#991b1b',
+  alertErrorBorder: '#dc2626',
+  alertErrorText: '#fca5a5',
+
+  // Dark badge variants
+  badgeDefault: '#374151',
+  badgeDefaultText: '#d1d5db',
+  badgePrimary: '#1e3a8a',
+  badgePrimaryText: '#93c5fd',
+  badgeSuccess: '#065f46',
+  badgeSuccessText: '#a7f3d0',
+  badgeWarning: '#92400e',
+  badgeWarningText: '#fcd34d',
+  badgeError: '#991b1b',
+  badgeErrorText: '#fca5a5',
+
+  // Navigation tab states
+  navTabActive: '#60a5fa',
+  navTabInactive: '#9ca3af',
+  navTabHover: '#d1d5db',
+
+  // Dashboard-specific colors
+  statCardBg: '#1a202c',
+  metricPositive: '#34d399',
+  metricNegative: '#fc8181',
+  urgentBg: '#991b1b',
+  urgentBorder: '#dc2626',
+  urgentText: '#fca5a5',
+
+  // Interactive states
+  hoverOverlay: 'rgba(255, 255, 255, 0.1)',
+  focusRing: '#60a5fa',
+  loadingBg: '#1f2937',
+
+  // Enhanced shadows for depth
+  shadowSm: '0 1px 3px 0 rgb(0 0 0 / 0.5)',
+  shadow: '0 4px 6px -1px rgb(0 0 0 / 0.6), 0 2px 4px -1px rgb(0 0 0 / 0.3)',
+  shadowLg: '0 10px 15px -3px rgb(0 0 0 / 0.7), 0 4px 6px -2px rgb(0 0 0 / 0.4)',
+  shadowXl: '0 20px 25px -5px rgb(0 0 0 / 0.8), 0 10px 10px -5px rgb(0 0 0 / 0.5)',
 };
 
 // Branded theme will be dynamically generated based on organization colors
@@ -135,21 +330,112 @@ export const generateBrandedTheme = (
   secondaryColor: string,
   accentColor: string
 ): ThemeColors => {
-  // Use light theme as base and override with brand colors
+  // Create a branded experience with prominent use of organization colors
   return {
     ...lightTheme,
+
+    // Prominent brand color usage
     primary: primaryColor,
-    primaryHover: adjustBrightness(primaryColor, -20),
+    primaryHover: adjustBrightness(primaryColor, -15),
     secondary: secondaryColor,
-    secondaryHover: adjustBrightness(secondaryColor, -20),
+    secondaryHover: adjustBrightness(secondaryColor, -15),
     accent: accentColor,
-    accentHover: adjustBrightness(accentColor, -20),
+    accentHover: adjustBrightness(accentColor, -15),
+
+    // Focus states use brand colors
     inputBorderFocus: primaryColor,
 
-    // Subtle brand color tinting for backgrounds
-    background: tintColor('#f8fafc', primaryColor, 0.02),
-    backgroundSecondary: tintColor('#f1f5f9', primaryColor, 0.03),
-    cardBackground: tintColor('#ffffff', primaryColor, 0.01),
+    // Branded backgrounds - more prominent tinting
+    background: tintColor('#fafafa', primaryColor, 0.04), // Subtle brand background
+    backgroundSecondary: tintColor('#f5f5f5', primaryColor, 0.06), // More noticeable tint
+    backgroundTertiary: tintColor('#eeeeee', primaryColor, 0.08), // Even more brand presence
+
+    // Branded components
+    cardBackground: tintColor('#ffffff', primaryColor, 0.02), // Subtle brand cards
+    cardBorder: tintColor('#e5e7eb', primaryColor, 0.15), // Brand-colored borders
+
+    // Branded inputs
+    inputBackground: tintColor('#ffffff', primaryColor, 0.01),
+    inputBorder: tintColor('#d1d5db', primaryColor, 0.2), // Noticeable brand tint
+
+    // Enhanced text colors with brand influence
+    textSecondary: tintColor('#6b7280', primaryColor, 0.1),
+    textTertiary: tintColor('#9ca3af', primaryColor, 0.15),
+
+    // Branded borders
+    border: tintColor('#e5e7eb', primaryColor, 0.2),
+    borderSecondary: tintColor('#d1d5db', primaryColor, 0.25),
+
+    // Branded extended palette
+    muted: tintColor('#f3f4f6', primaryColor, 0.08),
+    mutedHover: tintColor('#e5e7eb', primaryColor, 0.1),
+    subtle: tintColor('#f9fafb', primaryColor, 0.04),
+    emphasis: tintColor('#1f2937', primaryColor, 0.1),
+    highlight: tintColor('#fef3c7', primaryColor, 0.15),
+    selection: tintColor('#dbeafe', primaryColor, 0.3),
+
+    // Branded navigation
+    navBg: tintColor('#ffffff', primaryColor, 0.03),
+    navText: tintColor('#374151', primaryColor, 0.1),
+    navHover: tintColor('#f3f4f6', primaryColor, 0.1),
+    navActive: tintColor('#eff6ff', primaryColor, 0.2),
+
+    // Branded button variants
+    btnGhost: 'transparent',
+    btnGhostHover: tintColor('#f3f4f6', primaryColor, 0.1),
+    btnOutline: 'transparent',
+    btnOutlineBorder: tintColor('#d1d5db', primaryColor, 0.3),
+    btnOutlineHover: tintColor('#f9fafb', primaryColor, 0.08),
+
+    // Branded alert variants
+    alertInfoBg: tintColor('#eff6ff', primaryColor, 0.2),
+    alertInfoBorder: tintColor('#bfdbfe', primaryColor, 0.3),
+    alertInfoText: tintColor('#1e40af', primaryColor, 0.2),
+    alertSuccessBg: tintColor('#ecfdf5', accentColor, 0.2),
+    alertSuccessBorder: tintColor('#a7f3d0', accentColor, 0.3),
+    alertSuccessText: tintColor('#065f46', accentColor, 0.2),
+    alertWarningBg: '#fffbeb',
+    alertWarningBorder: '#fed7aa',
+    alertWarningText: '#92400e',
+    alertErrorBg: '#fef2f2',
+    alertErrorBorder: '#fecaca',
+    alertErrorText: '#991b1b',
+
+    // Branded badge variants
+    badgeDefault: tintColor('#f3f4f6', primaryColor, 0.1),
+    badgeDefaultText: tintColor('#374151', primaryColor, 0.15),
+    badgePrimary: tintColor('#eff6ff', primaryColor, 0.3),
+    badgePrimaryText: tintColor('#1e40af', primaryColor, 0.2),
+    badgeSuccess: tintColor('#ecfdf5', accentColor, 0.3),
+    badgeSuccessText: tintColor('#065f46', accentColor, 0.2),
+    badgeWarning: '#fffbeb',
+    badgeWarningText: '#92400e',
+    badgeError: '#fef2f2',
+    badgeErrorText: '#991b1b',
+
+    // Branded navigation tab states
+    navTabActive: primaryColor,
+    navTabInactive: tintColor('#6b7280', primaryColor, 0.2),
+    navTabHover: tintColor('#4b5563', primaryColor, 0.15),
+
+    // Branded dashboard-specific colors
+    statCardBg: tintColor('#ffffff', primaryColor, 0.02),
+    metricPositive: accentColor,
+    metricNegative: '#ef4444',
+    urgentBg: tintColor('#fef2f2', primaryColor, 0.1),
+    urgentBorder: tintColor('#fecaca', primaryColor, 0.2),
+    urgentText: tintColor('#991b1b', primaryColor, 0.1),
+
+    // Branded interactive states
+    hoverOverlay: hexToRgba(primaryColor, 0.08),
+    focusRing: primaryColor,
+    loadingBg: tintColor('#f9fafb', primaryColor, 0.05),
+
+    // Enhanced shadows with brand color hints
+    shadowSm: `0 1px 2px 0 ${hexToRgba(primaryColor, 0.1)}`,
+    shadow: `0 4px 6px -1px ${hexToRgba(primaryColor, 0.15)}, 0 2px 4px -1px ${hexToRgba(primaryColor, 0.06)}`,
+    shadowLg: `0 10px 15px -3px ${hexToRgba(primaryColor, 0.2)}, 0 4px 6px -2px ${hexToRgba(primaryColor, 0.08)}`,
+    shadowXl: `0 20px 25px -5px ${hexToRgba(primaryColor, 0.25)}, 0 10px 10px -5px ${hexToRgba(primaryColor, 0.1)}`,
   };
 };
 
@@ -194,6 +480,13 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   } : null;
 }
 
+// Helper function to convert hex to rgba string
+function hexToRgba(hex: string, alpha: number): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return `rgba(0, 0, 0, ${alpha})`;
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
+}
+
 // Function to apply theme to CSS variables
 export function applyTheme(theme: ThemeColors): void {
   const root = document.documentElement;
@@ -231,6 +524,71 @@ export function applyTheme(theme: ThemeColors): void {
   root.style.setProperty('--color-warning', theme.warning);
   root.style.setProperty('--color-error', theme.error);
   root.style.setProperty('--color-info', theme.info);
+
+  // Extended color palette
+  root.style.setProperty('--color-muted', theme.muted);
+  root.style.setProperty('--color-muted-hover', theme.mutedHover);
+  root.style.setProperty('--color-subtle', theme.subtle);
+  root.style.setProperty('--color-emphasis', theme.emphasis);
+  root.style.setProperty('--color-highlight', theme.highlight);
+  root.style.setProperty('--color-selection', theme.selection);
+
+  // Navigation colors
+  root.style.setProperty('--color-nav-bg', theme.navBg);
+  root.style.setProperty('--color-nav-text', theme.navText);
+  root.style.setProperty('--color-nav-hover', theme.navHover);
+  root.style.setProperty('--color-nav-active', theme.navActive);
+
+  // Button variants
+  root.style.setProperty('--color-btn-ghost', theme.btnGhost);
+  root.style.setProperty('--color-btn-ghost-hover', theme.btnGhostHover);
+  root.style.setProperty('--color-btn-outline', theme.btnOutline);
+  root.style.setProperty('--color-btn-outline-border', theme.btnOutlineBorder);
+  root.style.setProperty('--color-btn-outline-hover', theme.btnOutlineHover);
+
+  // Alert variants
+  root.style.setProperty('--color-alert-info-bg', theme.alertInfoBg);
+  root.style.setProperty('--color-alert-info-border', theme.alertInfoBorder);
+  root.style.setProperty('--color-alert-info-text', theme.alertInfoText);
+  root.style.setProperty('--color-alert-success-bg', theme.alertSuccessBg);
+  root.style.setProperty('--color-alert-success-border', theme.alertSuccessBorder);
+  root.style.setProperty('--color-alert-success-text', theme.alertSuccessText);
+  root.style.setProperty('--color-alert-warning-bg', theme.alertWarningBg);
+  root.style.setProperty('--color-alert-warning-border', theme.alertWarningBorder);
+  root.style.setProperty('--color-alert-warning-text', theme.alertWarningText);
+  root.style.setProperty('--color-alert-error-bg', theme.alertErrorBg);
+  root.style.setProperty('--color-alert-error-border', theme.alertErrorBorder);
+  root.style.setProperty('--color-alert-error-text', theme.alertErrorText);
+
+  // Badge variants
+  root.style.setProperty('--color-badge-default', theme.badgeDefault);
+  root.style.setProperty('--color-badge-default-text', theme.badgeDefaultText);
+  root.style.setProperty('--color-badge-primary', theme.badgePrimary);
+  root.style.setProperty('--color-badge-primary-text', theme.badgePrimaryText);
+  root.style.setProperty('--color-badge-success', theme.badgeSuccess);
+  root.style.setProperty('--color-badge-success-text', theme.badgeSuccessText);
+  root.style.setProperty('--color-badge-warning', theme.badgeWarning);
+  root.style.setProperty('--color-badge-warning-text', theme.badgeWarningText);
+  root.style.setProperty('--color-badge-error', theme.badgeError);
+  root.style.setProperty('--color-badge-error-text', theme.badgeErrorText);
+
+  // Navigation tab states
+  root.style.setProperty('--color-nav-tab-active', theme.navTabActive);
+  root.style.setProperty('--color-nav-tab-inactive', theme.navTabInactive);
+  root.style.setProperty('--color-nav-tab-hover', theme.navTabHover);
+
+  // Dashboard-specific colors
+  root.style.setProperty('--color-stat-card-bg', theme.statCardBg);
+  root.style.setProperty('--color-metric-positive', theme.metricPositive);
+  root.style.setProperty('--color-metric-negative', theme.metricNegative);
+  root.style.setProperty('--color-urgent-bg', theme.urgentBg);
+  root.style.setProperty('--color-urgent-border', theme.urgentBorder);
+  root.style.setProperty('--color-urgent-text', theme.urgentText);
+
+  // Interactive states
+  root.style.setProperty('--color-hover-overlay', theme.hoverOverlay);
+  root.style.setProperty('--color-focus-ring', theme.focusRing);
+  root.style.setProperty('--color-loading-bg', theme.loadingBg);
 
   // Shadows
   root.style.setProperty('--shadow-sm', theme.shadowSm);

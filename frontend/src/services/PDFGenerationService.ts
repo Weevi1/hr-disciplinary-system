@@ -5,6 +5,9 @@ import Logger from '../utils/logger';
 // ✅ Professional LRA-compliant document generation with proper formatting
 // ✅ Supports signatures, recommendations, and all your form data
 // ✅ RESILIENT to incomplete data states
+// 🚨 MEMORY OPTIMIZED for 2012-era devices with <1GB RAM
+
+import { globalDeviceCapabilities, getPerformanceLimits } from '../utils/deviceDetection';
 
 // Dynamic import for jsPDF - reduces main bundle by 43%
 // jsPDF will be loaded on-demand when PDF generation is needed
@@ -105,6 +108,15 @@ export class PDFGenerationService {
    */
   static async generateWarningPDF(data: WarningPDFData): Promise<Blob> {
     try {
+      // 🚨 Memory check for legacy devices
+      const capabilities = globalDeviceCapabilities || { isLegacyDevice: false };
+      const limits = getPerformanceLimits(capabilities);
+
+      if (capabilities.isLegacyDevice) {
+        console.warn('🚨 Legacy device detected - using simplified PDF generation');
+        return this.generateSimplifiedPDF(data);
+      }
+
       Logger.debug(2688)
       console.log('📊 Input data validation:', {
         hasEmployee: !!data.employee,
@@ -115,13 +127,13 @@ export class PDFGenerationService {
         warningLevel: data.warningLevel,
         category: data.category
       });
-      
+
       const startTime = Date.now();
-      
+
       // 🚀 PERFORMANCE: Dynamic import jsPDF to reduce main bundle by 43%
       Logger.debug(3310)
       const { default: jsPDF } = await import('jspdf');
-      
+
       Logger.debug(3436)
       const doc = new jsPDF({
         orientation: 'portrait',
@@ -1047,5 +1059,196 @@ export class PDFGenerationService {
     }
     
     return null;
+  }
+
+  /**
+   * 🚨 SIMPLIFIED PDF GENERATION FOR 2012-ERA DEVICES
+   * Minimal memory usage, no images, simple layout
+   */
+  static async generateSimplifiedPDF(data: WarningPDFData): Promise<Blob> {
+    try {
+      console.log('🚨 Generating simplified PDF for legacy device...');
+
+      // Import minimal jsPDF configuration
+      const { default: jsPDF } = await import('jspdf');
+
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+
+      // Simple layout variables
+      let currentY = 20;
+      const margin = 15;
+      const lineHeight = 6;
+
+      // Basic font only
+      doc.setFont('helvetica', 'normal');
+
+      // 1. Simple Header
+      doc.setFontSize(16);
+      doc.text('DISCIPLINARY WARNING', margin, currentY);
+      currentY += lineHeight * 2;
+
+      // 2. Organization (text only)
+      doc.setFontSize(12);
+      if (data.organization?.name) {
+        doc.text(`Organization: ${data.organization.name}`, margin, currentY);
+        currentY += lineHeight;
+      }
+
+      currentY += lineHeight;
+
+      // 3. Employee Details (simplified)
+      doc.setFontSize(11);
+      doc.text('EMPLOYEE DETAILS:', margin, currentY);
+      currentY += lineHeight;
+
+      doc.setFontSize(10);
+      const employeeLines = [
+        `Name: ${data.employee.firstName} ${data.employee.lastName}`,
+        `Employee ID: ${data.employee.employeeNumber}`,
+        `Department: ${data.employee.department}`,
+        `Position: ${data.employee.position}`
+      ];
+
+      employeeLines.forEach(line => {
+        doc.text(line, margin + 5, currentY);
+        currentY += lineHeight;
+      });
+
+      currentY += lineHeight;
+
+      // 4. Warning Details (simplified)
+      doc.setFontSize(11);
+      doc.text('WARNING DETAILS:', margin, currentY);
+      currentY += lineHeight;
+
+      doc.setFontSize(10);
+      const warningLines = [
+        `Date: ${data.issuedDate.toLocaleDateString()}`,
+        `Category: ${data.category}`,
+        `Level: ${data.warningLevel}`,
+        `Location: ${data.incidentLocation || 'Not specified'}`
+      ];
+
+      warningLines.forEach(line => {
+        doc.text(line, margin + 5, currentY);
+        currentY += lineHeight;
+      });
+
+      currentY += lineHeight;
+
+      // 5. Description (with word wrapping)
+      doc.setFontSize(11);
+      doc.text('INCIDENT DESCRIPTION:', margin, currentY);
+      currentY += lineHeight;
+
+      doc.setFontSize(10);
+      const maxWidth = 170; // mm
+      const descriptionLines = doc.splitTextToSize(data.description, maxWidth);
+
+      descriptionLines.forEach((line: string) => {
+        if (currentY > 270) { // Near bottom of page
+          doc.addPage();
+          currentY = 20;
+        }
+        doc.text(line, margin + 5, currentY);
+        currentY += lineHeight;
+      });
+
+      currentY += lineHeight * 2;
+
+      // 6. Signatures (simple text fields)
+      if (currentY > 240) {
+        doc.addPage();
+        currentY = 20;
+      }
+
+      doc.setFontSize(11);
+      doc.text('SIGNATURES:', margin, currentY);
+      currentY += lineHeight * 2;
+
+      doc.setFontSize(10);
+
+      // Manager signature
+      doc.text('Manager: ________________________', margin, currentY);
+      currentY += lineHeight;
+      doc.text(`Date: ${data.issuedDate.toLocaleDateString()}`, margin, currentY);
+      currentY += lineHeight * 3;
+
+      // Employee signature
+      doc.text('Employee: _______________________ ', margin, currentY);
+      currentY += lineHeight;
+      doc.text('Date: _______________', margin, currentY);
+
+      // 7. Footer
+      const pageHeight = doc.internal.pageSize.height;
+      doc.setFontSize(8);
+      doc.text('Generated by HR System - Simplified for mobile device', margin, pageHeight - 10);
+
+      console.log('✅ Simplified PDF generation completed');
+
+      // Force memory cleanup
+      const blob = doc.output('blob');
+
+      // Hint for garbage collection on legacy devices
+      if (window.gc) {
+        setTimeout(() => window.gc(), 100);
+      }
+
+      return blob;
+
+    } catch (error) {
+      console.error('❌ Simplified PDF generation failed:', error);
+
+      // Fallback: Generate even simpler text-based PDF
+      return this.generatePlainTextPDF(data);
+    }
+  }
+
+  /**
+   * 🚨 PLAIN TEXT PDF FALLBACK FOR VERY LIMITED DEVICES
+   * Absolute minimal PDF for extreme cases
+   */
+  static async generatePlainTextPDF(data: WarningPDFData): Promise<Blob> {
+    try {
+      const { default: jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+
+      doc.setFontSize(12);
+      let currentY = 20;
+      const lineHeight = 10;
+
+      const lines = [
+        'DISCIPLINARY WARNING',
+        '',
+        `Employee: ${data.employee.firstName} ${data.employee.lastName}`,
+        `Date: ${data.issuedDate.toLocaleDateString()}`,
+        `Category: ${data.category}`,
+        `Level: ${data.warningLevel}`,
+        '',
+        'Description:',
+        data.description,
+        '',
+        'This is a simplified version generated for older devices.'
+      ];
+
+      lines.forEach(line => {
+        if (currentY > 280) {
+          doc.addPage();
+          currentY = 20;
+        }
+        doc.text(line, 20, currentY);
+        currentY += lineHeight;
+      });
+
+      return doc.output('blob');
+    } catch (error) {
+      console.error('❌ Even plain text PDF failed:', error);
+      throw new Error('PDF generation not supported on this device');
+    }
   }
 }

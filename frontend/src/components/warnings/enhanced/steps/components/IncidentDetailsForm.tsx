@@ -7,6 +7,10 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { FileText, MapPin, Calendar, Clock, PenTool, Lightbulb, CheckCircle, AlertTriangle, Save } from 'lucide-react';
 import type { EnhancedWarningFormData } from '../../../../../services/WarningService';
 
+// Import unified theming components
+import { ThemedSectionHeader, ThemedFormInput } from '../../../../common/ThemedCard';
+import { CustomDatePicker } from '../../../../common/CustomDatePicker';
+
 interface IncidentDetailsFormProps {
   formData: EnhancedWarningFormData;
   onFormDataChange: (updates: Partial<EnhancedWarningFormData>) => void;
@@ -168,148 +172,98 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`space-y-4 ${className}`}>
       {/* Section Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-green-100 rounded-lg">
-            <FileText className="w-5 h-5 text-green-600" />
+      <ThemedSectionHeader
+        icon={FileText}
+        title="Incident Details"
+        subtitle="Provide comprehensive details about the incident"
+        rightContent={
+          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
+            {isSaving && (
+              <div className="flex items-center gap-1">
+                <Save className="w-4 h-4 animate-pulse" />
+                <span>Saving...</span>
+              </div>
+            )}
+            {lastSaved && !isSaving && (
+              <div className="flex items-center gap-1">
+                <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
+                <span>Saved {lastSaved.toLocaleTimeString()}</span>
+              </div>
+            )}
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Incident Details</h3>
-            <p className="text-sm text-gray-600">Provide comprehensive details about the incident</p>
-          </div>
-        </div>
-        
-        {/* Auto-save indicator */}
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          {isSaving && (
-            <div className="flex items-center gap-1">
-              <Save className="w-4 h-4 animate-pulse" />
-              <span>Saving...</span>
-            </div>
-          )}
-          {lastSaved && !isSaving && (
-            <div className="flex items-center gap-1">
-              <CheckCircle className="w-4 h-4 text-green-600" />
-              <span>Saved {lastSaved.toLocaleTimeString()}</span>
-            </div>
-          )}
-        </div>
-      </div>
+        }
+      />
 
       {/* Date and Time Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Incident Date */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            <Calendar className="w-4 h-4 inline mr-1" />
-            Incident Date *
-          </label>
-          <input
-            type="date"
-            value={formData.incidentDate || ''}
-            max={today}
-            onChange={(e) => handleFieldChange('incidentDate', e.target.value)}
-            disabled={disabled}
-            className={`
-              w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-              ${validationErrors.incidentDate && touched.incidentDate 
-                ? 'border-red-300 bg-red-50' 
-                : 'border-gray-300'
-              }
-              ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-            `}
-          />
-          {validationErrors.incidentDate && touched.incidentDate && (
-            <div className="flex items-center gap-1 text-sm text-red-600">
-              <AlertTriangle className="w-4 h-4" />
-              {validationErrors.incidentDate}
-            </div>
-          )}
-        </div>
+        <CustomDatePicker
+          type="date"
+          label="Incident Date"
+          value={formData.incidentDate || ''}
+          onChange={(value) => handleFieldChange('incidentDate', value)}
+          icon={Calendar}
+          required
+          disabled={disabled}
+          error={validationErrors.incidentDate && touched.incidentDate ? validationErrors.incidentDate : undefined}
+        />
 
         {/* Incident Time */}
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            <Clock className="w-4 h-4 inline mr-1" />
-            Incident Time *
-          </label>
-          <input
-            type="time"
-            value={formData.incidentTime || ''}
-            onChange={(e) => handleFieldChange('incidentTime', e.target.value)}
-            disabled={disabled}
-            className={`
-              w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-              ${validationErrors.incidentTime && touched.incidentTime 
-                ? 'border-red-300 bg-red-50' 
-                : 'border-gray-300'
-              }
-              ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-            `}
-          />
-          {validationErrors.incidentTime && touched.incidentTime && (
-            <div className="flex items-center gap-1 text-sm text-red-600">
-              <AlertTriangle className="w-4 h-4" />
-              {validationErrors.incidentTime}
-            </div>
-          )}
-        </div>
+        <CustomDatePicker
+          type="time"
+          label="Incident Time"
+          value={formData.incidentTime || ''}
+          onChange={(value) => handleFieldChange('incidentTime', value)}
+          icon={Clock}
+          required
+          disabled={disabled}
+          error={validationErrors.incidentTime && touched.incidentTime ? validationErrors.incidentTime : undefined}
+        />
       </div>
 
       {/* Location */}
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">
-          <MapPin className="w-4 h-4 inline mr-1" />
-          Incident Location *
-        </label>
-        <input
-          type="text"
-          value={formData.incidentLocation || ''}
-          onChange={(e) => handleFieldChange('incidentLocation', e.target.value)}
-          placeholder="e.g., Main office reception area, Warehouse loading dock, Conference Room B"
-          disabled={disabled}
-          className={`
-            w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-            ${validationErrors.incidentLocation && touched.incidentLocation 
-              ? 'border-red-300 bg-red-50' 
-              : 'border-gray-300'
-            }
-            ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-          `}
-        />
-        {validationErrors.incidentLocation && touched.incidentLocation && (
-          <div className="flex items-center gap-1 text-sm text-red-600">
-            <AlertTriangle className="w-4 h-4" />
-            {validationErrors.incidentLocation}
-          </div>
-        )}
-      </div>
+      <ThemedFormInput
+        type="text"
+        label="Incident Location"
+        value={formData.incidentLocation || ''}
+        onChange={(value) => handleFieldChange('incidentLocation', value)}
+        placeholder="e.g., Main office reception area, Warehouse loading dock, Conference Room B"
+        icon={MapPin}
+        required
+        disabled={disabled}
+        error={validationErrors.incidentLocation && touched.incidentLocation ? validationErrors.incidentLocation : undefined}
+      />
 
       {/* Incident Description */}
-      <div className="space-y-2">
+      <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-gray-700">
-            <PenTool className="w-4 h-4 inline mr-1" />
+          <label className="block text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+            <PenTool className="w-3 h-3 inline mr-1" />
             Incident Description *
           </label>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setShowWritingAssistance(!showWritingAssistance)}
-              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+              className="flex items-center gap-1 text-xs"
+              style={{ color: 'var(--color-primary)' }}
             >
-              <Lightbulb className="w-4 h-4" />
+              <Lightbulb className="w-3 h-3" />
               Writing Tips
             </button>
-            <div className={`
-              text-sm px-2 py-1 rounded-full
-              ${writingAssistance.isMinimumMet 
-                ? 'bg-green-100 text-green-700' 
-                : 'bg-amber-100 text-amber-700'
-              }
-            `}>
+            <div
+              className="text-xs px-1.5 py-0.5 rounded-full"
+              style={{
+                backgroundColor: writingAssistance.isMinimumMet
+                  ? 'var(--color-alert-success-bg)'
+                  : 'var(--color-alert-warning-bg)',
+                color: writingAssistance.isMinimumMet
+                  ? 'var(--color-alert-success-text)'
+                  : 'var(--color-alert-warning-text)'
+              }}
+            >
               {writingAssistance.wordCount} words
             </div>
           </div>
@@ -321,37 +275,39 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
           placeholder="Describe exactly what happened. Include specific details such as what was said or done, who was present, and any relevant context..."
           disabled={disabled}
           rows={6}
-          className={`
-            w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-            ${validationErrors.incidentDescription && touched.incidentDescription 
-              ? 'border-red-300 bg-red-50' 
-              : 'border-gray-300'
-            }
-            ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-          `}
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 text-sm min-h-[132px] resize-vertical ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          style={{
+            backgroundColor: validationErrors.incidentDescription && touched.incidentDescription
+              ? 'var(--color-alert-error-bg)'
+              : 'var(--color-input-background)',
+            borderColor: validationErrors.incidentDescription && touched.incidentDescription
+              ? 'var(--color-alert-error-border)'
+              : 'var(--color-input-border)',
+            color: 'var(--color-text)'
+          }}
         />
         
         {validationErrors.incidentDescription && touched.incidentDescription && (
-          <div className="flex items-center gap-1 text-sm text-red-600">
-            <AlertTriangle className="w-4 h-4" />
+          <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--color-error)' }}>
+            <AlertTriangle className="w-3 h-3" />
             {validationErrors.incidentDescription}
           </div>
         )}
 
         {/* Writing Assistance */}
         {showWritingAssistance && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-blue-900 mb-2">Writing Assistance</h4>
-            <div className="space-y-2 text-sm text-blue-800">
+          <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--color-alert-info-bg)', border: '1px solid var(--color-alert-info-border)' }}>
+            <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--color-alert-info-text)' }}>Writing Assistance</h4>
+            <div className="space-y-2 text-sm" style={{ color: 'var(--color-alert-info-text)' }}>
               {writingAssistance.suggestions.map((suggestion, index) => (
                 <div key={index} className="flex items-start gap-2">
-                  <Lightbulb className="w-4 h-4 mt-0.5 text-blue-600" />
+                  <Lightbulb className="w-4 h-4 mt-0.5" style={{ color: 'var(--color-alert-info-text)' }} />
                   <span>{suggestion}</span>
                 </div>
               ))}
               {writingAssistance.suggestions.length === 0 && (
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
                   <span className="text-green-700">Your description looks comprehensive!</span>
                 </div>
               )}
@@ -362,7 +318,7 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
 
       {/* Additional Notes */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">
+        <label className="block text-xs font-medium text-gray-700">
           Additional Notes
           <span className="text-gray-500 font-normal ml-1">(optional)</span>
         </label>
@@ -383,7 +339,7 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Issue Date */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             Issue Date *
           </label>
           <input
@@ -400,7 +356,7 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
 
         {/* Validity Period */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             Validity Period *
           </label>
           <select

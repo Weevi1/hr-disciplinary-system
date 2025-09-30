@@ -4,6 +4,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Shield, AlertCircle, CheckCircle, Volume2, Lock } from 'lucide-react';
+import { LoadingSpinner } from '../../../common/LoadingComponents';
 
 interface MicrophonePermissionHandlerProps {
   onPermissionGranted: () => void;
@@ -130,9 +131,9 @@ export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerPr
   const getStatusIcon = () => {
     switch (permissionState) {
       case 'requesting':
-        return <Mic className="w-6 h-6 text-blue-600 animate-pulse" />;
+        return <LoadingSpinner size="medium" color="#3b82f6" />;
       case 'granted':
-        return <CheckCircle className="w-6 h-6 text-green-600" />;
+        return <LoadingSpinner size="medium" color="#16a34a" />;
       case 'denied':
         return <MicOff className="w-6 h-6 text-red-600" />;
       case 'error':
@@ -148,18 +149,18 @@ export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerPr
     switch (permissionState) {
       case 'requesting':
         return {
-          title: 'Microphone Access Required',
-          message: 'Please allow microphone access to continue with the warning process.'
+          title: 'Checking microphone access...',
+          message: 'Please allow microphone access when prompted.'
         };
       case 'granted':
         return {
-          title: 'Access Granted',
+          title: 'Loading...',
           message: 'Starting warning wizard...'
         };
       case 'denied':
         return {
-          title: 'Access Denied',
-          message: errorMessage
+          title: 'Microphone Access Required',
+          message: 'You need to approve microphone access to continue with the warning process.'
         };
       case 'error':
         return {
@@ -188,7 +189,7 @@ export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerPr
         <div className="bg-white rounded-lg shadow-xl p-4 text-center">
           {/* Status Icon and Title */}
           <div className="mb-4">
-            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+            <div className="flex items-center justify-center mx-auto mb-3" style={{ height: '48px' }}>
               {getStatusIcon()}
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">{status.title}</h3>
@@ -211,15 +212,6 @@ export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerPr
             </div>
           )}
 
-          {/* Success State */}
-          {permissionState === 'granted' && (
-            <div className="bg-green-50 border border-green-200 rounded-md p-3">
-              <div className="flex items-center justify-center gap-2 text-green-800">
-                <CheckCircle className="w-4 h-4" />
-                <span className="text-sm">Ready to proceed</span>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Compact Organization Info */}

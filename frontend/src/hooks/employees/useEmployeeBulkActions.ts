@@ -60,15 +60,6 @@ export const useEmployeeBulkActions = () => {
               }
               break;
               
-            case 'updateDeliveryMethod':
-              if (!action.value) throw new Error('Delivery method not specified');
-              // Get employee, update delivery method, then save
-              const employeeForDelivery = await API.employees.getById(employeeId, organizationId);
-              if (employeeForDelivery) {
-                employeeForDelivery.profile.preferredDeliveryMethod = action.value as any;
-                await API.employees.update(employeeId, organizationId, employeeForDelivery);
-              }
-              break;
               
             default:
               throw new Error(`Unknown action type: ${action.type}`);

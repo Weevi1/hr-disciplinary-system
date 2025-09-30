@@ -99,7 +99,6 @@ export const useEmployeeImport = () => {
               position: row.position || '',
               startDate: row.startDate || '',
               contractType: (row.contractType?.toLowerCase() || 'permanent') as any,
-              preferredDeliveryMethod: (row.preferredDeliveryMethod?.toLowerCase() || 'email') as any
             };
 
 
@@ -184,7 +183,6 @@ export const useEmployeeImport = () => {
             position: row.position,
             startDate: row.startDate,
             contractType: row.contractType as any || 'permanent',
-            preferredDeliveryMethod: row.preferredDeliveryMethod as any || 'email',
             isActive: true
           };
 

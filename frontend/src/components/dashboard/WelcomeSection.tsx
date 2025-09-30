@@ -9,6 +9,9 @@ import { useOrganization } from '../../contexts/OrganizationContext';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
 import { UserCircle, Clock } from 'lucide-react';
 
+// Import themed components
+import { ThemedCard, ThemedBadge } from '../common/ThemedCard';
+
 // --- A Simple Breakpoint Hook (consistent with other components) ---
 const useBreakpoint = (breakpoint: number) => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > breakpoint);
@@ -55,19 +58,25 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({ className = '' }) => 
 
   // --- HELPER FUNCTIONS ---
 
-  // 🎨 Returns a vibrant, role-based gradient string. Used by both views.
-  const getRoleGradient = () => {
+  // 🎨 Returns themed background style for role-based gradients
+  const getRoleGradientStyle = () => {
     const primaryRole = getPrimaryRole();
-    const gradients = {
-      'business-owner': 'from-purple-500 to-indigo-600',
-      'hr-manager':     'from-emerald-500 to-teal-600',
-      'hod-manager':    'from-blue-500 to-cyan-600',
-      'supervisor':     'from-orange-500 to-amber-600',
-      'employee':       'from-gray-500 to-slate-600',
-      'admin':          'from-red-500 to-rose-600',
-      'super-user':     'from-violet-500 to-purple-600'
-    };
-    return gradients[primaryRole] || 'from-gray-500 to-gray-600';
+
+    // Use CSS variables for theme-aware gradients
+    switch (primaryRole) {
+      case 'business-owner':
+        return { background: 'linear-gradient(135deg, var(--color-accent), var(--color-primary))' };
+      case 'hr-manager':
+        return { background: 'linear-gradient(135deg, var(--color-success), var(--color-info))' };
+      case 'hod-manager':
+        return { background: 'linear-gradient(135deg, var(--color-primary), var(--color-info))' };
+      case 'supervisor':
+        return { background: 'linear-gradient(135deg, var(--color-warning), var(--color-warning-hover))' };
+      case 'super-user':
+        return { background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent-hover))' };
+      default:
+        return { background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))' };
+    }
   };
   
   const getRoleDisplayName = () => getPrimaryRole()?.replace(/-/g, ' ').toUpperCase() || 'USER';
@@ -92,9 +101,17 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({ className = '' }) => 
     <div className={className}>
       {isDesktop ? (
         // --- 🖥️ DESKTOP LAYOUT (Compact horizontal bar) ---
-        <div className={`relative overflow-hidden rounded-2xl p-4 text-white shadow-lg bg-gradient-to-r ${getRoleGradient()}`}>
+        <ThemedCard
+          padding="md"
+          shadow="lg"
+          className="relative overflow-hidden"
+          style={{
+            ...getRoleGradientStyle(),
+            color: 'var(--color-text-inverse)'
+          }}
+        >
             {/* Subtle background elements */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 rounded-full -translate-y-16 translate-x-16" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}></div>
 
             <div className="relative z-10 flex items-center justify-between">
               {/* Left: Greeting */}
@@ -104,57 +121,80 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({ className = '' }) => 
                     Good {getTimePeriod()}, {user?.firstName}! 👋
                   </h1>
                 </div>
-                <div className="hidden lg:block text-sm opacity-90 border-l border-white/20 pl-4 ml-2">
+                <div className="hidden lg:block text-sm opacity-90 pl-4 ml-2" style={{ borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
                   {organization?.name || 'SuperUser Dashboard'} • {getFormattedDate(true)}
                 </div>
               </div>
-              
+
               {/* Right: Time & Role */}
               <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2">
+                <div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}>
                   <Clock className="w-4 h-4 opacity-80" />
                   <div className="text-lg font-bold">{currentTime} {timePeriod}</div>
                 </div>
-                
-                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2">
+
+                <ThemedBadge
+                  variant="primary"
+                  size="md"
+                  className="flex items-center gap-2"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--color-text-inverse)', backdropFilter: 'blur(4px)' }}
+                >
                   <UserCircle className="w-4 h-4 opacity-80" />
                   <div className="text-sm font-medium">{getRoleDisplayName()}</div>
-                </div>
+                </ThemedBadge>
               </div>
             </div>
-        </div>
+        </ThemedCard>
 
       ) : (
 
-        // --- 📱 MOBILE "GREETING CARD" WIDGET (Vibrant, compact, and premium) ---
-        <div className={`relative overflow-hidden rounded-2xl p-4 text-white shadow-xl bg-gradient-to-br ${getRoleGradient()}`}>
-          {/* Subtle background decorative elements, scaled for mobile */}
-          <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-24 translate-x-24"></div>
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full translate-y-16 -translate-x-16"></div>
-          
+        // --- 📱 MOBILE "GREETING CARD" WIDGET (Compact mobile-optimized) ---
+        <ThemedCard
+          padding="sm"
+          shadow="lg"
+          className="relative overflow-hidden"
+          style={{
+            ...getRoleGradientStyle(),
+            color: 'var(--color-text-inverse)'
+          }}
+        >
+          {/* Minimal background decorative elements for mobile */}
+          <div className="absolute top-0 right-0 w-24 h-24 rounded-full -translate-y-12 translate-x-12" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}></div>
+
           <div className="relative z-10 flex justify-between items-center">
-            
-            {/* Left Column: Greeting & Role */}
+
+            {/* Left Column: Compact greeting & role */}
             <div className="flex flex-col justify-center">
-              <p className="text-base text-white/80">Good {getTimePeriod()},</p>
-              <h1 className="text-2xl font-bold -mt-1">{user?.firstName}! 👋</h1>
-              
-              {/* The "Glassmorphic" Role Pill */}
-              <div className="inline-block bg-white/15 backdrop-blur-sm rounded-full px-3 py-1 mt-2">
-                <span className="text-xs font-bold tracking-wider uppercase">{getRoleDisplayName()}</span>
-              </div>
+              <p className="text-sm" style={{ opacity: 0.8 }}>Good {getTimePeriod()},</p>
+              <h1 className="text-xl font-bold -mt-0.5">{user?.firstName}! 👋</h1>
+
+              {/* Compact role pill */}
+              <ThemedBadge
+                variant="primary"
+                size="sm"
+                className="inline-block mt-1.5"
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  color: 'var(--color-text-inverse)',
+                  backdropFilter: 'blur(4px)',
+                  fontSize: '10px',
+                  padding: '2px 6px'
+                }}
+              >
+                <span className="font-bold tracking-wider uppercase">{getRoleDisplayName()}</span>
+              </ThemedBadge>
             </div>
 
-            {/* Right Column: Time & Date */}
+            {/* Right Column: Compact time & date */}
             <div className="text-right flex flex-col items-end">
               <div className="flex items-baseline">
-                <span className="text-4xl font-bold tracking-tighter">{currentTime}</span>
-                <span className="text-lg font-medium ml-1.5 opacity-90">{timePeriod}</span>
+                <span className="text-2xl font-bold tracking-tight">{currentTime}</span>
+                <span className="text-sm font-medium ml-1 opacity-90">{timePeriod}</span>
               </div>
-              <p className="text-xs text-white/80 -mt-1">{getFormattedDate(true)}</p>
+              <p className="text-xs -mt-0.5" style={{ opacity: 0.8 }}>{getFormattedDate(true)}</p>
             </div>
           </div>
-        </div>
+        </ThemedCard>
       )}
     </div>
   );

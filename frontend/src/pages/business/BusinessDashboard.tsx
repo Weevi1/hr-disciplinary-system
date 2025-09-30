@@ -17,17 +17,36 @@ import { QuotesSection } from '../../components/dashboard/QuotesSection';
 import { HRDashboardSection } from '../../components/dashboard/HRDashboardSection';
 import { HODDashboardSection } from '../../components/dashboard/HODDashboardSection';
 import { BusinessOwnerDashboardSection } from '../../components/dashboard/BusinessOwnerDashboardSection';
-import { ThemeSelector } from '../../components/common/ThemeSelector';
 
 // 🛡️ ERROR FALLBACK COMPONENT
 const ErrorFallback = memo<{ error: Error; resetErrorBoundary: () => void }>(
   ({ error, resetErrorBoundary }) => (
-    <div className="bg-red-50 border border-red-200 rounded-lg p-6 m-4">
-      <h3 className="text-red-800 font-semibold mb-2">Something went wrong</h3>
-      <p className="text-red-700 text-sm mb-4">{error.message}</p>
+    <div
+      className="rounded-lg p-6 m-4"
+      style={{
+        backgroundColor: 'var(--color-alert-error-bg)',
+        border: '1px solid var(--color-alert-error-border)'
+      }}
+    >
+      <h3 className="font-semibold mb-2" style={{ color: 'var(--color-alert-error-text)' }}>
+        Something went wrong
+      </h3>
+      <p className="text-sm mb-4" style={{ color: 'var(--color-alert-error-text)' }}>
+        {error.message}
+      </p>
       <button
         onClick={resetErrorBoundary}
-        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+        className="px-4 py-2 rounded-lg transition-colors text-white"
+        style={{
+          backgroundColor: 'var(--color-error)',
+          hover: { backgroundColor: 'var(--color-error)' }
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.opacity = '0.9';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.opacity = '1';
+        }}
       >
         Try again
       </button>
@@ -40,17 +59,39 @@ ErrorFallback.displayName = 'ErrorFallback';
 // 🎨 LOADING SKELETONS
 const WelcomeSkeleton = memo(() => (
   <div className="animate-pulse max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div className="h-8 bg-gray-300 rounded w-1/3 mb-2"></div>
-    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+    <div
+      className="h-8 rounded w-1/3 mb-2"
+      style={{ backgroundColor: 'var(--color-muted)' }}
+    ></div>
+    <div
+      className="h-4 rounded w-2/3"
+      style={{ backgroundColor: 'var(--color-subtle)' }}
+    ></div>
   </div>
 ));
 
 const SkeletonCard = memo(() => (
-  <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 animate-pulse">
-    <div className="h-6 bg-gray-300 rounded w-1/3 mb-4"></div>
+  <div
+    className="rounded-2xl p-6 animate-pulse"
+    style={{
+      backgroundColor: 'var(--color-card-background)',
+      boxShadow: 'var(--shadow-lg)',
+      border: '1px solid var(--color-card-border)'
+    }}
+  >
+    <div
+      className="h-6 rounded w-1/3 mb-4"
+      style={{ backgroundColor: 'var(--color-muted)' }}
+    ></div>
     <div className="space-y-2">
-      <div className="h-4 bg-gray-200 rounded w-full"></div>
-      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+      <div
+        className="h-4 rounded w-full"
+        style={{ backgroundColor: 'var(--color-subtle)' }}
+      ></div>
+      <div
+        className="h-4 rounded w-3/4"
+        style={{ backgroundColor: 'var(--color-subtle)' }}
+      ></div>
     </div>
   </div>
 ));
@@ -84,16 +125,11 @@ export const BusinessDashboard = memo(() => {
       {/* 🎨 COMPACT WELCOME SECTION - Desktop first */}
       <div className="pb-0" style={{ backgroundColor: 'var(--color-background)' }}>
         <div className="max-w-7xl mx-auto p-6 pb-4">
-          <div className="flex justify-between items-start">
-            <ErrorBoundary FallbackComponent={ErrorFallback}>
-              <Suspense fallback={<WelcomeSkeleton />}>
-                <WelcomeSection />
-              </Suspense>
-            </ErrorBoundary>
-            <div className="ml-4">
-              <ThemeSelector />
-            </div>
-          </div>
+          <ErrorBoundary FallbackComponent={ErrorFallback}>
+            <Suspense fallback={<WelcomeSkeleton />}>
+              <WelcomeSection />
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </div>
 

@@ -8,6 +8,7 @@ import { DashboardRouter } from './components/dashboard/DashboardRouter';
 import { LoginForm } from './auth/LoginForm';
 import { ErrorBoundary, WarningErrorBoundary, EmployeeErrorBoundary, DashboardErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './components/common/ToastContainer';
+import { ThemeProvider } from './contexts/ThemeContext';
 
 // 🚀 LAZY-LOADED COMPONENTS FOR BUNDLE OPTIMIZATION
 const EnhancedWarningWizard = React.lazy(() => import('./components/warnings/enhanced/EnhancedWarningWizard').then(m => ({ default: m.EnhancedWarningWizard })));

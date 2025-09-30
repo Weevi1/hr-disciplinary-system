@@ -15,6 +15,16 @@ import { CategoryManagement } from '../admin/CategoryManagement';
 import WarningsReviewDashboard from '../warnings/ReviewDashboard';
 import { EmployeeManagement } from '../employees/EmployeeManagement';
 
+// Import themed components
+import { ThemedCard, ThemedBadge, ThemedAlert } from '../common/ThemedCard';
+import { ThemedButton } from '../common/ThemedButton';
+import { ThemedTabNavigation, TabItem } from '../common/ThemedTabNavigation';
+import { ThemedStatusCard } from '../common/ThemedStatusCard';
+import { UnifiedModal } from '../common/UnifiedModal';
+
+// Import enhanced delivery system
+import { EnhancedDeliveryWorkflow } from '../hr/EnhancedDeliveryWorkflow';
+
 interface HRDashboardSectionProps {
   className?: string;
   isMobile?: boolean;
@@ -59,6 +69,68 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
   // State management
   const [showCategoryManagement, setShowCategoryManagement] = useState(false);
   const [activeView, setActiveView] = useState<'urgent' | 'actions' | 'warnings' | 'employees'>('urgent');
+  const [selectedDeliveryNotification, setSelectedDeliveryNotification] = useState<any>(null);
+  const [showDeliveryWorkflow, setShowDeliveryWorkflow] = useState(false);
+
+  // Enhanced delivery workflow handlers
+  const handleStartDeliveryWorkflow = (notification: any) => {
+    setSelectedDeliveryNotification(notification);
+    setShowDeliveryWorkflow(true);
+  };
+
+  const handleDeliveryComplete = async (notificationId: string, proofData: any) => {
+    try {
+      // Update warning delivery status
+      console.log('Delivery completed:', { notificationId, proofData });
+      // This would typically call an API to update the delivery status
+
+      // Close workflow
+      setShowDeliveryWorkflow(false);
+      setSelectedDeliveryNotification(null);
+
+      // Refresh data
+      refreshData();
+    } catch (err) {
+      console.error('Failed to complete delivery:', err);
+    }
+  };
+
+  // Mock delivery notifications for demo (replace with real data)
+  const mockDeliveryNotifications = [
+    {
+      id: 'delivery_001',
+      warningId: 'warn_123',
+      employeeName: 'John Smith',
+      employeeEmail: 'john.smith@company.com',
+      employeePhone: '+27123456789',
+      warningLevel: 'Final Written Warning',
+      warningCategory: 'Attendance & Punctuality',
+      deliveryMethod: 'email' as const,
+      priority: 'high' as const,
+      status: 'pending' as const,
+      contactDetails: {
+        email: 'john.smith@company.com',
+        phone: '+27123456789'
+      },
+      createdAt: new Date(),
+      createdByName: 'HR Manager'
+    },
+    {
+      id: 'delivery_002',
+      warningId: 'warn_124',
+      employeeName: 'Jane Doe',
+      warningLevel: 'Verbal Warning',
+      warningCategory: 'Performance Issues',
+      deliveryMethod: 'whatsapp' as const,
+      priority: 'normal' as const,
+      status: 'pending' as const,
+      contactDetails: {
+        phone: '+27987654321'
+      },
+      createdAt: new Date(),
+      createdByName: 'Department Manager'
+    }
+  ];
 
   // 🎨 MOBILE VIEW
   if (isMobile) {
@@ -66,14 +138,14 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
       <div className={`space-y-6 ${className}`}>
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">HR Command Center</h1>
-            <p className="text-gray-600 mt-1">Employee oversight & disciplinary management</p>
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>HR Command Center</h1>
+            <p className="mt-1" style={{ color: 'var(--color-text-secondary)' }}>Employee oversight & disciplinary management</p>
           </div>
           {lastUpdated && (
             <div className="text-right">
-              <span className="text-xs text-gray-500">Last updated</span>
+              <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Last updated</span>
               <br />
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
                 {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
@@ -82,132 +154,170 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
         
         <div className="grid grid-cols-1 gap-6">
           {/* 📋 ABSENCE REPORTS CARD */}
-          <div 
+          <ThemedCard
+            padding="lg"
+            shadow="lg"
+            hover
             onClick={() => navigate('/hr/absence-reports')}
-            className="bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-6 text-white cursor-pointer hover:from-red-600 hover:to-red-700 transition-all relative"
+            className="cursor-pointer relative"
+            style={{
+              background: 'linear-gradient(to right, var(--color-error), var(--color-error))',
+              color: 'var(--color-text-inverse)'
+            }}
           >
             {hrCountsLoading && (
               <div className="absolute top-4 right-4">
-                <div className="w-4 h-4 border-2 border-red-200 border-t-white rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" style={{ opacity: 0.7 }}></div>
               </div>
             )}
-            
+
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-red-100 text-sm">Pending Reviews</p>
+                <p className="text-sm" style={{ opacity: 0.8 }}>Pending Reviews</p>
                 <p className="text-2xl font-bold">{hrReportsCount.absenceReports.unread}</p>
-                <div className="mt-2 text-sm text-red-100">
+                <div className="mt-2 text-sm" style={{ opacity: 0.8 }}>
                   {hrReportsCount.absenceReports.total} total absence reports
                 </div>
               </div>
-              <UserX className="w-8 h-8 text-red-200" />
+              <UserX className="w-8 h-8" style={{ opacity: 0.7 }} />
             </div>
-          </div>
+          </ThemedCard>
 
           {/* 💬 HR MEETINGS CARD */}
-          <div
+          <ThemedCard
+            padding="lg"
+            shadow="lg"
+            hover
             onClick={() => navigate('/hr/meeting-requests')}
-            className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white cursor-pointer hover:from-purple-600 hover:to-purple-700 transition-all relative"
+            className="cursor-pointer relative"
+            style={{
+              background: 'linear-gradient(to right, var(--color-accent), var(--color-accent))',
+              color: 'var(--color-text-inverse)'
+            }}
           >
             {hrCountsLoading && (
               <div className="absolute top-4 right-4">
-                <div className="w-4 h-4 border-2 border-purple-200 border-t-white rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" style={{ opacity: 0.7 }}></div>
               </div>
             )}
-            
+
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-100 text-sm">Meeting Requests</p>
+                <p className="text-sm" style={{ opacity: 0.8 }}>Meeting Requests</p>
                 <p className="text-2xl font-bold">{hrReportsCount.hrMeetings.unread}</p>
-                <div className="mt-2 text-sm text-purple-100">
+                <div className="mt-2 text-sm" style={{ opacity: 0.8 }}>
                   {hrReportsCount.hrMeetings.total} total requests
                 </div>
               </div>
-              <MessageCircle className="w-8 h-8 text-purple-200" />
+              <MessageCircle className="w-8 h-8" style={{ opacity: 0.7 }} />
             </div>
-          </div>
+          </ThemedCard>
 
           {/* 📋 CORRECTIVE COUNSELLING CARD */}
-          <div
+          <ThemedCard
+            padding="lg"
+            shadow="lg"
+            hover
             onClick={() => navigate('/hr/corrective-counselling')}
-            className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-all relative"
+            className="cursor-pointer relative"
+            style={{
+              background: 'linear-gradient(to right, var(--color-primary), var(--color-primary))',
+              color: 'var(--color-text-inverse)'
+            }}
           >
             {hrCountsLoading && (
               <div className="absolute top-4 right-4">
-                <div className="w-4 h-4 border-2 border-blue-200 border-t-white rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" style={{ opacity: 0.7 }}></div>
               </div>
             )}
-            
+
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-blue-100 text-sm">Counselling Sessions</p>
+                <p className="text-sm" style={{ opacity: 0.8 }}>Counselling Sessions</p>
                 <p className="text-2xl font-bold">{hrReportsCount.correctiveCounselling.unread}</p>
-                <div className="mt-2 text-sm text-blue-100">
+                <div className="mt-2 text-sm" style={{ opacity: 0.8 }}>
                   {hrReportsCount.correctiveCounselling.total} total records
                 </div>
               </div>
-              <BookOpen className="w-8 h-8 text-blue-200" />
+              <BookOpen className="w-8 h-8" style={{ opacity: 0.7 }} />
             </div>
-          </div>
+          </ThemedCard>
 
           {/* ⚠️ WARNINGS OVERVIEW CARD */}
-          <div
+          <ThemedCard
+            padding="lg"
+            shadow="lg"
+            hover
             onClick={() => setActiveView('warnings')}
-            className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-6 text-white cursor-pointer hover:from-orange-600 hover:to-orange-700 transition-all"
+            className="cursor-pointer"
+            style={{
+              background: 'linear-gradient(to right, var(--color-warning), var(--color-warning))',
+              color: 'var(--color-text-inverse)'
+            }}
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-orange-100 text-sm">Active Warnings</p>
+                <p className="text-sm" style={{ opacity: 0.8 }}>Active Warnings</p>
                 <p className="text-2xl font-bold">{warningStats.totalActive}</p>
-                <div className="mt-2 text-sm text-orange-100">
+                <div className="mt-2 text-sm" style={{ opacity: 0.8 }}>
                   {warningStats.undelivered} undelivered, {warningStats.highSeverity} high-severity
                 </div>
               </div>
-              <Shield className="w-8 h-8 text-orange-200" />
+              <Shield className="w-8 h-8" style={{ opacity: 0.7 }} />
             </div>
-          </div>
+          </ThemedCard>
 
           {/* 👥 EMPLOYEE OVERVIEW CARD */}
-          <div
+          <ThemedCard
+            padding="lg"
+            shadow="lg"
+            hover
             onClick={() => setActiveView('employees')}
-            className="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-xl p-6 text-white cursor-pointer hover:from-indigo-600 hover:to-indigo-700 transition-all"
+            className="cursor-pointer"
+            style={{
+              background: 'linear-gradient(to right, var(--color-info), var(--color-info))',
+              color: 'var(--color-text-inverse)'
+            }}
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-indigo-100 text-sm">Employee Network</p>
+                <p className="text-sm" style={{ opacity: 0.8 }}>Employee Network</p>
                 <p className="text-2xl font-bold">{employeeStats.totalEmployees}</p>
-                <div className="mt-2 text-sm text-indigo-100">
+                <div className="mt-2 text-sm" style={{ opacity: 0.8 }}>
                   {employeeStats.activeEmployees} active, {employeeStats.newEmployees} new this month
                 </div>
               </div>
-              <Users className="w-8 h-8 text-indigo-200" />
+              <Users className="w-8 h-8" style={{ opacity: 0.7 }} />
             </div>
-          </div>
+          </ThemedCard>
 
           {/* 🔧 CATEGORY MANAGEMENT CARD - MOBILE */}
           {canManageCategories && (
-            <button
+            <ThemedCard
+              padding="md"
+              shadow="sm"
+              hover
               onClick={() => setShowCategoryManagement(true)}
-              className="bg-white rounded-2xl p-4 shadow-sm border hover:shadow-md transition-all text-left"
+              className="cursor-pointer text-left"
             >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Settings className="w-5 h-5 text-blue-600" />
+                  <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-primary)', opacity: 0.1 }}>
+                    <Settings className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
                   </div>
                   <div>
-                    <div className="font-semibold text-gray-900">Warning Categories</div>
-                    <div className="text-sm text-gray-600">Configure categories</div>
+                    <div className="font-semibold" style={{ color: 'var(--color-text)' }}>Warning Categories</div>
+                    <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Configure categories</div>
                   </div>
                 </div>
-                <div className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                <ThemedBadge variant="primary" size="sm">
                   Manage
-                </div>
+                </ThemedBadge>
               </div>
-              <div className="text-sm text-gray-500">
+              <div className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
                 Universal & custom category settings
               </div>
-            </button>
+            </ThemedCard>
           )}
         </div>
 
@@ -221,60 +331,82 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
 
         {/* Enhanced Views - Mobile */}
         {activeView === 'warnings' && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2">
-            <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b">
-                <h2 className="text-lg font-bold text-gray-900">Warnings</h2>
-                <button onClick={() => setActiveView('urgent')} className="p-1 hover:bg-gray-100 rounded">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="p-4">
-                <p className="text-sm text-gray-600 mb-4">Comprehensive warnings management available on desktop.</p>
+          <UnifiedModal
+            isOpen={true}
+            onClose={() => setActiveView('urgent')}
+            title="Warnings Overview"
+            subtitle="Comprehensive warnings management"
+            size="sm"
+          >
+            <div className="space-y-4">
+              <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                Comprehensive warnings management available on desktop.
+              </p>
                 <div className="space-y-3">
-                  <div className="bg-orange-50 p-3 rounded-lg">
-                    <p className="text-sm font-medium text-orange-900">{warningStats.undelivered} Undelivered</p>
-                    <p className="text-xs text-orange-700">Require immediate attention</p>
-                  </div>
-                  <div className="bg-red-50 p-3 rounded-lg">
-                    <p className="text-sm font-medium text-red-900">{warningStats.highSeverity} High Priority</p>
-                    <p className="text-xs text-red-700">Final warnings & dismissals</p>
-                  </div>
-                  <div className="bg-blue-50 p-3 rounded-lg">
-                    <p className="text-sm font-medium text-blue-900">{warningStats.totalActive} Total Active</p>
-                    <p className="text-xs text-blue-700">All current warnings</p>
-                  </div>
+                  <ThemedStatusCard
+                    title="Undelivered"
+                    count={warningStats.undelivered}
+                    subtitle="Require immediate attention"
+                    variant="warning"
+                    icon={<AlertTriangle className="w-4 h-4" />}
+                    size="sm"
+                  />
+                  <ThemedStatusCard
+                    title="High Priority"
+                    count={warningStats.highSeverity}
+                    subtitle="Final warnings & dismissals"
+                    variant="error"
+                    icon={<Shield className="w-4 h-4" />}
+                    size="sm"
+                  />
+                  <ThemedStatusCard
+                    title="Total Active"
+                    count={warningStats.totalActive}
+                    subtitle="All current warnings"
+                    variant="info"
+                    icon={<FileText className="w-4 h-4" />}
+                    size="sm"
+                  />
                 </div>
-              </div>
             </div>
-          </div>
+          </UnifiedModal>
         )}
 
         {activeView === 'employees' && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2">
-            <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b">
-                <h2 className="text-lg font-bold text-gray-900">Employees</h2>
-                <button onClick={() => setActiveView('urgent')} className="p-1 hover:bg-gray-100 rounded">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+          <UnifiedModal
+            isOpen={true}
+            onClose={() => setActiveView('urgent')}
+            title="Employee Overview"
+            subtitle="Employee statistics and management"
+            size="sm"
+          >
               <div className="p-4 space-y-3">
-                <div className="bg-blue-50 p-3 rounded-lg">
-                  <p className="text-sm font-medium text-blue-900">{employeeStats.totalEmployees} Total</p>
-                  <p className="text-xs text-blue-700">All employees</p>
-                </div>
-                <div className="bg-green-50 p-3 rounded-lg">
-                  <p className="text-sm font-medium text-green-900">{employeeStats.activeEmployees} Active</p>
-                  <p className="text-xs text-green-700">Currently employed</p>
-                </div>
-                <div className="bg-indigo-50 p-3 rounded-lg">
-                  <p className="text-sm font-medium text-indigo-900">{employeeStats.newEmployees} New</p>
-                  <p className="text-xs text-indigo-700">Last 30 days</p>
-                </div>
+                <ThemedStatusCard
+                  title="Total"
+                  count={employeeStats.totalEmployees}
+                  subtitle="All employees"
+                  variant="info"
+                  icon={<Users className="w-4 h-4" />}
+                  size="sm"
+                />
+                <ThemedStatusCard
+                  title="Active"
+                  count={employeeStats.activeEmployees}
+                  subtitle="Currently employed"
+                  variant="success"
+                  icon={<Users className="w-4 h-4" />}
+                  size="sm"
+                />
+                <ThemedStatusCard
+                  title="New"
+                  count={employeeStats.newEmployees}
+                  subtitle="Last 30 days"
+                  variant="info"
+                  icon={<Plus className="w-4 h-4" />}
+                  size="sm"
+                />
               </div>
-            </div>
-          </div>
+          </UnifiedModal>
         )}
       </div>
     );
@@ -283,112 +415,58 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
   // 🖥️ DESKTOP VIEW - Compact, Desktop-First Design
   return (
     <div className={`${className}`}>
-      {/* Compact Header - Single Row */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-gray-900">HR Dashboard</h1>
-          <div className="text-sm text-gray-500">Employee oversight & disciplinary management</div>
-        </div>
-        
-        <div className="flex items-center gap-3">
-          {lastUpdated && (
-            <div className="text-xs text-gray-500">
-              Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </div>
-          )}
-          <button
-            onClick={() => {
-              refreshData();
-              refreshHRCounts();
-            }}
-            className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-            disabled={dashboardLoading || hrCountsLoading}
-          >
-            <RefreshCw className={`w-3 h-3 ${(dashboardLoading || hrCountsLoading) ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-
-        </div>
-      </div>
 
       {/* Compact Overview Cards - 4 Column Desktop Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-6">
         {/* Compact Cards - Better space utilization */}
-        <div 
+        <ThemedStatusCard
+          title="Absence Reports"
+          count={hrReportsCount.absenceReports.unread}
+          total={hrReportsCount.absenceReports.total}
+          icon={<UserX className="w-4 h-4" />}
+          variant="error"
+          gradient
           onClick={() => navigate('/hr/absence-reports')}
-          className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg p-4 text-white cursor-pointer hover:from-red-600 hover:to-red-700 transition-all shadow hover:shadow-lg"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <UserX className="w-4 h-4" />
-                <p className="text-sm font-medium text-red-100">Absence Reports</p>
-              </div>
-              <p className="text-2xl font-bold">{hrReportsCount.absenceReports.unread}</p>
-              <p className="text-xs text-red-200">of {hrReportsCount.absenceReports.total} total</p>
-            </div>
-            {hrCountsLoading && <div className="w-3 h-3 border border-red-200 border-t-white rounded-full animate-spin"></div>}
-          </div>
-        </div>
+        />
 
-        <div
+        <ThemedStatusCard
+          title="Meeting Requests"
+          count={hrReportsCount.hrMeetings.unread}
+          total={hrReportsCount.hrMeetings.total}
+          icon={<MessageCircle className="w-4 h-4" />}
+          variant="default"
+          gradient
           onClick={() => navigate('/hr/meeting-requests')}
-          className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-4 text-white cursor-pointer hover:from-purple-600 hover:to-purple-700 transition-all shadow hover:shadow-lg"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <MessageCircle className="w-4 h-4" />
-                <p className="text-sm font-medium text-purple-100">Meeting Requests</p>
-              </div>
-              <p className="text-2xl font-bold">{hrReportsCount.hrMeetings.unread}</p>
-              <p className="text-xs text-purple-200">of {hrReportsCount.hrMeetings.total} total</p>
-            </div>
-            {hrCountsLoading && <div className="w-3 h-3 border border-purple-200 border-t-white rounded-full animate-spin"></div>}
-          </div>
-        </div>
+        />
 
-        <div
+        <ThemedStatusCard
+          title="Counselling"
+          count={hrReportsCount.correctiveCounselling.unread}
+          total={hrReportsCount.correctiveCounselling.total}
+          icon={<BookOpen className="w-4 h-4" />}
+          variant="info"
+          gradient
           onClick={() => navigate('/hr/corrective-counselling')}
-          className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white cursor-pointer hover:from-blue-600 hover:to-blue-700 transition-all shadow hover:shadow-lg"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <BookOpen className="w-4 h-4" />
-                <p className="text-sm font-medium text-blue-100">Counselling</p>
-              </div>
-              <p className="text-2xl font-bold">{hrReportsCount.correctiveCounselling.unread}</p>
-              <p className="text-xs text-blue-200">of {hrReportsCount.correctiveCounselling.total} total</p>
-            </div>
-            {hrCountsLoading && <div className="w-3 h-3 border border-blue-200 border-t-white rounded-full animate-spin"></div>}
-          </div>
-        </div>
+        />
 
-        <div
+        <ThemedStatusCard
+          title="Active Warnings"
+          count={warningStats.totalActive}
+          subtitle={`${warningStats.undelivered} undelivered`}
+          icon={<Shield className="w-4 h-4" />}
+          variant="warning"
+          gradient
           onClick={() => setActiveView('warnings')}
-          className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-4 text-white cursor-pointer hover:from-orange-600 hover:to-orange-700 transition-all shadow hover:shadow-lg"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <Shield className="w-4 h-4" />
-                <p className="text-sm font-medium text-orange-100">Active Warnings</p>
-              </div>
-              <p className="text-2xl font-bold">{warningStats.totalActive}</p>
-              <p className="text-xs text-orange-200">{warningStats.undelivered} undelivered</p>
-            </div>
-          </div>
-        </div>
+        />
       </div>
 
       {/* Error Display */}
       {(hrCountsError || dashboardError) && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-          <div className="text-red-700 text-sm">
+        <ThemedAlert variant="error" className="mb-4">
+          <div className="text-sm">
             Failed to load HR data: {hrCountsError || dashboardError}
           </div>
-        </div>
+        </ThemedAlert>
       )}
 
       {/* Task-Oriented Tab Navigation */}
@@ -477,10 +555,10 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
                     </div>
                   )}
                   
-                  {/* Undelivered Warnings */}
+                  {/* Undelivered Warnings - Enhanced */}
                   {warningStats.undelivered > 0 && (
-                    <div className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => setActiveView('warnings')}>
-                      <div className="flex items-center justify-between">
+                    <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
                           <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                           <div>
@@ -488,12 +566,49 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
                             <div className="text-sm text-gray-600">Warning documents pending delivery to employees</div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full font-medium">
-                            {warningStats.undelivered} undelivered
-                          </span>
-                          <Shield className="w-4 h-4 text-gray-400" />
-                        </div>
+                        <ThemedBadge variant="warning" size="sm">
+                          Urgent
+                        </ThemedBadge>
+                      </div>
+
+                      {/* Quick Action Buttons for Sample Deliveries */}
+                      <div className="space-y-2">
+                        {mockDeliveryNotifications.slice(0, 2).map((notification) => (
+                          <div key={notification.id} className="flex items-center justify-between p-2 bg-white rounded border">
+                            <div className="flex items-center gap-2">
+                              <div className={`p-1 rounded text-xs ${
+                                notification.deliveryMethod === 'email' ? 'bg-blue-100 text-blue-700' :
+                                notification.deliveryMethod === 'whatsapp' ? 'bg-green-100 text-green-700' :
+                                'bg-purple-100 text-purple-700'
+                              }`}>
+                                {notification.deliveryMethod === 'email' ? '📧' :
+                                 notification.deliveryMethod === 'whatsapp' ? '📱' : '🖨️'}
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium">{notification.employeeName}</div>
+                                <div className="text-xs text-gray-500">{notification.warningLevel}</div>
+                              </div>
+                            </div>
+                            <ThemedButton
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleStartDeliveryWorkflow(notification)}
+                            >
+                              Start Delivery
+                            </ThemedButton>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-3 pt-3 border-t border-orange-200">
+                        <ThemedButton
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setActiveView('warnings')}
+                          className="w-full text-orange-700 hover:text-orange-800"
+                        >
+                          View All Undelivered Warnings
+                        </ThemedButton>
                       </div>
                     </div>
                   )}
@@ -674,6 +789,19 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
             </div>
           </div>
         </div>
+      )}
+
+      {/* Enhanced Delivery Workflow Modal */}
+      {showDeliveryWorkflow && selectedDeliveryNotification && (
+        <EnhancedDeliveryWorkflow
+          isOpen={showDeliveryWorkflow}
+          notification={selectedDeliveryNotification}
+          onDeliveryComplete={handleDeliveryComplete}
+          onClose={() => {
+            setShowDeliveryWorkflow(false);
+            setSelectedDeliveryNotification(null);
+          }}
+        />
       )}
     </div>
   );

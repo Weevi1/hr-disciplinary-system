@@ -2,7 +2,6 @@
 import React from 'react';
 import type { Employee } from '../../types';
 import type { EmployeePermissions } from '../../types';
-import { getDeliveryMethodIcon, getDeliveryMethodText } from '../../utils/employees/employeeHelpers';
 
 interface EmployeeCardProps {
   employee: Employee;
@@ -98,16 +97,6 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
           </span>
         </div>
 
-        {/* Delivery Method */}
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-lg">
-            {getDeliveryMethodIcon(employee.profile.preferredDeliveryMethod)}
-          </span>
-          <span className="text-gray-600">Delivery:</span>
-          <span className="font-medium text-gray-700">
-            {getDeliveryMethodText(employee.profile.preferredDeliveryMethod)}
-          </span>
-        </div>
 
         {/* Warnings */}
         <div className="flex items-center gap-2 text-sm">

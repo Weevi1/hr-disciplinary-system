@@ -17,6 +17,9 @@ import { DatabaseShardingService } from '../../services/DatabaseShardingService'
 import { API } from '../../api';
 import type { Employee } from '../../types/core';
 
+// Import unified components
+import { ThemedSectionHeader } from '../common/ThemedCard';
+
 // 🏢 SHARDED COLLECTIONS - Use organization-specific paths
 // Meetings should be stored at /organizations/{orgId}/meetings/{meetingId}
 
@@ -235,19 +238,19 @@ const ProfessionalSignatureCanvas: React.FC<SignatureCanvasProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <label className="block text-lg font-semibold text-gray-900">
+      {/* Header - Mobile Optimized */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+        <div className="flex-1">
+          <label className="block text-base sm:text-lg font-semibold text-gray-900">
             {label} {required && <span className="text-red-500">*</span>}
           </label>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">
             {role === 'manager' ? 'Please sign below to confirm this meeting request' : `${personName}, please sign below if you agree to this meeting`}
           </p>
         </div>
         
-        {/* Signature Status Indicator */}
-        <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
+        {/* Signature Status Indicator - Mobile Optimized */}
+        <div className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
           isValid
             ? `bg-green-100 text-green-700`
             : hasSignature
@@ -256,34 +259,37 @@ const ProfessionalSignatureCanvas: React.FC<SignatureCanvasProps> = ({
         }`}>
           {isValid ? (
             <>
-              <CheckCircle className="w-4 h-4" />
-              Valid Signature
+              <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Valid Signature</span>
+              <span className="sm:hidden">Valid</span>
             </>
           ) : hasSignature ? (
             <>
-              <Clock className="w-4 h-4" />
-              Needs More Detail
+              <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Needs More Detail</span>
+              <span className="sm:hidden">More Detail</span>
             </>
           ) : (
             <>
-              <UserCheck className="w-4 h-4" />
-              Signature Required
+              <UserCheck className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Signature Required</span>
+              <span className="sm:hidden">Required</span>
             </>
           )}
         </div>
       </div>
       
-      {/* Signature Canvas Container */}
-      <div className={`${colors.bg} ${colors.border} border-2 rounded-xl p-6 transition-all duration-200 ${
+      {/* Signature Canvas Container - Mobile Optimized */}
+      <div className={`${colors.bg} ${colors.border} border-2 rounded-lg sm:rounded-xl p-4 sm:p-6 transition-all duration-200 ${
         isDrawing ? 'shadow-lg scale-[1.01]' : 'shadow-sm'
       }`}>
         <div ref={containerRef} className="relative">
           {/* Canvas */}
           <canvas
             ref={canvasRef}
-            className={`w-full h-40 rounded-lg cursor-crosshair transition-all duration-200 ${
-              hasSignature 
-                ? 'bg-white border-2 border-gray-300' 
+            className={`w-full h-32 sm:h-40 rounded-lg cursor-crosshair transition-all duration-200 ${
+              hasSignature
+                ? 'bg-white border-2 border-gray-300'
                 : 'bg-white border-2 border-dashed border-gray-300 hover:border-gray-400'
             }`}
             onMouseDown={startDrawing}
@@ -296,72 +302,76 @@ const ProfessionalSignatureCanvas: React.FC<SignatureCanvasProps> = ({
             style={{ touchAction: 'none' }} // Prevent scrolling on touch
           />
           
-          {/* Instructions Overlay (only when empty) */}
+          {/* Instructions Overlay (only when empty) - Mobile Optimized */}
           {!hasSignature && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center text-gray-400">
-                <UserCheck className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm font-medium">Sign here with mouse or finger</p>
-                <p className="text-xs">Your signature confirms your agreement</p>
+                <UserCheck className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-xs sm:text-sm font-medium">Sign here with mouse or finger</p>
+                <p className="text-xs hidden sm:block">Your signature confirms your agreement</p>
               </div>
             </div>
           )}
         </div>
         
-        {/* Controls */}
-        <div className="mt-4 flex justify-between items-center">
-          <div className={`text-sm ${colors.text}`}>
+        {/* Controls - Mobile Optimized */}
+        <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row justify-between gap-3 sm:items-center">
+          <div className={`text-xs sm:text-sm ${colors.text}`}>
             {isValid ? (
               <span className="flex items-center gap-1">
-                <CheckCircle className="w-4 h-4" />
-                Signature ready to save
+                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Signature ready to save</span>
+                <span className="sm:hidden">Ready to save</span>
               </span>
             ) : hasSignature ? (
               <span className="flex items-center gap-1">
-                <AlertCircle className="w-4 h-4" />
-                Please add more detail to your signature
+                <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Please add more detail to your signature</span>
+                <span className="sm:hidden">Add more detail</span>
               </span>
             ) : (
               <span className="flex items-center gap-1">
-                <UserCheck className="w-4 h-4" />
-                Click/tap and drag to create your signature
+                <UserCheck className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Click/tap and drag to create your signature</span>
+                <span className="sm:hidden">Tap to sign</span>
               </span>
             )}
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:flex-row w-full sm:w-auto">
             <button
               type="button"
               onClick={clearSignature}
               disabled={!hasSignature}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors min-h-[40px] flex-1 sm:flex-none ${
                 hasSignature
                   ? 'text-red-600 hover:text-red-700 hover:bg-red-50'
                   : 'text-gray-400 cursor-not-allowed'
               }`}
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3 h-3 sm:w-4 sm:h-4" />
               Clear
             </button>
-            
+
             <button
               type="button"
               onClick={saveSignature}
               disabled={!isValid}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors min-h-[40px] flex-1 sm:flex-none ${
                 isValid
                   ? `bg-${colors.primary}-600 text-white hover:bg-${colors.primary}-700`
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
-              <Save className="w-4 h-4" />
-              Save Signature
+              <Save className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Save Signature</span>
+              <span className="sm:hidden">Save</span>
             </button>
           </div>
         </div>
         
-        {/* Professional Note */}
-        <div className={`mt-3 p-3 ${colors.bg} border ${colors.border} rounded-lg`}>
+        {/* Professional Note - Mobile Optimized */}
+        <div className={`mt-3 p-2 sm:p-3 ${colors.bg} border ${colors.border} rounded-lg`}>
           <p className={`text-xs ${colors.text}`}>
             <strong>Note:</strong> Your digital signature has the same legal validity as a handwritten signature and confirms your agreement to this meeting request.
           </p>
@@ -499,18 +509,34 @@ export const BookHRMeeting: React.FC = () => {
           const employeesData = await API.employees.getByManager(user?.id || '', organization.id);
           Logger.success(6333);
           
-          // Transform employees to the expected format (same as HODDashboardSection)
+          // Transform employees to the expected format with proper profile structure
           const transformedEmployees = employeesData.map(emp => ({
+            ...emp, // Keep all original properties
             id: emp.id,
             firstName: emp.profile?.firstName || emp.firstName || 'Unknown',
             lastName: emp.profile?.lastName || emp.lastName || 'Employee',
-          position: emp.profile?.position || emp.employment?.position || 'Unknown Position',
-          department: emp.profile?.department || emp.employment?.department || 'Unknown',
-          email: emp.profile?.email || emp.contact?.email || emp.email || '',
-          phone: emp.profile?.phone || emp.contact?.phone || emp.phone || '',
-          deliveryPreference: (emp.deliveryPreference || 'email') as 'email' | 'whatsapp' | 'print',
-          ...emp // Keep all original properties
-        }));
+            position: emp.profile?.position || emp.employment?.position || 'Unknown Position',
+            department: emp.profile?.department || emp.employment?.department || 'Unknown',
+            email: emp.profile?.email || emp.contact?.email || emp.email || '',
+            phone: emp.profile?.phone || emp.contact?.phone || emp.phone || '',
+            deliveryPreference: (emp.deliveryPreference || 'email') as 'email' | 'whatsapp' | 'print',
+            // Ensure profile structure exists for dropdown
+            profile: {
+              ...emp.profile,
+              firstName: emp.profile?.firstName || emp.firstName || 'Unknown',
+              lastName: emp.profile?.lastName || emp.lastName || 'Employee',
+              department: emp.profile?.department || emp.employment?.department || 'Unknown',
+              position: emp.profile?.position || emp.employment?.position || 'Unknown Position',
+              email: emp.profile?.email || emp.contact?.email || emp.email || '',
+              employeeNumber: emp.profile?.employeeNumber || ''
+            },
+            // Ensure employment structure exists
+            employment: {
+              ...emp.employment,
+              department: emp.employment?.department || emp.profile?.department || 'Unknown',
+              position: emp.employment?.position || emp.profile?.position || 'Unknown Position'
+            }
+          }));
         
           Logger.debug('👥 Employee details:', transformedEmployees.map(e => `${e.firstName} ${e.lastName}`));
           setEmployees(transformedEmployees);
@@ -733,60 +759,63 @@ export const BookHRMeeting: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-2 sm:p-4">
       <div className="max-w-2xl mx-auto">
-        
-        {/* 📱 HEADER WITH V2 AUTO-SAVE INDICATOR */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-700 rounded-2xl p-6 text-white shadow-xl mb-6">
+
+        {/* 📱 HEADER WITH V2 AUTO-SAVE INDICATOR - Mobile Optimized */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-700 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white shadow-xl mb-4 sm:mb-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Calendar className="w-8 h-8" />
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Calendar className="w-6 h-6 sm:w-8 sm:h-8" />
               <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold">Book HR Meeting</h1>
-                  {/* 💾 V2: AUTO-SAVE INDICATOR */}
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <h1 className="text-xl sm:text-2xl font-bold">Book HR Meeting</h1>
+                  {/* 💾 V2: AUTO-SAVE INDICATOR - Mobile Optimized */}
                   {autoSaveStatus === 'saving' && (
-                    <div className="flex items-center gap-1 text-blue-200 text-sm">
+                    <div className="flex items-center gap-1 text-blue-200 text-xs sm:text-sm">
                       <div className="w-3 h-3 border border-blue-200 border-t-white rounded-full animate-spin" />
-                      <span>Saving...</span>
+                      <span className="hidden sm:inline">Saving...</span>
+                      <span className="sm:hidden">...</span>
                     </div>
                   )}
                   {autoSaveStatus === 'saved' && lastSaved && (
-                    <div className="flex items-center gap-1 text-green-200 text-sm">
+                    <div className="flex items-center gap-1 text-green-200 text-xs sm:text-sm">
                       <Save className="w-3 h-3" />
-                      <span>Saved {new Date(lastSaved).toLocaleTimeString()}</span>
+                      <span className="hidden sm:inline">Saved {new Date(lastSaved).toLocaleTimeString()}</span>
+                      <span className="sm:hidden">✓</span>
                     </div>
                   )}
                   {autoSaveStatus === 'error' && (
-                    <div className="flex items-center gap-1 text-red-200 text-sm">
+                    <div className="flex items-center gap-1 text-red-200 text-xs sm:text-sm">
                       <WifiOff className="w-3 h-3" />
-                      <span>Save failed</span>
+                      <span className="hidden sm:inline">Save failed</span>
+                      <span className="sm:hidden">⚠️</span>
                     </div>
                   )}
                 </div>
-                <p className="text-blue-100">Request meeting with HR department</p>
+                <p className="text-blue-100 text-sm sm:text-base">Request meeting with HR department</p>
               </div>
             </div>
             <button
               onClick={() => navigate('/dashboard')}
-              className="p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+              className="p-3 sm:p-2 rounded-lg bg-white/20 hover:bg-white/30 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
         </div>
 
-        {/* ✅ SUCCESS STATE */}
+        {/* ✅ SUCCESS STATE - Mobile Optimized */}
         {step === 'complete' && success && (
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Meeting Request Submitted!</h2>
-            <p className="text-gray-600 mb-6">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-8 text-center">
+            <CheckCircle className="w-12 h-12 sm:w-16 sm:h-16 text-green-500 mx-auto mb-3 sm:mb-4" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Meeting Request Submitted!</h2>
+            <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base">
               HR has been notified and will schedule your meeting soon.
             </p>
             
-            <div className="bg-green-50 rounded-xl p-6 mb-6">
-              <div className="grid grid-cols-1 gap-4 text-sm">
+            <div className="bg-green-50 rounded-lg sm:rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
+              <div className="grid grid-cols-1 gap-3 sm:gap-4 text-xs sm:text-sm">
                 <div className="flex justify-between">
                   <span className="font-medium text-green-700">Employee:</span>
                   <span className="text-green-600">{selectedEmployee?.profile.firstName} {selectedEmployee?.profile.lastName}</span>
@@ -804,39 +833,47 @@ export const BookHRMeeting: React.FC = () => {
               </div>
             </div>
 
-            <p className="text-sm text-gray-500">Redirecting to dashboard in 3 seconds...</p>
+            <p className="text-xs sm:text-sm text-gray-500">Redirecting to dashboard in 3 seconds...</p>
           </div>
         )}
 
-        {/* 📝 FORM STEP */}
+        {/* 📝 FORM STEP - Mobile Optimized */}
         {step === 'form' && (
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600" />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+            <div className="mb-6 sm:mb-8">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 Meeting Details
               </h2>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 text-xs sm:text-sm">
                 ✅ Found {employees.length} team member{employees.length !== 1 ? 's' : ''} you can book meetings for.
               </p>
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6">
                 <div className="flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-red-600" />
-                  <span className="text-red-800 font-medium">Error</span>
+                  <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0" />
+                  <span className="text-red-800 font-medium text-sm sm:text-base">Error</span>
                 </div>
-                <p className="text-red-700 text-sm mt-1">{error}</p>
+                <p className="text-red-700 text-xs sm:text-sm mt-1">{error}</p>
               </div>
             )}
 
-            <div className="space-y-6">
-              {/* 👤 EMPLOYEE SELECTION - Now filtered to team members only */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Team Member <span className="text-red-500">*</span>
-                </label>
+            <div className="space-y-4 sm:space-y-6">
+              {/* 👤 EMPLOYEE SELECTION - Unified Design */}
+              <div className="space-y-4">
+                <ThemedSectionHeader
+                  icon={Users}
+                  title="Select Team Member"
+                  subtitle="Choose the employee for this HR meeting"
+                  rightContent={
+                    <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                      {employees.length}
+                    </span>
+                  }
+                />
+
                 <select
                   value={selectedEmployee?.id || ''}
                   onChange={(e) => {
@@ -849,29 +886,42 @@ export const BookHRMeeting: React.FC = () => {
                     setTouchedFields(prev => new Set(prev).add('selectedEmployee'));
                     validateField('selectedEmployee', selectedEmployee);
                   }}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 transition-colors ${
-                    touchedFields.has('selectedEmployee') && fieldErrors.selectedEmployee
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                      : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                  }`}
+                  className="w-full h-11 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                  style={{
+                    backgroundColor: touchedFields.has('selectedEmployee') && fieldErrors.selectedEmployee
+                      ? 'var(--color-alert-error-bg)'
+                      : 'var(--color-input-background)',
+                    borderColor: touchedFields.has('selectedEmployee') && fieldErrors.selectedEmployee
+                      ? 'var(--color-alert-error-border)'
+                      : 'var(--color-input-border)',
+                    color: 'var(--color-text)'
+                  }}
                 >
                   <option value="">Choose a team member...</option>
-                  {employees.map(employee => (
-                    <option key={employee.id} value={employee.id}>
-                      {employee.profile.firstName} {employee.profile.lastName} - {employee.profile.department || employee.employment.department}
-                      {employee.profile.employeeNumber && ` (#${employee.profile.employeeNumber})`}
-                    </option>
-                  ))}
+                  {employees.map(employee => {
+                    // Safety check for employee data
+                    if (!employee || !employee.id) return null;
+
+                    const firstName = employee.profile?.firstName || employee.firstName || 'Unknown';
+                    const lastName = employee.profile?.lastName || employee.lastName || 'Employee';
+                    const department = employee.profile?.department || employee.employment?.department || 'Unknown Department';
+
+                    return (
+                      <option key={employee.id} value={employee.id}>
+                        {firstName} {lastName} - {department}
+                      </option>
+                    );
+                  }).filter(Boolean)}
                 </select>
                 {touchedFields.has('selectedEmployee') && fieldErrors.selectedEmployee && (
-                  <p className="text-red-600 text-sm mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
+                  <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--color-error)' }}>
+                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
                     {fieldErrors.selectedEmployee}
-                  </p>
+                  </div>
                 )}
               </div>
 
-              {/* 📝 CONTEXT */}
+              {/* 📝 CONTEXT - Mobile Optimized */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Brief Context <span className="text-red-500">*</span>
@@ -889,7 +939,7 @@ export const BookHRMeeting: React.FC = () => {
                       validateField('context', context);
                     }}
                     placeholder="Brief reason for HR meeting (keep it concise)..."
-                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 resize-none transition-colors ${
+                    className={`w-full px-3 sm:px-4 py-3 text-sm sm:text-base border rounded-lg focus:ring-2 resize-none transition-colors min-h-[80px] ${
                       touchedFields.has('context') && fieldErrors.context
                         ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
                         : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
@@ -904,28 +954,28 @@ export const BookHRMeeting: React.FC = () => {
                   </div>
                 </div>
                 {touchedFields.has('context') && fieldErrors.context && (
-                  <p className="text-red-600 text-sm mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
+                  <p className="text-red-600 text-xs sm:text-sm mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 flex-shrink-0" />
                     {fieldErrors.context}
                   </p>
                 )}
               </div>
             </div>
 
-            {/* 🚀 CONTINUE BUTTON */}
-            <div className="mt-8 flex justify-between">
+            {/* 🚀 CONTINUE BUTTON - Mobile Optimized */}
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:justify-between">
               <button
                 onClick={() => navigate('/dashboard')}
-                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                className="px-4 sm:px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 min-h-[44px] text-sm sm:text-base order-2 sm:order-1"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Cancel
               </button>
-              
+
               <button
                 onClick={() => setStep('manager-sign')}
                 disabled={!isFormValid()}
-                className={`px-6 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
+                className={`px-4 sm:px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 min-h-[44px] text-sm sm:text-base order-1 sm:order-2 ${
                   isFormValid()
                     ? 'bg-blue-600 text-white hover:bg-blue-700'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -938,24 +988,24 @@ export const BookHRMeeting: React.FC = () => {
           </div>
         )}
 
-        {/* ✍️ MANAGER SIGNATURE STEP */}
+        {/* ✍️ MANAGER SIGNATURE STEP - Mobile Optimized */}
         {step === 'manager-sign' && (
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-blue-600" />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+            <div className="mb-6 sm:mb-8">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                 Manager Signature Required
               </h2>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 text-xs sm:text-sm">
                 As the requesting manager, please sign below to confirm this meeting request.
               </p>
             </div>
 
-            <div className="space-y-6">
-              {/* Meeting Summary */}
-              <div className="bg-blue-50 rounded-xl p-6">
-                <h3 className="font-semibold text-blue-900 mb-4">Meeting Request Summary</h3>
-                <div className="grid grid-cols-1 gap-3 text-sm">
+            <div className="space-y-4 sm:space-y-6">
+              {/* Meeting Summary - Mobile Optimized */}
+              <div className="bg-blue-50 rounded-lg sm:rounded-xl p-4 sm:p-6">
+                <h3 className="font-semibold text-blue-900 mb-3 sm:mb-4 text-sm sm:text-base">Meeting Request Summary</h3>
+                <div className="grid grid-cols-1 gap-2 sm:gap-3 text-xs sm:text-sm">
                   <div className="flex justify-between">
                     <span className="font-medium text-blue-700">Employee:</span>
                     <span className="text-blue-600">{selectedEmployee?.profile.firstName} {selectedEmployee?.profile.lastName}</span>
@@ -985,39 +1035,39 @@ export const BookHRMeeting: React.FC = () => {
               />
             </div>
 
-            <div className="mt-8 flex justify-between">
+            <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-3 sm:justify-between sm:items-center">
               <button
                 onClick={() => setStep('form')}
-                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                className="px-4 sm:px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 min-h-[44px] text-sm sm:text-base"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back to Details
               </button>
-              
-              <div className="text-sm text-gray-500">
+
+              <div className="text-xs sm:text-sm text-gray-500 text-center sm:text-right">
                 Sign above to continue to employee consent
               </div>
             </div>
           </div>
         )}
 
-        {/* 👤 EMPLOYEE DECISION STEP */}
+        {/* 👤 EMPLOYEE DECISION STEP - Mobile Optimized */}
         {step === 'employee-decision' && (
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                <Users className="w-5 h-5 text-purple-600" />
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+            <div className="mb-6 sm:mb-8">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
                 Employee Consent
               </h2>
-              <p className="text-gray-600 text-sm">
+              <p className="text-gray-600 text-xs sm:text-sm">
                 {selectedEmployee?.profile.firstName}, do you agree to this HR meeting request?
               </p>
             </div>
 
-            {/* Employee Info */}
-            <div className="bg-purple-50 rounded-xl p-6 mb-6">
-              <h3 className="font-semibold text-purple-900 mb-4">Meeting Request for You</h3>
-              <div className="grid grid-cols-1 gap-3 text-sm">
+            {/* Employee Info - Mobile Optimized */}
+            <div className="bg-purple-50 rounded-lg sm:rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
+              <h3 className="font-semibold text-purple-900 mb-3 sm:mb-4 text-sm sm:text-base">Meeting Request for You</h3>
+              <div className="grid grid-cols-1 gap-2 sm:gap-3 text-xs sm:text-sm">
                 <div className="flex justify-between">
                   <span className="font-medium text-purple-700">Requested by:</span>
                   <span className="text-purple-600">{user?.firstName} {user?.lastName}</span>
@@ -1033,29 +1083,29 @@ export const BookHRMeeting: React.FC = () => {
               </div>
             </div>
 
-            {/* Employee Decision Buttons */}
-            <div className="space-y-4">
+            {/* Employee Decision Buttons - Mobile Optimized */}
+            <div className="space-y-3 sm:space-y-4">
               <button
                 onClick={() => handleEmployeeDecision(true)}
-                className="w-full bg-green-600 text-white px-6 py-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 font-semibold"
+                className="w-full bg-green-600 text-white px-4 sm:px-6 py-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 font-semibold min-h-[48px] text-sm sm:text-base"
               >
-                <UserCheck className="w-5 h-5" />
+                <UserCheck className="w-4 h-4 sm:w-5 sm:h-5" />
                 I Agree to This Meeting
               </button>
-              
+
               <button
                 onClick={() => handleEmployeeDecision(false)}
-                className="w-full bg-red-600 text-white px-6 py-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 font-semibold"
+                className="w-full bg-red-600 text-white px-4 sm:px-6 py-4 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 font-semibold min-h-[48px] text-sm sm:text-base"
               >
-                <UserX className="w-5 h-5" />
+                <UserX className="w-4 h-4 sm:w-5 sm:h-5" />
                 I Do Not Consent (Manager Request Only)
               </button>
             </div>
 
             {showEmployeeSignature && (
-              <div className="mt-8 space-y-6">
-                <div className="border-t pt-6">
-                  <h3 className="font-semibold text-gray-900 mb-4">Employee Signature Required</h3>
+              <div className="mt-6 sm:mt-8 space-y-4 sm:space-y-6">
+                <div className="border-t pt-4 sm:pt-6">
+                  <h3 className="font-semibold text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base">Employee Signature Required</h3>
                   <ProfessionalSignatureCanvas
                     onSignatureChange={handleEmployeeSignature}
                     label="Employee Consent Signature"
@@ -1067,8 +1117,8 @@ export const BookHRMeeting: React.FC = () => {
               </div>
             )}
 
-            <div className="mt-8 flex justify-center">
-              <p className="text-sm text-gray-500">
+            <div className="mt-6 sm:mt-8 flex justify-center">
+              <p className="text-xs sm:text-sm text-gray-500 text-center">
                 Your response will be recorded and sent to HR
               </p>
             </div>

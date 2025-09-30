@@ -233,42 +233,33 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
   }
 };
 
-// South African provinces with major cities
-export const SA_PROVINCES: Record<SouthAfricanProvince, { name: string; cities: string[] }> = {
+// South African provinces
+export const SA_PROVINCES: Record<SouthAfricanProvince, { name: string }> = {
   'western-cape': {
-    name: 'Western Cape',
-    cities: ['Cape Town', 'Stellenbosch', 'George', 'Paarl', 'Worcester']
+    name: 'Western Cape'
   },
   'gauteng': {
-    name: 'Gauteng', 
-    cities: ['Johannesburg', 'Pretoria', 'Ekurhuleni', 'Germiston', 'Benoni']
+    name: 'Gauteng'
   },
   'kwazulu-natal': {
-    name: 'KwaZulu-Natal',
-    cities: ['Durban', 'Pietermaritzburg', 'Newcastle', 'Ladysmith', 'Richards Bay']
+    name: 'KwaZulu-Natal'
   },
   'eastern-cape': {
-    name: 'Eastern Cape',
-    cities: ['Port Elizabeth', 'East London', 'Uitenhage', 'King Williams Town', 'Grahamstown']
+    name: 'Eastern Cape'
   },
   'free-state': {
-    name: 'Free State', 
-    cities: ['Bloemfontein', 'Welkom', 'Kroonstad', 'Bethlehem', 'Sasolburg']
+    name: 'Free State'
   },
   'limpopo': {
-    name: 'Limpopo',
-    cities: ['Polokwane', 'Thohoyandou', 'Tzaneen', 'Giyani', 'Musina']
+    name: 'Limpopo'
   },
   'mpumalanga': {
-    name: 'Mpumalanga',
-    cities: ['Nelspruit', 'Witbank', 'Secunda', 'Standerton', 'Ermelo']
+    name: 'Mpumalanga'
   },
   'northern-cape': {
-    name: 'Northern Cape',
-    cities: ['Kimberley', 'Upington', 'Kuruman', 'De Aar', 'Springbok']
+    name: 'Northern Cape'
   },
   'north-west': {
-    name: 'North West',
-    cities: ['Mahikeng', 'Klerksdorp', 'Rustenburg', 'Potchefstroom', 'Brits']
+    name: 'North West'
   }
 };
