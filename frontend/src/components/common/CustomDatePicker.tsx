@@ -1,5 +1,6 @@
 // CustomDatePicker - Modern, themed date picker component
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Calendar, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { SlotMachineSpinner } from './SlotMachineSpinner';
 
@@ -164,18 +165,18 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
           )}
         </div>
 
-        {/* Custom Popup - Centered Modal */}
-        {isOpen && (
+        {/* Custom Popup - Rendered via Portal to Escape Modal Bounds */}
+        {isOpen && typeof document !== 'undefined' && createPortal(
           <>
             {/* Backdrop */}
             <div
-              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              className="fixed inset-0 bg-black bg-opacity-50 z-[10000]"
               onClick={() => setIsOpen(false)}
             />
             {/* Centered Modal */}
             <div
               ref={popupRef}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              className="fixed inset-0 z-[10001] flex items-center justify-center p-4"
             >
               <div
                 className="bg-white rounded-2xl shadow-2xl max-w-sm w-full max-h-[90vh] overflow-auto"
@@ -345,7 +346,8 @@ export const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
             )}
               </div>
             </div>
-          </>
+          </>,
+          document.body
         )}
       </div>
 

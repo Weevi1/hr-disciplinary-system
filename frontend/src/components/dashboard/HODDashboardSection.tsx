@@ -73,6 +73,18 @@ interface HODDashboardSectionProps {
   className?: string;
 }
 
+interface ToolAction {
+  id: string;
+  title: string;
+  icon: any;
+  color: string;
+  action: () => void;
+  enabled: boolean;
+  hasAudioRecording: boolean;
+  showCount?: boolean;
+  count?: number;
+}
+
 export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className = '' }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -365,7 +377,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
   // ============================================
   
   // 🎯 UNIFIED: All tool actions now use consistent modal system
-  const toolActions = [
+  const toolActions: ToolAction[] = [
     {
       id: 'create-warning',
       title: 'Issue Warning',
@@ -464,7 +476,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
               key={tool.id}
               hover
               padding="sm"
-              className="cursor-pointer transition-all duration-200"
+              className="cursor-pointer transition-all duration-200 active:scale-95"
               onClick={tool.action}
               style={{
                 opacity: (dashboardLoading.overall || dashboardLoading.employees) && tool.id === 'create-warning' ? 0.5 : 1,
@@ -474,13 +486,16 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
                            tool.color === 'blue' ? 'linear-gradient(135deg, var(--color-primary), var(--color-primary))' :
                            'linear-gradient(135deg, var(--color-primary), var(--color-primary))',
                 color: 'var(--color-text-inverse)',
-                minHeight: '80px' // Ensure consistent mobile touch targets
+                minHeight: '80px', // Ensure consistent mobile touch targets
+                willChange: 'transform'
               }}
             >
               <div className="flex flex-col items-center gap-1.5 py-1">
-                <tool.icon className="w-5 h-5" />
+                <div className="flex items-center gap-1">
+                  <tool.icon className="w-5 h-5" />
+                  {tool.hasAudioRecording && <Mic className="w-3.5 h-3.5 opacity-80" />}
+                </div>
                 <span className="font-medium text-xs text-center leading-tight">{tool.title}</span>
-                {tool.hasAudioRecording && <Mic className="w-3 h-3 opacity-60" />}
                 {(dashboardLoading.overall || dashboardLoading.employees) && tool.id === 'create-warning' && (
                   <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
                 )}
@@ -488,6 +503,35 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
             </ThemedCard>
           ))}
         </div>
+
+        {/* --- Mobile-Optimized Team Members Button (Full Width) --- */}
+        <ThemedCard
+          hover
+          padding="none"
+          className="mb-3 cursor-pointer transition-all duration-200 overflow-hidden active:scale-[0.98]"
+          onClick={() => setShowEmployeeManagement(true)}
+          style={{
+            background: 'linear-gradient(135deg, var(--color-success), var(--color-success))',
+            color: 'var(--color-text-inverse)',
+            minHeight: '64px',
+            willChange: 'transform'
+          }}
+        >
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              <Users className="w-5 h-5" />
+              <span className="font-medium text-sm">Team Members</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {dashboardLoading.employees ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+              ) : (
+                <span className="text-2xl font-bold">{employees.length}</span>
+              )}
+              <ChevronRight className="w-4 h-4 opacity-60" />
+            </div>
+          </div>
+        </ThemedCard>
 
         {/* --- Mobile-Optimized Follow-up Section --- */}
         {followUpCounts.total > 0 && (
@@ -588,32 +632,6 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
             </div>
           </ThemedCard>
         )}
-
-        {/* --- Mobile-Optimized Team Overview --- */}
-        <ThemedCard padding="sm">
-          <ThemedButton
-            variant="ghost"
-            onClick={() => setShowEmployeeManagement(true)}
-            className="w-full flex items-center justify-between p-2"
-            style={{
-              backgroundColor: 'var(--color-success)',
-              color: 'var(--color-text-inverse)',
-              minHeight: '48px' // Ensure mobile touch target
-            }}
-          >
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              <span className="text-sm font-medium">Team Members</span>
-            </div>
-            <span className="text-lg font-bold">
-              {dashboardLoading.employees ? (
-                <div className="animate-pulse h-5 w-6 rounded" style={{ backgroundColor: 'var(--color-success-light)' }}></div>
-              ) : (
-                employees.length
-              )}
-            </span>
-          </ThemedButton>
-        </ThemedCard>
       </div>
 
       {/* Audio consent is now integrated into the wizard as first step */}

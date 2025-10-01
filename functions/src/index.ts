@@ -29,7 +29,6 @@ import {
 
 // 🔐 ADD CUSTOM CLAIMS FUNCTIONS
 import {
-  setCustomClaimsOnSignIn,
   refreshUserClaims,
   getUserClaims,
   refreshOrganizationUserClaims
@@ -68,7 +67,6 @@ export {
   createPortalSession,
   
   // Custom claims & sharded auth functions
-  setCustomClaimsOnSignIn,
   refreshUserClaims,
   getUserClaims,
   refreshOrganizationUserClaims,

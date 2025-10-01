@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.initializeSuperUser = exports.getSuperUserInfo = exports.manageSuperUser = exports.refreshOrganizationUserClaims = exports.getUserClaims = exports.refreshUserClaims = exports.setCustomClaimsOnSignIn = exports.createPortalSession = exports.processMonthlyCommissions = exports.stripeWebhook = exports.createCheckoutSession = exports.previewAudioCleanup = exports.getGlobalAudioStats = exports.getCleanupStats = exports.manualAudioCleanup = exports.cleanupExpiredAudio = exports.createOrganizationUser = exports.createResellerUser = exports.resetUserPassword = exports.createOrganizationUsers = exports.createOrganizationAdmin = exports.cleanupExpiredTokens = exports.revokeTemporaryToken = exports.validateTemporaryToken = exports.downloadTempFile = exports.generateTemporaryDownloadLink = void 0;
+exports.initializeSuperUser = exports.getSuperUserInfo = exports.manageSuperUser = exports.refreshOrganizationUserClaims = exports.getUserClaims = exports.refreshUserClaims = exports.createPortalSession = exports.processMonthlyCommissions = exports.stripeWebhook = exports.createCheckoutSession = exports.previewAudioCleanup = exports.getGlobalAudioStats = exports.getCleanupStats = exports.manualAudioCleanup = exports.cleanupExpiredAudio = exports.createOrganizationUser = exports.createResellerUser = exports.resetUserPassword = exports.createOrganizationUsers = exports.createOrganizationAdmin = exports.cleanupExpiredTokens = exports.revokeTemporaryToken = exports.validateTemporaryToken = exports.downloadTempFile = exports.generateTemporaryDownloadLink = void 0;
 // functions/src/index.ts
 // Main Firebase Functions entry point
 const userCreationService_1 = require("./Auth/userCreationService");
@@ -30,7 +30,6 @@ Object.defineProperty(exports, "processMonthlyCommissions", { enumerable: true, 
 Object.defineProperty(exports, "createPortalSession", { enumerable: true, get: function () { return billing_1.createPortalSession; } });
 // 🔐 ADD CUSTOM CLAIMS FUNCTIONS
 const customClaims_1 = require("./customClaims");
-Object.defineProperty(exports, "setCustomClaimsOnSignIn", { enumerable: true, get: function () { return customClaims_1.setCustomClaimsOnSignIn; } });
 Object.defineProperty(exports, "refreshUserClaims", { enumerable: true, get: function () { return customClaims_1.refreshUserClaims; } });
 Object.defineProperty(exports, "getUserClaims", { enumerable: true, get: function () { return customClaims_1.getUserClaims; } });
 Object.defineProperty(exports, "refreshOrganizationUserClaims", { enumerable: true, get: function () { return customClaims_1.refreshOrganizationUserClaims; } });

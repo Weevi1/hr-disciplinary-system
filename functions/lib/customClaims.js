@@ -2,9 +2,8 @@
 // functions/src/customClaims.ts
 // Firebase Auth Custom Claims Management for Sharded User System
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.refreshOrganizationUserClaims = exports.getUserClaims = exports.refreshUserClaims = exports.setCustomClaimsOnSignIn = void 0;
+exports.refreshOrganizationUserClaims = exports.getUserClaims = exports.refreshUserClaims = void 0;
 const https_1 = require("firebase-functions/v2/https");
-const identity_1 = require("firebase-functions/v2/identity");
 const firebase_functions_1 = require("firebase-functions");
 const auth_1 = require("firebase-admin/auth");
 const firestore_1 = require("firebase-admin/firestore");
@@ -18,39 +17,6 @@ catch (e) {
 }
 const auth = (0, auth_1.getAuth)();
 const db = (0, firestore_1.getFirestore)();
-/**
- * Before Sign In Hook - Sets custom claims from sharded user data
- * This runs automatically whenever a user signs in
- */
-exports.setCustomClaimsOnSignIn = (0, identity_1.beforeUserSignedIn)(async (event) => {
-    const { uid, email } = event.data;
-    try {
-        firebase_functions_1.logger.info(`🔐 [CUSTOM CLAIMS] Setting claims for user: ${uid} (${email})`);
-        // Find user in sharded collections by searching all organizations
-        const userDoc = await findUserInShardedCollections(uid);
-        if (!userDoc) {
-            firebase_functions_1.logger.warn(`⚠️ [CUSTOM CLAIMS] User not found in sharded collections: ${uid}`);
-            // Don't block sign-in, but user will have 'guest' role
-            return;
-        }
-        const { userData, organizationId } = userDoc;
-        // Prepare custom claims
-        const customClaims = {
-            role: userData.role,
-            organizationId: organizationId,
-            permissions: userData.permissions ? Object.keys(userData.permissions) : [],
-            lastUpdated: Date.now()
-        };
-        // Set custom claims in Firebase Auth
-        await auth.setCustomUserClaims(uid, customClaims);
-        firebase_functions_1.logger.info(`✅ [CUSTOM CLAIMS] Claims set successfully for ${uid}:`, customClaims);
-    }
-    catch (error) {
-        firebase_functions_1.logger.error(`❌ [CUSTOM CLAIMS] Failed to set claims for ${uid}:`, error);
-        // Don't throw error to avoid blocking sign-in
-        // User will just have default 'guest' permissions
-    }
-});
 /**
  * Manually refresh custom claims for a user
  * Can be called from the frontend after user data changes

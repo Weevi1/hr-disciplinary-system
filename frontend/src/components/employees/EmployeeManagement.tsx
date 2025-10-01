@@ -271,10 +271,10 @@ export const EmployeeManagement: React.FC = () => {
       {/* Show filters only in cards view for simplicity */}
       {viewMode === 'cards' && (
         <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-md border border-white/50 p-3">
-          <EmployeeFilters 
+          <EmployeeFilters
             filters={filters}
             setFilters={setFilters}
-            departments={[...new Set(employees.map(e => e.employment.department))]}
+            departments={[...new Set(employees.map(e => e.profile.department))]}
             viewMode={viewMode}
             setViewMode={setViewMode}
           />

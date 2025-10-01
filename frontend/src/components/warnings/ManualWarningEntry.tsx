@@ -83,6 +83,14 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
   currentUserId,
   organizationId
 }) => {
+  console.log('🔵 [DEBUG] ManualWarningEntry component rendered:', {
+    isOpen,
+    employeesCount: employees?.length,
+    categoriesCount: categories?.length,
+    currentUserId,
+    organizationId
+  });
+
   const [currentStep, setCurrentStep] = useState<FormStep>(FormStep.EMPLOYEE_CATEGORY);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -299,7 +307,7 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
     switch (currentStep) {
       case FormStep.EMPLOYEE_CATEGORY:
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Employee Selection */}
             <div>
               <ThemedSectionHeader
@@ -310,9 +318,9 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
               <select
                 value={formData.employeeId}
                 onChange={(e) => updateFormData('employeeId', e.target.value)}
-                className="w-full h-11 px-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="mt-2 w-full h-11 px-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm font-medium transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               >
-                <option value="">-- Select Employee --</option>
+                <option value="">Select an employee...</option>
                 {employees.map(emp => (
                   <option key={emp.id} value={emp.id}>
                     {emp.profile.firstName} {emp.profile.lastName} ({emp.profile.employeeNumber})
@@ -331,9 +339,9 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
               <select
                 value={formData.categoryId}
                 onChange={(e) => updateFormData('categoryId', e.target.value)}
-                className="w-full h-11 px-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="mt-2 w-full h-11 px-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm font-medium transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               >
-                <option value="">-- Select Category --</option>
+                <option value="">Select a category...</option>
                 {categories.map(cat => (
                   <option key={cat.id} value={cat.id}>
                     {cat.name}
@@ -353,9 +361,9 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
                 <select
                   value={formData.level}
                   onChange={(e) => updateFormData('level', e.target.value as WarningLevel)}
-                  className="w-full h-11 px-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="mt-2 w-full h-11 px-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm font-medium transition-all duration-200 hover:border-gray-300 dark:hover:border-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 >
-                  <option value="">-- Select Level --</option>
+                  <option value="">Select warning level...</option>
                   {availableLevels.map(level => (
                     <option key={level} value={level}>
                       {WARNING_LEVEL_LABELS[level] || level}
@@ -369,19 +377,17 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
 
       case FormStep.DATES_DETAILS:
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Incident Date */}
             <div>
-              <ThemedSectionHeader
-                icon={Calendar}
-                title="Incident Date"
-                subtitle="When did the incident occur?"
-              />
               <CustomDatePicker
-                selectedDate={formData.incidentDate}
-                onChange={(date) => updateFormData('incidentDate', date)}
-                maxDate={new Date()}
+                label="Incident Date"
+                value={formData.incidentDate ? formData.incidentDate.toISOString().split('T')[0] : ''}
+                onChange={(dateString) => updateFormData('incidentDate', dateString ? new Date(dateString) : null)}
+                icon={Calendar}
+                required
               />
+              <p className="text-xs text-gray-500 mt-1">When did the incident occur?</p>
             </div>
 
             {/* Incident Time */}
@@ -390,21 +396,19 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
               label="Incident Time"
               type="time"
               value={formData.incidentTime}
-              onChange={(e) => updateFormData('incidentTime', e.target.value)}
+              onChange={(value) => updateFormData('incidentTime', value)}
             />
 
             {/* Issue Date */}
             <div>
-              <ThemedSectionHeader
-                icon={FileSignature}
-                title="Issue Date"
-                subtitle="When was the warning issued?"
-              />
               <CustomDatePicker
-                selectedDate={formData.issueDate}
-                onChange={(date) => updateFormData('issueDate', date)}
-                maxDate={new Date()}
+                label="Issue Date"
+                value={formData.issueDate ? formData.issueDate.toISOString().split('T')[0] : ''}
+                onChange={(dateString) => updateFormData('issueDate', dateString ? new Date(dateString) : null)}
+                icon={FileSignature}
+                required
               />
+              <p className="text-xs text-gray-500 mt-1">When was the warning issued?</p>
             </div>
 
             {/* Validity Period */}
@@ -436,7 +440,7 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
               label="Warning Title"
               placeholder="Brief summary of the warning"
               value={formData.title}
-              onChange={(e) => updateFormData('title', e.target.value)}
+              onChange={(value) => updateFormData('title', value)}
             />
 
             {/* Incident Location */}
@@ -445,7 +449,7 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
               label="Incident Location"
               placeholder="Where did the incident occur?"
               value={formData.incidentLocation}
-              onChange={(e) => updateFormData('incidentLocation', e.target.value)}
+              onChange={(value) => updateFormData('incidentLocation', value)}
             />
 
             {/* Description */}
@@ -480,7 +484,7 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
 
       case FormStep.PHYSICAL_CONFIRMATION:
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Physical Copy Confirmation */}
             <ThemedCard>
               <div className="space-y-4">
@@ -510,7 +514,7 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
                 label="Physical Copy Location (Optional)"
                 placeholder="e.g., Filing Cabinet A3, HR Office"
                 value={formData.physicalCopyLocation}
-                onChange={(e) => updateFormData('physicalCopyLocation', e.target.value)}
+                onChange={(value) => updateFormData('physicalCopyLocation', value)}
               />
             )}
 
@@ -537,7 +541,7 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
 
       case FormStep.REVIEW:
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Summary */}
             <ThemedCard>
               <div className="space-y-4">
@@ -628,14 +632,14 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
       onClose={handleClose}
       title={
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-            <FileText className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/40 dark:to-amber-900/20 flex items-center justify-center shadow-sm">
+            <FileText className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
               Manual Warning Entry
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               {STEP_TITLES[currentStep]}
             </p>
           </div>
@@ -643,24 +647,24 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
       }
       size="lg"
     >
-      {/* Progress Indicator */}
-      <div className="flex items-center justify-between mb-6 px-4">
+      {/* Progress Indicator - Compact Design */}
+      <div className="flex items-center justify-between mb-4 px-4">
         {[0, 1, 2, 3].map((step) => (
           <div key={step} className="flex items-center flex-1">
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors
+              className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-200
                 ${step <= currentStep
-                  ? 'bg-primary text-white'
+                  ? 'bg-blue-600 text-white shadow-sm'
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                 }`}
             >
-              {step < currentStep ? <Check className="w-4 h-4" /> : step + 1}
+              {step < currentStep ? <Check className="w-3.5 h-3.5" /> : step + 1}
             </div>
             {step < 3 && (
               <div
-                className={`flex-1 h-1 mx-2 transition-colors
+                className={`flex-1 h-0.5 mx-2 transition-all duration-200
                   ${step < currentStep
-                    ? 'bg-primary'
+                    ? 'bg-blue-600'
                     : 'bg-gray-200 dark:bg-gray-700'
                   }`}
               />
@@ -698,14 +702,13 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
         <ThemedButton
           onClick={currentStep === FormStep.REVIEW ? handleSubmit : handleNext}
           disabled={isSubmitting}
-          icon={currentStep === FormStep.REVIEW ? Save : ChevronRight}
-          iconPosition="right"
+          className="flex items-center justify-center gap-2"
         >
           {isSubmitting
             ? 'Saving...'
             : currentStep === FormStep.REVIEW
-            ? 'Save Historical Warning'
-            : 'Next'
+            ? <>Save Historical Warning <Save className="w-4 h-4" /></>
+            : <>Next <ChevronRight className="w-4 h-4" /></>
           }
         </ThemedButton>
       </div>

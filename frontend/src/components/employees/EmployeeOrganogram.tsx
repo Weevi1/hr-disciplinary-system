@@ -173,7 +173,7 @@ export const EmployeeOrganogram: React.FC<EmployeeOrganogramProps> = ({
   const departmentGroups = useMemo(() => {
     const groups = new Map<string, Employee[]>();
     employees.forEach(emp => {
-      const dept = emp.employment.department || 'Unassigned';
+      const dept = emp.profile.department || 'Unassigned';
       if (!groups.has(dept)) groups.set(dept, []);
       groups.get(dept)!.push(emp);
     });
@@ -242,7 +242,7 @@ export const EmployeeOrganogram: React.FC<EmployeeOrganogramProps> = ({
           <div className="text-xs text-gray-500 mb-2">
             <div className="flex items-center gap-1">
               <Building className="w-3 h-3 flex-shrink-0" />
-              <span className="truncate">{employee.employment.department}</span>
+              <span className="truncate">{employee.profile.department}</span>
             </div>
           </div>
 

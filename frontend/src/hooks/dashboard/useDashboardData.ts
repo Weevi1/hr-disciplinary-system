@@ -166,23 +166,24 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
 
       // Role-specific data requests - load independently
       if (requirements.includes('employees')) {
+        // HR and Business Owner see ALL employees, HOD sees only their team
+        const isHROrOwner = userRole === 'hr' || userRole === 'business_owner';
+        const cacheKey = isHROrOwner
+          ? CacheService.generateOrgKey(organization.id, 'employees:all')
+          : CacheService.generateOrgKey(organization.id, `employees:manager:${user.id}`);
+
         CacheService.getOrFetch(
-          CacheService.generateOrgKey(organization.id, `employees:manager:${user.id}`),
+          cacheKey,
           async () => {
-            const employeesData = await API.employees.getByManager(user.id, organization.id);
-            // Transform employees to expected format
-            return employeesData.map((emp: any) => ({
-              id: emp.id,
-              firstName: emp.profile?.firstName || emp.firstName || 'Unknown',
-              lastName: emp.profile?.lastName || emp.lastName || 'Employee',
-              position: emp.profile?.position || emp.employment?.position || 'Unknown Position',
-              department: emp.profile?.department || emp.employment?.department || 'Unknown',
-              email: emp.profile?.email || emp.contact?.email || emp.email || '',
-              phone: emp.profile?.phone || emp.contact?.phone || emp.phone || '',
-              deliveryPreference: (emp.deliveryPreference || 'email') as 'email' | 'whatsapp' | 'print',
-              recentWarnings: emp.recentWarnings || { count: 0 },
-              riskIndicators: emp.riskIndicators || { highRisk: false, reasons: [] }
-            }));
+            // HR/Business Owner get all employees, HOD gets their team
+            const employeesData = isHROrOwner
+              ? await API.employees.getAll(organization.id)
+              : await API.employees.getByManager(user.id, organization.id);
+
+            Logger.debug(`👥 Loading ${employeesData.length} employees for ${userRole}`);
+
+            // Return employees with full structure (ManualWarningEntry needs profile property)
+            return employeesData;
           }
         ).then(data => updateDataItem('employees', Array.isArray(data) ? data : []))
           .catch(error => {

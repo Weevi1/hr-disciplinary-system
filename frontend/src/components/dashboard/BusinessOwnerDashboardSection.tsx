@@ -4,7 +4,7 @@
 // ✅ Permission-based feature visibility
 // ✅ Clean, professional, consistent
 
-import React, { memo, useState } from 'react';
+import React, { memo, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Crown,
@@ -31,12 +31,22 @@ import { ThemedCard, ThemedBadge, ThemedAlert } from '../common/ThemedCard';
 import { ThemedButton } from '../common/ThemedButton';
 import { ThemedStatusCard } from '../common/ThemedStatusCard';
 
-// Import unified dashboard styles
-import './dashboard-cards.css';
+// --- A Reusable Breakpoint Hook (for responsive rendering) ---
+const useBreakpoint = (breakpoint: number) => {
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth > breakpoint);
+  const handleResize = useCallback(() => setIsDesktop(window.innerWidth > breakpoint), [breakpoint]);
+
+  useEffect(() => {
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, [handleResize]);
+
+  return isDesktop;
+};
 
 interface BusinessOwnerDashboardSectionProps {
   className?: string;
-  isMobile?: boolean;
 }
 
 const inspirationalQuotes = [
@@ -50,13 +60,13 @@ const inspirationalQuotes = [
 ];
 
 export const BusinessOwnerDashboardSection = memo<BusinessOwnerDashboardSectionProps>(({
-  className = '',
-  isMobile = false
+  className = ''
 }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { organization } = useOrganization();
-  const [activeView, setActiveView] = useState<'organization' | 'departments' | 'categories' | 'employees' | 'warnings'>('organization');
+  const isDesktop = useBreakpoint(768);
+  const [activeView, setActiveView] = useState<'organization' | 'departments' | 'categories' | 'employees' | 'warnings' | null>(null);
 
   // 🚀 UNIFIED DASHBOARD DATA
   const {
@@ -81,73 +91,250 @@ export const BusinessOwnerDashboardSection = memo<BusinessOwnerDashboardSectionP
   const [dailyQuote] = useState(() => inspirationalQuotes[Math.floor(Math.random() * inspirationalQuotes.length)]);
 
   // 📱 MOBILE VIEW
-  if (isMobile) {
+  if (!isDesktop) {
     return (
       <div className={`space-y-6 ${className}`}>
-        {/* Notification Blocks */}
-        <div className="grid grid-cols-1 gap-3">
-          <ThemedStatusCard
-            title="Total Employees"
-            count={executiveMetrics.totalEmployees}
-            icon={<Users className="w-4 h-4" />}
-            variant="success"
-            gradient
+        {/* --- 2x2 Grid Layout matching HOD Dashboard --- */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <ThemedCard
+            padding="sm"
+            shadow="lg"
+            hover
             onClick={() => setActiveView('employees')}
-          />
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, var(--color-success), var(--color-success))',
+              color: 'var(--color-text-inverse)',
+              minHeight: '80px',
+              willChange: 'transform'
+            }}
+          >
+            <div className="flex flex-col items-center gap-1.5 py-1">
+              <Users className="w-5 h-5" />
+              <span className="font-medium text-xs text-center leading-tight">Total Employees</span>
+              <span className="text-lg font-bold">{executiveMetrics.totalEmployees}</span>
+            </div>
+          </ThemedCard>
 
-          <ThemedStatusCard
-            title="Active Warnings"
-            count={executiveMetrics.activeWarnings}
-            subtitle={`${executiveMetrics.undeliveredWarnings} undelivered`}
-            icon={<AlertTriangle className="w-4 h-4" />}
-            variant="warning"
-            gradient
+          <ThemedCard
+            padding="sm"
+            shadow="lg"
+            hover
             onClick={() => setActiveView('warnings')}
-          />
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, var(--color-warning), var(--color-warning))',
+              color: 'var(--color-text-inverse)',
+              minHeight: '80px',
+              willChange: 'transform'
+            }}
+          >
+            <div className="flex flex-col items-center gap-1.5 py-1">
+              <AlertTriangle className="w-5 h-5" />
+              <span className="font-medium text-xs text-center leading-tight">Active Warnings</span>
+              <span className="text-lg font-bold">{executiveMetrics.activeWarnings}</span>
+            </div>
+          </ThemedCard>
 
-          <ThemedStatusCard
-            title="High Priority Cases"
-            count={executiveMetrics.highSeverityWarnings}
-            subtitle="Require oversight"
-            icon={<Shield className="w-4 h-4" />}
-            variant="error"
-            gradient
+          <ThemedCard
+            padding="sm"
+            shadow="lg"
+            hover
             onClick={() => setActiveView('warnings')}
-          />
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, var(--color-error), var(--color-error))',
+              color: 'var(--color-text-inverse)',
+              minHeight: '80px',
+              willChange: 'transform'
+            }}
+          >
+            <div className="flex flex-col items-center gap-1.5 py-1">
+              <Shield className="w-5 h-5" />
+              <span className="font-medium text-xs text-center leading-tight">High Priority</span>
+              <span className="text-lg font-bold">{executiveMetrics.highSeverityWarnings}</span>
+            </div>
+          </ThemedCard>
+
+          <ThemedCard
+            padding="sm"
+            shadow="lg"
+            hover
+            onClick={() => setActiveView('departments')}
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary))',
+              color: 'var(--color-text-inverse)',
+              minHeight: '80px',
+              willChange: 'transform'
+            }}
+          >
+            <div className="flex flex-col items-center gap-1.5 py-1">
+              <Building2 className="w-5 h-5" />
+              <span className="font-medium text-xs text-center leading-tight">Departments</span>
+              <span className="text-lg font-bold">{metrics?.departmentCount || 0}</span>
+            </div>
+          </ThemedCard>
         </div>
 
-        {/* Tab System - Mobile uses cards instead */}
+        {/* Tab System - Mobile uses cards for all 5 features */}
         <div className="space-y-3">
-          <ThemedCard padding="md" shadow="sm" hover onClick={() => setActiveView('organization')} className="cursor-pointer">
+          <ThemedCard
+            padding="md"
+            shadow="sm"
+            hover
+            onClick={() => setActiveView('organization')}
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+            style={{ minHeight: '64px', willChange: 'transform' }}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Building2 className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
-                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Organization Management</span>
+                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Organization</span>
               </div>
               <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
             </div>
           </ThemedCard>
 
-          <ThemedCard padding="md" shadow="sm" hover onClick={() => setActiveView('employees')} className="cursor-pointer">
+          <ThemedCard
+            padding="md"
+            shadow="sm"
+            hover
+            onClick={() => setActiveView('departments')}
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+            style={{ minHeight: '64px', willChange: 'transform' }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Building2 className="w-5 h-5" style={{ color: 'var(--color-info)' }} />
+                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Departments</span>
+              </div>
+              <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
+            </div>
+          </ThemedCard>
+
+          <ThemedCard
+            padding="md"
+            shadow="sm"
+            hover
+            onClick={() => setActiveView('categories')}
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+            style={{ minHeight: '64px', willChange: 'transform' }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Tags className="w-5 h-5" style={{ color: 'var(--color-warning)' }} />
+                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Warning Categories</span>
+              </div>
+              <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
+            </div>
+          </ThemedCard>
+
+          <ThemedCard
+            padding="md"
+            shadow="sm"
+            hover
+            onClick={() => setActiveView('employees')}
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+            style={{ minHeight: '64px', willChange: 'transform' }}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Users className="w-5 h-5" style={{ color: 'var(--color-success)' }} />
-                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Employee Management</span>
+                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Employees</span>
               </div>
               <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
             </div>
           </ThemedCard>
 
-          <ThemedCard padding="md" shadow="sm" hover onClick={() => navigate('/users')} className="cursor-pointer">
+          <ThemedCard
+            padding="md"
+            shadow="sm"
+            hover
+            onClick={() => setActiveView('warnings')}
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+            style={{ minHeight: '64px', willChange: 'transform' }}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Users className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
-                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>User Management</span>
+                <Shield className="w-5 h-5" style={{ color: 'var(--color-error)' }} />
+                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Warnings</span>
               </div>
               <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
             </div>
           </ThemedCard>
         </div>
+
+        {/* Mobile Modals for each view */}
+        {activeView === 'organization' && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
+            <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] overflow-hidden" shadow="xl">
+              <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Organization</h2>
+                <ThemedButton variant="ghost" size="sm" onClick={() => setActiveView(null)}>×</ThemedButton>
+              </div>
+              <div className="overflow-y-auto p-4">
+                <OrganizationManagementV2 />
+              </div>
+            </ThemedCard>
+          </div>
+        )}
+
+        {activeView === 'departments' && organization && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
+            <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] overflow-hidden" shadow="xl">
+              <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Departments</h2>
+                <ThemedButton variant="ghost" size="sm" onClick={() => setActiveView(null)}>×</ThemedButton>
+              </div>
+              <div className="overflow-y-auto">
+                <DepartmentManagement isOpen={true} onClose={() => setActiveView(null)} organizationId={organization.id} inline={true} />
+              </div>
+            </ThemedCard>
+          </div>
+        )}
+
+        {activeView === 'categories' && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
+            <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] overflow-hidden" shadow="xl">
+              <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Warning Categories</h2>
+                <ThemedButton variant="ghost" size="sm" onClick={() => setActiveView(null)}>×</ThemedButton>
+              </div>
+              <div className="overflow-y-auto p-4">
+                <OrganizationCategoriesViewer onClose={() => setActiveView(null)} inline={true} />
+              </div>
+            </ThemedCard>
+          </div>
+        )}
+
+        {activeView === 'employees' && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
+            <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] overflow-hidden" shadow="xl">
+              <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Employees</h2>
+                <ThemedButton variant="ghost" size="sm" onClick={() => setActiveView(null)}>×</ThemedButton>
+              </div>
+              <div className="overflow-y-auto">
+                <EmployeeManagement />
+              </div>
+            </ThemedCard>
+          </div>
+        )}
+
+        {activeView === 'warnings' && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
+            <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] overflow-hidden" shadow="xl">
+              <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Warnings Overview</h2>
+                <ThemedButton variant="ghost" size="sm" onClick={() => setActiveView(null)}>×</ThemedButton>
+              </div>
+              <div className="overflow-y-auto p-4">
+                <WarningsOverviewCard userRole="business-owner" variant="executive" />
+              </div>
+            </ThemedCard>
+          </div>
+        )}
       </div>
     );
   }
@@ -157,43 +344,95 @@ export const BusinessOwnerDashboardSection = memo<BusinessOwnerDashboardSectionP
     <div className={`${className}`}>
       {/* 4 Notification Blocks - Executive Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
-        <ThemedStatusCard
-          title="Total Employees"
-          count={executiveMetrics.totalEmployees}
-          icon={<Users className="w-4 h-4" />}
-          variant="success"
-          gradient
+        <ThemedCard
+          padding="sm"
+          shadow="lg"
+          hover
           onClick={() => setActiveView('employees')}
-        />
+          className="cursor-pointer transition-all duration-200 active:scale-95"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-success), var(--color-success))',
+            color: 'var(--color-text-inverse)',
+            minHeight: '80px',
+            willChange: 'transform'
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <Users className="w-8 h-8" style={{ opacity: 0.7 }} />
+            <div>
+              <div className="text-sm" style={{ opacity: 0.8 }}>Total Employees</div>
+              <div className="text-2xl font-bold">{executiveMetrics.totalEmployees}</div>
+            </div>
+          </div>
+        </ThemedCard>
 
-        <ThemedStatusCard
-          title="Active Warnings"
-          count={executiveMetrics.activeWarnings}
-          subtitle={`${executiveMetrics.undeliveredWarnings} undelivered`}
-          icon={<AlertTriangle className="w-4 h-4" />}
-          variant="warning"
-          gradient
+        <ThemedCard
+          padding="sm"
+          shadow="lg"
+          hover
           onClick={() => setActiveView('warnings')}
-        />
+          className="cursor-pointer transition-all duration-200 active:scale-95"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-warning), var(--color-warning))',
+            color: 'var(--color-text-inverse)',
+            minHeight: '80px',
+            willChange: 'transform'
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-8 h-8" style={{ opacity: 0.7 }} />
+            <div>
+              <div className="text-sm" style={{ opacity: 0.8 }}>Active Warnings</div>
+              <div className="text-2xl font-bold">{executiveMetrics.activeWarnings}</div>
+              <div className="text-xs mt-0.5" style={{ opacity: 0.8 }}>{executiveMetrics.undeliveredWarnings} undelivered</div>
+            </div>
+          </div>
+        </ThemedCard>
 
-        <ThemedStatusCard
-          title="High Priority"
-          count={executiveMetrics.highSeverityWarnings}
-          subtitle="Critical cases"
-          icon={<Shield className="w-4 h-4" />}
-          variant="error"
-          gradient
+        <ThemedCard
+          padding="sm"
+          shadow="lg"
+          hover
           onClick={() => setActiveView('warnings')}
-        />
+          className="cursor-pointer transition-all duration-200 active:scale-95"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-error), var(--color-error))',
+            color: 'var(--color-text-inverse)',
+            minHeight: '80px',
+            willChange: 'transform'
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <Shield className="w-8 h-8" style={{ opacity: 0.7 }} />
+            <div>
+              <div className="text-sm" style={{ opacity: 0.8 }}>High Priority</div>
+              <div className="text-2xl font-bold">{executiveMetrics.highSeverityWarnings}</div>
+              <div className="text-xs mt-0.5" style={{ opacity: 0.8 }}>Critical cases</div>
+            </div>
+          </div>
+        </ThemedCard>
 
-        <ThemedStatusCard
-          title="Departments"
-          count={metrics?.departmentCount || 0}
-          icon={<Building2 className="w-4 h-4" />}
-          variant="default"
-          gradient
+        <ThemedCard
+          padding="sm"
+          shadow="lg"
+          hover
           onClick={() => setActiveView('departments')}
-        />
+          className="cursor-pointer transition-all duration-200 active:scale-95"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary))',
+            color: 'var(--color-text-inverse)',
+            minHeight: '80px',
+            willChange: 'transform'
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <Building2 className="w-8 h-8" style={{ opacity: 0.7 }} />
+            <div>
+              <div className="text-sm" style={{ opacity: 0.8 }}>Departments</div>
+              <div className="text-2xl font-bold">{metrics?.departmentCount || 0}</div>
+            </div>
+          </div>
+        </ThemedCard>
       </div>
 
       {/* Error Display */}
@@ -312,20 +551,6 @@ export const BusinessOwnerDashboardSection = memo<BusinessOwnerDashboardSectionP
         </div>
       </div>
 
-      {/* Inspirational Quote - Matching HR Dashboard Bottom Section */}
-      <ThemedCard padding="lg" className="mt-6 border-l-4" style={{ borderLeftColor: 'var(--color-primary)' }}>
-        <div className="flex items-start gap-4">
-          <Crown className="w-8 h-8 mt-1" style={{ color: 'var(--color-primary)', opacity: 0.3 }} />
-          <div>
-            <p className="text-base italic mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-              "{dailyQuote.text}"
-            </p>
-            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-tertiary)' }}>
-              — {dailyQuote.author}
-            </p>
-          </div>
-        </div>
-      </ThemedCard>
     </div>
   );
 });

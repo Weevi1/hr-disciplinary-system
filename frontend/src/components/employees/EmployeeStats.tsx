@@ -13,13 +13,11 @@ export const EmployeeStats: React.FC<EmployeeStatsProps> = ({ employees }) => {
   const statCards = [
     { value: stats.total, label: 'Total Employees', color: 'blue', icon: '👥' },
     { value: stats.active, label: 'Active', color: 'green', icon: '✅' },
-    { value: stats.inactive, label: 'Archived', color: 'gray', icon: '📁' },
-    { value: stats.onProbation, label: 'On Probation', color: 'yellow', icon: '⏳' },
-    { value: stats.withActiveWarnings, label: 'With Warnings', color: 'red', icon: '⚠️' }
+    { value: stats.onProbationWithWarnings, label: 'On Probation, With Warnings', color: 'red', icon: '⚠️' }
   ];
 
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
+    <div className="grid grid-cols-3 gap-2 sm:gap-3">
       {statCards.map((stat, index) => (
         <div
           key={index}

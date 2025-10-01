@@ -61,6 +61,7 @@ export interface EmployeeStats {
   inactive: number;
   onProbation: number;
   withActiveWarnings: number;
+  onProbationWithWarnings: number;
   departments: Array<{
     name: string;
     count: number;
@@ -495,28 +496,37 @@ export const calculateEmployeeStats = (employees: Employee[]): EmployeeStats => 
     inactive: 0,
     onProbation: 0,
     withActiveWarnings: 0,
+    onProbationWithWarnings: 0,
     departments: [],
     contractTypes: []
   };
-  
+
   const departmentCounts: Record<string, number> = {};
   const contractCounts: Record<string, number> = {};
-  
+
   employees.forEach(employee => {
     if (employee.isActive) {
       stats.active++;
     } else {
       stats.inactive++;
     }
-    
+
     if (employee.isActive) {
-      if (employee.employment?.probationEndDate &&
-          new Date(employee.employment.probationEndDate) > new Date()) {
+      const isOnProbation = employee.employment?.probationEndDate &&
+          new Date(employee.employment.probationEndDate) > new Date();
+      const hasWarnings = employee.disciplinaryRecord?.activeWarnings > 0;
+
+      if (isOnProbation) {
         stats.onProbation++;
       }
-      
-      if (employee.disciplinaryRecord?.activeWarnings > 0) {
+
+      if (hasWarnings) {
         stats.withActiveWarnings++;
+      }
+
+      // Count employees who are BOTH on probation AND have warnings
+      if (isOnProbation && hasWarnings) {
+        stats.onProbationWithWarnings++;
       }
     }
     
