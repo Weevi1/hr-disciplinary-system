@@ -211,9 +211,9 @@ export const EnhancedDeliveryWorkflow: React.FC<EnhancedDeliveryWorkflowProps> =
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden shadow-2xl">
+      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[95vh] flex flex-col shadow-2xl">
         {/* Header */}
-        <div className={`p-6 border-b ${methodConfig.bgClass}`}>
+        <div className={`p-6 border-b flex-shrink-0 ${methodConfig.bgClass}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className={`p-3 rounded-xl bg-white shadow-sm`}>
@@ -244,7 +244,7 @@ export const EnhancedDeliveryWorkflow: React.FC<EnhancedDeliveryWorkflowProps> =
         </div>
 
         {/* Employee Info Bar */}
-        <div className="p-4 bg-gray-50 border-b">
+        <div className="p-4 bg-gray-50 border-b flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -286,7 +286,7 @@ export const EnhancedDeliveryWorkflow: React.FC<EnhancedDeliveryWorkflowProps> =
         </div>
 
         {/* Progress Steps */}
-        <div className="p-6 border-b bg-white">
+        <div className="p-6 border-b bg-white flex-shrink-0">
           <div className="flex items-center justify-between">
             {deliverySteps.map((step, index) => (
               <div key={step.id} className="flex items-center">
@@ -331,7 +331,7 @@ export const EnhancedDeliveryWorkflow: React.FC<EnhancedDeliveryWorkflowProps> =
 
         {/* Error Display */}
         {error && (
-          <div className="p-4">
+          <div className="p-4 flex-shrink-0">
             <ThemedAlert variant="error">
               {error}
             </ThemedAlert>
@@ -339,7 +339,7 @@ export const EnhancedDeliveryWorkflow: React.FC<EnhancedDeliveryWorkflowProps> =
         )}
 
         {/* Delivery Method Specific Content */}
-        <div className="p-6 flex-1 overflow-y-auto">
+        <div className="p-6 flex-1 overflow-y-auto min-h-0">
           {notification.deliveryMethod === 'whatsapp' && (
             <WhatsAppDeliveryGuide
               notification={notification}
@@ -372,7 +372,7 @@ export const EnhancedDeliveryWorkflow: React.FC<EnhancedDeliveryWorkflowProps> =
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t bg-gray-50 flex items-center justify-between">
+        <div className="p-4 border-t bg-gray-50 flex items-center justify-between flex-shrink-0">
           <div className="text-sm text-gray-500">
             Step {currentStep + 1} of {deliverySteps.length}
           </div>

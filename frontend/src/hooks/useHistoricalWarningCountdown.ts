@@ -51,19 +51,17 @@ export const useHistoricalWarningCountdown = (
         setLoading(true);
 
         // Load user document
-        const userDocResult = await DatabaseShardingService.getDocument(
+        const userData = await DatabaseShardingService.getDocument(
           organizationId,
           'users',
           userId
         );
 
-        if (!userDocResult.exists) {
+        if (!userData) {
           Logger.error('User document not found for countdown feature');
           setLoading(false);
           return;
         }
-
-        const userData = userDocResult.data;
         const existingAccess = userData?.features?.historicalWarningEntry;
 
         if (existingAccess?.firstAccessedAt) {

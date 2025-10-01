@@ -142,7 +142,7 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
 
   // Get unique departments for filter
   const departments = useMemo(() => {
-    const depts = new Set(employees.map(emp => emp.employment.department).filter(Boolean));
+    const depts = new Set(employees.map(emp => emp.profile.department).filter(Boolean));
     return Array.from(depts).sort();
   }, [employees]);
 
@@ -153,13 +153,13 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
         employee.profile.firstName,
         employee.profile.lastName,
         employee.profile.employeeNumber,
-        employee.employment.department,
+        employee.profile.department,
         employee.employment.position,
         employee.profile.email
       ].join(' ').toLowerCase();
 
       const matchesSearch = !searchTerm || searchFields.includes(searchTerm.toLowerCase());
-      const matchesDepartment = !filterDepartment || employee.employment.department === filterDepartment;
+      const matchesDepartment = !filterDepartment || employee.profile.department === filterDepartment;
       const matchesStatus = !filterStatus || (
         filterStatus === 'active' ? employee.isActive : !employee.isActive
       );
@@ -177,8 +177,8 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
           bValue = `${b.profile.firstName} ${b.profile.lastName}`;
           break;
         case 'department':
-          aValue = a.employment.department || '';
-          bValue = b.employment.department || '';
+          aValue = a.profile.department || '';
+          bValue = b.profile.department || '';
           break;
         case 'position':
           aValue = a.employment.position || '';
@@ -281,7 +281,7 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
     const csvData = filteredAndSortedEmployees.map(emp => [
       `${emp.profile.firstName} ${emp.profile.lastName}`,
       emp.profile.employeeNumber,
-      emp.employment.department,
+      emp.profile.department,
       emp.employment.position,
       getManagerName(emp.employment.managerId),
       emp.profile.email || '',
@@ -560,7 +560,7 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <Building className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-900">{employee.employment.department}</span>
+                        <span className="text-sm text-gray-900">{employee.profile.department}</span>
                       </div>
                     </td>
 
@@ -644,15 +644,6 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            onEmployeeEdit?.(employee);
-                          }}
-                          className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
                             onEmployeeSelect?.(employee);
                           }}
                           className="p-1 text-gray-400 hover:text-green-600 transition-colors"
@@ -697,7 +688,7 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
                             <div>
                               <h5 className="font-medium text-gray-900 mb-2 text-sm">Employment Details</h5>
                               <div className="space-y-2 text-sm">
-                                <p><span className="font-medium">Department:</span> {employee.employment.department}</p>
+                                <p><span className="font-medium">Department:</span> {employee.profile.department}</p>
                                 <p><span className="font-medium">Position:</span> {employee.employment.position}</p>
                                 <p><span className="font-medium">Manager:</span> {getManagerName(employee.employment.managerId)}</p>
                                 <p><span className="font-medium">Start Date:</span> {(() => {

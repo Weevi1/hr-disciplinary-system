@@ -148,9 +148,9 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({ className = '' }) => 
 
       ) : (
 
-        // --- 📱 MOBILE "GREETING CARD" WIDGET (Compact mobile-optimized) ---
+        // --- 📱 MOBILE "GREETING CARD" WIDGET (Ultra-compact mobile-optimized) ---
         <ThemedCard
-          padding="sm"
+          padding="none"
           shadow="lg"
           className="relative overflow-hidden"
           style={{
@@ -159,26 +159,27 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({ className = '' }) => 
           }}
         >
           {/* Minimal background decorative elements for mobile */}
-          <div className="absolute top-0 right-0 w-24 h-24 rounded-full -translate-y-12 translate-x-12" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}></div>
+          <div className="absolute top-0 right-0 w-20 h-20 rounded-full -translate-y-10 translate-x-10" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}></div>
 
-          <div className="relative z-10 flex justify-between items-center">
+          <div className="relative z-10 flex justify-between items-center p-3">
 
             {/* Left Column: Compact greeting & role */}
             <div className="flex flex-col justify-center">
-              <p className="text-sm" style={{ opacity: 0.8 }}>Good {getTimePeriod()},</p>
-              <h1 className="text-xl font-bold -mt-0.5">{user?.firstName}! 👋</h1>
+              <p className="text-xs leading-none" style={{ opacity: 0.85 }}>Good {getTimePeriod()},</p>
+              <h1 className="text-lg font-bold leading-tight mt-0.5">{user?.firstName}! 👋</h1>
 
               {/* Compact role pill */}
               <ThemedBadge
                 variant="primary"
                 size="sm"
-                className="inline-block mt-1.5"
+                className="inline-block mt-1"
                 style={{
                   backgroundColor: 'rgba(255,255,255,0.15)',
                   color: 'var(--color-text-inverse)',
                   backdropFilter: 'blur(4px)',
-                  fontSize: '10px',
-                  padding: '2px 6px'
+                  fontSize: '9px',
+                  padding: '2px 5px',
+                  lineHeight: '1'
                 }}
               >
                 <span className="font-bold tracking-wider uppercase">{getRoleDisplayName()}</span>
@@ -186,12 +187,12 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({ className = '' }) => 
             </div>
 
             {/* Right Column: Compact time & date */}
-            <div className="text-right flex flex-col items-end">
+            <div className="text-right flex flex-col items-end justify-center">
               <div className="flex items-baseline">
-                <span className="text-2xl font-bold tracking-tight">{currentTime}</span>
-                <span className="text-sm font-medium ml-1 opacity-90">{timePeriod}</span>
+                <span className="text-xl font-bold tracking-tight leading-none">{currentTime}</span>
+                <span className="text-xs font-medium ml-0.5 opacity-90">{timePeriod}</span>
               </div>
-              <p className="text-xs -mt-0.5" style={{ opacity: 0.8 }}>{getFormattedDate(true)}</p>
+              <p className="text-[10px] mt-0.5 leading-none" style={{ opacity: 0.8 }}>{getFormattedDate(true)}</p>
             </div>
           </div>
         </ThemedCard>

@@ -2,7 +2,6 @@
 // Firebase Auth Custom Claims Management for Sharded User System
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import { beforeUserSignedIn } from 'firebase-functions/v2/identity';
 import { logger } from 'firebase-functions';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -24,47 +23,6 @@ interface UserClaims {
   permissions?: string[];
   lastUpdated: number;
 }
-
-/**
- * Before Sign In Hook - Sets custom claims from sharded user data
- * This runs automatically whenever a user signs in
- */
-export const setCustomClaimsOnSignIn = beforeUserSignedIn(async (event: any) => {
-  const { uid, email } = event.data;
-  
-  try {
-    logger.info(`🔐 [CUSTOM CLAIMS] Setting claims for user: ${uid} (${email})`);
-
-    // Find user in sharded collections by searching all organizations
-    const userDoc = await findUserInShardedCollections(uid);
-    
-    if (!userDoc) {
-      logger.warn(`⚠️ [CUSTOM CLAIMS] User not found in sharded collections: ${uid}`);
-      // Don't block sign-in, but user will have 'guest' role
-      return;
-    }
-
-    const { userData, organizationId } = userDoc;
-
-    // Prepare custom claims
-    const customClaims: UserClaims = {
-      role: userData.role,
-      organizationId: organizationId,
-      permissions: userData.permissions ? Object.keys(userData.permissions) : [],
-      lastUpdated: Date.now()
-    };
-
-    // Set custom claims in Firebase Auth
-    await auth.setCustomUserClaims(uid, customClaims);
-    
-    logger.info(`✅ [CUSTOM CLAIMS] Claims set successfully for ${uid}:`, customClaims);
-
-  } catch (error) {
-    logger.error(`❌ [CUSTOM CLAIMS] Failed to set claims for ${uid}:`, error);
-    // Don't throw error to avoid blocking sign-in
-    // User will just have default 'guest' permissions
-  }
-});
 
 /**
  * Manually refresh custom claims for a user

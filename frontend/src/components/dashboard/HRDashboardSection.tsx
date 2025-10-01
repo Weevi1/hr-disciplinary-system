@@ -1,48 +1,72 @@
 // frontend/src/components/dashboard/HRDashboardSection.tsx
-// 🚀 ENHANCED HR DASHBOARD - Desktop Optimized with SuperUser Design System
-// ✅ Integrates with existing WarningsReviewDashboard
-// ✅ Enhanced data integration and employee overview
-// 🖥️ Optimized for desktop HR workflow
+// 🚀 HR DASHBOARD - UNIFIED WITH BUSINESS OWNER DASHBOARD DESIGN
+// ✅ Matches Business Owner Dashboard structure: Greeting → Notifications → Tabs → Quote
+// ✅ Permission-based feature visibility
+// ✅ Clean, professional, consistent
 
-import React, { memo, useState } from 'react';
-import { Bell, UserX, MessageCircle, AlertTriangle, RefreshCw, Clock, Archive, Settings, BookOpen, Users, TrendingUp, Shield, Building2, Plus, X, FileText } from 'lucide-react';
+import React, { memo, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useHRReportsData } from '../../hooks/dashboard/useHRReportsData';
-import { useEnhancedHRDashboard } from '../../hooks/dashboard/useEnhancedHRDashboard';
-import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
-import { useDashboardData } from '../../hooks/dashboard/useDashboardData';
-import { useHistoricalWarningCountdown } from '../../hooks/useHistoricalWarningCountdown';
+import {
+  Bell,
+  UserX,
+  MessageCircle,
+  AlertTriangle,
+  Shield,
+  Users,
+  Building2,
+  BookOpen,
+  Clock,
+  FileText,
+  TrendingUp,
+  ChevronRight
+} from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
-import { CategoryManagement } from '../admin/CategoryManagement';
-import { DepartmentManagement } from '../admin/DepartmentManagement';
+import { useDashboardData } from '../../hooks/dashboard/useDashboardData';
+import { useHRReportsData } from '../../hooks/dashboard/useHRReportsData';
+import { useHistoricalWarningCountdown } from '../../hooks/useHistoricalWarningCountdown';
 import WarningsReviewDashboard from '../warnings/ReviewDashboard';
 import { EmployeeManagement } from '../employees/EmployeeManagement';
 import { ManualWarningEntry } from '../warnings/ManualWarningEntry';
+import { DepartmentManagement } from '../admin/DepartmentManagement';
+import { EnhancedDeliveryWorkflow } from '../hr/EnhancedDeliveryWorkflow';
 
 // Import themed components
 import { ThemedCard, ThemedBadge, ThemedAlert } from '../common/ThemedCard';
 import { ThemedButton } from '../common/ThemedButton';
-import { ThemedTabNavigation, TabItem } from '../common/ThemedTabNavigation';
 import { ThemedStatusCard } from '../common/ThemedStatusCard';
-import { UnifiedModal } from '../common/UnifiedModal';
 
-// Import enhanced delivery system
-import { EnhancedDeliveryWorkflow } from '../hr/EnhancedDeliveryWorkflow';
+// --- A Reusable Breakpoint Hook (for responsive rendering) ---
+const useBreakpoint = (breakpoint: number) => {
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth > breakpoint);
+  const handleResize = useCallback(() => setIsDesktop(window.innerWidth > breakpoint), [breakpoint]);
+
+  useEffect(() => {
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, [handleResize]);
+
+  return isDesktop;
+};
 
 interface HRDashboardSectionProps {
   className?: string;
-  isMobile?: boolean;
 }
 
-export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '', isMobile = false }) => {
+export const HRDashboardSection = memo<HRDashboardSectionProps>(({
+  className = ''
+}) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { organization, categories } = useOrganization();
+  const isDesktop = useBreakpoint(768);
+  const [activeView, setActiveView] = useState<'urgent' | 'warnings' | 'employees' | null>(null);
 
-  // 🚀 UNIFIED DASHBOARD DATA - Parallel loading for HR role
+  // 🚀 UNIFIED DASHBOARD DATA
   const {
     employees,
     warnings,
-    reports,
     metrics,
     loading: dashboardLoading,
     error: dashboardError,
@@ -50,19 +74,27 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
     isReady
   } = useDashboardData({ role: 'hr' });
 
-  // Legacy hooks for compatibility during transition
-  const { hrReportsCount, hrCountsLoading, hrCountsError, refreshHRCounts, lastUpdated } = useHRReportsData();
-  const { canManageCategories } = useMultiRolePermissions();
+  // HR-specific reports data
+  const { hrReportsCount, hrCountsLoading, hrCountsError, refreshHRCounts } = useHRReportsData();
 
-  // Auth and Organization context for manual warning entry
-  const { user } = useAuth();
-  const { organization, categories } = useOrganization();
+  // State management for modals
+  const [showManualWarningEntry, setShowManualWarningEntry] = useState(false);
+  const [showDepartmentManagement, setShowDepartmentManagement] = useState(false);
+  const [selectedDeliveryNotification, setSelectedDeliveryNotification] = useState<any>(null);
+  const [showDeliveryWorkflow, setShowDeliveryWorkflow] = useState(false);
 
-  // Calculate stats from unified data
+  // 📅 Historical Warning 60-Day Countdown
+  const countdown = useHistoricalWarningCountdown(
+    user?.uid,
+    organization?.id,
+    activeView === 'warnings'
+  );
+
+  // 📊 HR METRICS
   const warningStats = {
     totalActive: warnings?.length || 0,
-    undelivered: warnings?.filter(w => !w.delivered)?.length || 0,
-    highSeverity: warnings?.filter(w => w.severity === 'high' || w.category?.severity === 'gross_misconduct')?.length || 0
+    undelivered: warnings?.filter(w => !w.delivered && w.status !== 'expired')?.length || 0,
+    highSeverity: warnings?.filter(w => (w.severity === 'high' || w.category?.severity === 'gross_misconduct') && w.status !== 'expired')?.length || 0
   };
 
   const employeeStats = {
@@ -75,21 +107,6 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
     })?.length || 0
   };
 
-  // State management
-  const [showCategoryManagement, setShowCategoryManagement] = useState(false);
-  const [showDepartmentManagement, setShowDepartmentManagement] = useState(false);
-  const [showManualWarningEntry, setShowManualWarningEntry] = useState(false);
-  const [activeView, setActiveView] = useState<'urgent' | 'actions' | 'warnings' | 'employees'>('urgent');
-  const [selectedDeliveryNotification, setSelectedDeliveryNotification] = useState<any>(null);
-  const [showDeliveryWorkflow, setShowDeliveryWorkflow] = useState(false);
-
-  // 📅 Historical Warning 60-Day Countdown (must be after activeView state)
-  const countdown = useHistoricalWarningCountdown(
-    user?.uid,
-    organization?.id,
-    activeView === 'warnings'
-  );
-
   // Enhanced delivery workflow handlers
   const handleStartDeliveryWorkflow = (notification: any) => {
     setSelectedDeliveryNotification(notification);
@@ -98,22 +115,16 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
 
   const handleDeliveryComplete = async (notificationId: string, proofData: any) => {
     try {
-      // Update warning delivery status
       console.log('Delivery completed:', { notificationId, proofData });
-      // This would typically call an API to update the delivery status
-
-      // Close workflow
       setShowDeliveryWorkflow(false);
       setSelectedDeliveryNotification(null);
-
-      // Refresh data
       refreshData();
     } catch (err) {
       console.error('Failed to complete delivery:', err);
     }
   };
 
-  // Mock delivery notifications for demo (replace with real data)
+  // Mock delivery notifications for demo
   const mockDeliveryNotifications = [
     {
       id: 'delivery_001',
@@ -126,479 +137,379 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
       deliveryMethod: 'email' as const,
       priority: 'high' as const,
       status: 'pending' as const,
-      contactDetails: {
-        email: 'john.smith@company.com',
-        phone: '+27123456789'
-      },
+      contactDetails: { email: 'john.smith@company.com', phone: '+27123456789' },
       createdAt: new Date(),
       createdByName: 'HR Manager'
-    },
-    {
-      id: 'delivery_002',
-      warningId: 'warn_124',
-      employeeName: 'Jane Doe',
-      warningLevel: 'Verbal Warning',
-      warningCategory: 'Performance Issues',
-      deliveryMethod: 'whatsapp' as const,
-      priority: 'normal' as const,
-      status: 'pending' as const,
-      contactDetails: {
-        phone: '+27987654321'
-      },
-      createdAt: new Date(),
-      createdByName: 'Department Manager'
     }
   ];
 
-  // 🎨 MOBILE VIEW
-  if (isMobile) {
+  // 📱 MOBILE VIEW
+  if (!isDesktop) {
     return (
       <div className={`space-y-6 ${className}`}>
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>HR Command Center</h1>
-            <p className="mt-1" style={{ color: 'var(--color-text-secondary)' }}>Employee oversight & disciplinary management</p>
-          </div>
-          {lastUpdated && (
-            <div className="text-right">
-              <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>Last updated</span>
-              <br />
-              <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            </div>
-          )}
-        </div>
-        
-        <div className="grid grid-cols-1 gap-6">
-          {/* 📋 ABSENCE REPORTS CARD */}
+        {/* --- 2x2 Grid Layout matching Business Owner Dashboard --- */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
           <ThemedCard
-            padding="lg"
+            padding="sm"
             shadow="lg"
             hover
             onClick={() => navigate('/hr/absence-reports')}
-            className="cursor-pointer relative"
+            className="cursor-pointer transition-all duration-200 active:scale-95"
             style={{
-              background: 'linear-gradient(to right, var(--color-error), var(--color-error))',
-              color: 'var(--color-text-inverse)'
+              background: 'linear-gradient(135deg, var(--color-error), var(--color-error))',
+              color: 'var(--color-text-inverse)',
+              minHeight: '80px',
+              willChange: 'transform'
             }}
           >
-            {hrCountsLoading && (
-              <div className="absolute top-4 right-4">
-                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" style={{ opacity: 0.7 }}></div>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm" style={{ opacity: 0.8 }}>Pending Reviews</p>
-                <p className="text-2xl font-bold">{hrReportsCount.absenceReports.unread}</p>
-                <div className="mt-2 text-sm" style={{ opacity: 0.8 }}>
-                  {hrReportsCount.absenceReports.total} total absence reports
-                </div>
-              </div>
-              <UserX className="w-8 h-8" style={{ opacity: 0.7 }} />
+            <div className="flex flex-col items-center gap-1.5 py-1">
+              <UserX className="w-5 h-5" />
+              <span className="font-medium text-xs text-center leading-tight">Absence Reports</span>
+              {hrCountsLoading ? (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+              ) : (
+                <span className="text-lg font-bold">{hrReportsCount.absenceReports.unread}</span>
+              )}
             </div>
           </ThemedCard>
 
-          {/* 💬 HR MEETINGS CARD */}
           <ThemedCard
-            padding="lg"
+            padding="sm"
             shadow="lg"
             hover
             onClick={() => navigate('/hr/meeting-requests')}
-            className="cursor-pointer relative"
+            className="cursor-pointer transition-all duration-200 active:scale-95"
             style={{
-              background: 'linear-gradient(to right, var(--color-accent), var(--color-accent))',
-              color: 'var(--color-text-inverse)'
+              background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent))',
+              color: 'var(--color-text-inverse)',
+              minHeight: '80px',
+              willChange: 'transform'
             }}
           >
-            {hrCountsLoading && (
-              <div className="absolute top-4 right-4">
-                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" style={{ opacity: 0.7 }}></div>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm" style={{ opacity: 0.8 }}>Meeting Requests</p>
-                <p className="text-2xl font-bold">{hrReportsCount.hrMeetings.unread}</p>
-                <div className="mt-2 text-sm" style={{ opacity: 0.8 }}>
-                  {hrReportsCount.hrMeetings.total} total requests
-                </div>
-              </div>
-              <MessageCircle className="w-8 h-8" style={{ opacity: 0.7 }} />
+            <div className="flex flex-col items-center gap-1.5 py-1">
+              <MessageCircle className="w-5 h-5" />
+              <span className="font-medium text-xs text-center leading-tight">HR Meetings</span>
+              {hrCountsLoading ? (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+              ) : (
+                <span className="text-lg font-bold">{hrReportsCount.hrMeetings.unread}</span>
+              )}
             </div>
           </ThemedCard>
 
-          {/* 📋 CORRECTIVE COUNSELLING CARD */}
           <ThemedCard
-            padding="lg"
+            padding="sm"
             shadow="lg"
             hover
             onClick={() => navigate('/hr/corrective-counselling')}
-            className="cursor-pointer relative"
+            className="cursor-pointer transition-all duration-200 active:scale-95"
             style={{
-              background: 'linear-gradient(to right, var(--color-primary), var(--color-primary))',
-              color: 'var(--color-text-inverse)'
+              background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary))',
+              color: 'var(--color-text-inverse)',
+              minHeight: '80px',
+              willChange: 'transform'
             }}
           >
-            {hrCountsLoading && (
-              <div className="absolute top-4 right-4">
-                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" style={{ opacity: 0.7 }}></div>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm" style={{ opacity: 0.8 }}>Counselling Sessions</p>
-                <p className="text-2xl font-bold">{hrReportsCount.correctiveCounselling.unread}</p>
-                <div className="mt-2 text-sm" style={{ opacity: 0.8 }}>
-                  {hrReportsCount.correctiveCounselling.total} total records
-                </div>
-              </div>
-              <BookOpen className="w-8 h-8" style={{ opacity: 0.7 }} />
+            <div className="flex flex-col items-center gap-1.5 py-1">
+              <BookOpen className="w-5 h-5" />
+              <span className="font-medium text-xs text-center leading-tight">Counselling</span>
+              {hrCountsLoading ? (
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current"></div>
+              ) : (
+                <span className="text-lg font-bold">{hrReportsCount.correctiveCounselling.unread}</span>
+              )}
             </div>
           </ThemedCard>
 
-          {/* ⚠️ WARNINGS OVERVIEW CARD */}
           <ThemedCard
-            padding="lg"
+            padding="sm"
             shadow="lg"
             hover
             onClick={() => setActiveView('warnings')}
-            className="cursor-pointer"
+            className="cursor-pointer transition-all duration-200 active:scale-95"
             style={{
-              background: 'linear-gradient(to right, var(--color-warning), var(--color-warning))',
-              color: 'var(--color-text-inverse)'
+              background: 'linear-gradient(135deg, var(--color-warning), var(--color-warning))',
+              color: 'var(--color-text-inverse)',
+              minHeight: '80px',
+              willChange: 'transform'
             }}
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm" style={{ opacity: 0.8 }}>Active Warnings</p>
-                <p className="text-2xl font-bold">{warningStats.totalActive}</p>
-                <div className="mt-2 text-sm" style={{ opacity: 0.8 }}>
-                  {warningStats.undelivered} undelivered, {warningStats.highSeverity} high-severity
-                </div>
-              </div>
-              <Shield className="w-8 h-8" style={{ opacity: 0.7 }} />
+            <div className="flex flex-col items-center gap-1.5 py-1">
+              <Shield className="w-5 h-5" />
+              <span className="font-medium text-xs text-center leading-tight">Active Warnings</span>
+              <span className="text-lg font-bold">{warningStats.totalActive}</span>
             </div>
           </ThemedCard>
+        </div>
 
-          {/* 👥 EMPLOYEE OVERVIEW CARD */}
-          <ThemedCard
-            padding="lg"
-            shadow="lg"
-            hover
-            onClick={() => setActiveView('employees')}
-            className="cursor-pointer"
-            style={{
-              background: 'linear-gradient(to right, var(--color-info), var(--color-info))',
-              color: 'var(--color-text-inverse)'
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm" style={{ opacity: 0.8 }}>Employee Network</p>
-                <p className="text-2xl font-bold">{employeeStats.totalEmployees}</p>
-                <div className="mt-2 text-sm" style={{ opacity: 0.8 }}>
-                  {employeeStats.activeEmployees} active, {employeeStats.newEmployees} new this month
-                </div>
-              </div>
-              <Users className="w-8 h-8" style={{ opacity: 0.7 }} />
-            </div>
-          </ThemedCard>
-
-          {/* 🔧 CATEGORY MANAGEMENT CARD - MOBILE */}
-          {canManageCategories && (
-            <ThemedCard
-              padding="md"
-              shadow="sm"
-              hover
-              onClick={() => setShowCategoryManagement(true)}
-              className="cursor-pointer text-left"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-primary)', opacity: 0.1 }}>
-                    <Settings className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
-                  </div>
-                  <div>
-                    <div className="font-semibold" style={{ color: 'var(--color-text)' }}>Warning Categories</div>
-                    <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Configure categories</div>
-                  </div>
-                </div>
-                <ThemedBadge variant="primary" size="sm">
-                  Manage
-                </ThemedBadge>
-              </div>
-              <div className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-                Universal & custom category settings
-              </div>
-            </ThemedCard>
-          )}
-
-          {/* 📄 MANUAL WARNING ENTRY CARD - MOBILE */}
-          {!countdown.isExpired && (
-            <ThemedCard
-              padding="md"
-              shadow="sm"
-              hover
-              onClick={() => setShowManualWarningEntry(true)}
-              className={`cursor-pointer text-left ${
-                countdown.urgencyLevel === 'urgent' ? 'border-2 border-red-500' :
-                countdown.urgencyLevel === 'warning' ? 'border-2 border-orange-500' : ''
-              }`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${
-                    countdown.urgencyLevel === 'urgent' ? 'bg-red-100 dark:bg-red-900/30' :
-                    countdown.urgencyLevel === 'warning' ? 'bg-orange-100 dark:bg-orange-900/30' :
-                    'bg-amber-100 dark:bg-amber-900/30'
-                  }`}>
-                    <FileText className={`w-5 h-5 ${
-                      countdown.urgencyLevel === 'urgent' ? 'text-red-600 dark:text-red-400' :
-                      countdown.urgencyLevel === 'warning' ? 'text-orange-600 dark:text-orange-400' :
-                      'text-amber-600 dark:text-amber-400'
-                    }`} />
-                  </div>
-                  <div>
-                    <div className="font-semibold" style={{ color: 'var(--color-text)' }}>Manual Warning Entry</div>
-                    <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                      {countdown.daysRemaining !== null ? (
-                        <span className={
-                          countdown.urgencyLevel === 'urgent' ? 'text-red-600 font-semibold' :
-                          countdown.urgencyLevel === 'warning' ? 'text-orange-600 font-semibold' :
-                          'text-amber-600'
-                        }>
-                          {countdown.daysRemaining === 0 ? 'Last day!' :
-                           countdown.daysRemaining === 1 ? '1 day left!' :
-                           countdown.daysRemaining <= 7 ? `${countdown.daysRemaining} days left - Hurry!` :
-                           `${countdown.daysRemaining} days left`}
-                        </span>
-                      ) : 'Enter historical warnings'}
-                    </div>
-                  </div>
-                </div>
-                <ThemedBadge
-                  variant={
-                    countdown.urgencyLevel === 'urgent' ? 'error' :
-                    countdown.urgencyLevel === 'warning' ? 'warning' : 'warning'
-                  }
-                  size="sm"
-                >
-                  {countdown.urgencyLevel === 'urgent' ? 'Urgent!' : 'Historical'}
-                </ThemedBadge>
-              </div>
-              <div className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-                Capture warnings from physical documents
-              </div>
-            </ThemedCard>
-          )}
-
-          {/* 🏢 DEPARTMENT MANAGEMENT CARD - MOBILE */}
+        {/* Tab System - Mobile uses cards for all 3 features */}
+        <div className="space-y-3">
           <ThemedCard
             padding="md"
             shadow="sm"
             hover
-            onClick={() => setShowDepartmentManagement(true)}
-            className="cursor-pointer text-left"
+            onClick={() => setActiveView('urgent')}
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+            style={{ minHeight: '64px', willChange: 'transform' }}
           >
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-accent)', opacity: 0.1 }}>
-                  <Building2 className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
-                </div>
-                <div>
-                  <div className="font-semibold" style={{ color: 'var(--color-text)' }}>Department Management</div>
-                  <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Manage departments</div>
-                </div>
+                <AlertTriangle className="w-5 h-5" style={{ color: 'var(--color-error)' }} />
+                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Urgent Tasks</span>
               </div>
-              <ThemedBadge variant="success" size="sm">
-                HR Access
-              </ThemedBadge>
+              <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
             </div>
-            <div className="text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-              Create, edit, and assign department managers
+          </ThemedCard>
+
+          <ThemedCard
+            padding="md"
+            shadow="sm"
+            hover
+            onClick={() => setActiveView('warnings')}
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+            style={{ minHeight: '64px', willChange: 'transform' }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Shield className="w-5 h-5" style={{ color: 'var(--color-warning)' }} />
+                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Warnings</span>
+              </div>
+              <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
+            </div>
+          </ThemedCard>
+
+          <ThemedCard
+            padding="md"
+            shadow="sm"
+            hover
+            onClick={() => setActiveView('employees')}
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+            style={{ minHeight: '64px', willChange: 'transform' }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Building2 className="w-5 h-5" style={{ color: 'var(--color-success)' }} />
+                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Employees</span>
+              </div>
+              <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
             </div>
           </ThemedCard>
         </div>
 
-        {/* Category Management Modal - Mobile */}
-        {showCategoryManagement && (
-          <CategoryManagement
-            onClose={() => setShowCategoryManagement(false)}
-            initialTab="overview"
-          />
-        )}
-
-        {/* Manual Warning Entry Modal - Mobile & Desktop */}
-        {showManualWarningEntry && user && organization && (
-          <ManualWarningEntry
-            isOpen={showManualWarningEntry}
-            onClose={() => setShowManualWarningEntry(false)}
-            onSuccess={() => {
-              setShowManualWarningEntry(false);
-              refreshData();
-            }}
-            employees={employees || []}
-            categories={categories || []}
-            currentUserId={user.uid}
-            organizationId={organization.id}
-          />
-        )}
-
-        {/* Department Management Modal - Mobile & Desktop */}
-        {showDepartmentManagement && organization && (
-          <DepartmentManagement
-            isOpen={showDepartmentManagement}
-            onClose={() => setShowDepartmentManagement(false)}
-            organizationId={organization.id}
-          />
-        )}
-
-        {/* Enhanced Views - Mobile */}
-        {activeView === 'warnings' && (
-          <UnifiedModal
-            isOpen={true}
-            onClose={() => setActiveView('urgent')}
-            title="Warnings Overview"
-            subtitle="Comprehensive warnings management"
-            size="sm"
-          >
-            <div className="space-y-4">
-              <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                Comprehensive warnings management available on desktop.
-              </p>
+        {/* Mobile Modals for each view */}
+        {activeView === 'urgent' && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
+            <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] overflow-hidden" shadow="xl">
+              <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Urgent Tasks</h2>
+                <ThemedButton variant="ghost" size="sm" onClick={() => setActiveView(null)}>×</ThemedButton>
+              </div>
+              <div className="overflow-y-auto p-4">
                 <div className="space-y-3">
-                  <ThemedStatusCard
-                    title="Undelivered"
-                    count={warningStats.undelivered}
-                    subtitle="Require immediate attention"
-                    variant="warning"
-                    icon={<AlertTriangle className="w-4 h-4" />}
-                    size="sm"
-                  />
-                  <ThemedStatusCard
-                    title="High Priority"
-                    count={warningStats.highSeverity}
-                    subtitle="Final warnings & dismissals"
-                    variant="error"
-                    icon={<Shield className="w-4 h-4" />}
-                    size="sm"
-                  />
-                  <ThemedStatusCard
-                    title="Total Active"
-                    count={warningStats.totalActive}
-                    subtitle="All current warnings"
-                    variant="info"
-                    icon={<FileText className="w-4 h-4" />}
-                    size="sm"
-                  />
+                  <ThemedCard
+                    padding="md"
+                    shadow="sm"
+                    hover
+                    onClick={() => navigate('/hr/absence-reports')}
+                    className="cursor-pointer"
+                    style={{
+                      background: 'linear-gradient(135deg, var(--color-error), var(--color-error))',
+                      color: 'var(--color-text-inverse)'
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm" style={{ opacity: 0.8 }}>Absence Reports</div>
+                        <div className="text-2xl font-bold">{hrReportsCount.absenceReports.unread}</div>
+                      </div>
+                      <UserX className="w-8 h-8" style={{ opacity: 0.7 }} />
+                    </div>
+                  </ThemedCard>
+
+                  <ThemedCard
+                    padding="md"
+                    shadow="sm"
+                    hover
+                    onClick={() => navigate('/hr/meeting-requests')}
+                    className="cursor-pointer"
+                    style={{
+                      background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent))',
+                      color: 'var(--color-text-inverse)'
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm" style={{ opacity: 0.8 }}>Meeting Requests</div>
+                        <div className="text-2xl font-bold">{hrReportsCount.hrMeetings.unread}</div>
+                      </div>
+                      <MessageCircle className="w-8 h-8" style={{ opacity: 0.7 }} />
+                    </div>
+                  </ThemedCard>
+
+                  <ThemedCard
+                    padding="md"
+                    shadow="sm"
+                    hover
+                    onClick={() => navigate('/hr/corrective-counselling')}
+                    className="cursor-pointer"
+                    style={{
+                      background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary))',
+                      color: 'var(--color-text-inverse)'
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm" style={{ opacity: 0.8 }}>Counselling</div>
+                        <div className="text-2xl font-bold">{hrReportsCount.correctiveCounselling.unread}</div>
+                      </div>
+                      <BookOpen className="w-8 h-8" style={{ opacity: 0.7 }} />
+                    </div>
+                  </ThemedCard>
                 </div>
-            </div>
-          </UnifiedModal>
+              </div>
+            </ThemedCard>
+          </div>
+        )}
+
+        {activeView === 'warnings' && (
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
+            <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] overflow-hidden" shadow="xl">
+              <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Warnings Overview</h2>
+                <ThemedButton variant="ghost" size="sm" onClick={() => setActiveView(null)}>×</ThemedButton>
+              </div>
+              <div className="overflow-y-auto p-4">
+                <WarningsReviewDashboard />
+              </div>
+            </ThemedCard>
+          </div>
         )}
 
         {activeView === 'employees' && (
-          <UnifiedModal
-            isOpen={true}
-            onClose={() => setActiveView('urgent')}
-            title="Employee Overview"
-            subtitle="Employee statistics and management"
-            size="sm"
-          >
-              <div className="p-4 space-y-3">
-                <ThemedStatusCard
-                  title="Total"
-                  count={employeeStats.totalEmployees}
-                  subtitle="All employees"
-                  variant="info"
-                  icon={<Users className="w-4 h-4" />}
-                  size="sm"
-                />
-                <ThemedStatusCard
-                  title="Active"
-                  count={employeeStats.activeEmployees}
-                  subtitle="Currently employed"
-                  variant="success"
-                  icon={<Users className="w-4 h-4" />}
-                  size="sm"
-                />
-                <ThemedStatusCard
-                  title="New"
-                  count={employeeStats.newEmployees}
-                  subtitle="Last 30 days"
-                  variant="info"
-                  icon={<Plus className="w-4 h-4" />}
-                  size="sm"
-                />
+          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
+            <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] overflow-hidden" shadow="xl">
+              <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Employees</h2>
+                <ThemedButton variant="ghost" size="sm" onClick={() => setActiveView(null)}>×</ThemedButton>
               </div>
-          </UnifiedModal>
+              <div className="overflow-y-auto">
+                <EmployeeManagement />
+              </div>
+            </ThemedCard>
+          </div>
         )}
       </div>
     );
   }
 
-  // 🖥️ DESKTOP VIEW - Compact, Desktop-First Design
+  // 🖥️ DESKTOP VIEW - Matching Business Owner Dashboard Structure
   return (
     <div className={`${className}`}>
-
-      {/* Compact Overview Cards - 4 Column Desktop Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-6">
-        {/* Compact Cards - Better space utilization */}
-        <ThemedStatusCard
-          title="Absence Reports"
-          count={hrReportsCount.absenceReports.unread}
-          total={hrReportsCount.absenceReports.total}
-          icon={<UserX className="w-4 h-4" />}
-          variant="error"
-          gradient
+      {/* 4 Notification Blocks - HR Metrics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
+        <ThemedCard
+          padding="sm"
+          shadow="lg"
+          hover
           onClick={() => navigate('/hr/absence-reports')}
-        />
+          className="cursor-pointer transition-all duration-200 active:scale-95"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-error), var(--color-error))',
+            color: 'var(--color-text-inverse)',
+            minHeight: '80px',
+            willChange: 'transform'
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <UserX className="w-8 h-8" style={{ opacity: 0.7 }} />
+            <div>
+              <div className="text-sm" style={{ opacity: 0.8 }}>Absence Reports</div>
+              <div className="text-2xl font-bold">{hrReportsCount.absenceReports.unread}</div>
+              <div className="text-xs mt-0.5" style={{ opacity: 0.8 }}>{hrReportsCount.absenceReports.total} total</div>
+            </div>
+          </div>
+        </ThemedCard>
 
-        <ThemedStatusCard
-          title="Meeting Requests"
-          count={hrReportsCount.hrMeetings.unread}
-          total={hrReportsCount.hrMeetings.total}
-          icon={<MessageCircle className="w-4 h-4" />}
-          variant="default"
-          gradient
+        <ThemedCard
+          padding="sm"
+          shadow="lg"
+          hover
           onClick={() => navigate('/hr/meeting-requests')}
-        />
+          className="cursor-pointer transition-all duration-200 active:scale-95"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent))',
+            color: 'var(--color-text-inverse)',
+            minHeight: '80px',
+            willChange: 'transform'
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <MessageCircle className="w-8 h-8" style={{ opacity: 0.7 }} />
+            <div>
+              <div className="text-sm" style={{ opacity: 0.8 }}>Meeting Requests</div>
+              <div className="text-2xl font-bold">{hrReportsCount.hrMeetings.unread}</div>
+              <div className="text-xs mt-0.5" style={{ opacity: 0.8 }}>{hrReportsCount.hrMeetings.total} total</div>
+            </div>
+          </div>
+        </ThemedCard>
 
-        <ThemedStatusCard
-          title="Counselling"
-          count={hrReportsCount.correctiveCounselling.unread}
-          total={hrReportsCount.correctiveCounselling.total}
-          icon={<BookOpen className="w-4 h-4" />}
-          variant="info"
-          gradient
+        <ThemedCard
+          padding="sm"
+          shadow="lg"
+          hover
           onClick={() => navigate('/hr/corrective-counselling')}
-        />
+          className="cursor-pointer transition-all duration-200 active:scale-95"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary))',
+            color: 'var(--color-text-inverse)',
+            minHeight: '80px',
+            willChange: 'transform'
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <BookOpen className="w-8 h-8" style={{ opacity: 0.7 }} />
+            <div>
+              <div className="text-sm" style={{ opacity: 0.8 }}>Counselling</div>
+              <div className="text-2xl font-bold">{hrReportsCount.correctiveCounselling.unread}</div>
+              <div className="text-xs mt-0.5" style={{ opacity: 0.8 }}>{hrReportsCount.correctiveCounselling.total} total</div>
+            </div>
+          </div>
+        </ThemedCard>
 
-        <ThemedStatusCard
-          title="Active Warnings"
-          count={warningStats.totalActive}
-          subtitle={`${warningStats.undelivered} undelivered`}
-          icon={<Shield className="w-4 h-4" />}
-          variant="warning"
-          gradient
+        <ThemedCard
+          padding="sm"
+          shadow="lg"
+          hover
           onClick={() => setActiveView('warnings')}
-        />
+          className="cursor-pointer transition-all duration-200 active:scale-95"
+          style={{
+            background: 'linear-gradient(135deg, var(--color-warning), var(--color-warning))',
+            color: 'var(--color-text-inverse)',
+            minHeight: '80px',
+            willChange: 'transform'
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <Shield className="w-8 h-8" style={{ opacity: 0.7 }} />
+            <div>
+              <div className="text-sm" style={{ opacity: 0.8 }}>Active Warnings</div>
+              <div className="text-2xl font-bold">{warningStats.totalActive}</div>
+              <div className="text-xs mt-0.5" style={{ opacity: 0.8 }}>{warningStats.undelivered} undelivered</div>
+            </div>
+          </div>
+        </ThemedCard>
       </div>
 
       {/* Error Display */}
-      {(hrCountsError || dashboardError) && (
+      {(dashboardError || hrCountsError) && (
         <ThemedAlert variant="error" className="mb-4">
           <div className="text-sm">
-            Failed to load HR data: {hrCountsError || dashboardError}
+            Failed to load dashboard data: {dashboardError || hrCountsError}
           </div>
         </ThemedAlert>
       )}
 
-      {/* Task-Oriented Tab Navigation */}
+      {/* Tab Navigation System - Matching Business Owner Dashboard */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="border-b border-gray-200">
           <nav className="flex space-x-6 px-4">
@@ -618,7 +529,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
               >
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
-                {tab.count > 0 && (
+                {tab.count && tab.count > 0 && (
                   <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ml-1">
                     {tab.count}
                   </span>
@@ -628,8 +539,9 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
           </nav>
         </div>
 
-        {/* Compact Tab Content */}
+        {/* Tab Content */}
         <div className="p-4">
+          {/* Urgent Tasks Tab */}
           {activeView === 'urgent' && (
             <div className="space-y-4">
               {/* Priority Tasks List */}
@@ -662,7 +574,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Unread Meeting Requests */}
                   {hrReportsCount.hrMeetings.unread > 0 && (
                     <div className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => navigate('/hr/meeting-requests')}>
@@ -683,11 +595,11 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
                       </div>
                     </div>
                   )}
-                  
-                  {/* Undelivered Warnings - Enhanced */}
+
+                  {/* Undelivered Warnings */}
                   {warningStats.undelivered > 0 && (
-                    <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                      <div className="flex items-center justify-between mb-3">
+                    <div className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => setActiveView('warnings')}>
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
                           <div>
@@ -695,53 +607,16 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
                             <div className="text-sm text-gray-600">Warning documents pending delivery to employees</div>
                           </div>
                         </div>
-                        <ThemedBadge variant="warning" size="sm">
-                          Urgent
-                        </ThemedBadge>
-                      </div>
-
-                      {/* Quick Action Buttons for Sample Deliveries */}
-                      <div className="space-y-2">
-                        {mockDeliveryNotifications.slice(0, 2).map((notification) => (
-                          <div key={notification.id} className="flex items-center justify-between p-2 bg-white rounded border">
-                            <div className="flex items-center gap-2">
-                              <div className={`p-1 rounded text-xs ${
-                                notification.deliveryMethod === 'email' ? 'bg-blue-100 text-blue-700' :
-                                notification.deliveryMethod === 'whatsapp' ? 'bg-green-100 text-green-700' :
-                                'bg-purple-100 text-purple-700'
-                              }`}>
-                                {notification.deliveryMethod === 'email' ? '📧' :
-                                 notification.deliveryMethod === 'whatsapp' ? '📱' : '🖨️'}
-                              </div>
-                              <div>
-                                <div className="text-sm font-medium">{notification.employeeName}</div>
-                                <div className="text-xs text-gray-500">{notification.warningLevel}</div>
-                              </div>
-                            </div>
-                            <ThemedButton
-                              variant="primary"
-                              size="sm"
-                              onClick={() => handleStartDeliveryWorkflow(notification)}
-                            >
-                              Start Delivery
-                            </ThemedButton>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="mt-3 pt-3 border-t border-orange-200">
-                        <ThemedButton
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setActiveView('warnings')}
-                          className="w-full text-orange-700 hover:text-orange-800"
-                        >
-                          View All Undelivered Warnings
-                        </ThemedButton>
+                        <div className="flex items-center gap-2">
+                          <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full font-medium">
+                            Urgent
+                          </span>
+                          <AlertTriangle className="w-4 h-4 text-gray-400" />
+                        </div>
                       </div>
                     </div>
                   )}
-                  
+
                   {/* High Severity Cases */}
                   {warningStats.highSeverity > 0 && (
                     <div className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => setActiveView('warnings')}>
@@ -762,7 +637,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Empty State */}
                   {hrReportsCount.absenceReports.unread === 0 && hrReportsCount.hrMeetings.unread === 0 && warningStats.undelivered === 0 && warningStats.highSeverity === 0 && (
                     <div className="p-8 text-center text-gray-500">
@@ -775,7 +650,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
                   )}
                 </div>
               </div>
-              
+
               {/* Today's Summary */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -798,7 +673,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                   <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <TrendingUp className="w-4 h-4 text-blue-600" />
@@ -819,7 +694,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
                   <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <Shield className="w-4 h-4 text-orange-600" />
@@ -844,7 +719,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
             </div>
           )}
 
-          {/* Warnings Tab Content */}
+          {/* Warnings Tab */}
           {activeView === 'warnings' && (
             <div className="space-y-4">
               {/* Manual Warning Entry Button with Countdown */}
@@ -914,9 +789,8 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
               </div>
             </div>
           )}
-          
 
-          {/* Employees Tab Content */}
+          {/* Employees Tab */}
           {activeView === 'employees' && (
             <div className="space-y-4">
               <EmployeeManagement />
@@ -925,24 +799,29 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
         </div>
       </div>
 
-      {/* Category Management Modal */}
-      {showCategoryManagement && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-gray-50 to-gray-100">
-              <h2 className="text-xl font-semibold text-gray-900">Warning Categories Management</h2>
-              <button
-                onClick={() => setShowCategoryManagement(false)}
-                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
-            <div className="p-6">
-              <CategoryManagement onClose={() => setShowCategoryManagement(false)} />
-            </div>
-          </div>
-        </div>
+      {/* Manual Warning Entry Modal */}
+      {showManualWarningEntry && user && organization && (
+        <ManualWarningEntry
+          isOpen={showManualWarningEntry}
+          onClose={() => setShowManualWarningEntry(false)}
+          onSuccess={() => {
+            setShowManualWarningEntry(false);
+            refreshData();
+          }}
+          employees={employees || []}
+          categories={categories || []}
+          currentUserId={user.uid}
+          organizationId={organization.id}
+        />
+      )}
+
+      {/* Department Management Modal */}
+      {showDepartmentManagement && organization && (
+        <DepartmentManagement
+          isOpen={showDepartmentManagement}
+          onClose={() => setShowDepartmentManagement(false)}
+          organizationId={organization.id}
+        />
       )}
 
       {/* Enhanced Delivery Workflow Modal */}
@@ -960,3 +839,5 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({ className = '
     </div>
   );
 });
+
+HRDashboardSection.displayName = 'HRDashboardSection';
