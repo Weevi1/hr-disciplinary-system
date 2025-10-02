@@ -25,37 +25,47 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     rollupOptions: {
+      // Exclude legacy components from build
+      external: (id) => id.includes('/_legacy/'),
       output: {
         manualChunks: {
           // Core React libraries
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          
+
           // Firebase services
           'firebase-vendor': [
-            'firebase/app', 
-            'firebase/auth', 
-            'firebase/firestore', 
-            'firebase/functions', 
+            'firebase/app',
+            'firebase/auth',
+            'firebase/firestore',
+            'firebase/functions',
             'firebase/storage',
             'firebase/analytics'
           ],
-          
+
           // UI and Icon libraries
           'ui-vendor': ['lucide-react', '@headlessui/react'],
-          
+
           // PDF and document libraries
           'pdf-vendor': ['jspdf', 'html2canvas'],
-          
+
           // Utility libraries
           'utils-vendor': ['date-fns'],
-          
-          // Split large component bundles
-          'dashboard-components': [
-            './src/components/dashboard/DashboardRouter',
-            './src/components/dashboard/HRDashboardSection',
+
+          // Split dashboard components by role (reduces initial load)
+          'business-owner-dashboard': [
+            './src/components/dashboard/BusinessOwnerDashboardSection'
+          ],
+          'hr-dashboard': [
+            './src/components/dashboard/HRDashboardSection'
+          ],
+          'hod-dashboard': [
             './src/components/dashboard/HODDashboardSection'
           ],
-          
+          'dashboard-router': [
+            './src/components/dashboard/DashboardRouter'
+          ],
+
+          // Warning system components
           'warning-components': [
             './src/components/warnings/ReviewDashboard'
           ]

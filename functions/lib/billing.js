@@ -147,7 +147,7 @@ async function handleCheckoutCompleted(session) {
             stripeSubscriptionId: session.subscription,
             stripeCustomerId: session.customer,
             currentPeriodStart: new Date().toISOString(),
-            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         });
@@ -235,7 +235,7 @@ async function handlePaymentSucceeded(invoice) {
             commissionAmount: commissionAmount,
             ownerAmount: ownerAmount,
             companyAmount: companyAmount,
-            status: 'calculated',
+            status: 'calculated', // Will become 'pending' after 30 days
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         });
@@ -243,7 +243,7 @@ async function handlePaymentSucceeded(invoice) {
         if (resellerId) {
             const resellerRef = db.collection('resellers').doc(resellerId);
             await resellerRef.update({
-                monthlyRecurringRevenue: netRevenue,
+                monthlyRecurringRevenue: netRevenue, // This should be calculated more precisely
                 totalCommissionsEarned: ((_a = (await resellerRef.get()).data()) === null || _a === void 0 ? void 0 : _a.totalCommissionsEarned) + commissionAmount || commissionAmount,
                 updatedAt: new Date().toISOString()
             });
@@ -312,7 +312,7 @@ async function handleSubscriptionCanceled(subscription) {
  * Runs daily at 2 AM UTC
  */
 exports.processMonthlyCommissions = (0, scheduler_1.onSchedule)({
-    schedule: '0 2 * * *',
+    schedule: '0 2 * * *', // Daily at 2 AM UTC
     timeZone: 'UTC'
 }, async () => {
     try {

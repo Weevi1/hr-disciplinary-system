@@ -11,8 +11,8 @@ const superUserAuth_1 = require("./middleware/superUserAuth");
  * Only callable by existing super-users with proper authentication
  */
 exports.manageSuperUser = (0, https_1.onCall)({
-    region: 'us-east1',
-    enforceAppCheck: false,
+    region: 'us-east1', // Changed from us-central1 due to quota limits
+    enforceAppCheck: false, // Disable for development
     cors: true, // Enable CORS
 }, async (request) => {
     var _a, _b, _c;
@@ -119,7 +119,7 @@ exports.manageSuperUser = (0, https_1.onCall)({
                     throw new https_1.HttpsError('invalid-argument', 'Cannot revoke your own super-user privileges');
                 }
                 await adminAuth.setCustomUserClaims(targetUserId, {
-                    role: 'business-owner',
+                    role: 'business-owner', // Downgrade to business owner
                     permissions: [],
                     revokedBy: context.uid,
                     revokedAt: new Date().toISOString()
@@ -153,7 +153,7 @@ exports.manageSuperUser = (0, https_1.onCall)({
  * Get Super-User Information (for security audits)
  */
 exports.getSuperUserInfo = (0, https_1.onCall)({
-    region: 'us-east1',
+    region: 'us-east1', // Changed from us-central1 due to quota limits
     cors: true, // Enable CORS
 }, async (request) => {
     // Validate super-user permissions

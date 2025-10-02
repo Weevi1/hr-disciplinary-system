@@ -11,6 +11,7 @@ import { UserCircle, Clock } from 'lucide-react';
 
 // Import themed components
 import { ThemedCard, ThemedBadge } from '../common/ThemedCard';
+import { DashboardRoleSelector } from './DashboardRoleSelector';
 
 // --- A Simple Breakpoint Hook (consistent with other components) ---
 const useBreakpoint = (breakpoint: number) => {
@@ -32,9 +33,15 @@ const useBreakpoint = (breakpoint: number) => {
 
 interface WelcomeSectionProps {
   className?: string;
+  selectedRole?: string;
+  onRoleChange?: (role: string) => void;
 }
 
-export const WelcomeSection = memo<WelcomeSectionProps>(({ className = '' }) => {
+export const WelcomeSection = memo<WelcomeSectionProps>(({
+  className = '',
+  selectedRole,
+  onRoleChange
+}) => {
   const isDesktop = useBreakpoint(768);
   const { user } = useAuth();
   
@@ -104,10 +111,11 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({ className = '' }) => 
         <ThemedCard
           padding="md"
           shadow="lg"
-          className="relative overflow-hidden"
+          className="relative"
           style={{
             ...getRoleGradientStyle(),
-            color: 'var(--color-text-inverse)'
+            color: 'var(--color-text-inverse)',
+            overflow: 'visible'
           }}
         >
             {/* Subtle background elements */}
@@ -126,22 +134,30 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({ className = '' }) => 
                 </div>
               </div>
 
-              {/* Right: Time & Role */}
+              {/* Right: Time & Role Selector */}
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}>
                   <Clock className="w-4 h-4 opacity-80" />
                   <div className="text-lg font-bold">{currentTime} {timePeriod}</div>
                 </div>
 
-                <ThemedBadge
-                  variant="primary"
-                  size="md"
-                  className="flex items-center gap-2"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--color-text-inverse)', backdropFilter: 'blur(4px)' }}
-                >
-                  <UserCircle className="w-4 h-4 opacity-80" />
-                  <div className="text-sm font-medium">{getRoleDisplayName()}</div>
-                </ThemedBadge>
+                {/* Multi-role selector or static badge */}
+                {selectedRole && onRoleChange ? (
+                  <DashboardRoleSelector
+                    selectedRole={selectedRole}
+                    onRoleChange={onRoleChange}
+                  />
+                ) : (
+                  <ThemedBadge
+                    variant="primary"
+                    size="md"
+                    className="flex items-center gap-2"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: 'var(--color-text-inverse)', backdropFilter: 'blur(4px)' }}
+                  >
+                    <UserCircle className="w-4 h-4 opacity-80" />
+                    <div className="text-sm font-medium">{getRoleDisplayName()}</div>
+                  </ThemedBadge>
+                )}
               </div>
             </div>
         </ThemedCard>
@@ -152,10 +168,11 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({ className = '' }) => 
         <ThemedCard
           padding="none"
           shadow="lg"
-          className="relative overflow-hidden"
+          className="relative"
           style={{
             ...getRoleGradientStyle(),
-            color: 'var(--color-text-inverse)'
+            color: 'var(--color-text-inverse)',
+            overflow: 'visible'
           }}
         >
           {/* Minimal background decorative elements for mobile */}
@@ -186,13 +203,23 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({ className = '' }) => 
               </ThemedBadge>
             </div>
 
-            {/* Right Column: Compact time & date */}
+            {/* Right Column: Compact time & date (or role selector on mobile) */}
             <div className="text-right flex flex-col items-end justify-center">
-              <div className="flex items-baseline">
-                <span className="text-xl font-bold tracking-tight leading-none">{currentTime}</span>
-                <span className="text-xs font-medium ml-0.5 opacity-90">{timePeriod}</span>
-              </div>
-              <p className="text-[10px] mt-0.5 leading-none" style={{ opacity: 0.8 }}>{getFormattedDate(true)}</p>
+              {selectedRole && onRoleChange ? (
+                <DashboardRoleSelector
+                  selectedRole={selectedRole}
+                  onRoleChange={onRoleChange}
+                  className="mb-1"
+                />
+              ) : (
+                <>
+                  <div className="flex items-baseline">
+                    <span className="text-xl font-bold tracking-tight leading-none">{currentTime}</span>
+                    <span className="text-xs font-medium ml-0.5 opacity-90">{timePeriod}</span>
+                  </div>
+                  <p className="text-[10px] mt-0.5 leading-none" style={{ opacity: 0.8 }}>{getFormattedDate(true)}</p>
+                </>
+              )}
             </div>
           </div>
         </ThemedCard>

@@ -57,7 +57,6 @@ import type {
 } from '@/services/WarningService';
 
 // Import PDF service and preview modal
-import { PDFGenerationService } from '@/services/PDFGenerationService';
 import { PDFPreviewModal } from '../PDFPreviewModal';
 
 // Import types

@@ -2,8 +2,9 @@
 // 🚀 CLEAN BUSINESS DASHBOARD - REDUNDANCY REMOVED
 // ✅ Focused, efficient, no duplicate functionality
 // 🎯 Role-specific sections handle all navigation and actions
+// 🎯 Multi-role selector for users with multiple dashboard roles
 
-import React, { Suspense, memo } from 'react';
+import React, { Suspense, memo, useState, useEffect } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 
 // 🎯 CORE HOOKS & CONTEXTS
@@ -17,6 +18,7 @@ import { QuotesSection } from '../../components/dashboard/QuotesSection';
 import { HRDashboardSection } from '../../components/dashboard/HRDashboardSection';
 import { HODDashboardSection } from '../../components/dashboard/HODDashboardSection';
 import { BusinessOwnerDashboardSection } from '../../components/dashboard/BusinessOwnerDashboardSection';
+import { getInitialDashboardRole } from '../../components/dashboard/DashboardRoleSelector';
 
 // 🛡️ ERROR FALLBACK COMPONENT
 const ErrorFallback = memo<{ error: Error; resetErrorBoundary: () => void }>(
@@ -109,6 +111,28 @@ export const BusinessDashboard = memo(() => {
     canManageHR
   } = useMultiRolePermissions();
 
+  // 🎯 MULTI-ROLE DASHBOARD SELECTOR STATE
+  const [selectedRole, setSelectedRole] = useState<string>(() =>
+    getInitialDashboardRole(canManageOrganization(), canManageHR(), getPrimaryRole)
+  );
+
+  // Update selected role if permissions change
+  useEffect(() => {
+    const currentRole = getInitialDashboardRole(canManageOrganization(), canManageHR(), getPrimaryRole);
+    // Only update if the current selected role is no longer valid
+    if (
+      (selectedRole === 'business-owner' && !canManageOrganization()) ||
+      (selectedRole === 'hr-manager' && !canManageHR()) ||
+      (selectedRole === 'hod-manager' && !(canManageOrganization() || canManageHR()))
+    ) {
+      setSelectedRole(currentRole);
+    }
+  }, [canManageOrganization, canManageHR, getPrimaryRole, selectedRole]);
+
+  const handleRoleChange = (role: string) => {
+    setSelectedRole(role);
+  };
+
   // 🛡️ SAFETY CHECK
   if (!user) {
     return (
@@ -127,7 +151,10 @@ export const BusinessDashboard = memo(() => {
         <div className="max-w-7xl mx-auto p-6 pb-4">
           <ErrorBoundary FallbackComponent={ErrorFallback}>
             <Suspense fallback={<WelcomeSkeleton />}>
-              <WelcomeSection />
+              <WelcomeSection
+                selectedRole={selectedRole}
+                onRoleChange={handleRoleChange}
+              />
             </Suspense>
           </ErrorBoundary>
         </div>
@@ -135,9 +162,9 @@ export const BusinessDashboard = memo(() => {
 
       {/* 🏢 MAIN DASHBOARD CONTENT - Desktop Layout */}
       <div className="max-w-7xl mx-auto p-6 pt-2">
-        
+
         {/* 🏢 BUSINESS OWNER DASHBOARD */}
-        {canManageOrganization() && (
+        {selectedRole === 'business-owner' && canManageOrganization() && (
           <ErrorBoundary FallbackComponent={ErrorFallback}>
             <Suspense fallback={
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
@@ -152,7 +179,7 @@ export const BusinessDashboard = memo(() => {
         )}
 
         {/* 🔔 HR MANAGEMENT SECTION */}
-        {canManageHR() && !canManageOrganization() && (
+        {selectedRole === 'hr-manager' && canManageHR() && (
           <ErrorBoundary FallbackComponent={ErrorFallback}>
             <Suspense fallback={
               <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 mb-6">
@@ -167,8 +194,8 @@ export const BusinessDashboard = memo(() => {
           </ErrorBoundary>
         )}
 
-        {/* 👥 HOD MANAGER SECTION */}
-        {getPrimaryRole() === 'hod-manager' && !canManageHR() && !canManageOrganization() && (
+        {/* 👥 HOD MANAGER SECTION - For multi-role users or standalone HODs */}
+        {(selectedRole === 'hod-manager' || getPrimaryRole() === 'hod-manager') && (
           <ErrorBoundary FallbackComponent={ErrorFallback}>
             <Suspense fallback={
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">

@@ -1,11 +1,13 @@
 // functions/src/customClaims.ts
 // Firebase Auth Custom Claims Management for Sharded User System
+// ✅ API v1.0.0 - Versioned responses
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { logger } from 'firebase-functions';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp } from 'firebase-admin/app';
+import { versionedFunction, logApiUsage } from './middleware/apiVersioning';
 
 // Initialize Firebase Admin if not already initialized
 try {
@@ -52,18 +54,32 @@ export const refreshUserClaims = onCall(async (request) => {
       throw new HttpsError('permission-denied', 'Insufficient permissions to refresh claims');
     }
 
-    // Find user in sharded collections
-    const userDoc = await findUserInShardedCollections(userIdToRefresh);
-    
-    if (!userDoc) {
-      throw new HttpsError('not-found', 'User not found in sharded collections');
-    }
+    // First, check root /users collection for super-users
+    const rootUserDoc = await db.collection('users').doc(userIdToRefresh).get();
 
-    const { userData, organizationId } = userDoc;
+    let userData: any;
+    let organizationId: string;
+
+    if (rootUserDoc.exists) {
+      // User found in root collection (likely super-user or reseller)
+      logger.info(`📍 [CUSTOM CLAIMS] Found user ${userIdToRefresh} in root /users collection`);
+      userData = rootUserDoc.data();
+      organizationId = userData.organizationId || 'system';
+    } else {
+      // Find user in sharded collections
+      const userDoc = await findUserInShardedCollections(userIdToRefresh);
+
+      if (!userDoc) {
+        throw new HttpsError('not-found', 'User not found in root or sharded collections');
+      }
+
+      userData = userDoc.userData;
+      organizationId = userDoc.organizationId;
+    }
 
     // Prepare custom claims
     const customClaims: UserClaims = {
-      role: userData.role,
+      role: userData.role?.id || userData.role, // Extract ID if role is an object
       organizationId: organizationId,
       permissions: userData.permissions ? Object.keys(userData.permissions) : [],
       lastUpdated: Date.now()
@@ -88,15 +104,19 @@ export const refreshUserClaims = onCall(async (request) => {
 
 /**
  * Get current user's custom claims (for debugging)
+ * ✅ API v1.0.0 - Returns versioned response
  */
-export const getUserClaims = onCall(async (request) => {
+export const getUserClaims = onCall(versionedFunction('getUserClaims', async (request) => {
   const { uid } = request.auth || {};
-  
+
   if (!uid) {
     throw new HttpsError('unauthenticated', 'User must be authenticated');
   }
 
   try {
+    // Log API usage for monitoring
+    logApiUsage('getUserClaims', '1.0.0', uid);
+
     const user = await auth.getUser(uid);
     return {
       uid,
@@ -108,7 +128,7 @@ export const getUserClaims = onCall(async (request) => {
     logger.error(`❌ [CUSTOM CLAIMS] Failed to get claims for ${uid}:`, error);
     throw new HttpsError('internal', 'Failed to retrieve user claims');
   }
-});
+}));
 
 /**
  * Find user document in sharded collections by searching organizations
@@ -221,7 +241,7 @@ export const refreshOrganizationUserClaims = onCall(async (request) => {
 
       try {
         const customClaims: UserClaims = {
-          role: userData.role,
+          role: userData.role?.id || userData.role, // Extract ID if role is an object
           organizationId: organizationId,
           permissions: userData.permissions ? Object.keys(userData.permissions) : [],
           lastUpdated: Date.now()

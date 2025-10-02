@@ -26,7 +26,8 @@ import {
   Square,
   FileSpreadsheet,
   Eye,
-  UserPlus
+  UserPlus,
+  Users
 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
@@ -455,6 +456,15 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
                 {selectedRows.size} employee{selectedRows.size !== 1 ? 's' : ''} selected
               </span>
               <div className="flex gap-2">
+                {user?.role?.id === 'hr-manager' && (
+                  <button
+                    onClick={() => handleBulkAction('assign-manager')}
+                    className="flex items-center gap-1 px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
+                  >
+                    <Users className="w-3 h-3" />
+                    Assign to Manager
+                  </button>
+                )}
                 <button
                   onClick={() => handleBulkAction('export')}
                   className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"

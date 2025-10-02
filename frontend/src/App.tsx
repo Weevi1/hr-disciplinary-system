@@ -24,8 +24,8 @@ const ResellerManagement = React.lazy(() => import('./components/admin/ResellerM
 const EnhancedOrganizationWizard = React.lazy(() => import('./components/admin/EnhancedOrganizationWizard').then(m => ({ default: m.EnhancedOrganizationWizard })));
 
 // 🌟 LAZY-LOADED FEATURE COMPONENTS
-const BookHRMeeting = React.lazy(() => import('./components/meetings/BookHRMeeting').then(m => ({ default: m.BookHRMeeting })));
-const ReportAbsence = React.lazy(() => import('./components/absences/ReportAbsence').then(m => ({ default: m.ReportAbsence })));
+const BookHRMeeting = React.lazy(() => import('./components/meetings/UnifiedBookHRMeeting').then(m => ({ default: m.UnifiedBookHRMeeting })));
+const ReportAbsence = React.lazy(() => import('./components/absences/UnifiedReportAbsence').then(m => ({ default: m.UnifiedReportAbsence })));
 
 // 🔔 LAZY-LOADED HR REVIEW COMPONENTS
 const AbsenceReportReview = React.lazy(() => import('./components/absences/AbsenceReportReview').then(m => ({ default: m.AbsenceReportReview })));
