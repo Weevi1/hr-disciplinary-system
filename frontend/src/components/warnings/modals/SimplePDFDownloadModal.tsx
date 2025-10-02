@@ -20,7 +20,6 @@ import {
   Printer
 } from 'lucide-react';
 import { useOrganization } from '../../../contexts/OrganizationContext';
-import { PDFGenerationService } from '../../../services/PDFGenerationService';
 
 // ============================================
 // INTERFACES MATCHING YOUR WARNING WIZARD
@@ -256,6 +255,9 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
       };
 
       Logger.debug(8949)
+
+      // Lazy-load PDF generation service (reduces initial bundle by ~578 KB)
+      const { PDFGenerationService } = await import('@/services/PDFGenerationService');
       const blob = await PDFGenerationService.generateWarningPDF(pdfData);
       
       setPdfBlob(blob);

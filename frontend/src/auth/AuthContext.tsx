@@ -195,6 +195,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const result = await UserOrgIndexService.getUserWithOrganization(firebaseUser.uid);
 
           if (result) {
+            // 🔍 Check if custom claims need to be refreshed
+            const idTokenResult = await firebaseUser.getIdTokenResult();
+            const roleIsInvalid = !idTokenResult.claims.role || typeof idTokenResult.claims.role === 'object';
+
+            if (roleIsInvalid) {
+              console.warn('⚠️ [AUTH] Role missing or incorrectly formatted! Calling refreshUserClaims...');
+              try {
+                const { getFunctions, httpsCallable } = await import('firebase/functions');
+                const functions = getFunctions(undefined, 'us-central1');
+                const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
+                await refreshClaims({});
+                console.log('✅ [AUTH] Claims refreshed! Signing out...');
+                // Sign out to force token refresh on next login
+                await auth.signOut();
+                alert('Your user role has been refreshed! Please SIGN IN AGAIN.');
+                return;
+              } catch (err) {
+                console.error('❌ [AUTH] Failed to refresh claims:', err);
+              }
+            }
+
             // ✅ User found via index - instant O(1) lookup regardless of organization count
             const normalizedRole = normalizeUserRole(result.user.role);
             dispatch({

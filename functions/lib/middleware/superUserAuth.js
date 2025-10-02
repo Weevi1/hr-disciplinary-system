@@ -2,7 +2,8 @@
 // functions/src/middleware/superUserAuth.ts
 // Server-side permission validation middleware for SuperUser operations
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requireSuperUser = exports.SuperUserAuthMiddleware = void 0;
+exports.SuperUserAuthMiddleware = void 0;
+exports.requireSuperUser = requireSuperUser;
 const https_1 = require("firebase-functions/v2/https");
 const auth_1 = require("firebase-admin/auth");
 const firestore_1 = require("firebase-admin/firestore");
@@ -247,5 +248,4 @@ function requireSuperUser(options = {}) {
         return descriptor;
     };
 }
-exports.requireSuperUser = requireSuperUser;
 //# sourceMappingURL=superUserAuth.js.map

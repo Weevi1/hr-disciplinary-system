@@ -85,7 +85,9 @@ export const DashboardRouter: React.FC = () => {
           <div className="p-6 max-w-7xl mx-auto pb-0">
             <WelcomeSection />
           </div>
-          <SuperAdminDashboard />
+          <div className="max-w-7xl mx-auto p-6 pt-2">
+            <SuperAdminDashboard />
+          </div>
         </div>
       );
 

@@ -27,8 +27,8 @@ import {
   Smartphone
 } from 'lucide-react';
 import { useOrganization } from '../../../contexts/OrganizationContext';
-import { PDFGenerationService } from '../../../services/PDFGenerationService';
 import { QRCodeDownloadModal } from '../modals/QRCodeDownloadModal';
+import { measureAsync, TraceNames } from '../../../config/performance';
 
 // ============================================
 // INTERFACES MATCHING YOUR WARNING WIZARD
@@ -317,7 +317,18 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
 
       Logger.debug(10791)
 
-      const blob = await PDFGenerationService.generateWarningPDF(pdfData);
+      // Lazy-load PDF generation service (reduces initial bundle by ~578 KB)
+      const { PDFGenerationService } = await import('@/services/PDFGenerationService');
+
+      // 📊 Track PDF generation performance
+      const blob = await measureAsync(
+        TraceNames.GENERATE_WARNING_PDF,
+        () => PDFGenerationService.generateWarningPDF(pdfData),
+        {
+          employee: `${extractedData.employee.firstName} ${extractedData.employee.lastName}`,
+          category: extractedData.category.name
+        }
+      );
       
       setPdfBlob(blob);
       setFilename(generatedFilename);
@@ -424,6 +435,9 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
       };
 
       setQrGenerationStep('Generating PDF document...');
+
+      // Lazy-load PDF generation service (reduces initial bundle by ~578 KB)
+      const { PDFGenerationService } = await import('@/services/PDFGenerationService');
       const qrBlob = await PDFGenerationService.generateWarningPDF(pdfData);
 
       Logger.debug('✅ QR PDF generated:', {

@@ -44,6 +44,9 @@ import {
 // 👥 ADD ORGANIZATION USER CREATION
 import { createOrganizationUser } from './createOrganizationUser';
 
+// 📡 ADD API VERSIONING
+import { getApiVersionInfo } from './api/versionInfo';
+
 // Export all cloud functions
 export {
   // User/Auth functions
@@ -74,5 +77,8 @@ export {
   // Super-user management functions
   manageSuperUser,
   getSuperUserInfo,
-  initializeSuperUser
+  initializeSuperUser,
+
+  // API versioning
+  getApiVersionInfo
 };

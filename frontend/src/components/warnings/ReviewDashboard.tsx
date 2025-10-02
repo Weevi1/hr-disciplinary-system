@@ -26,7 +26,7 @@ import WarningDetailsModal from './modals/WarningDetailsModal';
 import { ProofOfDeliveryModal } from './modals/ProofOfDeliveryModal';
 import { AppealModal } from './modals/AppealModal';
 import { AppealReviewModal } from './modals/AppealReviewModal';
-import { WarningArchive } from './WarningArchive';
+// WarningArchive moved to _legacy - archive functionality integrated into ReviewDashboard
 
 // Warning interface imported from API layer types
 
@@ -516,7 +516,15 @@ const loadWarnings = useCallback(async () => {
 
       {/* Conditional rendering based on view mode */}
       {viewMode === 'archive' ? (
-        <WarningArchive onBack={() => setViewMode('warnings')} />
+        <div className="text-center py-12">
+          <p className="text-gray-500">Warning archive view is being reimplemented. Please use the filters to find archived warnings.</p>
+          <button
+            onClick={() => setViewMode('warnings')}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Back to Warnings
+          </button>
+        </div>
       ) : (
         <>
       {/* Compact Search and Filters Bar */}

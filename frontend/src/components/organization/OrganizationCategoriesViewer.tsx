@@ -16,11 +16,18 @@ import {
   ChevronDown,
   ChevronUp,
   Lock,
-  Info
+  Info,
+  Edit,
+  Trash2,
+  Eye,
+  EyeOff,
+  Plus
 } from 'lucide-react';
 
-import { useOrganization } from '../../contexts/OrganizationContext';
+import { OrganizationContext } from '../../contexts/OrganizationContext';
+import { useAuth } from '../../auth/AuthContext';
 import { API } from '../../api';
+import { DatabaseShardingService } from '../../services/DatabaseShardingService';
 import type { WarningCategory } from '../../services/WarningService';
 import { LoadingState } from '../common/LoadingState';
 import Logger from '../../utils/logger';
@@ -28,17 +35,48 @@ import Logger from '../../utils/logger';
 interface OrganizationCategoriesViewerProps {
   onClose: () => void;
   inline?: boolean; // New prop for inline rendering in tabs
+  organizationId?: string; // Optional - for use without OrganizationProvider (e.g., SuperAdmin)
+  organizationName?: string; // Optional - for display without OrganizationProvider
+  allowEdit?: boolean; // Optional - enable CRUD for SuperUser
 }
 
 export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewerProps> = ({
   onClose,
-  inline = false
+  inline = false,
+  organizationId: propOrganizationId,
+  organizationName: propOrganizationName,
+  allowEdit = false
 }) => {
-  const { organization, organizationId } = useOrganization();
+  const { user } = useAuth();
+
+  // Optional organization context - not all users have organizations (e.g., super users)
+  const orgContext = React.useContext(OrganizationContext);
+  const organization = orgContext?.organization || null;
+  const contextOrganizationId = orgContext?.organizationId;
+
+  // Use prop if provided, otherwise fall back to context
+  const organizationId = propOrganizationId || contextOrganizationId;
   const [categories, setCategories] = useState<WarningCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [editingCategory, setEditingCategory] = useState<WarningCategory | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [creatingNew, setCreatingNew] = useState(false);
+  const [newCategory, setNewCategory] = useState<any>({
+    name: '',
+    description: '',
+    level: 'verbal' as const,
+    color: '#10b981',
+    icon: '📋',
+    isActive: true,
+    isDefault: false,
+    escalationPath: ['verbal', 'first_written', 'final_written']
+  });
+
+  // Check if user is SuperUser (has CRUD access)
+  const isSuperUser = user?.role?.id === 'super-user';
+  const canEdit = allowEdit && isSuperUser;
 
   const loadCategories = async () => {
     if (!organizationId) {
@@ -70,6 +108,147 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
   useEffect(() => {
     loadCategories();
   }, [organizationId]);
+
+  // CRUD Handlers for SuperUser
+  const handleSaveCategory = async (category: WarningCategory) => {
+    if (!organizationId || !canEdit) return;
+
+    try {
+      setSaving(true);
+
+      // Update the category in the categories array
+      const updatedCategories = categories.map(cat =>
+        cat.id === category.id ? category : cat
+      );
+
+      // Save to Firestore via DatabaseShardingService
+      await DatabaseShardingService.updateDocument(
+        organizationId,
+        'organizations',
+        organizationId,
+        { categories: updatedCategories }
+      );
+
+      await loadCategories();
+      setEditingCategory(null);
+      Logger.success('Category updated successfully');
+    } catch (error) {
+      Logger.error('Failed to update category:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    if (!organizationId || !canEdit) return;
+    if (!confirm('Are you sure you want to delete this category?')) return;
+
+    try {
+      setSaving(true);
+
+      // Remove category from array
+      const updatedCategories = categories.filter(cat => cat.id !== categoryId);
+
+      // Save to Firestore
+      await DatabaseShardingService.updateDocument(
+        organizationId,
+        'organizations',
+        organizationId,
+        { categories: updatedCategories }
+      );
+
+      await loadCategories();
+      Logger.success('Category deleted successfully');
+    } catch (error) {
+      Logger.error('Failed to delete category:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleActive = async (category: WarningCategory) => {
+    if (!organizationId || !canEdit) return;
+
+    try {
+      setSaving(true);
+
+      // Toggle isActive and update categories array
+      const updatedCategories = categories.map(cat =>
+        cat.id === category.id
+          ? { ...cat, isActive: cat.isActive === false ? true : false }
+          : cat
+      );
+
+      // Save to Firestore
+      await DatabaseShardingService.updateDocument(
+        organizationId,
+        'organizations',
+        organizationId,
+        { categories: updatedCategories }
+      );
+
+      await loadCategories();
+      Logger.success(`Category ${category.isActive !== false ? 'deactivated' : 'activated'}`);
+    } catch (error) {
+      Logger.error('Failed to toggle category:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    if (!organizationId || !canEdit) return;
+    if (!newCategory.name?.trim()) {
+      alert('Category name is required');
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      // Create new category with unique ID (matching wizard format)
+      const categoryToCreate: any = {
+        id: `custom-${Date.now()}`,
+        name: newCategory.name,
+        description: newCategory.description || '',
+        level: newCategory.level || 'verbal',
+        color: newCategory.color || '#10b981',
+        icon: newCategory.icon || '📋',
+        isActive: newCategory.isActive !== false,
+        isDefault: false,
+        escalationPath: newCategory.escalationPath || ['verbal', 'first_written', 'final_written']
+      };
+
+      // Add to categories array
+      const updatedCategories = [...categories, categoryToCreate];
+
+      // Save to Firestore
+      await DatabaseShardingService.updateDocument(
+        organizationId,
+        'organizations',
+        organizationId,
+        { categories: updatedCategories }
+      );
+
+      await loadCategories();
+      setCreatingNew(false);
+      setNewCategory({
+        name: '',
+        description: '',
+        level: 'verbal',
+        color: '#10b981',
+        icon: '📋',
+        isActive: true,
+        isDefault: false,
+        escalationPath: ['verbal', 'first_written', 'final_written']
+      });
+      Logger.success('Category created successfully');
+    } catch (error) {
+      Logger.error('Failed to create category:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -122,7 +301,7 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Warning Categories</h2>
                 <p className="text-gray-600">
-                  {organization?.name} • {categories.length} categories configured
+                  {propOrganizationName || organization?.name} • {categories.length} categories configured
                 </p>
               </div>
             </div>
@@ -215,17 +394,170 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
           ) : (
             <div className="space-y-3">
               {/* Security Notice */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <div className="flex items-center gap-2">
-                  <Lock className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-                  <div>
-                    <h4 className="text-xs font-semibold text-blue-900 mb-0.5">Read-Only View</h4>
-                    <p className="text-xs text-blue-800">
-                      Category modifications are restricted to SuperUser administrators to ensure compliance and data integrity.
-                    </p>
+              {!canEdit && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                    <div>
+                      <h4 className="text-xs font-semibold text-blue-900 mb-0.5">Read-Only View</h4>
+                      <p className="text-xs text-blue-800">
+                        Category modifications are restricted to SuperUser administrators to ensure compliance and data integrity.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+              {canEdit && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <Edit className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+                    <div>
+                      <h4 className="text-xs font-semibold text-green-900 mb-0.5">SuperUser Edit Mode</h4>
+                      <p className="text-xs text-green-800">
+                        You can edit, activate/deactivate, and delete categories for this organization.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Create New Category Button */}
+              {canEdit && !creatingNew && (
+                <button
+                  onClick={() => setCreatingNew(true)}
+                  className="w-full flex items-center justify-center gap-2 p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="font-medium">Create New Category</span>
+                </button>
+              )}
+
+              {/* Create New Category Form - Matching Wizard Format */}
+              {canEdit && creatingNew && (
+                <div className="bg-white border-2 border-blue-400 rounded-lg p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-base font-semibold text-gray-900">Create New Category</h4>
+                    <button
+                      onClick={() => setCreatingNew(false)}
+                      className="p-1.5 hover:bg-gray-100 rounded"
+                    >
+                      <X className="w-5 h-5 text-gray-600" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Category Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Category Name *</label>
+                      <input
+                        type="text"
+                        value={newCategory.name || ''}
+                        onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                        placeholder="e.g., Attendance Issues"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    {/* Starting Level */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Starting Level</label>
+                      <select
+                        value={newCategory.level || 'verbal'}
+                        onChange={(e) => setNewCategory({ ...newCategory, level: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="counselling">Counselling</option>
+                        <option value="verbal">Verbal Warning</option>
+                        <option value="first_written">First Written Warning</option>
+                        <option value="second_written">Second Written Warning</option>
+                        <option value="final_written">Final Written Warning</option>
+                        <option value="suspension">Suspension</option>
+                        <option value="dismissal">Dismissal</option>
+                      </select>
+                    </div>
+
+                    {/* Description */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                      <textarea
+                        value={newCategory.description || ''}
+                        onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                        placeholder="Brief description of this category..."
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    {/* Color Picker */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Category Color</label>
+                      <input
+                        type="color"
+                        value={newCategory.color || '#10b981'}
+                        onChange={(e) => setNewCategory({ ...newCategory, color: e.target.value })}
+                        className="w-full h-10 border border-gray-300 rounded-lg"
+                      />
+                    </div>
+
+                    {/* Active Checkbox */}
+                    <div className="flex items-center">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={newCategory.isActive !== false}
+                          onChange={(e) => setNewCategory({ ...newCategory, isActive: e.target.checked })}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">Active Category</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Icon Picker */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Category Icon</label>
+                    <div className="grid grid-cols-8 gap-2 p-3 border border-gray-300 rounded-lg bg-gray-50">
+                      {['📋', '⚠️', '📊', '🔒', '👔', '💼', '🏢', '📞', '🖥️', '📝', '🗂️', '📅', '🔧', '⚡', '🎯', '📈'].map((icon) => (
+                        <button
+                          key={icon}
+                          type="button"
+                          onClick={() => setNewCategory({ ...newCategory, icon })}
+                          className={`w-10 h-10 rounded-lg border-2 text-xl flex items-center justify-center transition-all duration-200 hover:bg-gray-100 ${
+                            newCategory.icon === icon
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-200 bg-white'
+                          }`}
+                        >
+                          {icon}
+                        </button>
+                      ))}
+                    </div>
+                    {newCategory.icon && (
+                      <div className="mt-2 text-sm text-gray-600">
+                        Selected: <span className="text-xl">{newCategory.icon}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={handleCreateCategory}
+                      disabled={saving || !newCategory.name?.trim()}
+                      className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {saving ? 'Creating...' : 'Create Category'}
+                    </button>
+                    <button
+                      onClick={() => setCreatingNew(false)}
+                      disabled={saving}
+                      className="px-4 py-2.5 bg-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-300 disabled:opacity-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Categories List */}
               <div className="space-y-1.5">
@@ -292,14 +624,46 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                             </div>
                           </div>
 
-                          {/* Expand/collapse button */}
-                          <button
-                            onClick={() => setExpandedCategory(isExpanded ? null : category.id)}
-                            className="p-1.5 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-50 flex-shrink-0"
-                            title={isExpanded ? 'Collapse details' : 'Expand details'}
-                          >
-                            {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                          </button>
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-1">
+                            {/* SuperUser CRUD buttons */}
+                            {canEdit && (
+                              <>
+                                {/* Toggle Active/Inactive */}
+                                <button
+                                  onClick={() => handleToggleActive(category)}
+                                  disabled={saving}
+                                  className={`p-1.5 rounded hover:bg-gray-50 flex-shrink-0 ${
+                                    category.isActive !== false
+                                      ? 'text-green-600 hover:text-green-700'
+                                      : 'text-gray-400 hover:text-gray-600'
+                                  }`}
+                                  title={category.isActive !== false ? 'Deactivate category' : 'Activate category'}
+                                >
+                                  {category.isActive !== false ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                </button>
+
+                                {/* Delete button */}
+                                <button
+                                  onClick={() => handleDeleteCategory(category.id)}
+                                  disabled={saving}
+                                  className="p-1.5 text-red-500 hover:text-red-700 rounded hover:bg-red-50 flex-shrink-0"
+                                  title="Delete category"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+
+                            {/* Expand/collapse button */}
+                            <button
+                              onClick={() => setExpandedCategory(isExpanded ? null : category.id)}
+                              className="p-1.5 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-50 flex-shrink-0"
+                              title={isExpanded ? 'Collapse details' : 'Expand details'}
+                            >
+                              {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
                         </div>
 
                         {/* Expanded details */}
@@ -387,10 +751,17 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                   <span>
                     Active: <strong>{categories.filter(c => c.isActive !== false).length}</strong>
                   </span>
-                  <span className="flex items-center gap-1">
-                    <Lock className="w-2.5 h-2.5" />
-                    Read-only
-                  </span>
+                  {canEdit ? (
+                    <span className="flex items-center gap-1 text-green-600">
+                      <Edit className="w-2.5 h-2.5" />
+                      Edit mode
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      <Lock className="w-2.5 h-2.5" />
+                      Read-only
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

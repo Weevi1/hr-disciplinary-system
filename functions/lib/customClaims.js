@@ -1,6 +1,7 @@
 "use strict";
 // functions/src/customClaims.ts
 // Firebase Auth Custom Claims Management for Sharded User System
+// ✅ API v1.0.0 - Versioned responses
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.refreshOrganizationUserClaims = exports.getUserClaims = exports.refreshUserClaims = void 0;
 const https_1 = require("firebase-functions/v2/https");
@@ -8,6 +9,7 @@ const firebase_functions_1 = require("firebase-functions");
 const auth_1 = require("firebase-admin/auth");
 const firestore_1 = require("firebase-admin/firestore");
 const app_1 = require("firebase-admin/app");
+const apiVersioning_1 = require("./middleware/apiVersioning");
 // Initialize Firebase Admin if not already initialized
 try {
     (0, app_1.initializeApp)();
@@ -22,6 +24,7 @@ const db = (0, firestore_1.getFirestore)();
  * Can be called from the frontend after user data changes
  */
 exports.refreshUserClaims = (0, https_1.onCall)(async (request) => {
+    var _a;
     const { uid } = request.auth || {};
     const { targetUserId } = request.data || {};
     if (!uid) {
@@ -39,15 +42,28 @@ exports.refreshUserClaims = (0, https_1.onCall)(async (request) => {
         if (!isSuperUser && !isSameUser && !isBusinessOwner) {
             throw new https_1.HttpsError('permission-denied', 'Insufficient permissions to refresh claims');
         }
-        // Find user in sharded collections
-        const userDoc = await findUserInShardedCollections(userIdToRefresh);
-        if (!userDoc) {
-            throw new https_1.HttpsError('not-found', 'User not found in sharded collections');
+        // First, check root /users collection for super-users
+        const rootUserDoc = await db.collection('users').doc(userIdToRefresh).get();
+        let userData;
+        let organizationId;
+        if (rootUserDoc.exists) {
+            // User found in root collection (likely super-user or reseller)
+            firebase_functions_1.logger.info(`📍 [CUSTOM CLAIMS] Found user ${userIdToRefresh} in root /users collection`);
+            userData = rootUserDoc.data();
+            organizationId = userData.organizationId || 'system';
         }
-        const { userData, organizationId } = userDoc;
+        else {
+            // Find user in sharded collections
+            const userDoc = await findUserInShardedCollections(userIdToRefresh);
+            if (!userDoc) {
+                throw new https_1.HttpsError('not-found', 'User not found in root or sharded collections');
+            }
+            userData = userDoc.userData;
+            organizationId = userDoc.organizationId;
+        }
         // Prepare custom claims
         const customClaims = {
-            role: userData.role,
+            role: ((_a = userData.role) === null || _a === void 0 ? void 0 : _a.id) || userData.role, // Extract ID if role is an object
             organizationId: organizationId,
             permissions: userData.permissions ? Object.keys(userData.permissions) : [],
             lastUpdated: Date.now()
@@ -68,13 +84,16 @@ exports.refreshUserClaims = (0, https_1.onCall)(async (request) => {
 });
 /**
  * Get current user's custom claims (for debugging)
+ * ✅ API v1.0.0 - Returns versioned response
  */
-exports.getUserClaims = (0, https_1.onCall)(async (request) => {
+exports.getUserClaims = (0, https_1.onCall)((0, apiVersioning_1.versionedFunction)('getUserClaims', async (request) => {
     const { uid } = request.auth || {};
     if (!uid) {
         throw new https_1.HttpsError('unauthenticated', 'User must be authenticated');
     }
     try {
+        // Log API usage for monitoring
+        (0, apiVersioning_1.logApiUsage)('getUserClaims', '1.0.0', uid);
         const user = await auth.getUser(uid);
         return {
             uid,
@@ -87,7 +106,7 @@ exports.getUserClaims = (0, https_1.onCall)(async (request) => {
         firebase_functions_1.logger.error(`❌ [CUSTOM CLAIMS] Failed to get claims for ${uid}:`, error);
         throw new https_1.HttpsError('internal', 'Failed to retrieve user claims');
     }
-});
+}));
 /**
  * Find user document in sharded collections by searching organizations
  */
@@ -156,6 +175,7 @@ async function findUserInShardedCollections(uid) {
  * Useful for organization setup or migration
  */
 exports.refreshOrganizationUserClaims = (0, https_1.onCall)(async (request) => {
+    var _a;
     const { uid } = request.auth || {};
     const { organizationId } = request.data || {};
     if (!uid) {
@@ -182,7 +202,7 @@ exports.refreshOrganizationUserClaims = (0, https_1.onCall)(async (request) => {
             const userData = userDoc.data();
             try {
                 const customClaims = {
-                    role: userData.role,
+                    role: ((_a = userData.role) === null || _a === void 0 ? void 0 : _a.id) || userData.role, // Extract ID if role is an object
                     organizationId: organizationId,
                     permissions: userData.permissions ? Object.keys(userData.permissions) : [],
                     lastUpdated: Date.now()

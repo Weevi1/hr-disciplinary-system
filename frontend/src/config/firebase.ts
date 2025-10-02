@@ -48,6 +48,9 @@ if (import.meta.env.DEV) {
 // Firebase persistence is now handled automatically by Firebase v9+
 // No need to explicitly enable IndexedDB persistence
 
+// Export Firebase app instance
+export { app };
+
 // Helper to check if we're in development mode
 export const isDevelopment = import.meta.env.DEV;
 

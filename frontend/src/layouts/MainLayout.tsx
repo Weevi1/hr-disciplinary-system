@@ -12,12 +12,16 @@ import { useOrganization, OrganizationProvider } from '../contexts/OrganizationC
 import {
   LogOut,
   Users,
-  Settings
+  Settings,
+  Key
 } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
 import { BrandedLogo } from '../components/common/BrandedLogo';
 import { BrandingProvider } from '../contexts/BrandingContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
+import { UnifiedModal } from '../components/common/UnifiedModal';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../config/firebase';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -72,6 +76,38 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
 
   // State Management
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [resetPasswordModalOpen, setResetPasswordModalOpen] = useState(false);
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
+  const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
+
+  // Password Reset Handler
+  const handlePasswordReset = async () => {
+    if (!user?.email) {
+      setResetPasswordError('No email address found');
+      return;
+    }
+
+    setResetPasswordLoading(true);
+    setResetPasswordError(null);
+
+    try {
+      await sendPasswordResetEmail(auth, user.email);
+      setResetPasswordSuccess(true);
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      setResetPasswordError(error.message || 'Failed to send password reset email');
+    } finally {
+      setResetPasswordLoading(false);
+    }
+  };
+
+  // Close modal and reset states
+  const closeResetPasswordModal = () => {
+    setResetPasswordModalOpen(false);
+    setResetPasswordSuccess(false);
+    setResetPasswordError(null);
+  };
 
   // 🎨 Effect to update CSS variables when organization branding changes
   useEffect(() => {
@@ -288,6 +324,29 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
                     )}
 
                     <button
+                      onClick={() => {
+                        setResetPasswordModalOpen(true);
+                        setUserMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:px-4 sm:py-2 text-sm transition-colors"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                        minHeight: '44px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--color-nav-hover)';
+                        e.currentTarget.style.color = 'var(--color-text)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'var(--color-text-secondary)';
+                      }}
+                    >
+                      <Key className="w-4 h-4" />
+                      <span>Reset Password</span>
+                    </button>
+
+                    <button
                       onClick={logout}
                       className="w-full flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:px-4 sm:py-2 text-sm transition-colors"
                       style={{
@@ -323,6 +382,83 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
       {/* Modern Top Navigation */}
       <TopNavigation />
 
+      {/* Password Reset Modal */}
+      <UnifiedModal
+        isOpen={resetPasswordModalOpen}
+        onClose={closeResetPasswordModal}
+        title="Reset Password"
+        size="sm"
+      >
+        <div className="p-6">
+          {!resetPasswordSuccess ? (
+            <>
+              <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
+                A password reset link will be sent to:
+              </p>
+              <div className="mb-6 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-primary-bg)' }}>
+                <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                  {user?.email}
+                </p>
+              </div>
+
+              {resetPasswordError && (
+                <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-alert-error-bg)' }}>
+                  <p className="text-sm" style={{ color: 'var(--color-alert-error-text)' }}>
+                    {resetPasswordError}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={closeResetPasswordModal}
+                  disabled={resetPasswordLoading}
+                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  style={{
+                    backgroundColor: 'var(--color-card-background)',
+                    color: 'var(--color-text-secondary)',
+                    border: '1px solid var(--color-border)'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePasswordReset}
+                  disabled={resetPasswordLoading}
+                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  style={{
+                    background: 'linear-gradient(to right, var(--color-primary), var(--color-primary-hover))',
+                    color: 'var(--color-text-inverse)'
+                  }}
+                >
+                  {resetPasswordLoading ? 'Sending...' : 'Send Reset Link'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mb-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-alert-success-bg)' }}>
+                <p className="text-sm font-medium mb-2" style={{ color: 'var(--color-alert-success-text)' }}>
+                  Password reset email sent!
+                </p>
+                <p className="text-sm" style={{ color: 'var(--color-alert-success-text)' }}>
+                  Check your inbox for instructions to reset your password.
+                </p>
+              </div>
+              <button
+                onClick={closeResetPasswordModal}
+                className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                style={{
+                  background: 'linear-gradient(to right, var(--color-primary), var(--color-primary-hover))',
+                  color: 'var(--color-text-inverse)'
+                }}
+              >
+                Close
+              </button>
+            </>
+          )}
+        </div>
+      </UnifiedModal>
 
       {/* Main Content Area - Full width */}
       <main

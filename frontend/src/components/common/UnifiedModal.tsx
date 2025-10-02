@@ -4,10 +4,10 @@
 // 🎨 Integrates with design system: CSS variables, ThemedButton, organization branding
 // 📱 Mobile-optimized with Samsung S8+ compatibility
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useContext } from 'react';
 import { X, ChevronLeft, ArrowLeft } from 'lucide-react';
 import { ThemedButton } from './ThemedButton';
-import { useOrganization } from '../../contexts/OrganizationContext';
+import { OrganizationContext } from '../../contexts/OrganizationContext';
 
 interface UnifiedModalProps {
   // Core modal properties
@@ -66,7 +66,9 @@ export const UnifiedModal: React.FC<UnifiedModalProps> = ({
   customFooter,
   children
 }) => {
-  const { organization } = useOrganization();
+  // Optional organization context - not all users have organizations (e.g., super users)
+  const orgContext = useContext(OrganizationContext);
+  const organization = orgContext?.organization || null;
 
   // Prevent body scroll when modal is open
   useEffect(() => {

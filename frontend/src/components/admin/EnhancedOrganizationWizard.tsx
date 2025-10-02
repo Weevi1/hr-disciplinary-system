@@ -2,12 +2,12 @@
 // Revenue-first Organization Wizard with Stripe payment integration
 
 import React, { useState, useEffect } from 'react';
-import { 
-  CreditCard, 
-  Building2, 
-  Users, 
-  MapPin, 
-  Check, 
+import {
+  CreditCard,
+  Building2,
+  Users,
+  MapPin,
+  Check,
   AlertCircle,
   ArrowLeft,
   ArrowRight,
@@ -17,7 +17,10 @@ import {
   Trash2,
   Edit3,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Upload,
+  Image as ImageIcon,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import Logger from '../../utils/logger';
@@ -26,13 +29,15 @@ import { DataService } from '../../services/DataService';
 import { ShardedOrganizationService } from '../../services/ShardedOrganizationService';
 import DepartmentService from '../../services/DepartmentService';
 import { UNIVERSAL_SA_CATEGORIES } from '../../services/UniversalCategories';
-import type { 
-  SubscriptionTier, 
-  SouthAfricanProvince, 
+import type {
+  SubscriptionTier,
+  SouthAfricanProvince,
   Reseller
 } from '../../types/billing';
 import { SUBSCRIPTION_PLANS, SA_PROVINCES } from '../../types/billing';
 import type { WarningLevel, SeverityLevel } from '../../types/core';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../../config/firebase';
 
 interface OrganizationCategory {
   id: string;
@@ -447,7 +452,7 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
     companyName: '',
     employeeCount: 15,
     selectedPlan: 'professional', // Default to most popular
-    
+
     // Step 2: Company Details
     industry: '',
     province: 'gauteng', // Default to largest market
@@ -455,17 +460,17 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
     contactPerson: '',
     contactEmail: '',
     contactPhone: '',
-    
+
     // Step 3: Reseller Assignment
     resellerId: '',
-    
+
     // Step 4: Admin Setup
     adminFirstName: '',
     adminLastName: '',
     adminEmail: '',
     adminPassword: '',
     adminPasswordConfirm: '',
-    
+
     // Step 5: Customization
     logoUrl: '',
     primaryColor: '#2563eb',
@@ -473,6 +478,99 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
     accentColor: '#10b981',
     customCategories: getDefaultCategories()
   });
+
+  // Logo upload state
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>('');
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+  // Convert JPG to PNG using canvas
+  const convertToPng = async (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      img.onload = () => {
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx?.drawImage(img, 0, 0);
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to convert image to PNG'));
+          }
+        }, 'image/png');
+      };
+
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // Handle logo file selection
+  const handleLogoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please upload a JPG or PNG file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
+      return;
+    }
+
+    setLogoFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setLogoPreview(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Upload logo to Firebase Storage
+  const uploadLogo = async (organizationId: string): Promise<string> => {
+    if (!logoFile) return '';
+
+    try {
+      setIsUploadingLogo(true);
+      Logger.info('📤 Uploading logo...');
+
+      let fileToUpload: Blob = logoFile;
+
+      // Convert JPG to PNG if needed
+      if (logoFile.type === 'image/jpeg' || logoFile.type === 'image/jpg') {
+        Logger.info('🔄 Converting JPG to PNG...');
+        fileToUpload = await convertToPng(logoFile);
+      }
+
+      // Upload to Firebase Storage
+      const timestamp = Date.now();
+      const storageRef = ref(storage, `organizations/${organizationId}/logos/logo-${timestamp}.png`);
+      await uploadBytes(storageRef, fileToUpload);
+
+      // Get download URL
+      const downloadURL = await getDownloadURL(storageRef);
+      Logger.success('✅ Logo uploaded successfully');
+
+      return downloadURL;
+    } catch (error) {
+      Logger.error('Failed to upload logo:', error);
+      throw error;
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
 
   // Same steps for everyone - behavior adapts based on role
   const steps = [
@@ -495,10 +593,10 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
 
   useEffect(() => {
     if (isOpen) {
-      // Load resellers for both SuperUsers and Resellers
-      loadAvailableResellers();
-
       if (isSuperUser) {
+        // Load resellers for SuperUsers only (resellers don't have permission to list all resellers)
+        loadAvailableResellers();
+
         // Auto-select plan based on employee count
         const recommendedPlan = StripeService.getRecommendedTier(formData.employeeCount);
         setFormData(prev => ({ ...prev, selectedPlan: recommendedPlan }));
@@ -506,7 +604,7 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
         // For resellers, auto-assign themselves, skip subscription, and check deployment limits
         setFormData(prev => ({
           ...prev,
-          resellerId: user?.id || '', // Reseller ID is the user's ID
+          resellerId: user?.resellerId || '', // Use resellerId from user data
           selectedPlan: 'professional', // Default plan for reseller deployments
           subscriptionTier: 'professional'
         }));
@@ -665,10 +763,22 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
 
       // Step 1: Skip Stripe - Auto-approve organization
       const organizationId = formData.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-');
-      
+
+      // Upload logo if provided
+      let logoUrl = formData.logoUrl;
+      if (logoFile) {
+        try {
+          logoUrl = await uploadLogo(organizationId);
+          Logger.success('✅ Logo uploaded and converted to PNG');
+        } catch (error) {
+          Logger.error('Failed to upload logo:', error);
+          // Continue with deployment even if logo upload fails
+        }
+      }
+
       // Use predefined password 'temp123' for development
       const devPassword = 'temp123';
-      
+
       // Step 2: Create organization with sharded structure - ACTIVE from start
       const orgResult = await ShardedOrganizationService.createOrganization({
         id: organizationId,
@@ -679,13 +789,13 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
         contactEmail: formData.contactEmail,
         contactPhone: formData.contactPhone,
         employeeCount: formData.employeeCount,
-        
+
         subscriptionTier: formData.selectedPlan,
         subscriptionStatus: 'active', // Auto-approve instead of 'pending_payment'
         resellerId: formData.resellerId,
-        
+
         branding: {
-          logoUrl: formData.logoUrl,
+          logoUrl: logoUrl,
           primaryColor: formData.primaryColor,
           secondaryColor: formData.secondaryColor,
           accentColor: formData.accentColor
@@ -1129,19 +1239,69 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
           {getCurrentStepId() === 'customize' && (
             <div className="space-y-6">
               <h3 className="text-lg font-semibold mb-4">Branding & Category Configuration</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Company Logo URL</label>
+
+              {/* Logo Upload Section */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Company Logo</label>
+                <p className="text-xs text-gray-500 mb-4">Upload a JPG or PNG file (max 5MB). JPG files will be automatically converted to PNG.</p>
+
+                {logoPreview ? (
+                  <div className="space-y-4">
+                    <div className="relative inline-block">
+                      <img
+                        src={logoPreview}
+                        alt="Logo preview"
+                        className="max-w-xs max-h-32 rounded-lg border-2 border-gray-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLogoFile(null);
+                          setLogoPreview('');
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-green-600">
+                      <ImageIcon className="w-4 h-4" />
+                      <span>{logoFile?.name}</span>
+                      {logoFile?.type.includes('jpeg') && <span className="text-xs text-blue-600">(will be converted to PNG)</span>}
+                    </div>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png"
+                      onChange={handleLogoSelect}
+                      className="hidden"
+                    />
+                    <div className="flex flex-col items-center justify-center py-8 border-2 border-gray-300 border-dashed rounded-lg hover:border-blue-400 transition-colors">
+                      <Upload className="w-12 h-12 text-gray-400 mb-2" />
+                      <span className="text-sm font-medium text-gray-600">Click to upload logo</span>
+                      <span className="text-xs text-gray-500 mt-1">JPG or PNG (max 5MB)</span>
+                    </div>
+                  </label>
+                )}
+
+                {/* Optional URL fallback */}
+                <div className="mt-4">
+                  <label className="block text-xs font-medium text-gray-600 mb-2">Or provide a logo URL:</label>
                   <input
                     type="url"
                     value={formData.logoUrl}
                     onChange={e => updateFormData({ logoUrl: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="https://example.com/logo.png"
+                    disabled={!!logoFile}
                   />
                 </div>
+              </div>
 
+              {/* Color Scheme */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Primary Color</label>
                   <input

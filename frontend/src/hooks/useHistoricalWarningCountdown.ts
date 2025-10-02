@@ -135,7 +135,7 @@ export const useHistoricalWarningCountdown = (
       const now = Date.now();
       const expiresTime = featureAccess.expiresAt.getTime();
       const msRemaining = expiresTime - now;
-      const days = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
+      const days = Math.floor(msRemaining / (1000 * 60 * 60 * 24));
 
       setDaysRemaining(Math.max(0, days));
     };

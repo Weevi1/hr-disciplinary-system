@@ -17,8 +17,9 @@ import { EmployeeCard } from './EmployeeCard';
 import { EmployeeFormModal } from './EmployeeFormModal';
 import { EmployeeImportModal } from './EmployeeImportModal';
 import { EmployeeArchiveModal } from './EmployeeArchiveModal';
-import { EmployeeArchive } from './EmployeeArchive';
+// EmployeeArchive moved to _legacy - archive list view functionality to be reimplemented if needed
 import { EmployeePromotionModal } from './EmployeePromotionModal';
+import { BulkAssignManagerModal } from './BulkAssignManagerModal';
 import EmployeeOrganogram from './EmployeeOrganogram';
 import EmployeeTableBrowser from './EmployeeTableBrowser';
 import { MobileEmployeeManagement } from './MobileEmployeeManagement';
@@ -91,6 +92,8 @@ export const EmployeeManagement: React.FC = () => {
   const [archivingEmployee, setArchivingEmployee] = useState<Employee | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [promotingEmployee, setPromotingEmployee] = useState<Employee | null>(null);
+  const [bulkAssignEmployees, setBulkAssignEmployees] = useState<Employee[]>([]);
+  const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
 
   const permissions = calculateEmployeePermissions(user?.role.id, user?.departmentIds);
 
@@ -120,6 +123,11 @@ export const EmployeeManagement: React.FC = () => {
 
   const handleBulkAction = useCallback((action: string, employees: Employee[]) => {
     switch (action) {
+      case 'assign-manager':
+        // Open bulk assign manager modal
+        setBulkAssignEmployees(employees);
+        setShowBulkAssignModal(true);
+        break;
       case 'export':
         // Export selected employees
         console.log('Exporting employees:', employees);
@@ -132,6 +140,25 @@ export const EmployeeManagement: React.FC = () => {
         console.log('Bulk action:', action, employees);
     }
   }, []);
+
+  const handleBulkAssignManager = useCallback(async (managerId: string) => {
+    if (!organizationId) return;
+
+    // Update all selected employees with the new manager
+    const updatePromises = bulkAssignEmployees.map(employee =>
+      updateEmployee(employee.id, {
+        employment: {
+          ...employee.employment,
+          managerId
+        }
+      })
+    );
+
+    await Promise.all(updatePromises);
+    await loadEmployees();
+    setShowBulkAssignModal(false);
+    setBulkAssignEmployees([]);
+  }, [bulkAssignEmployees, organizationId, updateEmployee, loadEmployees]);
 
   if (loading) {
     // Use simplified loading for legacy devices
@@ -355,11 +382,17 @@ export const EmployeeManagement: React.FC = () => {
         </div>
       )}
 
+      {/* Archive list view temporarily disabled - EmployeeArchive moved to _legacy */}
       {viewMode === 'archive' && (
-        <EmployeeArchive
-          onBack={() => setViewMode('table')}
-          onEmployeeRestored={() => loadEmployees(true)}
-        />
+        <div className="text-center py-12">
+          <p className="text-gray-500">Archive list view is being reimplemented. Use the Archive button on individual employees.</p>
+          <button
+            onClick={() => setViewMode('table')}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Back to Employee List
+          </button>
+        </div>
       )}
 
       {/* Compact Load More Button */}
@@ -450,6 +483,18 @@ export const EmployeeManagement: React.FC = () => {
               loadEmployees();
               setPromotingEmployee(null);
             }}
+          />
+        )}
+
+        {showBulkAssignModal && (
+          <BulkAssignManagerModal
+            isOpen={showBulkAssignModal}
+            onClose={() => {
+              setShowBulkAssignModal(false);
+              setBulkAssignEmployees([]);
+            }}
+            employees={bulkAssignEmployees}
+            onAssign={handleBulkAssignManager}
           />
         )}
     </div>
