@@ -81,7 +81,7 @@
 }
 
 .unified-field-hint {
-  font-size: 0.75rem !important; /* 12px */
+  font-size: 0.875rem !important; /* 14px - improved accessibility */
   color: var(--color-text-secondary) !important;
   margin-top: 0.25rem !important;
 }
@@ -331,7 +331,7 @@
 }
 
 .mobile-step-title {
-  font-size: 0.8125rem !important; /* 13px - smaller */
+  font-size: 0.875rem !important; /* 14px - improved accessibility */
   font-weight: 600 !important;
   color: var(--color-text) !important;
   line-height: 1.2 !important; /* Tighter */
@@ -373,7 +373,7 @@
 }
 
 .mobile-step-description p {
-  font-size: 0.8125rem !important; /* 13px */
+  font-size: 0.875rem !important; /* 14px - improved accessibility */
   line-height: 1.5 !important;
   color: var(--color-text-secondary) !important;
   margin: 0 !important;
@@ -396,7 +396,7 @@
   align-items: center !important;
   justify-content: center !important;
   gap: 0.5rem !important; /* Tighter spacing */
-  font-size: 0.75rem !important; /* 12px - smaller */
+  font-size: 0.875rem !important; /* 14px - improved accessibility */
   color: var(--color-text-secondary) !important;
   margin-top: 0.0625rem !important; /* Minimal margin */
 }
@@ -428,48 +428,93 @@
   }
 }
 
+/* Recording indicator next to step dots */
+.mobile-recording-indicator {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-left: 0.5rem !important;
+}
+
+.mobile-recording-dot-pulse {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: #ef4444 !important; /* Red-500 */
+  animation: mobile-pulse 1.5s infinite !important;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6) !important;
+}
+
 /* ============================================= */
 /* 🖥️ DESKTOP PROGRESS INDICATOR */
 /* ============================================= */
 
-.modal-header__progress {
-  display: flex !important;
+.modal-header__progress-desktop {
+  display: none !important; /* Hidden on mobile by default */
   align-items: center !important;
-  gap: 0.5rem !important;
+  gap: 0.25rem !important;
   flex: 1 !important;
   justify-content: center !important;
-  max-width: 120px !important;
+  max-width: 200px !important;
 }
 
-.modal-header__step {
+/* Show desktop progress on tablet and up (768px+) */
+@media (min-width: 768px) {
+  .modal-header__progress-desktop {
+    display: flex !important;
+  }
+}
+
+.step-container {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+}
+
+.step-dot {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   width: 24px !important;
   height: 24px !important;
   border-radius: 50% !important;
-  font-size: 0.75rem !important;
+  font-size: 0.875rem !important;
   font-weight: 600 !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   flex-shrink: 0 !important;
 }
 
-.modal-header__step--active {
+.step-dot--active {
   background: var(--color-primary) !important;
   color: var(--color-text-inverse) !important;
   transform: scale(1.1) !important;
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25) !important;
 }
 
-.modal-header__step--completed {
+.step-dot--completed {
   background: var(--color-success) !important;
   color: var(--color-text-inverse) !important;
 }
 
-.modal-header__step--inactive {
+.step-dot--inactive {
   background: var(--color-background-secondary) !important;
   color: var(--color-text-tertiary) !important;
   border: 1px solid var(--color-input-border) !important;
+}
+
+.step-connector {
+  width: 24px !important;
+  height: 2px !important;
+  flex-shrink: 0 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.step-connector--completed {
+  background: var(--color-success) !important;
+}
+
+.step-connector--inactive {
+  background: var(--color-border) !important;
 }
 
 /* ============================================= */
@@ -490,7 +535,7 @@
   border: 1px solid var(--color-alert-warning-border) !important;
   border-radius: 6px !important;
   padding: 0.25rem 0.5rem !important;
-  font-size: 0.75rem !important;
+  font-size: 0.875rem !important;
   font-weight: 600 !important;
   display: flex !important;
   align-items: center !important;
@@ -509,7 +554,7 @@
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 12px !important;
+  font-size: 14px !important;
 }
 
 .modal-header__right button[title*="Toggle"]:active {
@@ -570,7 +615,7 @@
 }
 
 .category-card__description {
-  font-size: 0.75rem !important;
+  font-size: 0.875rem !important;
   color: var(--color-text-secondary) !important;
   margin: 0 !important;
   line-height: 1.3 !important;
@@ -581,7 +626,7 @@
   align-items: center !important;
   padding: 0.125rem 0.375rem !important;
   border-radius: 0.375rem !important;
-  font-size: 0.625rem !important;
+  font-size: 0.875rem !important; /* 14px - improved from 10px */
   font-weight: 600 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.025em !important;
@@ -679,7 +724,7 @@
 }
 
 .modal-content__scrollable h4 {
-  font-size: 0.9375rem !important; /* 15px - reduced from 16px */
+  font-size: 1rem !important; /* 16px - improved accessibility */
   font-weight: 600 !important;
   margin: 0.375rem 0 0.25rem 0 !important; /* Further reduced */
   color: var(--color-text-secondary) !important;
@@ -688,7 +733,7 @@
 
 /* Body text - Samsung S8 optimized */
 .modal-content__scrollable p {
-  font-size: 0.875rem !important; /* 14px - reduced from 15px */
+  font-size: 1rem !important; /* 16px - improved accessibility */
   font-weight: 400 !important;
   margin: 0 0 0.375rem 0 !important; /* Further reduced for S8 */
   color: var(--color-text-secondary) !important;
@@ -698,13 +743,13 @@
 /* Small text */
 .modal-content__scrollable .text-sm,
 .modal-content__scrollable small {
-  font-size: 0.8125rem !important; /* 13px */
+  font-size: 0.875rem !important; /* 14px - improved accessibility */
   line-height: 1.5 !important;
 }
 
 /* Extra small text */
 .modal-content__scrollable .text-xs {
-  font-size: 0.75rem !important; /* 12px */
+  font-size: 0.875rem !important; /* 14px - improved accessibility */
   line-height: 1.4 !important;
 }
 
@@ -725,7 +770,7 @@
   border: 1px solid var(--color-input-border) !important;
   border-radius: 8px !important;
   padding: 0.75rem 0.875rem !important;
-  font-size: 0.9375rem !important; /* 15px - optimal for mobile */
+  font-size: 1rem !important; /* 16px - improved accessibility */
   line-height: 1.5 !important;
   color: var(--color-text) !important;
   background: var(--color-card-background) !important;
@@ -867,7 +912,7 @@
 
 /* Better typography spacing for mobile readability */
 .modal-content__scrollable label {
-  font-size: 0.9375rem !important;
+  font-size: 1rem !important;
   font-weight: 600 !important;
   margin-bottom: 0.5rem !important;
   display: block !important;
@@ -1108,7 +1153,7 @@
 .mobile-category-severity {
   padding: 0.25rem 0.75rem !important;
   border-radius: 9999px !important;
-  font-size: 0.75rem !important;
+  font-size: 0.875rem !important;
   font-weight: 600 !important;
   border-width: 1px !important;
   text-transform: uppercase !important;
@@ -1319,7 +1364,7 @@
   }
 
   .modal-content__scrollable label:has(input[type="radio"]) .text-sm {
-    font-size: 0.9375rem !important;
+    font-size: 1rem !important;
     line-height: 1.5 !important;
     margin-top: 0.5rem !important;
   }
@@ -1437,7 +1482,7 @@
 .modal-footer__button {
   min-height: 44px !important; /* More compact height */
   border-radius: 8px !important; /* Smaller border radius */
-  font-size: 0.9375rem !important; /* Slightly smaller text */
+  font-size: 1rem !important; /* 16px - improved accessibility */
   font-weight: 600 !important;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
   cursor: pointer !important;
@@ -1595,7 +1640,7 @@
 
 /* Step-consistent ThemedBadge system */
 .enhanced-warning-wizard-container [class*="ThemedBadge"] {
-  font-size: 0.75rem !important;
+  font-size: 0.875rem !important;
   padding: 0.25rem 0.5rem !important;
   line-height: 1.2 !important;
   border-radius: 0.375rem !important;
@@ -1640,14 +1685,14 @@
 }
 
 .enhanced-warning-wizard-container [class*="bg-amber-50"] p {
-  font-size: 0.75rem !important;
+  font-size: 0.875rem !important;
   line-height: 1.3 !important;
 }
 
 /* Professional button styling */
 .enhanced-warning-wizard-container [class*="bg-amber-50"] button {
   padding: 0.375rem 0.75rem !important;
-  font-size: 0.75rem !important;
+  font-size: 0.875rem !important;
   font-weight: 500 !important;
   border-radius: 0.5rem !important;
 }
@@ -1722,12 +1767,12 @@
 
   .enhanced-warning-wizard-container [class*="bg-amber-50"] button {
     padding: 0.2rem 0.4rem !important;
-    font-size: 0.6rem !important;
+    font-size: 0.875rem !important; /* 14px - improved accessibility */
   }
 
   .enhanced-warning-wizard-container [class*="bg-amber-50"] select {
     min-width: 50px !important;
-    font-size: 0.55rem !important;
+    font-size: 0.875rem !important; /* 14px - improved accessibility */
   }
 }
 
@@ -1751,7 +1796,7 @@
 
   /* Text sizing for readability */
   .enhanced-warning-wizard-container [class*="text-xs"] {
-    font-size: 0.65rem !important;
+    font-size: 0.875rem !important; /* 14px - improved accessibility */
   }
 }
 
@@ -1802,7 +1847,7 @@
 
   /* Step headers more compact on mobile */
   .enhanced-warning-wizard-container h3[class*="font-medium"] {
-    font-size: 0.8rem !important;
+    font-size: 0.875rem !important; /* 14px - improved accessibility */
   }
 
   /* Delivery cards mobile touch targets */
@@ -1824,7 +1869,7 @@
 
   /* Text sizing for readability */
   .enhanced-warning-wizard-container p[class*="text-xs"] {
-    font-size: 0.65rem !important;
+    font-size: 0.875rem !important; /* 14px - improved accessibility */
     line-height: 1.3 !important;
   }
 
@@ -1946,7 +1991,7 @@
   .modal-content__scrollable select {
     min-height: 40px !important; /* Reduced from 48px */
     padding: 0.5rem 0.625rem !important; /* Much smaller padding */
-    font-size: 0.8125rem !important; /* 13px */
+    font-size: 0.875rem !important; /* 14px - improved accessibility */
     border-radius: 4px !important; /* Smaller radius */
   }
 
@@ -1954,7 +1999,7 @@
   .modal-content__scrollable textarea {
     min-height: 60px !important; /* Very small */
     padding: 0.5rem 0.625rem !important;
-    font-size: 0.8125rem !important; /* 13px */
+    font-size: 0.875rem !important; /* 14px - improved accessibility */
     line-height: 1.3 !important; /* Tighter */
   }
 
@@ -1970,7 +2015,7 @@
   }
 
   .modal-content__scrollable h3 {
-    font-size: 0.9375rem !important; /* 15px */
+    font-size: 1rem !important; /* 16px - improved accessibility */
     margin: 0.25rem 0 0.125rem 0 !important;
   }
 
@@ -1981,7 +2026,7 @@
 
   /* Reduce paragraph spacing */
   .modal-content__scrollable p {
-    font-size: 0.8125rem !important; /* 13px */
+    font-size: 0.875rem !important; /* 14px - improved accessibility */
     margin: 0 0 0.25rem 0 !important;
     line-height: 1.4 !important;
   }
@@ -1997,7 +2042,7 @@
 
   /* Reduce label text size */
   .modal-content__scrollable label {
-    font-size: 0.8125rem !important; /* 13px */
+    font-size: 0.875rem !important; /* 14px - improved accessibility */
     margin-bottom: 0.375rem !important;
   }
 
@@ -2005,7 +2050,7 @@
   .modal-content__scrollable button:not(.modal-footer__button) {
     min-height: 40px !important; /* Reduced */
     padding: 0.5rem 1rem !important; /* Smaller padding */
-    font-size: 0.8125rem !important; /* 13px */
+    font-size: 0.875rem !important; /* 14px - improved accessibility */
   }
 
   /* Reduce spacing between form sections */
@@ -2022,14 +2067,14 @@
 
   /* More compact mobile step title for legacy devices */
   .mobile-step-title {
-    font-size: 0.8125rem !important; /* 13px - smaller for legacy devices */
+    font-size: 0.875rem !important; /* 14px - improved accessibility for legacy devices */
   }
 
   /* Smaller progress dots for legacy devices */
   .mobile-step-dot {
     width: 18px !important; /* Smaller for legacy screens */
     height: 18px !important;
-    font-size: 0.625rem !important; /* 10px */
+    font-size: 0.875rem !important; /* 14px - improved from 10px */ /* 10px */
   }
 
   /* Very compact footer navigation for legacy devices */
@@ -2045,7 +2090,7 @@
   .modal-footer__button {
     min-height: 38px !important; /* Very compact height for legacy devices */
     padding: 0.375rem 0.75rem !important; /* Minimal padding for legacy */
-    font-size: 0.8125rem !important; /* 13px - smaller text for legacy */
+    font-size: 0.875rem !important; /* 14px - improved accessibility for legacy */
     border-radius: 4px !important; /* Smaller border radius for legacy */
     gap: 0.1875rem !important; /* Very tight icon-text gap for legacy */
   }
@@ -2065,7 +2110,7 @@
   .modal-content__scrollable input,
   .modal-content__scrollable textarea,
   .modal-content__scrollable select {
-    font-size: 0.75rem !important; /* 12px for very small screens */
+    font-size: 0.875rem !important; /* 14px - improved accessibility even on small screens */
   }
 
   /* Ultra-compact footer for tiny screens */
@@ -2081,7 +2126,7 @@
   .modal-footer__button {
     min-height: 36px !important; /* Very compact height for tiny screens */
     padding: 0.375rem 0.75rem !important; /* Minimal padding */
-    font-size: 0.8125rem !important; /* 13px */
+    font-size: 0.875rem !important; /* 14px - improved accessibility */
     border-radius: 4px !important; /* Smaller border radius */
   }
 }
@@ -2096,7 +2141,7 @@
   .modal-content__scrollable textarea,
   .modal-content__scrollable select {
     min-height: 44px !important; /* Standard iOS touch target */
-    font-size: 0.9375rem !important; /* 15px */
+    font-size: 1rem !important; /* 16px - improved accessibility */
   }
 }
 
