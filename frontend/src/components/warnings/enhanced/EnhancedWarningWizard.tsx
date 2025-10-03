@@ -1058,43 +1058,19 @@ return (
               </div>
             );
           })}
-        </div>
 
-        {/* Current Step Info */}
-        <div className="mobile-step-info">
-          <div
-            className="mobile-step-title-container"
-            onClick={() => setIsStepDetailsExpanded(!isStepDetailsExpanded)}
-          >
-            <div className="mobile-step-title">
-              {stepConfig[currentStep]?.title || 'Loading...'}
-            </div>
-            <button className="mobile-step-expand-btn">
-              {isStepDetailsExpanded ? (
-                <ChevronUp className="w-4 h-4" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
-            </button>
-          </div>
-
-          {/* Collapsible Step Description */}
-          {isStepDetailsExpanded && (
-            <div className="mobile-step-description">
-              <Info className="w-4 h-4 text-blue-500" />
-              <p>{stepConfig[currentStep]?.description}</p>
+          {/* Recording indicator next to step dots */}
+          {audioRecording.isRecording && (
+            <div className="mobile-recording-indicator">
+              <div className="mobile-recording-dot-pulse" />
             </div>
           )}
+        </div>
 
-          <div className="mobile-step-meta">
-            Step {currentStep + 1} of {Object.keys(stepConfig).length}
-            {/* Audio Recording Status - Mobile */}
-            {audioRecording.isRecording && (
-              <span className="mobile-audio-indicator">
-                <div className="mobile-recording-dot" />
-                Recording
-              </span>
-            )}
+        {/* Current Step Title - Simple, no dropdown */}
+        <div className="mobile-step-info">
+          <div className="mobile-step-title">
+            {stepConfig[currentStep]?.title || 'Loading...'}
           </div>
         </div>
       </div>
@@ -1121,7 +1097,7 @@ return (
               {isCompleted ? (
                 <Check className="w-3 h-3" />
               ) : (
-                stepNum
+                stepNum + 1
               )}
             </div>
             
@@ -1179,13 +1155,6 @@ return (
               )}
             </button>
           )}
-        </div>
-        
-        {/* Progress indicator on mobile */}
-        <div className="md:hidden flex items-center space-x-1">
-          <span className="text-xs text-gray-500">
-            Step {currentStep + 1} of {Object.keys(stepConfig).length}
-          </span>
         </div>
       </div>
 

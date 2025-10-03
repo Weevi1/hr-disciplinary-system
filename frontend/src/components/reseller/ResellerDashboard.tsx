@@ -68,23 +68,23 @@ export const ResellerDashboard: React.FC = () => {
       const currentUser = auth.currentUser;
       if (currentUser) {
         const idTokenResult = await currentUser.getIdTokenResult();
-        console.log('🔍 [RESELLER DEBUG] User custom claims:', idTokenResult.claims);
-        console.log('🔍 [RESELLER DEBUG] User role:', idTokenResult.claims.role);
+        Logger.debug('🔍 [RESELLER DEBUG] User custom claims:', idTokenResult.claims);
+        Logger.debug('🔍 [RESELLER DEBUG] User role:', idTokenResult.claims.role);
 
         // Auto-refresh claims if role is missing or incorrectly formatted (object instead of string)
         const roleIsInvalid = !idTokenResult.claims.role || typeof idTokenResult.claims.role === 'object';
         if (roleIsInvalid) {
-          console.warn('⚠️ Role missing or incorrectly formatted! Calling refreshUserClaims...');
+          Logger.warn('⚠️ Role missing or incorrectly formatted! Calling refreshUserClaims...');
           try {
             const { getFunctions, httpsCallable } = await import('firebase/functions');
             const functions = getFunctions(undefined, 'us-central1');
             const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
             const result = await refreshClaims({});
-            console.log('✅ Claims refreshed! Please sign out and back in:', result.data);
+            Logger.debug('✅ Claims refreshed! Please sign out and back in:', result.data);
             alert('Your user role has been refreshed! Please SIGN OUT and SIGN BACK IN for changes to take effect.');
             return; // Stop loading dashboard until user refreshes
           } catch (err) {
-            console.error('❌ Failed to refresh claims:', err);
+            Logger.error('❌ Failed to refresh claims:', err);
           }
         }
       }
@@ -163,8 +163,8 @@ export const ResellerDashboard: React.FC = () => {
   const { reseller, metrics, clients, recentCommissions, monthlyTrend } = dashboardData;
 
   return (
-    <div className="space-y-6">
-      
+    <div className="max-w-7xl mx-auto px-6 space-y-6">
+
 
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl p-6 text-white">

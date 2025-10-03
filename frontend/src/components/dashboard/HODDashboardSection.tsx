@@ -102,25 +102,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
     refreshData
   } = useDashboardData({ role: 'hod' });
 
-  // 🔄 CACHE FIX: Refresh data when user role/permissions are properly established
-  useEffect(() => {
-    // If user is a manager but has no employees, and data loading is complete, try refreshing
-    if (user?.id && organization?.id && isReady &&
-        dashboardEmployees.length === 0 &&
-        !dashboardLoading.employees &&
-        !dashboardLoading.overall) {
-
-      Logger.debug('[HODDashboard] 🔄 Manager has no employees - checking if cache refresh needed...');
-
-      // Add a slight delay to ensure all auth/role data is properly loaded
-      const refreshTimer = setTimeout(() => {
-        Logger.debug('[HODDashboard] 🔄 Refreshing employee data for manager...');
-        refreshData();
-      }, 2000); // 2 second delay to ensure user auth is fully established
-
-      return () => clearTimeout(refreshTimer);
-    }
-  }, [user?.id, organization?.id, isReady, dashboardEmployees.length, dashboardLoading.employees, dashboardLoading.overall, refreshData]);
+  // Note: Removed automatic refresh loop - if manager has 0 employees, that's a valid state
 
   // Create followUpCounts from dueFollowUps for compatibility
   const followUpCounts = {
@@ -188,7 +170,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
   // 🎯 PRODUCTION DEBUG: Only log when context is ready
   useEffect(() => {
     if (!orgLoading && contextCategories && contextCategories.length > 0) {
-      console.log('✅ [HOD] Context ready:', {
+      Logger.debug('✅ [HOD] Context ready:', {
         organization: organization?.name,
         categories: contextCategories.length,
         employees: employees.length
@@ -207,61 +189,69 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
   const handleIssueWarning = useCallback(async () => {
     if (!canCreateWarnings()) return;
 
-    console.log('🎯 Opening warning wizard with integrated audio consent...');
+    Logger.debug('🎯 Opening warning wizard with integrated audio consent...');
 
     // 🚀 OPTIMIZED: Data is already loaded via useDashboardData hook
     // Check if data is ready from unified hook
-    if (isReady && employees.length > 0 && categories.length > 0) {
-      setShowWarningWizard(true);
-    } else {
-      console.error('❌ Cannot open wizard: data not ready', {
-        isReady,
-        employees: employees.length,
-        categories: categories.length,
-        loading: dashboardLoading.overall
-      });
+    if (!isReady || dashboardLoading.overall) {
+      Logger.warn('⚠️ Please wait for data to load...');
+      return;
     }
+
+    if (categories.length === 0) {
+      Logger.error('❌ No warning categories configured');
+      alert('Cannot issue warning: No warning categories are configured for this organization.');
+      return;
+    }
+
+    if (employees.length === 0) {
+      Logger.warn('⚠️ No team members assigned');
+      alert('You have no team members assigned to you as a manager.\n\nAs a Department Manager, you can only issue warnings to employees who report directly to you.\n\nPlease contact HR to have employees assigned to your team, or switch to the HR Dashboard view if you have HR permissions.');
+      return;
+    }
+
+    setShowWarningWizard(true);
   }, [canCreateWarnings, isReady, employees.length, categories.length, dashboardLoading]);
 
   // Audio consent handling is now integrated into the wizard
 
   const handleWarningWizardComplete = useCallback(() => {
-    console.log('✅ Warning wizard completed');
+    Logger.debug('✅ Warning wizard completed');
     setShowWarningWizard(false);
   }, []);
 
   const handleWarningWizardCancel = useCallback(() => {
-    console.log('❌ Warning wizard cancelled');
+    Logger.debug('❌ Warning wizard cancelled');
     setShowWarningWizard(false);
   }, []);
 
   const handleOpenCorrectiveCounselling = useCallback(() => {
-    console.log('📋 Opening corrective counselling modal');
+    Logger.debug('📋 Opening corrective counselling modal');
     setShowCorrectiveCounselling(true);
   }, []);
 
   const handleCorrectiveCounsellingClose = useCallback(() => {
-    console.log('❌ Corrective counselling modal closed');
+    Logger.debug('❌ Corrective counselling modal closed');
     setShowCorrectiveCounselling(false);
   }, []);
 
   const handleOpenBookHRMeeting = useCallback(() => {
-    console.log('📅 Opening book HR meeting modal');
+    Logger.debug('📅 Opening book HR meeting modal');
     setShowBookHRMeeting(true);
   }, []);
 
   const handleBookHRMeetingClose = useCallback(() => {
-    console.log('❌ Book HR meeting modal closed');
+    Logger.debug('❌ Book HR meeting modal closed');
     setShowBookHRMeeting(false);
   }, []);
 
   const handleOpenReportAbsence = useCallback(() => {
-    console.log('🚫 Opening report absence modal');
+    Logger.debug('🚫 Opening report absence modal');
     setShowReportAbsence(true);
   }, []);
 
   const handleReportAbsenceClose = useCallback(() => {
-    console.log('❌ Report absence modal closed');
+    Logger.debug('❌ Report absence modal closed');
     setShowReportAbsence(false);
   }, []);
 
@@ -271,19 +261,19 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
   // ============================================
 
   const handleOpenFollowUp = useCallback((session: any) => {
-    console.log('📅 Opening follow-up for session:', session.id);
+    Logger.debug('📅 Opening follow-up for session:', session.id);
     setSelectedFollowUpSession(session);
     setShowFollowUpModal(true);
   }, []);
 
   const handleFollowUpClose = useCallback(() => {
-    console.log('❌ Follow-up modal closed');
+    Logger.debug('❌ Follow-up modal closed');
     setShowFollowUpModal(false);
     setSelectedFollowUpSession(null);
   }, []);
 
   const handleFollowUpComplete = useCallback(() => {
-    console.log('✅ Follow-up completed');
+    Logger.debug('✅ Follow-up completed');
     setShowFollowUpModal(false);
     setSelectedFollowUpSession(null);
     // Refresh follow-ups data would happen automatically via the hook
@@ -359,7 +349,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
 
       setFinalWarningEmployees(employeesWithFinal);
     } catch (error) {
-      console.error('Failed to fetch final warning employees:', error);
+      Logger.error('Failed to fetch final warning employees:', error);
     } finally {
       setLoadingFinalWarnings(false);
     }
@@ -649,7 +639,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
                 await API.warnings.create(warningData);
                 handleWarningWizardComplete();
               } catch (error) {
-                console.error('Failed to create warning:', error);
+                Logger.error('Failed to create warning:', error);
                 throw error;
               }
             }}

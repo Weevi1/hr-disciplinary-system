@@ -7,7 +7,7 @@ import React, { memo, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
-import { UserCircle, Clock } from 'lucide-react';
+import { UserCircle } from 'lucide-react';
 
 // Import themed components
 import { ThemedCard, ThemedBadge } from '../common/ThemedCard';
@@ -55,13 +55,6 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({
   }
   
   const { getPrimaryRole } = useMultiRolePermissions();
-  
-  // --- STATE FOR REAL-TIME CLOCK ---
-  const [time, setTime] = useState(new Date());
-  useEffect(() => {
-    const timerId = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timerId);
-  }, []);
 
   // --- HELPER FUNCTIONS ---
 
@@ -85,24 +78,15 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({
         return { background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))' };
     }
   };
-  
+
   const getRoleDisplayName = () => getPrimaryRole()?.replace(/-/g, ' ').toUpperCase() || 'USER';
+
   const getTimePeriod = () => {
-    const hour = time.getHours();
+    const hour = new Date().getHours();
     if (hour < 12) return 'Morning';
     if (hour < 17) return 'Afternoon';
     return 'Evening';
   };
-
-  // Formatters for different views
-  const getFormattedTime = () => time.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', hour12: true }).split(' ');
-  const getFormattedDate = (compact = false) => {
-    return compact 
-      ? time.toLocaleDateString('en-ZA', { weekday: 'long', month: 'short', day: 'numeric' })
-      : time.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  };
-
-  const [currentTime, timePeriod] = getFormattedTime();
 
   return (
     <div className={className}>
@@ -130,17 +114,12 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({
                   </h1>
                 </div>
                 <div className="hidden lg:block text-sm opacity-90 pl-4 ml-2" style={{ borderLeft: '1px solid rgba(255,255,255,0.2)' }}>
-                  {organization?.name || 'SuperUser Dashboard'} • {getFormattedDate(true)}
+                  {organization?.name || 'SuperUser Dashboard'}
                 </div>
               </div>
 
-              {/* Right: Time & Role Selector */}
+              {/* Right: Role Selector or Badge */}
               <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(4px)' }}>
-                  <Clock className="w-4 h-4 opacity-80" />
-                  <div className="text-lg font-bold">{currentTime} {timePeriod}</div>
-                </div>
-
                 {/* Multi-role selector or static badge */}
                 {selectedRole && onRoleChange ? (
                   <DashboardRoleSelector
@@ -178,18 +157,20 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({
           {/* Minimal background decorative elements for mobile */}
           <div className="absolute top-0 right-0 w-20 h-20 rounded-full -translate-y-10 translate-x-10" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}></div>
 
-          <div className="relative z-10 flex justify-between items-center p-3">
+          <div className="relative z-10 p-3 space-y-2">
 
-            {/* Left Column: Compact greeting & role */}
-            <div className="flex flex-col justify-center">
-              <p className="text-xs leading-none" style={{ opacity: 0.85 }}>Good {getTimePeriod()},</p>
-              <h1 className="text-lg font-bold leading-tight mt-0.5">{user?.firstName}! 👋</h1>
+            {/* Greeting & role badge */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs leading-none" style={{ opacity: 0.85 }}>Good {getTimePeriod()},</p>
+                <h1 className="text-lg font-bold leading-tight mt-0.5">{user?.firstName}! 👋</h1>
+              </div>
 
               {/* Compact role pill */}
               <ThemedBadge
                 variant="primary"
                 size="sm"
-                className="inline-block mt-1"
+                className="inline-block"
                 style={{
                   backgroundColor: 'rgba(255,255,255,0.15)',
                   color: 'var(--color-text-inverse)',
@@ -203,24 +184,13 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({
               </ThemedBadge>
             </div>
 
-            {/* Right Column: Compact time & date (or role selector on mobile) */}
-            <div className="text-right flex flex-col items-end justify-center">
-              {selectedRole && onRoleChange ? (
-                <DashboardRoleSelector
-                  selectedRole={selectedRole}
-                  onRoleChange={onRoleChange}
-                  className="mb-1"
-                />
-              ) : (
-                <>
-                  <div className="flex items-baseline">
-                    <span className="text-xl font-bold tracking-tight leading-none">{currentTime}</span>
-                    <span className="text-xs font-medium ml-0.5 opacity-90">{timePeriod}</span>
-                  </div>
-                  <p className="text-[10px] mt-0.5 leading-none" style={{ opacity: 0.8 }}>{getFormattedDate(true)}</p>
-                </>
-              )}
-            </div>
+            {/* Role selector below greeting */}
+            {selectedRole && onRoleChange && (
+              <DashboardRoleSelector
+                selectedRole={selectedRole}
+                onRoleChange={onRoleChange}
+              />
+            )}
           </div>
         </ThemedCard>
       )}
