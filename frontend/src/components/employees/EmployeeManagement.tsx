@@ -175,26 +175,37 @@ export const EmployeeManagement: React.FC = () => {
   }
 
   return (
-    <div className="w-full space-y-3 md:space-y-4">
+    <div className="w-full space-y-2 md:space-y-4">
 
-      {/* Compact Mobile Header / Full Desktop Header */}
-      <div className="md:bg-white/95 md:backdrop-blur-sm md:rounded-xl md:shadow-lg md:border md:border-white/50 overflow-hidden">
-        {/* Mobile: Simple Title Bar */}
-        <div className="md:hidden flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200">
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900">Employees</h3>
-            <p className="text-xs text-gray-500">{filteredEmployees.length} total</p>
-          </div>
-          {permissions.canBulkImport && (
+      {/* Mobile: Compact Count Badge */}
+      <div className="md:hidden flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
+            <Users className="w-4 h-4" />
+            {filteredEmployees.length}
+          </span>
+          {filters.search && (
             <button
-              onClick={() => setShowImportModal(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg font-medium text-sm"
+              onClick={() => setFilters({ ...filters, search: '' })}
+              className="text-xs text-gray-500 hover:text-gray-700"
             >
-              <Upload className="w-4 h-4" />
-              Import
+              Clear search
             </button>
           )}
         </div>
+        {permissions.canBulkImport && (
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium text-sm"
+          >
+            <Upload className="w-4 h-4" />
+            Import
+          </button>
+        )}
+      </div>
+
+      {/* Desktop Header Only */}
+      <div className="hidden md:block md:bg-white/95 md:backdrop-blur-sm md:rounded-xl md:shadow-lg md:border md:border-white/50 overflow-hidden">
 
         {/* Desktop: Full Header with Gradient */}
         <div className="hidden md:block bg-gradient-to-r from-indigo-600 via-purple-700 to-indigo-800 p-3">
@@ -312,9 +323,9 @@ export const EmployeeManagement: React.FC = () => {
       </div>
       </div>
             
-      {/* Show filters only in cards view for simplicity */}
+      {/* Desktop: Show filters in cards view */}
       {viewMode === 'cards' && (
-        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-md border border-white/50 p-3">
+        <div className="hidden md:block bg-white/95 backdrop-blur-sm rounded-lg shadow-md border border-white/50 p-3">
           <EmployeeFilters
             filters={filters}
             setFilters={setFilters}
@@ -324,6 +335,17 @@ export const EmployeeManagement: React.FC = () => {
           />
         </div>
       )}
+
+      {/* Mobile: Simple search bar only */}
+      <div className="md:hidden -mt-1">
+        <input
+          type="text"
+          placeholder="🔍 Search employees..."
+          value={filters.search}
+          onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all bg-white text-sm"
+        />
+      </div>
 
       {/* Main Content Views */}
       {viewMode === 'organogram' && (
@@ -348,7 +370,7 @@ export const EmployeeManagement: React.FC = () => {
       )}
 
       {viewMode === 'cards' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pb-24 md:pb-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 md:gap-3 pb-24 md:pb-0 -mt-0.5 md:mt-0">
           {paginatedEmployees.map((employee) => (
             <EmployeeCard
               key={employee.id}

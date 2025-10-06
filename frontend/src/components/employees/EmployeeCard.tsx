@@ -46,7 +46,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
       style={{ cursor: permissions.canEdit ? 'pointer' : 'default' }}
     >
       {/* Compact Header with Visual Hierarchy */}
-      <div className="px-3 py-3 sm:px-4 sm:py-4">
+      <div className="px-3 py-2.5 sm:px-4 sm:py-4">
         {/* Name & Status Row */}
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex-1 min-w-0">
@@ -78,14 +78,14 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
         </div>
 
         {/* Department & Employee Number - Compact */}
-        <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
+        <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
           <span className="truncate">{employee.profile?.department || 'N/A'}</span>
           <span className="text-gray-400">•</span>
           <span className="flex-shrink-0">#{employee.profile.employeeNumber}</span>
         </div>
 
         {/* Quick Info Pills - Mobile Optimized */}
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1">
           {/* Status Pill */}
           <span className={`
             inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full
@@ -130,13 +130,13 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
 
       {/* Actions Bar - Touch Friendly */}
       {permissions.canEdit && (
-        <div className="border-t border-gray-100 px-3 py-2 sm:px-4 bg-gray-50/50 flex gap-2">
+        <div className="border-t border-gray-100 px-3 py-2 sm:px-4 sm:py-2 bg-gray-50/50 flex gap-2">
           <button
             onClick={(e) => {
               e.stopPropagation();
               onEdit(employee);
             }}
-            className="flex-1 py-2.5 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors text-sm active:scale-95"
+            className="flex-1 py-2 sm:py-2.5 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors text-sm active:scale-95"
           >
             Edit Details
           </button>
@@ -146,7 +146,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
                 e.stopPropagation();
                 onArchive(employee);
               }}
-              className="px-3 py-2.5 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors text-sm active:scale-95"
+              className="px-3 py-2 sm:py-2.5 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors text-sm active:scale-95"
             >
               Archive
             </button>
