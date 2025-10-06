@@ -141,7 +141,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
           employment: {
             ...employee.employment,
             contractType: formData.contractType,
-            ...(formData.managerId && { managerId: formData.managerId }),
+            managerId: formData.managerId || undefined, // Always save managerId (undefined if empty)
             ...(formData.probationEndDate && { probationEndDate: new Date(formData.probationEndDate) })
           },
           isActive: employee.isActive, // Preserve current active status - use archive functionality to change status

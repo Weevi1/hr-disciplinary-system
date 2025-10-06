@@ -5,6 +5,10 @@ import path from 'path'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  define: {
+    // Ensure NODE_ENV is properly set for Logger dead code elimination
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production')
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -24,6 +28,14 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        // Remove Logger.debug calls completely in production
+        pure_funcs: ['Logger.debug', 'Logger.info', 'Logger.perf'],
+        drop_debugger: true,
+      },
+    },
     rollupOptions: {
       // Exclude legacy components from build
       external: (id) => id.includes('/_legacy/'),
@@ -73,6 +85,5 @@ export default defineConfig({
       }
     },
     target: 'esnext',
-    minify: true
   }
 })

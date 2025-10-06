@@ -1,3 +1,5 @@
+import Logger from '../utils/logger';
+
 // src/config/features.ts
 // Feature flags for gradual rollout of new functionality
 
@@ -80,7 +82,7 @@ export function getAllFeatureFlags(): FeatureFlags {
  * Log current feature flag configuration
  */
 export function logFeatureFlags(): void {
-  console.log('🚩 Feature Flags Configuration:', FEATURE_FLAGS);
+  Logger.debug('🚩 Feature Flags Configuration:', FEATURE_FLAGS);
 }
 
 // Development environment defaults (for .env.development)

@@ -28,6 +28,7 @@ import { ThemedButton } from '../common/ThemedButton';
 
 // Import PDF preview modal
 import { PDFPreviewModal } from '../warnings/enhanced/PDFPreviewModal';
+import Logger from '../../utils/logger';
 
 // ============================================
 // INTERFACES
@@ -103,7 +104,7 @@ HR Department`,
       setScriptCopied(true);
       setTimeout(() => setScriptCopied(false), 3000);
     } catch (err) {
-      console.error('Failed to copy script:', err);
+      Logger.error('Failed to copy script:', err);
     }
   };
 
@@ -168,7 +169,7 @@ HR Department`,
         phoneNumber: whatsappData.formattedPhone
       });
     } catch (err) {
-      console.error('Failed to complete delivery:', err);
+      Logger.error('Failed to complete delivery:', err);
     } finally {
       setIsUploading(false);
     }

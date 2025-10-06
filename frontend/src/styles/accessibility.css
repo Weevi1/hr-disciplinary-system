@@ -193,7 +193,8 @@ label {
 
 /* Focus trap management for modals */
 .modal-open {
-  overflow: hidden;
+  /* Allow body to scroll so footer can scroll into view */
+  overflow: auto !important;
 }
 
 /* Ensure modal backdrops are not focusable */

@@ -4,6 +4,7 @@
 // ✅ Professional HR Decision Tools with Documentation
 
 import React, { useState, useCallback } from 'react';
+import Logger from '../../../utils/logger';
 import {
   X,
   Scale,
@@ -161,7 +162,7 @@ export const AppealReviewModal: React.FC<AppealReviewModalProps> = ({
 
       onClose();
     } catch (error) {
-      console.error('Failed to submit appeal decision:', error);
+      Logger.error('Failed to submit appeal decision:', error);
       alert('Failed to submit decision. Please try again.');
     } finally {
       setIsSubmitting(false);

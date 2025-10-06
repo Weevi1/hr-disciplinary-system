@@ -14,6 +14,7 @@ import { EmployeeImportModal } from './EmployeeImportModal';
 import { EmployeeArchiveModal } from './EmployeeArchiveModal';
 import { calculateEmployeePermissions } from '../../types';
 import type { Employee } from '../../types';
+import Logger from '../../utils/logger';
 import {
   Users, Plus, Upload, Search, Filter, List, Grid, Archive, ChevronDown
 } from 'lucide-react';
@@ -81,7 +82,7 @@ export const MobileEmployeeManagement: React.FC = () => {
 
   // Debug logging
   React.useEffect(() => {
-    console.log('🔍 [MobileEmployeeManagement] Data status:', {
+    Logger.debug('🔍 [MobileEmployeeManagement] Data status:', {
       organizationId: organization?.id,
       userId: user?.id,
       loading: loading?.overall || loading?.employees || false,
@@ -145,7 +146,7 @@ export const MobileEmployeeManagement: React.FC = () => {
 
   // Debug for development
   if (process.env.NODE_ENV === 'development') {
-    console.log('📊 Employee Management:', {
+    Logger.debug('📊 Employee Management:', {
       employeesCount: employees.length,
       filteredCount: filteredEmployees.length,
       userRole: user?.role?.id,

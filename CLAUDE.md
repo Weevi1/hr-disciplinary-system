@@ -478,6 +478,281 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 
 ---
 
+### **🔧 Recent Fixes (Session 11) - WARNING WIZARD MOBILE & AUDIO FIXES**
+
+- **Mobile Scrolling Fix - Next Button Accessibility 📱**
+  - ✅ **Root Cause 1**: `.modal-content__scrollable` had **zero bottom padding** across all screen sizes
+  - ✅ **Root Cause 2**: `.modal-header__center` (progress section) had **no CSS** - used default flex causing layout issues
+  - ✅ **Root Cause 3**: `.modal-system` had `padding-top: env(safe-area-inset-top)` pushing footer below viewport
+  - ✅ **Root Cause 4**: `.modal-open` only set `overflow: hidden` but didn't constrain body height - MainLayout's `min-h-screen` made body taller than viewport
+  - ✅ **Impact**: Users couldn't scroll to see footer buttons - modal footer pushed below visible area
+  - ✅ **Fix 1**: Added **1rem (16px) bottom padding** to scrollable content area (6 instances)
+  - ✅ **Fix 2**: Added `flex-shrink: 0` to progress section to prevent it from expanding
+  - ✅ **Fix 3**: Removed safe-area padding from modal-system (already constrained by fixed positioning)
+  - ✅ **Fix 4**: Added `height: 100vh/100dvh` to `.modal-open` class to constrain body to viewport height
+  - ✅ **Fix 5**: Added `min-height: 0` to `.modal-content` to allow flex shrinking
+  - ✅ **Files Changed**:
+    - `frontend/src/modal-system.css` - lines 150-158, 199-204, 651, 659, 1895, 1911, 1980, 2107, 2137
+    - `frontend/src/styles/accessibility.css` - lines 195-199
+  - ✅ **Result**: Modal constrained to viewport - footer always visible at bottom, content scrolls correctly
+  - ✅ **Coverage**: Fixed for all screen sizes (tiny phones to modern large screens)
+
+- **Audio Recording Loop Fix - Max Size Handling 🎙️**
+  - ✅ **Root Cause**: `ondataavailable` fires every second, continuing to add chunks even while async `stopRecording()` executes
+  - ✅ **Issue**: Size kept growing (801KB → 803KB → 805KB → 903KB...) creating infinite loop
+  - ✅ **Fix Applied**:
+    - Check `isStoppingRef` flag at START of `ondataavailable` to skip queued chunks
+    - Call `mediaRecorder.stop()` **directly** when max size reached (not async function)
+    - Immediately stops MediaRecorder from queuing new events
+  - ✅ **Files Changed**: `frontend/src/hooks/warnings/useAudioRecording.ts` - line 452-480
+  - ✅ **Result**: Recording stops immediately at max size with all audio preserved
+  - ✅ **Behavior**: Hits 800KB → sets flag → stops recorder → skips remaining chunks → processes final blob
+
+---
+
+### **🔧 Recent Fixes (Session 11 Continued) - DROPDOWN POSITIONING & Z-INDEX**
+
+- **Dropdown/Selector Positioning Fix - Mobile Floating Modals 📱**
+  - ✅ **Issue**: With modal now scrollable (`position: absolute`), dropdowns appeared from footer upward
+  - ✅ **Mobile Solution**: Changed dropdowns to `position: fixed` with `z-index: 10001` (above parent modal)
+  - ✅ **Desktop Behavior**: Kept `position: absolute top-full` for proper dropdown positioning
+  - ✅ **Components Fixed**:
+    - `EmployeeSelector.tsx` - Warning wizard employee selection
+    - `CategorySelector.tsx` - Warning wizard category selection
+    - `UniversalEmployeeSelector.tsx` - Used in HR Meeting, Absence Reports, Counselling
+  - ✅ **Mobile Modal Z-Index**: Increased from `9998` → `10000` for employee/category modals
+  - ✅ **Result**: Dropdowns now appear as floating overlays on mobile, proper dropdowns on desktop
+  - ✅ **Coverage**: All modals (Warning, HR Meeting, Report Absence, Counselling)
+
+### **🔧 Recent Fixes (Session 11 Continued) - MOBILE MODAL CENTERING**
+
+- **Mobile Selection Modal Centering Fix 🎯**
+  - ✅ **Issue**: Employee/Category selection modals appeared at bottom of screen instead of centered
+  - ✅ **Root Causes Discovered**:
+    1. Using `position: absolute` positioned relative to scrollable parent (not viewport)
+    2. Using percentage units (`top: 50%`) calculated from parent height
+    3. Backdrop also positioned as `absolute` instead of `fixed`
+  - ✅ **Iterations**:
+    - Attempt 1: Changed `margin: auto 0 0 0` → `margin: auto` (didn't work)
+    - Attempt 2: Added flexbox `align-items: center; justify-content: center` (still bottom)
+    - Attempt 3: `position: absolute; top: 50%; transform: translate(-50%, -50%)` (still wrong)
+    - Attempt 4: Changed to `position: fixed` (got closer)
+    - Final Fix: Used viewport units `top: 50vh` then adjusted to `45vh` for header offset
+  - ✅ **Final Solution**:
+    ```css
+    .mobile-employee-modal-backdrop {
+      position: fixed !important; /* Not absolute */
+    }
+    .mobile-employee-modal-content {
+      position: fixed !important; /* Not absolute */
+      top: 45vh !important; /* Use vh, not %, offset for header */
+      left: 50vw !important;
+      transform: translate(-50%, -50%) !important;
+    }
+    ```
+  - ✅ **Files Changed**: `frontend/src/modal-system.css` - lines 932-965, 1079-1113
+  - ✅ **Result**: Modals perfectly centered in viewport, accounting for MainLayout header
+  - ✅ **Applied To**: Both `.mobile-employee-modal` and `.mobile-category-modal`
+
+---
+
+### **🔧 Recent Fixes (Session 11 Continued) - STEP 2 UX IMPROVEMENTS**
+
+- **Warning Wizard Step 2 - User-Friendly Redesign ✨**
+  - ✅ **Issue**: Step 2 was "very factual, but not very user friendly" - managers unclear on what to do next
+  - ✅ **Improvements Applied**:
+    1. **Action-Oriented Header**: Added "📋 Review & Prepare for Warning Meeting" with time estimate (5-10 minutes)
+    2. **Numbered Workflow Guide**: Clear 4-step process with emoji indicators:
+       - 1️⃣ Review the system recommendation below (legal analysis)
+       - 2️⃣ Read the employee warning script thoroughly
+       - 3️⃣ Conduct a private meeting with the employee
+       - 4️⃣ Collect both signatures (yours and employee's)
+    3. **Warning Severity Badge**: Shows warning level and offense type at a glance
+    4. **Friendlier LRA Text**: Changed "Legal analysis complete" → "🎯 System Recommendation"
+    5. **Context-Aware Explanation**:
+       - First offense: "Since this is a first offense, we recommend starting with [level] rather than a formal written warning. This follows best practice progressive discipline."
+       - Escalation: "This employee has X previous warning(s). We're escalating to [level] to follow proper progressive discipline procedures."
+    6. **Script Section Enhancement**: Added clear instructions - "Read this script before your meeting. It ensures you cover all legal requirements..."
+    7. **"What Happens After Signatures?" Callout**: Info box explaining:
+       - ✅ Warning officially recorded
+       - 📧 Employee receives copy
+       - 🔔 HR notified automatically
+       - ⏱️ 60-day countdown begins
+    8. **Visual Hierarchy**: Added emoji icons throughout (📋, 🎯, 📖, ℹ️, ✍️)
+  - ✅ **Files Changed**: `frontend/src/components/warnings/enhanced/steps/LegalReviewSignaturesStepV2.tsx`
+  - ✅ **Result**: Managers now have clear guidance on workflow and understand what happens at each stage
+  - ✅ **User Feedback**: "Tell me before you implement" → User approved all improvements
+
+### **🔧 Recent Fixes (Session 11 Continued) - SIGNATURE VALIDATION**
+
+- **Digital Signature Pad - Validation Fix ✍️**
+  - ✅ **Issue**: Signatures showing "Signature too simple" error even though marked as "✓ Signed"
+  - ✅ **Root Cause**: Overly strict validation requiring 2+ strokes (line 253)
+  - ✅ **Problem**: Most real signatures are single continuous strokes, not multiple strokes
+  - ✅ **Old Validation**: `strokes.length >= 2 && strokes.some(stroke => stroke.points.length >= 3)`
+  - ✅ **New Validation**:
+    - Single stroke with 5+ points (realistic signature motion), OR
+    - 2+ strokes (initials/complex signatures)
+  - ✅ **UX Improvements**:
+    - Removed "Signature too simple" error message entirely
+    - Removed amber border for "invalid" signatures
+    - All signatures now get green border when captured
+    - Removed debug "Strokes: X | Valid: Y" text
+  - ✅ **Image Loading Fix**: Added proper scaling and error handling for initial signature display
+  - ✅ **Files Changed**: `frontend/src/components/warnings/enhanced/steps/DigitalSignaturePad.tsx`
+  - ✅ **Result**: Any signature drawn is now considered valid - no confusing error messages
+
+### **🔧 Recent Fixes (Session 11 Continued) - STEP 3 UX IMPROVEMENTS**
+
+- **Warning Wizard Step 3 - Delivery Setup Redesign ✨**
+  - ✅ **Issue**: Step 3 was functional but not user-friendly - managers unclear on HR's role and next steps
+  - ✅ **User Feedback**: "Too much focus on what HR will do... this is not the manager's business"
+  - ✅ **Improvements Applied**:
+    1. **Clear Header**: "📬 Delivery Setup" with explanation that this is the final step
+    2. **Simplified Workflow Guide**: 3-step process (removed HR internal details):
+       - 1️⃣ Choose delivery method (email, WhatsApp, or print)
+       - 2️⃣ Review the document (optional preview)
+       - 3️⃣ Notify your HR team - your job is done!
+    3. **Manager-Focused Callout**: "Your HR Team Takes Over From Here"
+       - 📧 HR will deliver the warning to [employee name] using your chosen method
+       - ✅ Your responsibility ends once you click "Notify HR"
+       - 📊 You can track delivery status in the warnings dashboard
+    4. **Step Labels**: "📋 Step 1: Choose Delivery Method" and "📄 Step 2: Review & Send to HR"
+    5. **Personalized Text**: Shows employee name in delivery method selection
+    6. **Visual Hierarchy**: Emoji icons (📬, 📋, 📄, ℹ️, 📧, ✅, 📊) throughout
+    7. **Cleaner Layout**: Removed redundant warning summary card, added compact badge instead
+  - ✅ **Removed**: HR internal process details (collect proof, upload proof, notify manager)
+  - ✅ **Files Changed**: `frontend/src/components/warnings/enhanced/steps/DeliveryCompletionStep.tsx`
+  - ✅ **Result**: Managers understand their job is done after clicking "Notify HR" - no technical HR details
+  - ✅ **Consistency**: Matches Step 2 redesign pattern (workflow guide + callouts + visual hierarchy)
+
+- **Auto-Scroll to Top on Step Navigation 📜**
+  - ✅ **Issue**: When navigating to Steps 2 and 3, page didn't scroll to top - user had to manually scroll
+  - ✅ **Root Cause**: Old scroll logic only scrolled `.modal-content__scrollable`, but with new scrollable modal layout, need to scroll window
+  - ✅ **Fix Applied**: Updated scroll logic to:
+    1. Scroll window to top (for scrollable modal layout)
+    2. Also scroll modal content if it has internal scroll
+    3. Scroll modal-system container into view
+    4. Fallback to instant scroll after 500ms if smooth scroll didn't work
+  - ✅ **Files Changed**: `frontend/src/components/warnings/enhanced/EnhancedWarningWizard.tsx` - lines 275-304
+  - ✅ **Result**: All step transitions (1→2, 2→3) now auto-scroll to top smoothly
+  - ✅ **Coverage**: Works for all steps, not just 2 and 3
+
+### **🔧 Recent Fixes (Session 11 Continued) - PDF PREVIEW MODAL REDESIGN**
+
+- **PDFPreviewModal - Complete Mobile-First Rewrite 📱**
+  - ✅ **Issue**: Desktop-centric design with broken mobile UX, duplicate buttons, information overload
+  - ✅ **Critical Problems Fixed**:
+    1. **Broken iframe on mobile** - PDF preview doesn't work in mobile browsers
+    2. **Action button chaos** - Download, QR Code, Open appeared in TWO places
+    3. **Information overload** - Excessive employee/incident cards forcing endless scrolling
+    4. **Wrong modal pattern** - Desktop centered modal doesn't work on mobile
+    5. **Tiny touch targets** - Buttons too small for mobile (< 48px)
+    6. **Metadata nobody needs** - Verbose footer text and technical details
+
+  - ✅ **Mobile Layout (Bottom Sheet)**:
+    - Slides up from bottom (native mobile pattern)
+    - Max height 85vh with scroll
+    - **Minimal metadata**: Just name, warning type, filename, file size
+    - **Large touch targets**: Primary button 56px, secondary 48px
+    - **Clear hierarchy**: Download (blue, large) → QR Code + Preview (secondary)
+    - **No iframe**: Preview button opens new tab instead
+    - **Single action location**: All buttons in one section
+
+  - ✅ **Desktop Layout (Sidebar + Preview)**:
+    - Left sidebar (320px): Metadata + actions
+    - Right side: Full-height PDF iframe preview
+    - **No footer duplication**: Actions only in sidebar
+    - **Better space usage**: Preview fills entire right panel
+    - **Single action column**: Not scattered across modal
+
+  - ✅ **Universal Improvements**:
+    - ✅ Responsive detection (window.innerWidth < 768)
+    - ✅ Removed ALL duplicate buttons
+    - ✅ Removed verbose employee/incident detail cards
+    - ✅ Removed footer metadata ("Generated by HR System", "LRA Compliant")
+    - ✅ Primary action clarity (Download is blue/prominent)
+    - ✅ Simplified loading states
+    - ✅ Cleaner error handling
+    - ✅ Auto-scroll to top on open
+
+  - ✅ **Validation Improvements**:
+    - ✅ Prevents auto-generation when data is incomplete
+    - ✅ Shows clear "Incomplete Warning Data" message with missing items listed
+    - ✅ "Return to Wizard" button to complete missing fields
+    - ✅ No more "Unknown Employee" or "Category Not Selected" PDFs
+
+  - ✅ **Files Changed**: `frontend/src/components/warnings/enhanced/PDFPreviewModal.tsx`
+  - ✅ **Result**: Mobile users get centered modal with large touch targets, desktop users get sidebar + preview layout
+  - ✅ **Impact**: Prevents generating PDFs with placeholder data, clearer user guidance
+
+---
+
+### **🔧 Recent Fixes (Session 12) - WIZARD FINALIZATION & EMPLOYEE DATA**
+
+- **60-Day Countdown Removal - Reduced Confusion ⏱️**
+  - ✅ **Issue**: Step 2 showed "⏱️ 60-day countdown begins for this warning" - confusing for managers (only applies to Manual Warning Entry)
+  - ✅ **Fix**: Removed misleading countdown text from LegalReviewSignaturesStepV2.tsx
+  - ✅ **Now Shows**: Only relevant info - warning recorded, employee notified, HR alerted
+  - ✅ **Files Changed**: `frontend/src/components/warnings/enhanced/steps/LegalReviewSignaturesStepV2.tsx`
+
+- **Employee Name Display - Fixed Data Structure 👤**
+  - ✅ **Issue**: Employee names showing "undefined undefined" - accessing `selectedEmployee.firstName` directly
+  - ✅ **Root Cause**: Employee interface uses nested `profile` object (profile.firstName, profile.lastName)
+  - ✅ **Fixes Applied**:
+    - **DeliveryCompletionStep.tsx**: UI display and delivery notification creation
+    - **PDFPreviewModal.tsx**: PDF generation data extraction
+  - ✅ **Pattern**: `selectedEmployee.profile?.firstName || selectedEmployee.firstName || 'Unknown'`
+  - ✅ **Fallbacks**: Supports both nested and legacy flat structures
+  - ✅ **Result**: Correct employee names in Step 3, PDF modal, console logs, and delivery notifications
+
+- **QR Code Generation - Duplicate Prevention 🔄**
+  - ✅ **Issue**: React StrictMode causing duplicate QR generation (two QR codes for one modal open)
+  - ✅ **Fix**: Added `useRef` pattern to prevent duplicate effects in QRCodeDownloadModal.tsx
+  - ✅ **Pattern**: `hasGeneratedRef.current` flag checked before generation, reset on modal close
+  - ✅ **Result**: Single QR code generation per modal open, reduced Firebase resource usage
+
+- **Modal Button Cleanup - Reduced Redundancy 🎯**
+  - ✅ **PDFPreviewModal**:
+    - Removed "Download PDF" button from both mobile and desktop views
+    - Users can download from Preview tab instead
+    - Kept only QR Code and Preview buttons
+  - ✅ **QRCodeDownloadModal**:
+    - Removed "Test Link" button (unnecessary - link works or it doesn't)
+    - Removed "Revoke" button and handler functions
+    - Removed unused imports (Eye, Trash2)
+    - Updated security notice: removed "Can be revoked instantly" text
+    - Now shows only "Copy Download Link" as primary action
+  - ✅ **Files Changed**:
+    - `frontend/src/components/warnings/enhanced/PDFPreviewModal.tsx`
+    - `frontend/src/components/warnings/modals/QRCodeDownloadModal.tsx`
+  - ✅ **Result**: Cleaner UX, less button chaos, clearer primary actions
+
+- **Finalize Button - Footer Integration ✅**
+  - ✅ **Issue**: "Notify HR Team" button in Step 3 content - inconsistent with wizard navigation pattern
+  - ✅ **User Request**: Move to footer next to "Previous", rename to "Finalize"
+  - ✅ **Implementation**:
+    - Added `onFinalizeReady` prop to DeliveryCompletionStep
+    - Passes `{ canFinalize: boolean, finalizeHandler: () => void }` to parent
+    - Modified wizard `getNextButtonState()` to show "Finalize" button on last step
+    - Updated `nextStep()` handler to call finalization when on final step
+    - Removed "Notify HR Team" button from step content
+    - Auto-closes wizard 2 seconds after successful HR notification
+  - ✅ **Files Changed**:
+    - `frontend/src/components/warnings/enhanced/steps/DeliveryCompletionStep.tsx`
+    - `frontend/src/components/warnings/enhanced/EnhancedWarningWizard.tsx`
+  - ✅ **Result**: Consistent footer navigation, "Finalize" button appears next to "Previous" on Step 3
+  - ✅ **UX Flow**: Select delivery → Click Finalize → HR notified → Wizard auto-closes → Return to dashboard
+
+- **Employee Email Fallback - Firestore Compatibility 📧**
+  - ✅ **Issue**: `employeeEmail: undefined` causing Firestore errors (Unsupported field value)
+  - ✅ **Fix**: Changed fallback from `undefined` to empty string `''`
+  - ✅ **Pattern**: `selectedEmployee.profile?.email || selectedEmployee.email || ''`
+  - ✅ **Impact**: Delivery notifications save successfully even without employee email
+  - ✅ **Files Changed**: `frontend/src/components/warnings/enhanced/steps/DeliveryCompletionStep.tsx`
+
+---
+
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, and **WCAG AA accessibility compliance**.*
 
-*Last Updated: 2025-10-03 - Session 10: Accessibility improvements, mobile UX polish, and wizard header cleanup*
+*Last Updated: 2025-10-06 - Session 12: Wizard finalization flow, employee data structure fixes, QR duplicate prevention, modal button cleanup, footer integration*

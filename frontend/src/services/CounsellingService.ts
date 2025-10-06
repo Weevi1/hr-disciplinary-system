@@ -4,12 +4,13 @@ import Logger from '../utils/logger';
 // Handles counselling lifecycle, follow-ups, and notifications
 
 import { FirebaseService } from './FirebaseService';
+import { TimeService } from './TimeService';
 import { query, collection, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import type { 
-  CorrectiveCounselling, 
-  CounsellingFollowUp, 
-  CounsellingSummary 
+import type {
+  CorrectiveCounselling,
+  CounsellingFollowUp,
+  CounsellingSummary
 } from '../types/counselling';
 
 // 🏢 COLLECTIONS
@@ -119,14 +120,14 @@ export class CounsellingService {
       const followUp: Omit<CounsellingFollowUp, 'id'> = {
         ...followUpData,
         counsellingId,
-        createdDate: new Date().toISOString()
+        createdDate: TimeService.getServerTimestamp()
       };
-      
+
       const followUpId = await FirebaseService.createDocument(
-        COLLECTIONS.COUNSELLING_FOLLOWUPS, 
+        COLLECTIONS.COUNSELLING_FOLLOWUPS,
         followUp
       );
-      
+
       // Update original counselling record
       await FirebaseService.updateDocument(
         COLLECTIONS.CORRECTIVE_COUNSELLING,
@@ -134,7 +135,7 @@ export class CounsellingService {
         {
           followUpCompleted: true,
           improvementNoted: followUpData.improvementObserved,
-          lastUpdated: new Date().toISOString()
+          lastUpdated: TimeService.getServerTimestamp()
         }
       );
       
@@ -231,9 +232,9 @@ export class CounsellingService {
           followUpDate: counsellingSession.followUpDate
         },
         read: false,
-        createdAt: new Date().toISOString()
+        createdAt: TimeService.getServerTimestamp()
       };
-      
+
       await FirebaseService.createDocument(COLLECTIONS.NOTIFICATIONS, notification);
       Logger.debug('🔔 Follow-up notification created for manager:', managerId)
     } catch (error) {

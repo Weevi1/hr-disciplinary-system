@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Shield, AlertCircle, CheckCircle, Volume2, Lock } from 'lucide-react';
 import { LoadingSpinner } from '../../../common/LoadingComponents';
+import Logger from '../../../../utils/logger';
 
 interface MicrophonePermissionHandlerProps {
   onPermissionGranted: () => void;
@@ -102,7 +103,7 @@ export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerPr
       }
 
     } catch (error: any) {
-      console.error('Microphone permission error:', error);
+      Logger.error('Microphone permission error:', error);
 
       // 🔧 SINGLETON: Reset global state on error
       globalPermissionState.isRequesting = false;

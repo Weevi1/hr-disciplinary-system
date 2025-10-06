@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Logger from '../../utils/logger';
 import { DataService } from '../../services/DataService';
+import { TimeService } from '../../services/TimeService';
 import CommissionService from '../../services/CommissionService';
 import { EncryptionService } from '../../services/EncryptionService';
 import { PIIAccessLogger } from '../../services/PIIAccessLogger';
@@ -220,7 +221,7 @@ The reseller profile has been saved successfully with ID: ${resellerId}
         territory: formData.territory,
         commissionRate: formData.commissionRate,
         bankDetails: encryptedBankDetails, // Encrypted banking details
-        updatedAt: new Date().toISOString()
+        updatedAt: TimeService.getServerTimestamp()
       });
 
       Logger.success('Reseller updated successfully');
@@ -284,7 +285,7 @@ The reseller profile has been saved successfully with ID: ${resellerId}
     try {
       await DataService.updateReseller(reseller.id, {
         isActive: !reseller.isActive,
-        updatedAt: new Date().toISOString()
+        updatedAt: TimeService.getServerTimestamp()
       });
       
       Logger.success(`Reseller ${reseller.isActive ? 'deactivated' : 'activated'}`);

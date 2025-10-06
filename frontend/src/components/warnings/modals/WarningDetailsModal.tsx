@@ -992,7 +992,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
           }}
           onPDFGenerated={(blob, filename) => {
             Logger.debug('PDF generated:', filename)
-            console.log('Warning data for PDF:', {
+            Logger.debug('Warning data for PDF:', {
               categoryName: warning.categoryName,
               category: warning.category,
               signatures: warning.signatures

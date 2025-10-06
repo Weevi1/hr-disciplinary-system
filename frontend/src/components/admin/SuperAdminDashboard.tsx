@@ -140,24 +140,24 @@ export const SuperAdminDashboard = () => {
       const user = auth.currentUser;
       if (user) {
         const idTokenResult = await user.getIdTokenResult();
-        console.log('🔍 [DEBUG] User custom claims:', idTokenResult.claims);
-        console.log('🔍 [DEBUG] User role:', idTokenResult.claims.role);
-        console.log('🔍 [DEBUG] Is super-user?', idTokenResult.claims.role === 'super-user');
+        Logger.debug('🔍 [DEBUG] User custom claims:', idTokenResult.claims);
+        Logger.debug('🔍 [DEBUG] User role:', idTokenResult.claims.role);
+        Logger.debug('🔍 [DEBUG] Is super-user?', idTokenResult.claims.role === 'super-user');
 
         // Auto-refresh claims if role is missing or incorrectly formatted (object instead of string)
         const roleIsInvalid = !idTokenResult.claims.role || typeof idTokenResult.claims.role === 'object';
         if (roleIsInvalid) {
-          console.warn('⚠️ Role missing or incorrectly formatted! Calling refreshUserClaims...');
+          Logger.warn('⚠️ Role missing or incorrectly formatted! Calling refreshUserClaims...');
           try {
             const { getFunctions, httpsCallable } = await import('firebase/functions');
             const functions = getFunctions(undefined, 'us-central1');
             const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
             const result = await refreshClaims({});
-            console.log('✅ Claims refreshed! Please sign out and back in:', result.data);
+            Logger.debug('✅ Claims refreshed! Please sign out and back in:', result.data);
             alert('Your user role has been refreshed! Please SIGN OUT and SIGN BACK IN for changes to take effect.');
             return; // Stop loading dashboard until user refreshes
           } catch (err) {
-            console.error('❌ Failed to refresh claims:', err);
+            Logger.error('❌ Failed to refresh claims:', err);
           }
         }
       }

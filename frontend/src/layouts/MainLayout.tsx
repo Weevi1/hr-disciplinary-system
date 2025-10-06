@@ -22,6 +22,7 @@ import { ThemeProvider } from '../contexts/ThemeContext';
 import { UnifiedModal } from '../components/common/UnifiedModal';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import Logger from '../utils/logger';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -95,7 +96,7 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
       await sendPasswordResetEmail(auth, user.email);
       setResetPasswordSuccess(true);
     } catch (error: any) {
-      console.error('Password reset error:', error);
+      Logger.error('Password reset error:', error);
       setResetPasswordError(error.message || 'Failed to send password reset email');
     } finally {
       setResetPasswordLoading(false);

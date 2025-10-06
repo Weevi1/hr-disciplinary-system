@@ -150,6 +150,32 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
     return () => handleBodyScrollLock(false);
   }, []);
 
+  // 🕐 30-MINUTE SESSION TIMEOUT (FIXED - no dependency loop)
+  useEffect(() => {
+    const TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+    Logger.debug('⏱️ Starting 30-minute wizard session timeout')
+
+    const timeoutId = setTimeout(() => {
+      Logger.debug('⏱️ Wizard session timed out after 30 minutes - closing wizard')
+      alert('⏱️ Session Timeout\n\nThis warning session has been open for 30 minutes and will now close. Please start a new warning if needed.');
+
+      // Force cleanup audio (use ref to avoid dependency)
+      if (audioRecording) {
+        audioRecording.forceCleanup();
+      }
+
+      // Close wizard (onCancel is stable from props)
+      onCancel();
+    }, TIMEOUT_MS);
+
+    // Only run once on mount, cleanup on unmount
+    return () => {
+      clearTimeout(timeoutId);
+      Logger.debug('⏱️ Wizard session timeout cleared')
+    };
+  }, []); // Empty deps - only run once!
+
   // ============================================
   // STATE - USING STANDARD EscalationRecommendation
   // ============================================
@@ -178,7 +204,10 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   // 🔧 FIXED: Using EscalationRecommendation instead of local LRARecommendation
   const [lraRecommendation, setLraRecommendation] = useState<EscalationRecommendation | null>(null);
   const [finalWarningId, setFinalWarningId] = useState<string | null>(null);
-  
+
+  // Finalization state for step 3
+  const [finalizeData, setFinalizeData] = useState<{ canFinalize: boolean; finalizeHandler: () => void } | null>(null);
+
   // 🔥 Navigation state to prevent race conditions
   const [isNavigating, setIsNavigating] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<WizardStep | null>(null);
@@ -192,6 +221,9 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   });
 
   const [signaturesFinalized, setSignaturesFinalized] = useState(false);
+
+  // Audio upload status for Step 2
+  const [audioUploadStatus, setAudioUploadStatus] = useState<'recording' | 'stopping' | 'uploading' | 'complete' | null>(null);
 
   // 🔧 FIX: Initialize logging hook with safe defaults
   const logging = useWizardLogging({
@@ -243,25 +275,35 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   }, [currentStep, isNavigating]);
 
 
-// 🔧 ENHANCED: Scroll to top when step changes with debugging
+// 🔧 ENHANCED: Scroll to top when step changes (works with scrollable modal layout)
 useEffect(() => {
   Logger.debug('🔍 Step changed, attempting scroll to top:', currentStep)
-  
+
+  // Since modal is now scrollable with MainLayout, scroll the window
+  // Also try scrolling the modal content in case it has internal scroll
+
+  // 1. Scroll window/body to top (for scrollable modal layout)
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // 2. Also scroll modal content if it exists (fallback for internal scroll)
   const contentElement = document.querySelector('.modal-content__scrollable');
-  Logger.debug('🔍 Content element found:', !!contentElement)
-  
   if (contentElement) {
-    Logger.debug('🔍 Current scroll position:', contentElement.scrollTop)
     contentElement.scrollTo({ top: 0, behavior: 'smooth' });
-    
-    // Fallback: Force scroll if smooth doesn't work
-    setTimeout(() => {
-      if (contentElement.scrollTop > 0) {
-        Logger.debug('⚡ Fallback: Force instant scroll')
-        contentElement.scrollTop = 0;
-      }
-    }, 300);
   }
+
+  // 3. Scroll to modal-system container if it exists
+  const modalSystem = document.querySelector('.modal-system');
+  if (modalSystem) {
+    modalSystem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Fallback: Force instant scroll after animation
+  setTimeout(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    if (contentElement && contentElement.scrollTop > 0) {
+      contentElement.scrollTop = 0;
+    }
+  }, 500);
 }, [currentStep]);
 
   // ============================================
@@ -514,12 +556,17 @@ useEffect(() => {
   // ============================================
   
   const nextStep = useCallback(async () => {
-    logging.trackSuccess('NEXT_STEP_REQUESTED', { 
-      currentStep, 
-      hasLRA: !!lraRecommendation 
+    logging.trackSuccess('NEXT_STEP_REQUESTED', {
+      currentStep,
+      hasLRA: !!lraRecommendation
     });
 
-    if (currentStep >= WizardStep.DELIVERY_COMPLETION) {
+    // Handle finalization on last step
+    if (currentStep === WizardStep.DELIVERY_COMPLETION) {
+      if (finalizeData?.canFinalize && finalizeData?.finalizeHandler) {
+        logging.trackSuccess('FINALIZING_WARNING', {});
+        finalizeData.finalizeHandler();
+      }
       return;
     }
 
@@ -559,8 +606,8 @@ useEffect(() => {
     });
     setCurrentStep(nextStepNumber);
     
-  }, [currentStep, formData.employeeId, formData.categoryId, formData.incidentDescription, 
-      lraRecommendation, isAnalyzing, generateLRARecommendation, logging]);
+  }, [currentStep, formData.employeeId, formData.categoryId, formData.incidentDescription,
+      lraRecommendation, isAnalyzing, generateLRARecommendation, logging, finalizeData]);
 
   const previousStep = useCallback(() => {
     if (currentStep > WizardStep.INCIDENT_DETAILS) {
@@ -602,17 +649,18 @@ useEffect(() => {
         // 🎤 CRITICAL: Auto-stop audio recording FIRST before creating warning
         let audioUrl = null;
         if (audioRecording?.isRecording) {
+          setAudioUploadStatus('stopping');
           Logger.debug('🎤 Auto-stopping audio recording before saving warning...')
           logging.trackSuccess('AUDIO_AUTO_STOP_BEFORE_SAVE', {
             duration: audioRecording.duration,
             size: audioRecording.size
           });
-          
+
           // Get the audioUrl directly from stopRecording return value
           audioUrl = await audioRecording.stopRecording();
-          
+
           Logger.success(21068)
-          
+
           if (!audioUrl) {
             Logger.warn('⚠️ Audio URL not returned from stopRecording. Will create warning with placeholder.')
           }
@@ -701,25 +749,26 @@ useEffect(() => {
         // 🔥 STEP 2: Upload audio to Firebase and update warning document
         if (audioUrl && audioRecording?.uploadToFirebaseFromUrl && audioRecording?.recordingId && warningId) {
           try {
+            setAudioUploadStatus('uploading');
             Logger.debug('☁️ Uploading audio to Firebase Storage...')
-            
+
             // Upload audio to Firebase Storage using the returned audioUrl directly
             const firebaseAudioUrl = await audioRecording.uploadToFirebaseFromUrl(
-              audioUrl, 
-              audioRecording.recordingId, 
-              organization.id, 
+              audioUrl,
+              audioRecording.recordingId,
+              organization.id,
               warningId
             );
-            
+
             if (firebaseAudioUrl) {
               Logger.success(25382)
-              
+
               // Use Firebase functions for document updates
-              
+
               // 🔥 Update warning document with Firebase audio URL (SHARDED COLLECTION)
               Logger.debug('📝 Updating warning document with Firebase audio URL...')
               const warningRef = doc(db, 'organizations', organization.id, 'warnings', warningId);
-              
+
               await updateDoc(warningRef, {
                 'audioRecording.url': firebaseAudioUrl,
                 'audioRecording.storageePath': `warnings/${organization.id}/${warningId}/audio/${audioRecording.recordingId}.webm`,
@@ -727,7 +776,7 @@ useEffect(() => {
                 'audioRecording.uploadedAt': new Date(),
                 updatedAt: new Date()
               });
-              
+
               Logger.success(26224)
               logging.trackSuccess('AUDIO_UPLOADED_AND_UPDATED', {
                 warningId,
@@ -735,6 +784,8 @@ useEffect(() => {
                 duration: audioRecording.duration,
                 size: audioRecording.size
               });
+
+              setAudioUploadStatus('complete');
 
               // 🎤 CRITICAL: Force cleanup audio recording after successful upload
               Logger.debug('🧹 Force cleaning up audio recording after successful upload...')
@@ -805,9 +856,9 @@ useEffect(() => {
       icon: Scale,
     },
     [WizardStep.DELIVERY_COMPLETION]: {
-      title: 'Deliver & Complete',
-      subtitle: `Step ${WizardStep.DELIVERY_COMPLETION + 1} of 3`,
-      description: 'Choose delivery method, generate warning document, and complete the warning process.',
+      title: 'Delivery Setup',
+      subtitle: `Step ${WizardStep.DELIVERY_COMPLETION + 1} of 3 - Administrative`,
+      description: '✅ Warning saved. Choose how HR will deliver to employee.',
       icon: Send,
     }
   }), []);
@@ -877,6 +928,8 @@ useEffect(() => {
             isAnalyzing={isAnalyzing}
             signaturesFinalized={signaturesFinalized}
             currentSignatures={signatures}
+            warningId={finalWarningId}
+            audioUploadStatus={audioUploadStatus}
           />
         );
 
@@ -884,6 +937,7 @@ useEffect(() => {
         return (
           <DeliveryCompletionStep
             selectedEmployee={selectedEmployee}
+            selectedCategory={selectedCategory}
             formData={formData}
             lraRecommendation={lraRecommendation}
             signatures={signatures}
@@ -893,6 +947,7 @@ useEffect(() => {
             onComplete={handleWizardComplete}
             onWarningCreated={setFinalWarningId}
             warningId={finalWarningId}
+            onFinalizeReady={setFinalizeData}
           />
         );
 
@@ -926,18 +981,36 @@ useEffect(() => {
   
   const getNextButtonState = () => {
     if (currentStep === WizardStep.DELIVERY_COMPLETION) {
-      return { show: false, disabled: false, loading: false, text: 'Complete' };
+      // Show "Finalize" button on last step
+      return {
+        show: true,
+        disabled: !finalizeData?.canFinalize,
+        loading: false,
+        text: 'Finalize'
+      };
     }
-    
+
     if (currentStep === WizardStep.INCIDENT_DETAILS && !isStepValid) {
-      return { show: true, disabled: true, loading: false, text: 'Next' };
+      // Calculate what's missing for dynamic button text
+      const missing = [];
+      if (!formData.employeeId) missing.push('Select employee');
+      else if (!formData.categoryId) missing.push('Choose category');
+      else if (!formData.incidentLocation || formData.incidentLocation.length < 3) missing.push('Add location');
+      else if (!formData.incidentDescription || formData.incidentDescription.length < 20) {
+        const words = formData.incidentDescription?.trim().split(/\s+/).filter(w => w.length > 0) || [];
+        const wordsNeeded = Math.max(0, 20 - words.length);
+        missing.push(`Add ${wordsNeeded} more word${wordsNeeded === 1 ? '' : 's'}`);
+      }
+
+      const buttonText = missing.length > 0 ? `Next - ${missing[0]}` : 'Next';
+      return { show: true, disabled: true, loading: false, text: buttonText };
     }
-    
-    if (currentStep === WizardStep.INCIDENT_DETAILS && 
+
+    if (currentStep === WizardStep.INCIDENT_DETAILS &&
         isStepValid && (isNavigating || isAnalyzing)) {
       return { show: true, disabled: true, loading: true, text: 'Analyzing...' };
     }
-    
+
     return { show: true, disabled: !isStepValid, loading: false, text: 'Next' };
   };
 
@@ -1116,7 +1189,10 @@ return (
 
       {/* 🎯 WIZARD CONTENT - The key fix for scrolling */}
       <div className="modal-content">
-        <div className="modal-content__scrollable">
+        <div
+          className="modal-content__scrollable step-transition"
+          key={currentStep}
+        >
           {renderStepContent()}
         </div>
       </div>

@@ -16,8 +16,10 @@ import { UniversalEmployeeSelector } from '../common/UniversalEmployeeSelector';
 import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
+import { TimeService } from '../../services/TimeService';
 import { API } from '../../api';
 import type { Employee } from '../../types/core';
+import Logger from '../../utils/logger';
 
 interface UnifiedBookHRMeetingProps {
   isOpen: boolean;
@@ -241,7 +243,7 @@ export const UnifiedBookHRMeeting: React.FC<UnifiedBookHRMeetingProps> = ({
         }));
         setEmployees(transformedEmployees);
       } catch (error) {
-        console.error('Failed to load employees:', error);
+        Logger.error('Failed to load employees:', error);
         setError('Failed to load employees');
       }
     };
@@ -293,9 +295,9 @@ export const UnifiedBookHRMeeting: React.FC<UnifiedBookHRMeetingProps> = ({
         ...(employeeConsent && employeeSignature && { employeeSignature }),
         employeeConsent: employeeConsent || false,
         status: 'pending',
-        requestDate: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        requestDate: TimeService.getServerTimestamp(),
+        createdAt: TimeService.getServerTimestamp(),
+        updatedAt: TimeService.getServerTimestamp()
       };
 
       await DatabaseShardingService.createDocument(
@@ -311,7 +313,7 @@ export const UnifiedBookHRMeeting: React.FC<UnifiedBookHRMeetingProps> = ({
         onClose();
       }, 3000);
     } catch (err) {
-      console.error('Failed to submit meeting request:', err);
+      Logger.error('Failed to submit meeting request:', err);
       setError('Failed to submit meeting request. Please try again.');
     } finally {
       setLoading(false);

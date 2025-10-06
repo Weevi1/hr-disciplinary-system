@@ -32,7 +32,8 @@ import {
   ArrowRight,
   Eye,
   Loader2,
-  Check
+  Check,
+  RefreshCw
 } from 'lucide-react';
 
 // Import Firebase functions for document updates
@@ -68,6 +69,7 @@ import type { UseAudioRecordingReturn } from '../../../../hooks/warnings/useAudi
 
 interface DeliveryCompletionStepProps {
   selectedEmployee: any;
+  selectedCategory: any;
   formData: any;
   lraRecommendation: any;
   signatures: any;
@@ -77,6 +79,7 @@ interface DeliveryCompletionStepProps {
   onComplete: () => void;
   onWarningCreated?: (warningId: string) => void;
   warningId?: string; // The warning ID created in step 2
+  onFinalizeReady?: (data: { canFinalize: boolean; finalizeHandler: () => void }) => void; // Pass finalize state and handler
 }
 
 interface DeliveryOption {
@@ -93,6 +96,7 @@ interface DeliveryOption {
 
 export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
   selectedEmployee,
+  selectedCategory,
   formData,
   lraRecommendation,
   signatures,
@@ -101,15 +105,28 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
   audioRecording,
   onComplete,
   onWarningCreated,
-  warningId
+  warningId,
+  onFinalizeReady
 }) => {
 
   // ============================================
   // HOOKS
   // ============================================
-  
+
   const { user } = useAuth();
   const { organization } = useOrganization();
+
+  // DEBUG: Log employee data
+  useEffect(() => {
+    Logger.debug('🔍 DeliveryCompletionStep - Props:', {
+      selectedEmployee,
+      selectedCategory,
+      employeeName: selectedEmployee ? `${selectedEmployee.profile?.firstName} ${selectedEmployee.profile?.lastName}` : 'NONE',
+      categoryName: selectedCategory?.name || 'NONE',
+      formDataEmployeeId: formData?.employeeId,
+      formDataCategoryId: formData?.categoryId
+    });
+  }, [selectedEmployee, selectedCategory, formData]);
 
   // ============================================
   // STATE
@@ -204,12 +221,12 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
       const deliveryNotificationId = await DeliveryNotificationService.createDeliveryNotification({
         warningId,
         organizationId: organization.id,
-        
-        // Employee details
+
+        // Employee details - using nested profile structure with fallbacks
         employeeId: selectedEmployee.id,
-        employeeName: `${selectedEmployee.firstName} ${selectedEmployee.lastName}`,
-        employeeEmail: selectedEmployee.email,
-        employeePhone: selectedEmployee.phone,
+        employeeName: `${selectedEmployee.profile?.firstName || selectedEmployee.firstName || 'Unknown'} ${selectedEmployee.profile?.lastName || selectedEmployee.lastName || 'Employee'}`,
+        employeeEmail: selectedEmployee.profile?.email || selectedEmployee.email || '',
+        employeePhone: selectedEmployee.profile?.phoneNumber || selectedEmployee.phone || '',
         
         // Warning details
         warningLevel: lraRecommendation?.suggestedLevel || formData.level || 'counselling',
@@ -270,6 +287,29 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
   }, [warningId, selectedDeliveryMethod, isCreatingWarning, deliveryNotificationId]);
 
   const selectedOption = deliveryOptions.find(opt => opt.id === selectedDeliveryMethod);
+
+  // ============================================
+  // EXPOSE FINALIZATION STATE TO PARENT
+  // ============================================
+
+  // Notify parent with finalize state and handler
+  useEffect(() => {
+    onFinalizeReady?.({
+      canFinalize: canCompleteDelivery,
+      finalizeHandler: handleCreateWarning
+    });
+  }, [canCompleteDelivery, handleCreateWarning, onFinalizeReady]);
+
+  // Auto-close wizard after successful warning creation
+  useEffect(() => {
+    if (warningCreated && deliveryNotificationId) {
+      // Wait 2 seconds to show success message, then close
+      const timer = setTimeout(() => {
+        onComplete();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [warningCreated, deliveryNotificationId, onComplete]);
 
   // ============================================
   // RENDER
@@ -383,52 +423,61 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header - Simplified */}
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Delivery & Completion</h2>
-      </div>
-
-      {/* Step 1 Style Warning Summary */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+    <div className="space-y-3">
+      {/* Success Banner - Warning Already Saved */}
+      <ThemedCard padding="md" className="border-l-4" style={{ borderLeftColor: 'var(--color-success)' }}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-success)' }}>
+            <CheckCircle className="w-6 h-6 text-white" />
+          </div>
           <div>
-            <h3 className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>Warning Summary</h3>
-            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Employee: {selectedEmployee?.firstName} {selectedEmployee?.lastName}</p>
+            <h2 className="text-base font-bold" style={{ color: 'var(--color-text)' }}>Warning Successfully Recorded</h2>
+            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              Warning #{warningId?.slice(-8)} • Signatures captured • Audio uploaded
+            </p>
           </div>
         </div>
+      </ThemedCard>
 
-        {/* Compact Summary Card - Step 1 Style */}
-        <ThemedCard padding="sm" hover className="border-l-4" style={{ borderLeftColor: 'var(--color-success)' }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <ThemedBadge variant="success" size="sm" className="font-semibold">
-                {lraRecommendation?.recommendedLevel || 'Counselling Session'}
-              </ThemedBadge>
-              <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--color-success)' }}></div>
-                <span className="font-medium" style={{ color: 'var(--color-success)' }}>#{warningId?.slice(-8)} created</span>
-                {audioRecording?.audioUrl && <span>• Audio included</span>}
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
-              <span className="text-xs font-medium" style={{ color: 'var(--color-success)' }}>Ready</span>
-            </div>
-          </div>
-        </ThemedCard>
-      </div>
-
-      {/* Delivery Method - Step 1 Style Compact */}
-      <div className="space-y-2">
+      {/* Simplified Header - No Workflow Guide */}
+      <ThemedCard padding="md" className="border-l-4" style={{ borderLeftColor: 'var(--color-success)' }}>
         <div className="flex items-center gap-2">
-          <Send className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
-          <div>
-            <h3 className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>Delivery Method</h3>
-            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Choose how HR will deliver this warning</p>
+          <CheckCircle className="w-5 h-5" style={{ color: 'var(--color-success)' }} />
+          <div className="flex-1">
+            <h2 className="text-base font-bold" style={{ color: 'var(--color-text)' }}>
+              Ready to Hand Off to HR
+            </h2>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+              Choose delivery method and notify your HR team
+            </p>
           </div>
         </div>
+      </ThemedCard>
+
+      {/* Warning Summary - Employee & Level */}
+      <ThemedCard padding="sm" className="border-l-4" style={{ borderLeftColor: 'var(--color-success)' }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <User className="w-4 h-4" style={{ color: 'var(--color-text-secondary)' }} />
+            <div>
+              <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Employee</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                {selectedEmployee?.profile?.firstName} {selectedEmployee?.profile?.lastName}
+              </p>
+            </div>
+          </div>
+          <ThemedBadge variant="success" size="sm" className="font-semibold">
+            {lraRecommendation?.recommendedLevel || 'Counselling Session'}
+          </ThemedBadge>
+        </div>
+      </ThemedCard>
+
+      {/* Delivery Method - Simplified */}
+      <div className="space-y-3">
+        <h3 className="font-semibold text-sm flex items-center gap-2" style={{ color: 'var(--color-text)' }}>
+          <Send className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+          How should HR deliver this warning?
+        </h3>
 
         {/* Compact Delivery Options */}
         <div className="grid grid-cols-1 gap-2">
@@ -487,95 +536,54 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
         </div>
       </div>
 
-      {/* Final Review - Step 1 Style Compact */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Eye className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
-          <div>
-            <h3 className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>Final Review</h3>
-            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Preview document and complete delivery process</p>
+      {/* Secondary Action - Preview (Optional) */}
+      {!deliveryNotificationId && (
+        <div className="space-y-3">
+          <button
+            onClick={handlePreviewPDF}
+            className="w-full py-3 px-4 rounded-lg border transition-all hover:shadow-sm"
+            style={{
+              borderColor: 'var(--color-border)',
+              backgroundColor: 'var(--color-card-background)',
+              color: 'var(--color-text-secondary)'
+            }}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Eye className="w-4 h-4" />
+              <span className="text-sm">Preview Document (Optional)</span>
+            </div>
+          </button>
+
+          {/* What Happens Next Info */}
+          <div className="text-xs text-center px-4" style={{ color: 'var(--color-text-secondary)' }}>
+            Your HR team will handle delivery and proof of receipt
           </div>
         </div>
-
-        {/* Compact Action Cards */}
-        <div className="grid grid-cols-1 gap-2">
-          {/* Preview Button */}
-          <ThemedCard
-            padding="sm"
-            hover
-            className="cursor-pointer border-l-4"
-            style={{ borderLeftColor: 'var(--color-secondary)' }}
-            onClick={handlePreviewPDF}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Eye className="w-4 h-4" style={{ color: 'var(--color-secondary)' }} />
-                <div>
-                  <p className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>Preview Document</p>
-                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Review warning before sending to HR</p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4" style={{ color: 'var(--color-text-tertiary)' }} />
-            </div>
-          </ThemedCard>
-
-          {/* Notify HR Button */}
-          <ThemedCard
-            padding="sm"
-            hover={!isCreatingWarning && canCompleteDelivery}
-            className={`transition-all border-l-4 ${
-              canCompleteDelivery && !deliveryNotificationId ? 'cursor-pointer' : ''
-            } ${!canCompleteDelivery && !deliveryNotificationId ? 'opacity-50' : ''}`}
-            style={{
-              borderLeftColor: deliveryNotificationId
-                ? 'var(--color-success)'
-                : canCompleteDelivery
-                  ? 'var(--color-primary)'
-                  : 'var(--color-border)',
-              backgroundColor: deliveryNotificationId ? 'var(--color-alert-success-bg)' : 'transparent'
-            }}
-            onClick={!isCreatingWarning && canCompleteDelivery ? handleCreateWarning : undefined}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {isCreatingWarning ? (
-                  <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--color-primary)' }} />
-                ) : deliveryNotificationId ? (
-                  <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
-                ) : (
-                  <Send className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
-                )}
-                <div>
-                  <p className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>
-                    {isCreatingWarning ? 'Notifying HR...' :
-                     deliveryNotificationId ? 'HR Notified' :
-                     'Notify HR'}
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                    {deliveryNotificationId
-                      ? `Delivery notification sent via ${selectedDeliveryMethod}`
-                      : 'Send delivery instructions to HR team'
-                    }
-                  </p>
-                </div>
-              </div>
-              {!deliveryNotificationId && canCompleteDelivery && !isCreatingWarning && (
-                <ArrowRight className="w-4 h-4" style={{ color: 'var(--color-text-tertiary)' }} />
-              )}
-            </div>
-          </ThemedCard>
-        </div>
-      </div>
+      )}
 
       {/* Status and Errors - Simplified */}
       {audioUploadError && (
         <ThemedAlert variant="error">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 mt-0.5" style={{ color: 'var(--color-error)' }} />
-            <div>
-              <span className="text-sm font-medium">Error</span>
-              <p className="text-xs mt-1">{audioUploadError}</p>
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2 flex-1">
+              <AlertTriangle className="w-4 h-4 mt-0.5" style={{ color: 'var(--color-error)' }} />
+              <div>
+                <span className="text-sm font-medium">Error</span>
+                <p className="text-xs mt-1">{audioUploadError}</p>
+              </div>
             </div>
+            <ThemedButton
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setAudioUploadError(null);
+                handleCreateWarning();
+              }}
+              className="flex items-center gap-1"
+            >
+              <RefreshCw className="w-3 h-3" />
+              Retry
+            </ThemedButton>
           </div>
         </ThemedAlert>
       )}
@@ -605,6 +613,7 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
           onClose={() => setShowPDFPreview(false)}
           warningData={{
             selectedEmployee: selectedEmployee,
+            selectedCategory: selectedCategory,
             formData: formData,
             lraRecommendation: lraRecommendation,
             signatures: signatures,

@@ -230,11 +230,19 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
 
       const img = new Image();
       img.onload = () => {
+        const rect = canvas.getBoundingClientRect();
+
+        // Clear canvas first
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
+
+        // Draw the signature image scaled to fit the canvas display size
+        ctx.drawImage(img, 0, 0, rect.width, rect.height);
         setHasSignature(true);
+      };
+      img.onerror = () => {
+        console.error('Failed to load signature image');
       };
       img.src = initialSignature;
     }
@@ -249,8 +257,13 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
     };
   }, []);
 
-  // Signature validation
-  const isValidSignature = strokes.length >= 2 && strokes.some(stroke => stroke.points.length >= 3);
+  // Signature validation - Allow single stroke signatures (realistic for most people)
+  const isValidSignature =
+    strokes.length >= 1 && // At least one stroke
+    (
+      strokes.some(stroke => stroke.points.length >= 5) || // Single stroke with 5+ points (real signature motion)
+      strokes.length >= 2 // OR multiple strokes (initials/complex signatures)
+    );
 
   return (
     <div className={`space-y-3 ${className}`}>
@@ -280,8 +293,7 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
       <div className={`
         relative border-2 border-dashed rounded-lg bg-white
         ${disabled ? 'border-gray-200 bg-gray-50' : 'border-gray-300 hover:border-gray-400'}
-        ${hasSignature && isValidSignature ? 'border-green-300 bg-green-50' : ''}
-        ${hasSignature && !isValidSignature ? 'border-amber-300 bg-amber-50' : ''}
+        ${hasSignature ? 'border-green-300 bg-green-50' : ''}
       `}>
         <canvas
           ref={canvasRef}
@@ -303,19 +315,10 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
           </div>
         )}
 
-        {hasSignature && !isValidSignature && (
-          <div className="absolute top-2 right-2 bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-full">
-            Signature too simple
-          </div>
-        )}
+        {/* Removed "Signature too simple" warning - if user signed, it's valid */}
       </div>
 
-      {/* Stroke count indicator for debugging */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="text-xs text-gray-400">
-          Strokes: {strokes.length} | Valid: {isValidSignature ? 'Yes' : 'No'}
-        </div>
-      )}
+      {/* Debug info removed - signatures are now auto-validated */}
     </div>
   );
 };

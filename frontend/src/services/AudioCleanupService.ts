@@ -189,7 +189,7 @@ export class AudioCleanupService {
    */
   static async requestAudioDeletion(request: AudioDeletionRequest): Promise<boolean> {
     try {
-      console.log('🗑️ Requesting manual audio deletion:', {
+      Logger.debug('🗑️ Requesting manual audio deletion:', {
         warningId: request.warningId,
         reason: request.reason
       });

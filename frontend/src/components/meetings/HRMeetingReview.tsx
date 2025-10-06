@@ -11,6 +11,7 @@ import {
 
 import { useAuth } from '../../auth/AuthContext';
 import { FirebaseService } from '../../services/FirebaseService';
+import { TimeService } from '../../services/TimeService';
 
 // 🏢 COLLECTIONS - Same as BookHRMeeting
 const COLLECTIONS = {
@@ -162,8 +163,8 @@ export const HRMeetingReview: React.FC = () => {
         scheduledTime: updateData.scheduledTime || undefined,
         hrNotes: updateData.hrNotes.trim() || undefined,
         hrReviewedBy: user.id,
-        hrReviewedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        hrReviewedAt: TimeService.getServerTimestamp(),
+        updatedAt: TimeService.getServerTimestamp()
       };
 
       // ✅ PATTERN: Use FirebaseService.updateDocument like other components

@@ -200,19 +200,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const roleIsInvalid = !idTokenResult.claims.role || typeof idTokenResult.claims.role === 'object';
 
             if (roleIsInvalid) {
-              console.warn('⚠️ [AUTH] Role missing or incorrectly formatted! Calling refreshUserClaims...');
+              Logger.warn('⚠️ [AUTH] Role missing or incorrectly formatted! Calling refreshUserClaims...');
               try {
                 const { getFunctions, httpsCallable } = await import('firebase/functions');
                 const functions = getFunctions(undefined, 'us-central1');
                 const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
                 await refreshClaims({});
-                console.log('✅ [AUTH] Claims refreshed! Signing out...');
+                Logger.debug('✅ [AUTH] Claims refreshed! Signing out...');
                 // Sign out to force token refresh on next login
                 await auth.signOut();
                 alert('Your user role has been refreshed! Please SIGN IN AGAIN.');
                 return;
               } catch (err) {
-                console.error('❌ [AUTH] Failed to refresh claims:', err);
+                Logger.error('❌ [AUTH] Failed to refresh claims:', err);
               }
             }
 

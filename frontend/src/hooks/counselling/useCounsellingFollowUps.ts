@@ -63,7 +63,7 @@ export const useCounsellingFollowUps = () => {
         total: followUps.length
       });
       
-      console.log('✅ Follow-ups loaded:', {
+      Logger.debug('✅ Follow-ups loaded:', {
         total: followUps.length,
         overdue,
         dueSoon

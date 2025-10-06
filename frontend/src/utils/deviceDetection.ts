@@ -1,3 +1,5 @@
+import Logger from '../utils/logger';
+
 /**
  * 🚨 2012-ERA DEVICE DETECTION UTILITIES
  * Critical for South Africa rollout - many users have older Android devices
@@ -167,7 +169,7 @@ export const monitorPerformance = (capabilities: DeviceCapabilities) => {
       const usedMemory = memInfo.usedJSHeapSize / 1048576; // MB
 
       if (usedMemory > 50) { // 50MB threshold for legacy devices
-        console.warn('High memory usage detected on legacy device:', usedMemory.toFixed(2), 'MB');
+        Logger.warn('High memory usage detected on legacy device:', usedMemory.toFixed(2), 'MB');
 
         // Trigger garbage collection hint if available
         if (window.gc) {
@@ -198,7 +200,7 @@ export const initializeLegacySupport = () => {
 
   // Log device info for debugging
   if (capabilities.isLegacyDevice) {
-    console.log('Legacy device detected:', {
+    Logger.debug('Legacy device detected:', {
       browser: capabilities.browserInfo,
       hasModernAudio: capabilities.hasModernAudio,
       hasModernCSS: capabilities.hasModernCSS,

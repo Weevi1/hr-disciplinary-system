@@ -78,9 +78,9 @@ class CommissionService {
         companyAmount: companyAmount,
         
         status: 'calculated', // Will become 'pending' after 30 days
-        
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       };
 
       // Save commission record
@@ -147,9 +147,9 @@ class CommissionService {
           totalCommission,
           
           commissions,
-          
+
           payoutStatus: 'pending',
-          payoutDate: new Date().toISOString()
+          payoutDate: serverTimestamp()
         };
 
         // Save report

@@ -29,6 +29,7 @@ import { ThemedButton } from '../common/ThemedButton';
 
 // Import PDF preview modal
 import { PDFPreviewModal } from '../warnings/enhanced/PDFPreviewModal';
+import Logger from '../../utils/logger';
 
 // ============================================
 // INTERFACES
@@ -209,7 +210,7 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
         filingChecklist
       });
     } catch (err) {
-      console.error('Failed to complete delivery:', err);
+      Logger.error('Failed to complete delivery:', err);
     }
   };
 

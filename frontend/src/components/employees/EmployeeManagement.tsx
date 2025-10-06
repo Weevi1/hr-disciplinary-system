@@ -32,6 +32,7 @@ import {
 // Import legacy skeleton loaders for 2012-era devices
 import { LegacySkeletonDashboard, LegacyLoadingMessage } from '../common/LegacySkeletonLoader';
 import { LoadingState } from '../common/LoadingState';
+import Logger from '../../utils/logger';
 
 export const EmployeeManagement: React.FC = () => {
   const { user, organization } = useAuth();
@@ -130,14 +131,14 @@ export const EmployeeManagement: React.FC = () => {
         break;
       case 'export':
         // Export selected employees
-        console.log('Exporting employees:', employees);
+        Logger.debug('Exporting employees:', employees);
         break;
       case 'email':
         // Send bulk email
-        console.log('Sending email to employees:', employees);
+        Logger.debug('Sending email to employees:', employees);
         break;
       default:
-        console.log('Bulk action:', action, employees);
+        Logger.debug('Bulk action:', action, employees);
     }
   }, []);
 

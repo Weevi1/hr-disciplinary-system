@@ -4,6 +4,7 @@
 import React, { useContext } from 'react';
 import { OrganizationContext } from '../../contexts/OrganizationContext';
 import { Logo } from './Logo';
+import Logger from '../../utils/logger';
 
 interface BrandedLogoProps {
   size?: 'small' | 'medium' | 'large' | 'xlarge';
@@ -44,7 +45,7 @@ export const BrandedLogo: React.FC<BrandedLogoProps> = ({
           alt={`${companyName} Logo`}
           className={`${sizeClass} flex-shrink-0 object-contain rounded-md`}
           onError={(e) => {
-            console.warn('Organization logo failed to load, falling back to system <File> logo');
+            Logger.warn('Organization logo failed to load, falling back to system <File> logo');
             const img = e.target as HTMLImageElement;
             const fallbackDiv = img.nextElementSibling as HTMLElement;
             img.style.display = 'none';

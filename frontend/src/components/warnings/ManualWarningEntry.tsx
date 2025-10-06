@@ -14,6 +14,7 @@ import { HistoricalWarningDisclaimer } from './HistoricalWarningDisclaimer';
 import { CustomDatePicker } from '../common/CustomDatePicker';
 import type { Employee, WarningLevel } from '../../types/core';
 import type { WarningCategory } from '../../services/WarningService';
+import Logger from '../../utils/logger';
 
 interface ManualWarningEntryProps {
   isOpen: boolean;
@@ -83,7 +84,7 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
   currentUserId,
   organizationId
 }) => {
-  console.log('🔵 [DEBUG] ManualWarningEntry component rendered:', {
+  Logger.debug('🔵 [DEBUG] ManualWarningEntry component rendered:', {
     isOpen,
     employeesCount: employees?.length,
     categoriesCount: categories?.length,
@@ -269,7 +270,7 @@ export const ManualWarningEntry: React.FC<ManualWarningEntryProps> = ({
       onSuccess();
       onClose();
     } catch (err) {
-      console.error('Error creating historical warning:', err);
+      Logger.error('Error creating historical warning:', err);
       setError(err instanceof Error ? err.message : 'Failed to create warning');
     } finally {
       setIsSubmitting(false);
