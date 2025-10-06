@@ -71,7 +71,11 @@ export interface Warning {
   incidentTime: string;
   incidentLocation: string;
   additionalNotes?: string;
-  
+
+  // 🆕 Override tracking (for custom escalation paths)
+  wasOverridden?: boolean; // True if manager overrode system recommendation
+  originalRecommendedLevel?: WarningLevel; // Original system recommendation for audit trail
+
   // Administrative
   issueDate: Date;
   expiryDate: Date;
@@ -328,6 +332,7 @@ export class WarningService {
 
   /**
    * Determine suggested warning level based on active warnings and escalation path
+   * 🆕 RESPECTS OVERRIDES: Uses actual issued level, whether system-recommended or manager-overridden
    * Returns 'hr_intervention' when employee has final written warning
    */
   private static determineSuggestedLevel(
@@ -340,24 +345,32 @@ export class WarningService {
       Logger.debug('🆕 [ESCALATION] No active warnings - starting with:', firstLevel)
       return firstLevel;
     }
-    
+
     // Check if employee already has final written warning
     const hasFinalWritten = activeWarnings.some(warning => warning.level === 'final_written');
     if (hasFinalWritten) {
       Logger.warn('🚨 [HR INTERVENTION] Employee has final written warning - HR intervention required')
       return 'hr_intervention' as any; // Signal for HR intervention
     }
-    
-    // Find highest level in active warnings
+
+    // 🆕 Find highest level in active warnings (respects overridden levels)
+    // This automatically handles custom escalation paths because it uses the ACTUAL level issued,
+    // whether that was the system recommendation or a manager override
     let highestCurrentLevel: WarningLevel = escalationPath[0] || 'counselling';
     let highestIndex = -1;
-    
+    let wasOverridden = false;
+
     for (const warning of activeWarnings) {
       const index = escalationPath.indexOf(warning.level);
       if (index > highestIndex) {
         highestIndex = index;
         highestCurrentLevel = warning.level;
+        wasOverridden = warning.wasOverridden || false;
       }
+    }
+
+    if (wasOverridden) {
+      Logger.debug('⚖️ [ESCALATION] Highest warning was manager-overridden, respecting custom path');
     }
     
     Logger.debug(9224)
@@ -380,6 +393,7 @@ export class WarningService {
 
   /**
    * Generate human-readable escalation reason
+   * 🆕 Mentions if previous warnings were overridden
    */
   private static generateEscalationReason(
     activeWarnings: Warning[],
@@ -394,7 +408,11 @@ export class WarningService {
     const lastWarning = activeWarnings[0];
     const daysSince = Math.floor((Date.now() - lastWarning.issueDate.getTime()) / (1000 * 60 * 60 * 24));
 
-    return `Employee has ${warningCount} active warning${warningCount > 1 ? 's' : ''} on record. Most recent warning was issued ${daysSince} days ago. Progressive discipline policy requires escalation to ${getLevelLabel(suggestedLevel)}.`;
+    // Check if any warnings were overridden
+    const hasOverrides = activeWarnings.some(w => w.wasOverridden);
+    const overrideNote = hasOverrides ? ' Note: Previous warnings include manager-overridden levels.' : '';
+
+    return `Employee has ${warningCount} active warning${warningCount > 1 ? 's' : ''} on record. Most recent warning was issued ${daysSince} days ago. Progressive discipline policy requires escalation to ${getLevelLabel(suggestedLevel)}.${overrideNote}`;
   }
 
   /**
@@ -456,43 +474,80 @@ export class WarningService {
   // ============================================
 
   /**
-   * Get active warnings for employee
+   * Get active warnings for employee using SERVER-SIDE time validation
+   * 🔒 FRAUD-PROOF: Uses server time to prevent device clock manipulation
    */
   static async getActiveWarnings(employeeId: string, organizationId?: string): Promise<Warning[]> {
     try {
       Logger.debug('📋 [WARNINGS] Getting active warnings for employee:', employeeId)
-      
+
       if (!organizationId) {
         Logger.warn('⚠️ [WARNINGS] No organizationId provided, using DataService fallback')
-        return await DataService.getActiveWarningsForEmployee(employeeId);
+        const org = await DataService.getOrganization();
+        organizationId = org.id;
       }
-      
-      // Use sharded collection path
-      const warningsRef = collection(db, 'organizations', organizationId, 'warnings');
-      const q = query(
-        warningsRef,
-        where('employeeId', '==', employeeId),
-        where('isActive', '==', true),
-        orderBy('issueDate', 'desc')
-      );
-      
-      const snapshot = await getDocs(q);
-      const warnings = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        issueDate: doc.data().issueDate?.toDate() || new Date(),
-        expiryDate: doc.data().expiryDate?.toDate() || new Date(),
-        incidentDate: doc.data().incidentDate?.toDate() || new Date(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-        updatedAt: doc.data().updatedAt?.toDate() || new Date()
-      })) as Warning[];
-      
-      Logger.success(12879)
-      return warnings;
-      
-    } catch (error) {
-      Logger.error('❌ [WARNINGS] Error getting active warnings:', error)
+
+      // 🔒 USE SERVER-SIDE FUNCTION for fraud-proof validation
+      const functions = await import('firebase/functions');
+      const { getFunctions, httpsCallable } = functions;
+      const functionsInstance = getFunctions();
+      const getActiveWarningsServerSide = httpsCallable(functionsInstance, 'getActiveWarningsServerSide');
+
+      const result = await getActiveWarningsServerSide({
+        employeeId,
+        organizationId
+      });
+
+      if (result.data && typeof result.data === 'object' && 'success' in result.data && result.data.success) {
+        const data = result.data as { success: boolean; warnings: any[]; serverTime: string };
+        const warnings = data.warnings.map(w => ({
+          ...w,
+          issueDate: new Date(w.issueDate),
+          expiryDate: new Date(w.expiryDate),
+          incidentDate: new Date(w.incidentDate),
+          createdAt: new Date(w.createdAt),
+          updatedAt: new Date(w.updatedAt),
+          deliveryDate: w.deliveryDate ? new Date(w.deliveryDate) : undefined,
+          signatureDate: w.signatureDate ? new Date(w.signatureDate) : undefined
+        })) as Warning[];
+
+        Logger.success(`📋 [WARNINGS] Retrieved ${warnings.length} active warnings using SERVER time (${data.serverTime})`);
+        return warnings;
+      }
+
+      Logger.warn('⚠️ [WARNINGS] Server function returned unexpected result, using fallback');
       return [];
+
+    } catch (error) {
+      Logger.error('❌ [WARNINGS] Error getting active warnings from server, using client fallback:', error)
+
+      // Fallback to client-side query if server function fails
+      try {
+        const warningsRef = collection(db, 'organizations', organizationId!, 'warnings');
+        const q = query(
+          warningsRef,
+          where('employeeId', '==', employeeId),
+          where('isActive', '==', true),
+          orderBy('issueDate', 'desc')
+        );
+
+        const snapshot = await getDocs(q);
+        const warnings = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          issueDate: doc.data().issueDate?.toDate() || new Date(),
+          expiryDate: doc.data().expiryDate?.toDate() || new Date(),
+          incidentDate: doc.data().incidentDate?.toDate() || new Date(),
+          createdAt: doc.data().createdAt?.toDate() || new Date(),
+          updatedAt: doc.data().updatedAt?.toDate() || new Date()
+        })) as Warning[];
+
+        Logger.warn(`⚠️ [WARNINGS] Fallback succeeded with ${warnings.length} warnings (client time)`);
+        return warnings;
+      } catch (fallbackError) {
+        Logger.error('❌ [WARNINGS] Fallback also failed:', fallbackError);
+        return [];
+      }
     }
   }
 

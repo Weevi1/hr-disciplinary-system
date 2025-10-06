@@ -159,6 +159,8 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
         employee: signatures.employee
       },
       recommendation: lraRecommendation,
+      // ✅ Use the actual warning level from formData (which includes manual overrides)
+      warningLevel: formData.level || lraRecommendation?.suggestedLevel || 'counselling',
       issueDate: new Date(),
       deliveryMethod: deliveryChoice?.method || 'email'
     };
@@ -224,7 +226,8 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
           position: extractedData.employee.position,
           email: extractedData.employee.email
         },
-        warningLevel: extractedData.recommendation?.suggestedLevel || 'verbal',
+        // ✅ Use the actual warning level (includes manual overrides from Step 2)
+        warningLevel: extractedData.warningLevel || 'counselling',
         category: extractedData.category.name,
         description: extractedData.incident.description,
         incidentDate: new Date(extractedData.incident.date),
@@ -329,7 +332,8 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
           position: extractedData.employee.position,
           email: extractedData.employee.email
         },
-        warningLevel: extractedData.recommendation?.suggestedLevel || 'verbal',
+        // ✅ Use the actual warning level (includes manual overrides from Step 2)
+        warningLevel: extractedData.warningLevel || 'counselling',
         category: extractedData.category.name,
         description: extractedData.incident.description,
         incidentDate: new Date(extractedData.incident.date),
