@@ -13,7 +13,7 @@ import Logger from '../../../utils/logger';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
-import { Check, ChevronLeft, ChevronRight, X, FileText, Scale, Send, Mic, ChevronDown, ChevronUp, Info, AlertTriangle } from 'lucide-react';
+import { Check, CheckCircle, ChevronLeft, ChevronRight, X, FileText, Scale, Send, Mic, ChevronDown, ChevronUp, Info, AlertTriangle } from 'lucide-react';
 // Import debugging components
 import { useWizardLogging } from '../../../hooks/useWizardLogging';
 
@@ -207,6 +207,20 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
 
   // 🆕 Override level from Step 2 (user can override system recommendation)
   const [overrideLevel, setOverrideLevel] = useState<string | null>(null);
+
+  // 🔄 Sync override level to formData whenever it changes
+  useEffect(() => {
+    const newLevel = overrideLevel || lraRecommendation?.suggestedLevel || 'counselling';
+
+    // Only update if the level actually changed to avoid unnecessary re-renders
+    if (formData.level !== newLevel) {
+      setFormData(prev => ({
+        ...prev,
+        level: newLevel,
+        wasOverridden: !!overrideLevel
+      }));
+    }
+  }, [overrideLevel, lraRecommendation?.suggestedLevel, formData.level]);
 
   // 🚨 Final Warning Block - prevents wizard from continuing if employee has final warning
   const [hasFinalWarningBlock, setHasFinalWarningBlock] = useState(false);
@@ -436,24 +450,26 @@ useEffect(() => {
       return; // Stop wizard progression
     }
 
-    // 🚨 STEP 2: Check for final warnings (we have data now, so this is safe)
-    const hasFinalWarning = activeWarnings.some(warning =>
-      warning.level === 'final_written' ||
-      warning.level === 'Final Written Warning' ||
-      warning.suggestedLevel === 'final_written'
+    // 🚨 STEP 2: Check for final warnings FOR THE SAME CATEGORY (we have data now, so this is safe)
+    const hasFinalWarningForCategory = activeWarnings.some(warning =>
+      (warning.level === 'final_written' ||
+       warning.level === 'Final Written Warning' ||
+       warning.suggestedLevel === 'final_written') &&
+      warning.categoryId === categoryId  // ✅ Must be same category
     );
 
-    if (hasFinalWarning) {
+    if (hasFinalWarningForCategory) {
       const finalWarning = activeWarnings.find(w =>
-        w.level === 'final_written' ||
-        w.level === 'Final Written Warning' ||
-        w.suggestedLevel === 'final_written'
+        (w.level === 'final_written' ||
+         w.level === 'Final Written Warning' ||
+         w.suggestedLevel === 'final_written') &&
+        w.categoryId === categoryId
       );
 
       const employee = employees.find(e => e.id === employeeId);
       const category = categories.find(c => c.id === categoryId);
 
-      Logger.debug('🚨 FINAL WARNING DETECTED - Blocking wizard progression');
+      Logger.debug('🚨 FINAL WARNING DETECTED FOR SAME CATEGORY - Blocking wizard progression');
       setHasFinalWarningBlock(true);
       setFinalWarningBlockData({
         employeeName: employee ? `${employee.firstName} ${employee.lastName}` : 'Employee',
@@ -1359,36 +1375,49 @@ return (
       <div className="modal-footer">
         {!hasFinalWarningBlock && (
           <div className="modal-footer__nav">
-            {/* Previous Button */}
-            <button
-              onClick={previousStep}
-              disabled={currentStep === WizardStep.INCIDENT_DETAILS || isNavigating}
-              className={`
-                modal-footer__button modal-footer__button--secondary
-                ${(currentStep === WizardStep.INCIDENT_DETAILS || isNavigating) ? 'opacity-50' : ''}
-              `}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Previous
-            </button>
-
-            {/* Next/Complete Button */}
-            {nextButtonState.show && (
+            {/* ✅ Show "Close" button after warning is successfully created */}
+            {currentStep === WizardStep.DELIVERY_COMPLETION && finalWarningId ? (
               <button
-                onClick={nextStep}
-                disabled={nextButtonState.disabled}
-                className={`
-                  modal-footer__button modal-footer__button--primary
-                  ${nextButtonState.loading ? 'modal-footer__button--loading' : ''}
-                `}
+                onClick={handleWizardComplete}
+                className="modal-footer__button modal-footer__button--primary w-full"
               >
-                {!nextButtonState.loading && (
-                  <>
-                    {nextButtonState.text}
-                    <ChevronRight className="w-4 h-4" />
-                  </>
-                )}
+                <CheckCircle className="w-4 h-4" />
+                Close
               </button>
+            ) : (
+              <>
+                {/* Previous Button */}
+                <button
+                  onClick={previousStep}
+                  disabled={currentStep === WizardStep.INCIDENT_DETAILS || isNavigating}
+                  className={`
+                    modal-footer__button modal-footer__button--secondary
+                    ${(currentStep === WizardStep.INCIDENT_DETAILS || isNavigating) ? 'opacity-50' : ''}
+                  `}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+
+                {/* Next/Complete Button */}
+                {nextButtonState.show && (
+                  <button
+                    onClick={nextStep}
+                    disabled={nextButtonState.disabled}
+                    className={`
+                      modal-footer__button modal-footer__button--primary
+                      ${nextButtonState.loading ? 'modal-footer__button--loading' : ''}
+                    `}
+                  >
+                    {!nextButtonState.loading && (
+                      <>
+                        {nextButtonState.text}
+                        <ChevronRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}

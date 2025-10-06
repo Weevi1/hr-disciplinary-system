@@ -47,6 +47,9 @@ import { createOrganizationUser } from './createOrganizationUser';
 // 📡 ADD API VERSIONING
 import { getApiVersionInfo } from './api/versionInfo';
 
+// ⏰ ADD TIME SERVICE (fraud-proof server time)
+import { getServerTime, getActiveWarningsServerSide } from './timeService';
+
 // Export all cloud functions
 export {
   // User/Auth functions
@@ -55,30 +58,34 @@ export {
   resetUserPassword,
   createResellerUser,
   createOrganizationUser,
-  
+
   // Audio cleanup functions
   cleanupExpiredAudio,
   manualAudioCleanup,
   getCleanupStats,
   getGlobalAudioStats,
   previewAudioCleanup,
-  
+
   // Billing & subscription functions
   createCheckoutSession,
   stripeWebhook,
   processMonthlyCommissions,
   createPortalSession,
-  
+
   // Custom claims & sharded auth functions
   refreshUserClaims,
   getUserClaims,
   refreshOrganizationUserClaims,
-  
+
   // Super-user management functions
   manageSuperUser,
   getSuperUserInfo,
   initializeSuperUser,
 
   // API versioning
-  getApiVersionInfo
+  getApiVersionInfo,
+
+  // Time service (fraud-proof timestamps)
+  getServerTime,
+  getActiveWarningsServerSide
 };

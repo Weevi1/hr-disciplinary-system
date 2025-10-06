@@ -26,7 +26,7 @@ import { calculateEmployeePermissions } from '../../types';
 import type { Employee } from '../../types';
 import {
   Users, Plus, Upload, Grid, List, ChevronDown,
-  Workflow, FileSpreadsheet, Eye, Layout, Archive, UserCheck
+  Workflow, FileSpreadsheet, Eye, Layout, Archive, UserCheck, Filter
 } from 'lucide-react';
 // Import legacy skeleton loaders for 2012-era devices
 import { LegacySkeletonDashboard, LegacyLoadingMessage } from '../common/LegacySkeletonLoader';
@@ -91,6 +91,7 @@ export const EmployeeManagement: React.FC = () => {
   const [promotingEmployee, setPromotingEmployee] = useState<Employee | null>(null);
   const [bulkAssignEmployees, setBulkAssignEmployees] = useState<Employee[]>([]);
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const permissions = calculateEmployeePermissions(user?.role.id, user?.departmentIds);
 
@@ -336,15 +337,76 @@ export const EmployeeManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Mobile: Simple search bar only */}
-      <div className="md:hidden -mt-1">
-        <input
-          type="text"
-          placeholder="🔍 Search employees..."
-          value={filters.search}
-          onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all bg-white text-sm"
-        />
+      {/* Mobile: Search bar with filter button */}
+      <div className="md:hidden -mt-1 space-y-2">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="🔍 Search employees..."
+            value={filters.search}
+            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none transition-all bg-white text-sm"
+          />
+          <button
+            onClick={() => setShowMobileFilters(!showMobileFilters)}
+            className={`px-3 py-2.5 border rounded-lg font-medium text-sm transition-all ${
+              showMobileFilters
+                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                : 'bg-white border-gray-300 text-gray-700'
+            }`}
+          >
+            <Filter className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Collapsible Filter Panel */}
+        {showMobileFilters && (
+          <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-2">
+            <select
+              value={filters.department}
+              onChange={(e) => setFilters({ ...filters, department: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+            >
+              <option value="">All Departments</option>
+              {[...new Set(employees.map(e => e.profile?.department).filter(Boolean))].map(dept => (
+                <option key={dept} value={dept}>{dept}</option>
+              ))}
+            </select>
+
+            <select
+              value={filters.contractType}
+              onChange={(e) => setFilters({ ...filters, contractType: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+            >
+              <option value="">All Contract Types</option>
+              <option value="permanent">Permanent</option>
+              <option value="contract">Contract</option>
+              <option value="temporary">Temporary</option>
+            </select>
+
+            <div className="flex gap-2">
+              <label className="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <input
+                  type="checkbox"
+                  checked={filters.hasWarnings}
+                  onChange={(e) => setFilters({ ...filters, hasWarnings: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm text-gray-700">Has Warnings</span>
+              </label>
+
+              <label className="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <input
+                  type="checkbox"
+                  checked={filters.isActive}
+                  onChange={(e) => setFilters({ ...filters, isActive: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                <span className="text-sm text-gray-700">Active Only</span>
+              </label>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Content Views */}
@@ -378,6 +440,16 @@ export const EmployeeManagement: React.FC = () => {
               permissions={permissions}
               onEdit={setEditingEmployee}
               onArchive={setArchivingEmployee}
+              onViewWarnings={(employee) => {
+                // Close the employee modal and navigate to warnings with employee filter
+                // This will be handled by parent component (HRDashboardSection)
+                Logger.debug('View warnings for employee:', employee.id);
+                // You can store the employee ID in localStorage or pass it up
+                localStorage.setItem('warningFilterEmployeeId', employee.id);
+                localStorage.setItem('warningFilterEmployeeName', `${employee.profile.firstName} ${employee.profile.lastName}`);
+                // Close the modal by triggering parent
+                window.dispatchEvent(new CustomEvent('navigateToWarnings', { detail: { employeeId: employee.id } }));
+              }}
             />
           ))}
         </div>

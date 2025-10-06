@@ -8,13 +8,15 @@ interface EmployeeCardProps {
   permissions: EmployeePermissions;
   onEdit: (employee: Employee) => void;
   onArchive: (employee: Employee) => void;
+  onViewWarnings?: (employee: Employee) => void;
 }
 
 export const EmployeeCard: React.FC<EmployeeCardProps> = ({
   employee,
   permissions,
   onEdit,
-  onArchive
+  onArchive,
+  onViewWarnings
 }) => {
   const getProbationStatus = () => {
     if (!employee.employment?.probationEndDate) return null;
@@ -129,30 +131,47 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
       </div>
 
       {/* Actions Bar - Touch Friendly */}
-      {permissions.canEdit && (
-        <div className="border-t border-gray-100 px-3 py-2 sm:px-4 sm:py-2 bg-gray-50/50 flex gap-2">
+      <div className="border-t border-gray-100 px-3 py-2 sm:px-4 sm:py-2 bg-gray-50/50">
+        {/* View Warnings Button - Shows when employee has warnings */}
+        {activeWarnings > 0 && onViewWarnings && (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onEdit(employee);
+              onViewWarnings(employee);
             }}
-            className="flex-1 py-2 sm:py-2.5 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors text-sm active:scale-95"
+            className="w-full mb-2 py-2 sm:py-2.5 px-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-lg hover:bg-amber-100 font-medium transition-colors text-sm active:scale-95 flex items-center justify-center gap-2"
           >
-            Edit Details
+            <span>⚠️</span>
+            <span>View {activeWarnings} Active Warning{activeWarnings !== 1 ? 's' : ''}</span>
           </button>
-          {employee.isActive && permissions.canArchive && (
+        )}
+
+        {/* Edit/Archive Buttons */}
+        {permissions.canEdit && (
+          <div className="flex gap-2">
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onArchive(employee);
+                onEdit(employee);
               }}
-              className="px-3 py-2 sm:py-2.5 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors text-sm active:scale-95"
+              className="flex-1 py-2 sm:py-2.5 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors text-sm active:scale-95"
             >
-              Archive
+              Edit Details
             </button>
-          )}
-        </div>
-      )}
+            {employee.isActive && permissions.canArchive && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onArchive(employee);
+                }}
+                className="px-3 py-2 sm:py-2.5 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors text-sm active:scale-95"
+              >
+                Archive
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -91,6 +91,27 @@ interface DeliveryOption {
 }
 
 // ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Format warning level from system code to display name
+ */
+const formatWarningLevel = (level: string | undefined): string => {
+  if (!level) return 'Counselling Session';
+
+  const levelMap: Record<string, string> = {
+    'counselling': 'Counselling Session',
+    'verbal': 'Verbal Warning',
+    'first_written': 'First Written Warning',
+    'second_written': 'Second Written Warning',
+    'final_written': 'Final Written Warning'
+  };
+
+  return levelMap[level] || level;
+};
+
+// ============================================
 // COMPONENT
 // ============================================
 
@@ -467,7 +488,7 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
             </div>
           </div>
           <ThemedBadge variant="success" size="sm" className="font-semibold">
-            {lraRecommendation?.recommendedLevel || 'Counselling Session'}
+            {formatWarningLevel(formData.level) || 'Counselling Session'}
           </ThemedBadge>
         </div>
       </ThemedCard>

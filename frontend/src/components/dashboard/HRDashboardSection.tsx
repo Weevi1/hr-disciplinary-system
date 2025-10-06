@@ -63,6 +63,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
   const { organization, categories } = useOrganization();
   const isDesktop = useBreakpoint(768);
   const [activeView, setActiveView] = useState<'urgent' | 'warnings' | 'employees' | null>(null);
+  const [employeeWarningFilter, setEmployeeWarningFilter] = useState<{ id: string; name: string } | null>(null);
 
   // 🚀 UNIFIED DASHBOARD DATA
   const {
@@ -124,6 +125,28 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
       Logger.error('Failed to complete delivery:', err);
     }
   };
+
+  // Listen for navigate to warnings event from employee cards
+  useEffect(() => {
+    const handleNavigateToWarnings = (event: CustomEvent) => {
+      const { employeeId } = event.detail;
+      const employeeName = localStorage.getItem('warningFilterEmployeeName');
+
+      if (employeeId && employeeName) {
+        setEmployeeWarningFilter({ id: employeeId, name: employeeName });
+        setActiveView('warnings');
+
+        // Clear the localStorage after reading
+        localStorage.removeItem('warningFilterEmployeeId');
+        localStorage.removeItem('warningFilterEmployeeName');
+      }
+    };
+
+    window.addEventListener('navigateToWarnings', handleNavigateToWarnings as EventListener);
+    return () => {
+      window.removeEventListener('navigateToWarnings', handleNavigateToWarnings as EventListener);
+    };
+  }, []);
 
   // Mock delivery notifications for demo
   const mockDeliveryNotifications = [
@@ -376,11 +399,16 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
           <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
             <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] flex flex-col overflow-hidden" shadow="xl">
               <div className="flex items-center justify-between p-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
-                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Warnings Overview</h2>
-                <ThemedButton variant="ghost" size="sm" onClick={() => setActiveView(null)}>×</ThemedButton>
+                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>
+                  {employeeWarningFilter ? `Warnings for ${employeeWarningFilter.name}` : 'Warnings Overview'}
+                </h2>
+                <ThemedButton variant="ghost" size="sm" onClick={() => {
+                  setActiveView(null);
+                  setEmployeeWarningFilter(null);
+                }}>×</ThemedButton>
               </div>
               <div className="flex-1 overflow-y-auto p-4 min-h-0">
-                <WarningsReviewDashboard />
+                <WarningsReviewDashboard initialEmployeeFilter={employeeWarningFilter || undefined} />
               </div>
             </ThemedCard>
           </div>
@@ -786,7 +814,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
 
               {/* Full Warnings Dashboard - Inline */}
               <div className="bg-white rounded-lg border border-gray-200">
-                <WarningsReviewDashboard />
+                <WarningsReviewDashboard initialEmployeeFilter={employeeWarningFilter || undefined} />
               </div>
             </div>
           )}

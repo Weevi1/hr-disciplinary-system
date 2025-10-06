@@ -234,6 +234,27 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 
 ---
 
+### **🔧 Recent Fixes (Session 14) - WARNING WIZARD UX & LEVEL OVERRIDE FIXES**
+
+- **Warning Success Screen - Close Button ✅**
+  - ✅ **Clear Close Button**: Added prominent "Close" button after warning is successfully created
+  - ✅ **Removed Confusing Buttons**: Hides "Previous" and greyed-out "Finalize" buttons on success screen
+  - ✅ **Better UX**: Full-width green button with checkmark icon for clear user action
+  - ✅ **Smart Detection**: Checks if `finalWarningId` is set to determine success state
+
+- **Level Override System - Complete Fix 🎯**
+  - ✅ **EnhancedWarningWizard**: Added `useEffect` to sync `overrideLevel` → `formData.level` in real-time
+  - ✅ **Step 3 Display**: DeliveryCompletionStep now shows manually selected level correctly
+  - ✅ **PDF Preview Modal**: Uses `formData.level` instead of `lraRecommendation.suggestedLevel`
+  - ✅ **End-to-End Fix**: Manual escalation to "Final Written Warning" now displays correctly throughout wizard and PDFs
+
+- **Final Warnings Watch List - React Key Fix 🔑**
+  - ✅ **Unique Keys**: Fixed duplicate key warning by including `categoryId` in key generation
+  - ✅ **Fallback Strategy**: Uses `warningId` or composite key `employeeId-categoryId-timestamp`
+  - ✅ **Console Clean**: Eliminated React duplicate children warning
+
+---
+
 ### **🔧 Recent Fixes (Session 5) - HR DASHBOARD REWRITE**
 - **HR Dashboard Section - Complete Rewrite ✨**
   - ✅ **Structural Fix**: Completely rewrote HRDashboardSection.tsx to match BusinessOwnerDashboard pattern
@@ -793,4 +814,4 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, and **WCAG AA accessibility compliance**.*
 
-*Last Updated: 2025-10-06 - Session 13: Multi-language warning script translations, X icon bug fix, logging consistency (FLAT→SHARD)*
+*Last Updated: 2025-10-06 - Session 14: Warning wizard UX improvements (Close button), Level override system fixes (Step 3 & PDF), React key warnings fixed*

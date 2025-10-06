@@ -16,6 +16,7 @@ import {
   Calendar,
   Target,
   ChevronRight,
+  ChevronDown, // NEW: Collapsible section icon
   Mic, // NEW: Audio recording icon
   BookOpen, // NEW: Corrective Counselling icon
   RefreshCw // NEW: Refresh button for cache issues
@@ -130,6 +131,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
   // Final Warnings Watch List State
   const [finalWarningEmployees, setFinalWarningEmployees] = useState<any[]>([]);
   const [loadingFinalWarnings, setLoadingFinalWarnings] = useState(false);
+  const [finalWarningsExpanded, setFinalWarningsExpanded] = useState(false);
   // 🚀 OPTIMIZED: Use data from unified dashboard hook instead of local state
   const employees = dashboardEmployees || [];
   const categories = contextCategories || [];
@@ -314,36 +316,25 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
       // Load ALL employees for final warnings watch list (not just HOD's direct reports)
       const allEmployees = await API.employees.getAll(organization.id);
 
-      // Filter for final written warnings and group by employee
+      // Filter for final written warnings - flatten to show each warning separately
       const finalWarnings = warnings.filter((warning: any) => warning.level === 'final_written');
 
-      const employeesWithFinal = finalWarnings.reduce((acc: any[], warning: any) => {
-        const existing = acc.find(emp => emp.employeeId === warning.employeeId);
-        if (existing) {
-          existing.warnings.push(warning);
-        } else {
-          const employee = allEmployees.find(emp => emp.id === warning.employeeId);
-          if (employee) {
-            acc.push({
-              ...employee,
-              employeeId: warning.employeeId,
-              warnings: [warning],
-              latestFinalWarning: warning,
-              // Ensure name field for UI display
-              name: employee.name || `${employee.profile?.firstName || ''} ${employee.profile?.lastName || ''}`.trim()
-            });
-          }
-        }
-        return acc;
-      }, []);
+      // Map each warning to include employee info
+      const warningsWithEmployeeInfo = finalWarnings.map((warning: any) => {
+        const employee = allEmployees.find(emp => emp.id === warning.employeeId);
+        return {
+          ...warning,
+          employeeName: employee?.name || `${employee?.profile?.firstName || ''} ${employee?.profile?.lastName || ''}`.trim() || 'Unknown',
+          employee: employee
+        };
+      });
 
-      // Sort by most recent final warning
-      employeesWithFinal.sort((a, b) =>
-        new Date(b.latestFinalWarning.issueDate).getTime() -
-        new Date(a.latestFinalWarning.issueDate).getTime()
+      // Sort by most recent issue date
+      warningsWithEmployeeInfo.sort((a, b) =>
+        new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime()
       );
 
-      setFinalWarningEmployees(employeesWithFinal);
+      setFinalWarningEmployees(warningsWithEmployeeInfo);
     } catch (error) {
       Logger.error('Failed to fetch final warning employees:', error);
     } finally {
@@ -542,83 +533,91 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
           </ThemedCard>
         )}
 
-        {/* --- 🚨 Mobile-Optimized Final Warnings Watch List --- */}
+        {/* --- 🚨 Mobile-Optimized Final Warnings Watch List (Collapsible) --- */}
         {finalWarningEmployees.length > 0 && (
           <ThemedAlert variant="error" className="border-2">
-            <h4 className="text-sm font-semibold flex items-center gap-2 mb-2">
-              <AlertTriangle className="w-4 h-4" />
-              Final Warnings Watch List ({finalWarningEmployees.length})
-              <ThemedBadge variant="error" size="sm" className="animate-pulse hidden sm:inline-block">
-                MONITOR CLOSELY
-              </ThemedBadge>
-            </h4>
-            <div className="space-y-1.5">
-              {finalWarningEmployees.slice(0, 4).map((employee) => {
-                // Handle Firestore Timestamp or Date object conversion for issue date
-                let issueDate;
-                if (employee.latestFinalWarning.issueDate?.toDate) {
-                  issueDate = employee.latestFinalWarning.issueDate.toDate();
-                } else if (employee.latestFinalWarning.issueDate?.seconds) {
-                  issueDate = new Date(employee.latestFinalWarning.issueDate.seconds * 1000);
-                } else {
-                  issueDate = new Date(employee.latestFinalWarning.issueDate);
-                }
-
-                // Handle Firestore Timestamp or Date object conversion for expiry date
-                let expiryDate;
-                if (employee.latestFinalWarning.expiryDate?.toDate) {
-                  expiryDate = employee.latestFinalWarning.expiryDate.toDate();
-                } else if (employee.latestFinalWarning.expiryDate?.seconds) {
-                  expiryDate = new Date(employee.latestFinalWarning.expiryDate.seconds * 1000);
-                } else {
-                  expiryDate = new Date(employee.latestFinalWarning.expiryDate);
-                }
-
-                const daysSince = Math.floor(
-                  (Date.now() - issueDate.getTime()) / (1000 * 60 * 60 * 24)
-                );
-
-                const daysUntilExpiry = Math.floor(
-                  (expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-                );
-
-                return (
-                  <ThemedCard
-                    key={employee.employeeId}
-                    padding="md"
-                    className="border-2"
-                    style={{ borderColor: 'var(--color-alert-error-border)' }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="font-medium" style={{ color: 'var(--color-alert-error-text)' }}>{employee.name}</div>
-                        <div className="text-xs" style={{ color: 'var(--color-alert-error-text)', opacity: 0.8 }}>
-                          {employee.latestFinalWarning.category} • {daysSince} days ago
-                        </div>
-                        <div className="text-xs mt-1" style={{ color: 'var(--color-alert-error-text)' }}>
-                          ⚠️ Next offense requires HR intervention • Expires in {daysUntilExpiry} days
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <ThemedBadge variant="error" size="sm">
-                          {employee.warnings.length} warning{employee.warnings.length > 1 ? 's' : ''}
-                        </ThemedBadge>
-                      </div>
-                    </div>
-                  </ThemedCard>
-                );
-              })}
-              {finalWarningEmployees.length > 4 && (
-                <div className="text-xs text-center py-2" style={{ color: 'var(--color-alert-error-text)', opacity: 0.8 }}>
-                  +{finalWarningEmployees.length - 4} more employees with final warnings
-                </div>
-              )}
+            {/* Collapsible Header */}
+            <div
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setFinalWarningsExpanded(!finalWarningsExpanded)}
+            >
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                Final Warnings Watch List ({finalWarningEmployees.length})
+                <ThemedBadge variant="error" size="sm" className="animate-pulse hidden sm:inline-block">
+                  MONITOR CLOSELY
+                </ThemedBadge>
+              </h4>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${finalWarningsExpanded ? 'rotate-180' : ''}`}
+                style={{ color: 'var(--color-alert-error-text)' }}
+              />
             </div>
-            <ThemedCard padding="sm" className="mt-3" style={{ backgroundColor: 'var(--color-alert-error-bg)', opacity: 0.7 }}>
-              <div className="text-xs" style={{ color: 'var(--color-alert-error-text)' }}>
-                💡 <strong>Tip:</strong> Monitor these employees closely. Any new offenses will trigger urgent HR intervention alerts.
-              </div>
-            </ThemedCard>
+
+            {/* Expandable Content */}
+            {finalWarningsExpanded && (
+              <>
+                <div className="space-y-1.5 mt-3">
+                  {finalWarningEmployees.map((warning) => {
+                    // Handle Firestore Timestamp or Date object conversion for issue date
+                    let issueDate;
+                    if (warning.issueDate?.toDate) {
+                      issueDate = warning.issueDate.toDate();
+                    } else if (warning.issueDate?.seconds) {
+                      issueDate = new Date(warning.issueDate.seconds * 1000);
+                    } else {
+                      issueDate = new Date(warning.issueDate);
+                    }
+
+                    // Handle Firestore Timestamp or Date object conversion for expiry date
+                    let expiryDate;
+                    if (warning.expiryDate?.toDate) {
+                      expiryDate = warning.expiryDate.toDate();
+                    } else if (warning.expiryDate?.seconds) {
+                      expiryDate = new Date(warning.expiryDate.seconds * 1000);
+                    } else {
+                      expiryDate = new Date(warning.expiryDate);
+                    }
+
+                    const daysSince = Math.floor(
+                      (Date.now() - issueDate.getTime()) / (1000 * 60 * 60 * 24)
+                    );
+
+                    const daysUntilExpiry = Math.floor(
+                      (expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                    );
+
+                    return (
+                      <ThemedCard
+                        key={warning.id || `${warning.employeeId}-${warning.categoryId || warning.category}-${issueDate.getTime()}`}
+                        padding="md"
+                        className="border-2"
+                        style={{ borderColor: 'var(--color-alert-error-border)' }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="font-medium" style={{ color: 'var(--color-alert-error-text)' }}>
+                              {warning.employeeName}
+                            </div>
+                            <div className="text-xs" style={{ color: 'var(--color-alert-error-text)', opacity: 0.8 }}>
+                              {warning.category} • {daysSince} days ago
+                            </div>
+                            <div className="text-xs mt-1" style={{ color: 'var(--color-alert-error-text)' }}>
+                              ⚠️ Next offense requires HR intervention • Expires in {daysUntilExpiry} days
+                            </div>
+                          </div>
+                        </div>
+                      </ThemedCard>
+                    );
+                  })}
+                </div>
+                <ThemedCard padding="sm" className="mt-3" style={{ backgroundColor: 'var(--color-alert-error-bg)', opacity: 0.7 }}>
+                  <div className="text-xs" style={{ color: 'var(--color-alert-error-text)' }}>
+                    💡 <strong>Tip:</strong> Monitor these employees closely. Any new offenses will trigger urgent HR intervention alerts.
+                  </div>
+                </ThemedCard>
+              </>
+            )}
           </ThemedAlert>
         )}
 
