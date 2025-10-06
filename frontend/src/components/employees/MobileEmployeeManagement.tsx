@@ -7,7 +7,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { globalDeviceCapabilities, getPerformanceLimits } from '../../utils/deviceDetection';
-import { useDashboardData } from '../../hooks/dashboard/useDashboardData';
+import { useEmployees } from '../../hooks/employees/useEmployees';
 import { useEmployeeFilters } from '../../hooks/employees/useEmployeeFilters';
 import { EmployeeFormModal } from './EmployeeFormModal';
 import { EmployeeImportModal } from './EmployeeImportModal';
@@ -22,93 +22,19 @@ import {
 export const MobileEmployeeManagement: React.FC = () => {
   const { user, organization } = useAuth();
 
-  // Use the same dashboard data source as the main dashboard
+  // Check if user is an HOD manager - if so, only load their team members
+  const isHODManager = user?.role?.id === 'hod-manager';
+  const organizationId = organization?.id;
+
+  // Use the same employee data source as desktop
   const {
-    employees: dashboardEmployees,
+    employees,
     loading,
     error,
-    refreshData
-  } = useDashboardData({ role: 'hod' });
-
-  // Transform dashboard employee data to match expected structure
-  const employees = React.useMemo(() => {
-    if (!dashboardEmployees || dashboardEmployees.length === 0) {
-      return [];
-    }
-
-    return dashboardEmployees.map(emp => ({
-      id: emp.id,
-      organizationId: organization?.id || '',
-      isActive: true, // Dashboard employees are always active (since they're loaded)
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      profile: {
-        firstName: emp.firstName,
-        lastName: emp.lastName,
-        email: emp.email,
-        department: emp.department,
-        employeeNumber: emp.employeeNumber || emp.id,
-        phoneNumber: emp.phone,
-        position: emp.position,
-        startDate: new Date() // Default start date
-      },
-      employment: {
-        startDate: new Date(), // Default start date
-        department: emp.department,
-        position: emp.position,
-        contractType: emp.contractType || 'full-time'
-      },
-      disciplinaryRecord: {
-        totalWarnings: emp.recentWarnings?.count || 0,
-        activeWarnings: emp.recentWarnings?.count || 0,
-        currentLevel: 'none',
-        warningHistory: [],
-        warningsByCategory: {}
-      },
-      deliveryPreferences: {
-        primaryMethod: 'email',
-        allowAlternativeMethods: true,
-        whatsappConsent: false,
-        emailConsent: true,
-        printConsent: false,
-        lastUpdated: new Date()
-      },
-      // Keep original data for reference
-      _original: emp
-    }));
-  }, [dashboardEmployees, organization?.id]);
+    loadEmployees
+  } = useEmployees(organizationId, isHODManager ? user?.id : undefined);
 
   const { filters, setFilters, filteredEmployees } = useEmployeeFilters(employees, user);
-
-  // Debug logging
-  React.useEffect(() => {
-    Logger.debug('🔍 [MobileEmployeeManagement] Data status:', {
-      organizationId: organization?.id,
-      userId: user?.id,
-      loading: loading?.overall || loading?.employees || false,
-      error,
-      employeesCount: employees.length,
-      filteredCount: filteredEmployees.length,
-      filters,
-      rawDashboardEmployees: dashboardEmployees,
-      transformedEmployees: employees.map(e => ({
-        id: e.id,
-        name: `${e.profile?.firstName || 'Unknown'} ${e.profile?.lastName || 'Unknown'}`,
-        isActive: e.isActive,
-        hasProfile: !!e.profile,
-        profileDepartment: e.profile?.department,
-        rawEmployee: e
-      })),
-      filteredEmployees: filteredEmployees.map(e => ({
-        id: e.id,
-        name: `${e.profile?.firstName || 'Unknown'} ${e.profile?.lastName || 'Unknown'}`,
-        isActive: e.isActive,
-        hasProfile: !!e.profile
-      })),
-      userRole: user?.role?.id,
-      userDepartments: user?.departmentIds
-    });
-  }, [organization?.id, user?.id, loading, error, employees, filteredEmployees, filters, dashboardEmployees, user]);
 
   // Mobile-specific states
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
