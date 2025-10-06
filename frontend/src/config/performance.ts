@@ -4,6 +4,7 @@
 
 import { getPerformance, trace, type Performance } from 'firebase/performance';
 import { app } from './firebase';
+import Logger from '../utils/logger';
 
 let performanceInstance: Performance | null = null;
 let performanceEnabled = false;
@@ -15,16 +16,16 @@ let performanceEnabled = false;
 export function initPerformance(): void {
   // Only enable in production
   if (import.meta.env.MODE !== 'production') {
-    console.log('📊 [PERFORMANCE] Disabled in development mode');
+    Logger.debug('📊 [PERFORMANCE] Disabled in development mode');
     return;
   }
 
   try {
     performanceInstance = getPerformance(app);
     performanceEnabled = true;
-    console.log('📊 [PERFORMANCE] Monitoring initialized');
+    Logger.debug('📊 [PERFORMANCE] Monitoring initialized');
   } catch (error) {
-    console.error('❌ [PERFORMANCE] Failed to initialize:', error);
+    Logger.error('❌ [PERFORMANCE] Failed to initialize:', error);
   }
 }
 

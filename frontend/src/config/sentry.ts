@@ -2,6 +2,7 @@
 // 🔍 Sentry Error Tracking Configuration
 
 import * as Sentry from '@sentry/react';
+import Logger from '../utils/logger';
 
 export const initSentry = () => {
   // Only initialize in production
@@ -79,9 +80,9 @@ export const initSentry = () => {
       ],
     });
 
-    console.log('✅ Sentry initialized for error tracking');
+    Logger.debug('✅ Sentry initialized for error tracking');
   } else {
-    console.log('ℹ️ Sentry disabled in development mode');
+    Logger.debug('ℹ️ Sentry disabled in development mode');
   }
 };
 
@@ -92,7 +93,7 @@ export const logError = (error: Error, context?: Record<string, any>) => {
       contexts: { custom: context },
     });
   } else {
-    console.error('Error:', error, 'Context:', context);
+    Logger.error('Error:', error, 'Context:', context);
   }
 };
 
@@ -100,7 +101,7 @@ export const logMessage = (message: string, level: 'info' | 'warning' | 'error' 
   if (import.meta.env.MODE === 'production') {
     Sentry.captureMessage(message, level);
   } else {
-    console.log(`[${level.toUpperCase()}]`, message);
+    Logger.debug(`[${level.toUpperCase()}]`, message);
   }
 };
 

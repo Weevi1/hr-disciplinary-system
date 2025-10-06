@@ -10,6 +10,7 @@ import type { EnhancedWarningFormData } from '../../../../../services/WarningSer
 // Import unified theming components
 import { ThemedSectionHeader, ThemedFormInput } from '../../../../common/ThemedCard';
 import { CustomDatePicker } from '../../../../common/CustomDatePicker';
+import Logger from '../../../../../utils/logger';
 
 interface IncidentDetailsFormProps {
   formData: EnhancedWarningFormData;
@@ -94,7 +95,7 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
           onFormDataChange(parsed);
         }
       } catch (error) {
-        console.warn('Failed to load saved incident details:', error);
+        Logger.warn('Failed to load saved incident details:', error);
       }
     }
   }, []);

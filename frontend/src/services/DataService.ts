@@ -666,7 +666,7 @@ export class DataService {
    */
   static async saveEmployee(employeeData: Partial<Employee>, organizationId: string): Promise<string> {
     try {
-      console.log('[DataService] 🚀 Creating employee:', {
+      Logger.debug('[DataService] 🚀 Creating employee:', {
         organizationId,
         hasData: !!employeeData,
         dataKeys: Object.keys(employeeData),

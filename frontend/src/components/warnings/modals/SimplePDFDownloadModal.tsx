@@ -266,7 +266,7 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
 
-      console.log('✅ PDF generated for simple download:', {
+      Logger.debug('✅ PDF generated for simple download:', {
         filename: generatedFilename,
         size: `${(blob.size / 1024).toFixed(1)} KB`
       });

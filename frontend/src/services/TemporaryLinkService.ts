@@ -55,7 +55,7 @@ export class TemporaryLinkService {
    */
   static async generateTemporaryLink(request: LinkGenerationRequest): Promise<TemporaryLinkData> {
     Logger.debug('🔧 [TemporaryLinkService] Starting PDF upload using Firebase Storage...')
-    console.log('🔧 [TemporaryLinkService] Request:', {
+    Logger.debug('🔧 [TemporaryLinkService] Request:', {
       filename: request.filename,
       blobSize: request.pdfBlob.size,
       employeeId: request.employeeId,
@@ -134,7 +134,7 @@ export class TemporaryLinkService {
       // Set expiry time (1 hour from now)
       const expiresAt = new Date(Date.now() + (this.EXPIRY_HOURS * 60 * 60 * 1000));
 
-      console.log('✅ [TemporaryLinkService] Link generation complete:', {
+      Logger.debug('✅ [TemporaryLinkService] Link generation complete:', {
         tokenId,
         expiresAt: expiresAt.toISOString(),
         downloadUrl: downloadUrl.substring(0, 60) + '...'

@@ -5,6 +5,7 @@
  */
 
 import { globalDeviceCapabilities, DeviceCapabilities } from './deviceDetection';
+import Logger from '../utils/logger';
 
 export interface FeatureSupport {
   // Core capabilities
@@ -270,7 +271,7 @@ export class ProgressiveEnhancement {
 
     // Log capabilities for debugging
     if (process.env.NODE_ENV === 'development') {
-      console.log('🚀 Progressive Enhancement Applied:', {
+      Logger.debug('🚀 Progressive Enhancement Applied:', {
         featureSupport: this.analyzeCapabilities(),
         cssClasses: classes
       });

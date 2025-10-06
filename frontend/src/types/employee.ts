@@ -1,3 +1,5 @@
+import Logger from '../utils/logger';
+
 // frontend/src/types/employee.ts
 // 🏆 COMPLETE EMPLOYEE MANAGEMENT SYSTEM
 // Enhanced with archiving, bulk operations, CSV import, and full permission system
@@ -295,7 +297,7 @@ const safeDateToString = (date: any): string => {
     
     return '';
   } catch (error) {
-    console.warn('Failed to convert date:', date, error);
+    Logger.warn('Failed to convert date:', date, error);
     return '';
   }
 };
@@ -426,7 +428,7 @@ export const filterEmployees = (
 
     // Log employee structure for debugging HOD manager issues
     if (userRole === 'hod-manager' && !employee.profile) {
-      console.warn('🔍 [FILTER DEBUG] Employee missing profile:', {
+      Logger.warn('🔍 [FILTER DEBUG] Employee missing profile:', {
         id: employee.id,
         hasEmployment: !!employee.employment,
         managerId: employee.employment?.managerId,

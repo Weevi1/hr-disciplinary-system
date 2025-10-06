@@ -38,19 +38,32 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isMobileModal, setIsMobileModal] = useState(false);
 
+  // Helper to safely get employee properties (handles both flat and nested structures)
+  const getEmployeeProp = (emp: any, prop: string): string => {
+    // Try flat structure first
+    if (emp[prop]) return String(emp[prop]);
+    // Try nested profile structure
+    if (emp.profile?.[prop]) return String(emp.profile[prop]);
+    // Try nested employment structure for certain props
+    if (prop === 'position' && emp.employment?.position) return String(emp.employment.position);
+    if (prop === 'department' && emp.profile?.department) return String(emp.profile.department);
+    return '';
+  };
+
   // Filter employees based on search
   const filteredEmployees = useMemo(() => {
     if (!searchTerm.trim()) return employees;
-    
+
     const term = searchTerm.toLowerCase();
     return employees.filter(emp => {
-      // EmployeeWithContext uses flat structure, not nested profile
-      const fullName = `${emp.firstName} ${emp.lastName}`.toLowerCase();
-      const employeeNumber = emp.id?.toLowerCase() || ''; // Use id as employee number for now
-      const department = emp.department?.toLowerCase() || '';
-      
-      return fullName.includes(term) || 
-             employeeNumber.includes(term) || 
+      const firstName = getEmployeeProp(emp, 'firstName');
+      const lastName = getEmployeeProp(emp, 'lastName');
+      const fullName = `${firstName} ${lastName}`.toLowerCase();
+      const employeeNumber = emp.id?.toLowerCase() || '';
+      const department = getEmployeeProp(emp, 'department').toLowerCase();
+
+      return fullName.includes(term) ||
+             employeeNumber.includes(term) ||
              department.includes(term);
     });
   }, [employees, searchTerm]);
@@ -138,15 +151,15 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                   <div className="w-8 h-8 rounded-full flex items-center justify-center"
                        style={{ backgroundColor: 'var(--color-primary-light)' }}>
                     <span className="font-semibold text-xs" style={{ color: 'var(--color-primary)' }}>
-                      {selectedEmployee.firstName?.charAt(0)}{selectedEmployee.lastName?.charAt(0)}
+                      {getEmployeeProp(selectedEmployee, 'firstName').charAt(0)}{getEmployeeProp(selectedEmployee, 'lastName').charAt(0)}
                     </span>
                   </div>
                   <div className="min-w-0">
                     <div className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
-                      {selectedEmployee.firstName} {selectedEmployee.lastName}
+                      {getEmployeeProp(selectedEmployee, 'firstName')} {getEmployeeProp(selectedEmployee, 'lastName')}
                     </div>
                     <div className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
-                      {selectedEmployee.position} • {selectedEmployee.department}
+                      {getEmployeeProp(selectedEmployee, 'position')} • {getEmployeeProp(selectedEmployee, 'department')}
                     </div>
                   </div>
                 </div>
@@ -173,7 +186,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
 
           {/* Dropdown Content */}
           {isOpen && (
-            <div className="absolute top-full left-0 right-0 z-20 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden">
+            <div className="fixed top-20 left-4 right-4 z-[10001] bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden md:absolute md:top-full md:left-0 md:right-0">
               {/* Search Input */}
               <div className="p-3 border-b border-gray-200">
                 <input
@@ -192,7 +205,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                     {filteredEmployees.map(employee => {
                       const riskLevel = getRiskLevel(employee);
                       const warningsSummary = getWarningsSummary(employee);
-                      
+
                       return (
                         <button
                           key={employee.id}
@@ -200,7 +213,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                           className="w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors"
                         >
                           <div className="font-medium text-gray-900 text-sm">
-                            {employee.firstName} {employee.lastName} - {employee.position}
+                            {getEmployeeProp(employee, 'firstName')} {getEmployeeProp(employee, 'lastName')} - {getEmployeeProp(employee, 'position')}
                           </div>
                         </button>
                       );
@@ -256,7 +269,7 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
                       className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
                     >
                       <div className="font-medium text-gray-900 text-base">
-                        {employee.firstName} {employee.lastName} - {employee.position}
+                        {getEmployeeProp(employee, 'firstName')} {getEmployeeProp(employee, 'lastName')} - {getEmployeeProp(employee, 'position')}
                       </div>
                     </button>
                   ))}
@@ -300,15 +313,15 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
               <div>
                 <div className="text-sm font-medium text-gray-700">Contact Information</div>
                 <div className="text-sm text-gray-600 mt-1">
-                  📧 {selectedEmployee.email || 'No email'}<br />
-                  📱 {selectedEmployee.phone || 'No phone'}
+                  📧 {getEmployeeProp(selectedEmployee, 'email') || 'No email'}<br />
+                  📱 {getEmployeeProp(selectedEmployee, 'phone') || 'No phone'}
                 </div>
               </div>
               <div>
                 <div className="text-sm font-medium text-gray-700">Position Details</div>
                 <div className="text-sm text-gray-600 mt-1">
-                  {selectedEmployee.position}<br />
-                  {selectedEmployee.department}
+                  {getEmployeeProp(selectedEmployee, 'position')}<br />
+                  {getEmployeeProp(selectedEmployee, 'department')}
                 </div>
               </div>
             </div>

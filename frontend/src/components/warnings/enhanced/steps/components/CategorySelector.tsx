@@ -193,7 +193,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
 
           {/* Dropdown Content */}
           {isOpen && (
-            <div className="absolute top-full left-0 right-0 z-20 bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden">
+            <div className="fixed top-20 left-4 right-4 z-[10001] bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden md:absolute md:top-full md:left-0 md:right-0">
               {/* Search Input */}
               <div className="p-3 border-b border-gray-200">
                 <input
@@ -490,7 +490,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                         Recommended Action: {getLevelLabel(lraRecommendation.suggestedLevel)}
                       </div>
                       <div className="text-sm mt-1" style={{ color: 'var(--color-alert-info-text)' }}>
-                        Based on {lraRecommendation.warningCount} total warnings 
+                        Based on {lraRecommendation.categoryWarningCount ?? 0} previous warning(s) in this category
                         {lraRecommendation.isEscalation && ' (escalation required)'}
                       </div>
                     </div>

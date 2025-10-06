@@ -155,7 +155,7 @@ export const UniversalEmployeeSelector: React.FC<UniversalEmployeeSelectorProps>
 
           {/* Dropdown Content */}
           {isOpen && (
-            <div className="absolute top-full left-0 right-0 z-20 rounded-lg shadow-lg max-h-80 overflow-hidden"
+            <div className="fixed top-20 left-4 right-4 z-[10001] rounded-lg shadow-lg max-h-80 overflow-hidden md:absolute md:top-full md:left-0 md:right-0"
                  style={{
                    backgroundColor: 'var(--color-background)',
                    border: '1px solid var(--color-border)'

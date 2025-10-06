@@ -242,6 +242,7 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
   const startTimeRef = useRef<number>(0);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const warningShownRef = useRef<boolean>(false);
+  const isStoppingRef = useRef<boolean>(false); // Prevent stop loop on max size
 
   // ============================================
   // UTILITY FUNCTIONS
@@ -398,6 +399,9 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
     }
 
     try {
+      // Reset stopping flag for new recording
+      isStoppingRef.current = false;
+
       // Force cleanup any previous recording before starting new one
       if (streamRef.current || mediaRecorderRef.current || audioSingleton.mediaStream) {
         Logger.debug('🧹 Cleaning up previous recording before starting new one');
@@ -446,17 +450,31 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
       
       // Handle data chunks
       mediaRecorder.ondataavailable = (event) => {
+        // Check if we're stopping - if so, ignore any new data chunks
+        if (isStoppingRef.current) {
+          Logger.debug('⏭️ Skipping data chunk - recording is stopping')
+          return;
+        }
+
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
-          
+
           // Update size estimate
           const totalSize = audioChunksRef.current.reduce((total, chunk) => total + chunk.size, 0);
           setState(prev => ({ ...prev, size: totalSize }));
-          
-          // Safety check for size
-          if (totalSize >= AUDIO_CONFIG.MAX_SIZE_BYTES) {
-            Logger.debug('🔴 Auto-stopping recording: Max size reached')
-            stopRecording();
+
+          // Safety check for size - stop immediately
+          if (totalSize >= AUDIO_CONFIG.MAX_SIZE_BYTES && mediaRecorderRef.current?.state === 'recording') {
+            Logger.debug('🔴 Auto-stopping recording: Max size reached (' + formatSize(totalSize) + ')')
+            isStoppingRef.current = true; // Set flag to ignore future chunks
+
+            // Stop the MediaRecorder IMMEDIATELY to prevent more ondataavailable events
+            try {
+              mediaRecorderRef.current.stop();
+              Logger.debug('✅ MediaRecorder stopped at max size - audio preserved')
+            } catch (error) {
+              Logger.error('❌ Error stopping MediaRecorder:', error)
+            }
           }
         }
       };
@@ -512,25 +530,26 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
   const stopRecording = useCallback(async (): Promise<string | null> => {
     try {
       if (!mediaRecorderRef.current || !state.isRecording) {
+        isStoppingRef.current = false; // Reset flag if already stopped
         return null;
       }
-      
+
       setState(prev => ({ ...prev, isProcessing: true }));
-      
+
       // Stop duration tracking
       if (durationIntervalRef.current) {
         clearInterval(durationIntervalRef.current);
         durationIntervalRef.current = null;
       }
-      
+
       return new Promise<string | null>((resolve) => {
         const mediaRecorder = mediaRecorderRef.current!;
-        
+
         mediaRecorder.onstop = () => {
           try {
             // Create final audio blob
-            const audioBlob = new Blob(audioChunksRef.current, { 
-              type: AUDIO_CONFIG.CODEC 
+            const audioBlob = new Blob(audioChunksRef.current, {
+              type: AUDIO_CONFIG.CODEC
             });
             
             // Create audio URL
@@ -544,14 +563,17 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
               size: audioBlob.size
             }));
             
-            console.log('✅ Recording completed:', {
+            Logger.debug('✅ Recording completed:', {
               duration: prev => prev.duration,
               size: formatSize(audioBlob.size),
               id: prev => prev.recordingId
             });
-            
+
+            // Reset stopping flag
+            isStoppingRef.current = false;
+
             resolve(audioUrl);
-            
+
           } catch (error) {
             Logger.error('❌ Error processing recording:', error)
             setState(prev => ({
@@ -560,14 +582,15 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
               isProcessing: false,
               error: 'Failed to process recording'
             }));
+            isStoppingRef.current = false; // Reset flag on error
             resolve(null);
           }
         };
-        
+
         mediaRecorder.stop();
         setState(prev => ({ ...prev, isRecording: false }));
       });
-      
+
     } catch (error: any) {
       Logger.error('❌ Error stopping recording:', error)
       setState(prev => ({
@@ -576,6 +599,7 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
         isProcessing: false,
         error: error.message || 'Failed to stop recording'
       }));
+      isStoppingRef.current = false; // Reset flag on error
       return null;
     }
   }, [state.isRecording, formatSize]);

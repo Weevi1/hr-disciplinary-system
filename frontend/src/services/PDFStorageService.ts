@@ -39,7 +39,7 @@ export class PDFStorageService {
   ): Promise<PDFUploadResult> {
     try {
       Logger.debug(1127)
-      console.log('📄 File details:', {
+      Logger.debug('📄 File details:', {
         filename,
         size: pdfBlob.size,
         type: pdfBlob.type,

@@ -4,6 +4,7 @@
  */
 
 import { globalDeviceCapabilities } from './deviceDetection';
+import Logger from '../utils/logger';
 
 export interface ErrorContext {
   component: string;
@@ -28,7 +29,7 @@ export class LegacyErrorHandler {
   static handleError(error: any, context: ErrorContext): ErrorResponse {
     const isLegacyDevice = globalDeviceCapabilities?.isLegacyDevice || false;
 
-    console.error(`[${context.component}] Error during ${context.action}:`, error);
+    Logger.error(`[${context.component}] Error during ${context.action}:`, error);
 
     // Device capability issues
     if (this.isDeviceCapabilityError(error)) {
@@ -268,7 +269,7 @@ export class LegacyErrorHandler {
       hasModernCSS: globalDeviceCapabilities?.hasModernCSS
     };
 
-    console.error('Error logged:', {
+    Logger.error('Error logged:', {
       timestamp: new Date().toISOString(),
       error: {
         name: error.name,

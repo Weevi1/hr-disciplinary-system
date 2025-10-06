@@ -10,6 +10,7 @@ import {
   type VersionedApiResponse
 } from '@/config/apiVersion';
 import { logError } from '@/config/sentry';
+import Logger from '../utils/logger';
 
 /**
  * Call a Cloud Function with automatic API versioning
@@ -58,7 +59,7 @@ export async function callVersionedFunction<TData = any, TResult = any>(
       // Verify API version compatibility
       if (!isVersionCompatible(response.metadata.version)) {
         const errorMsg = `API version mismatch: Backend ${response.metadata.version}, Frontend expects ${CURRENT_API_VERSION}`;
-        console.error(errorMsg);
+        Logger.error(errorMsg);
         logError(new Error(errorMsg), {
           component: 'versionedApi',
           functionName,
@@ -80,7 +81,7 @@ export async function callVersionedFunction<TData = any, TResult = any>(
     return response.data as TResult;
 
   } catch (error) {
-    console.error(`❌ [API] ${functionName} failed:`, error);
+    Logger.error(`❌ [API] ${functionName} failed:`, error);
 
     // Log to Sentry
     logError(error as Error, {
@@ -122,7 +123,7 @@ export async function getApiVersion(): Promise<{
     };
 
   } catch (error) {
-    console.error('Failed to get API version info:', error);
+    Logger.error('Failed to get API version info:', error);
     return {
       current: 'unknown',
       supported: [],
@@ -140,7 +141,7 @@ export async function checkApiCompatibility(): Promise<boolean> {
     const versionInfo = await getApiVersion();
 
     if (!versionInfo.compatible) {
-      console.error(
+      Logger.error(
         `⚠️ API VERSION MISMATCH!\n` +
         `Backend: ${versionInfo.current}\n` +
         `Frontend: ${CURRENT_API_VERSION}\n` +
@@ -150,7 +151,7 @@ export async function checkApiCompatibility(): Promise<boolean> {
     }
 
     if (versionInfo.current !== CURRENT_API_VERSION) {
-      console.warn(
+      Logger.warn(
         `ℹ️ API versions differ:\n` +
         `Backend: ${versionInfo.current}\n` +
         `Frontend: ${CURRENT_API_VERSION}\n` +
@@ -158,11 +159,11 @@ export async function checkApiCompatibility(): Promise<boolean> {
       );
     }
 
-    console.log(`✅ API Version: ${versionInfo.current} (compatible)`);
+    Logger.debug(`✅ API Version: ${versionInfo.current} (compatible)`);
     return true;
 
   } catch (error) {
-    console.warn('Could not verify API compatibility:', error);
+    Logger.warn('Could not verify API compatibility:', error);
     return true; // Don't block app if version check fails
   }
 }

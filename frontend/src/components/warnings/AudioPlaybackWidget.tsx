@@ -304,7 +304,7 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
   // Auto-play if requested and audio is available
   useEffect(() => {
     if (autoPlay && audioRef.current && !state.isLoading && !state.error && canPlay) {
-      audioRef.current.play().catch(console.warn);
+      audioRef.current.play().catch((err) => Logger.warn('Audio autoplay failed', err));
     }
   }, [autoPlay, state.isLoading, state.error, canPlay]);
 

@@ -20,7 +20,7 @@ export const EmployeeArchiveModal: React.FC<EmployeeArchiveModalProps> = ({
 
   const handleArchive = async () => {
     // 🔍 DEBUG: Log all the data we're working with
-    console.log('🔍 DEBUGGING - Archive Modal Data:', {
+    Logger.debug('🔍 DEBUGGING - Archive Modal Data:', {
       employee: employee,
       employeeId: employee?.id,
       employeeIdType: typeof employee?.id,

@@ -194,7 +194,7 @@ static async getEmployeesByManager(managerId: string): Promise<Employee[]> {
     if (managedEmployees.length === 0) {
       try {
         const userProfile = await DataService.getUserProfile(managerId);
-        console.log('[EmployeeService] User profile for fallback:', {
+        Logger.debug('[EmployeeService] User profile for fallback:', {
           name: `${userProfile?.firstName} ${userProfile?.lastName}`,
           role: userProfile?.role?.id,
           departmentIds: userProfile?.departmentIds
@@ -212,7 +212,7 @@ static async getEmployeesByManager(managerId: string): Promise<Employee[]> {
                                         employee.isActive;
             
             if (isInManagedDepartment) {
-              console.log('[EmployeeService] Found department employee:', {
+              Logger.debug('[EmployeeService] Found department employee:', {
                 name: `${employee.profile.firstName} ${employee.profile.lastName}`,
                 department: employeeDept,
                 managedDepartments: userProfile.departmentIds
@@ -241,7 +241,7 @@ static async getEmployeesByManager(managerId: string): Promise<Employee[]> {
               }) && employee.isActive;
               
               if (hasMatch) {
-                console.log('[EmployeeService] Found flexible match:', {
+                Logger.debug('[EmployeeService] Found flexible match:', {
                   employee: `${employee.profile.firstName} ${employee.profile.lastName}`,
                   employeeDept: employee.profile.department,
                   managedDepts: userProfile.departmentIds

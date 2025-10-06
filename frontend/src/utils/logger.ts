@@ -16,13 +16,10 @@ interface LogContext {
 }
 
 class Logger {
-  private static isDevelopment = process.env.NODE_ENV === 'development';
-  private static isProduction = process.env.NODE_ENV === 'production';
-  
   // Production logging whitelist - only these prefixes are allowed in production
   private static productionWhitelist = [
     '❌', // Errors
-    '🚨', // Critical alerts  
+    '🚨', // Critical alerts
     '⚠️', // Warnings
     '✅', // Success confirmations for user feedback
     '🎯', // Important user-facing actions
@@ -30,9 +27,11 @@ class Logger {
 
   /**
    * Safe debug logging - only shows in development
+   * Using direct import.meta.env.DEV check for proper tree-shaking
    */
   static debug(message: string, data?: any, context?: LogContext): void {
-    if (this.isDevelopment) {
+    // Direct check enables Vite to eliminate this entire block in production
+    if (import.meta.env.DEV) {
       console.debug(this.formatMessage('DEBUG', message, context), data);
     }
   }
@@ -41,7 +40,7 @@ class Logger {
    * Info logging - filtered in production
    */
   static info(message: string, data?: any, context?: LogContext): void {
-    if (this.isDevelopment || this.isWhitelistedMessage(message)) {
+    if (import.meta.env.DEV || this.isWhitelistedMessage(message)) {
       console.info(this.formatMessage('INFO', message, context), data);
     }
   }
@@ -50,7 +49,7 @@ class Logger {
    * Warning logging - always shown but sanitized in production
    */
   static warn(message: string, data?: any, context?: LogContext): void {
-    const sanitizedData = this.isProduction ? this.sanitizeData(data) : data;
+    const sanitizedData = import.meta.env.PROD ? this.sanitizeData(data) : data;
     console.warn(this.formatMessage('WARN', message, context), sanitizedData);
   }
 
@@ -58,11 +57,11 @@ class Logger {
    * Error logging - always shown but sanitized in production
    */
   static error(message: string, error?: any, context?: LogContext): void {
-    const sanitizedError = this.isProduction ? this.sanitizeError(error) : error;
+    const sanitizedError = import.meta.env.PROD ? this.sanitizeError(error) : error;
     console.error(this.formatMessage('ERROR', message, context), sanitizedError);
-    
+
     // In production, also send to monitoring service
-    if (this.isProduction) {
+    if (import.meta.env.PROD) {
       this.sendToMonitoring('error', message, sanitizedError, context);
     }
   }
@@ -72,7 +71,7 @@ class Logger {
    */
   static success(message: string | number, data?: any, context?: LogContext): void {
     const messageStr = String(message);
-    if (this.isDevelopment || this.isWhitelistedMessage(message)) {
+    if (import.meta.env.DEV || this.isWhitelistedMessage(message)) {
       console.log(this.formatMessage('SUCCESS', messageStr, context), data);
     }
   }
@@ -81,7 +80,7 @@ class Logger {
    * Performance timing logging - development only
    */
   static perf(operation: string, startTime: number, context?: LogContext): void {
-    if (this.isDevelopment) {
+    if (import.meta.env.DEV) {
       const duration = Date.now() - startTime;
       console.debug(this.formatMessage('PERF', `${operation} completed in ${duration}ms`, context));
     }
@@ -149,16 +148,16 @@ class Logger {
    */
   private static sanitizeError(error: any): any {
     if (!error) return error;
-    
+
     if (error instanceof Error) {
       return {
         name: error.name,
         message: this.sanitizeString(error.message),
         // Don't include stack traces in production logs
-        stack: this.isDevelopment ? error.stack : '[REDACTED]'
+        stack: import.meta.env.DEV ? error.stack : '[REDACTED]'
       };
     }
-    
+
     return this.sanitizeData(error);
   }
 

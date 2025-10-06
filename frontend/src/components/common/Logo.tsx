@@ -6,6 +6,7 @@ import React from 'react';
 import logo64 from '../../assets/images/logo/logo-64.png';
 import logo128 from '../../assets/images/logo/logo-128.png';
 import logo256 from '../../assets/images/logo/logo-256.png';
+import Logger from '../../utils/logger';
 
 interface LogoProps {
   size?: 'small' | 'medium' | 'large' | 'xlarge';
@@ -58,7 +59,7 @@ export const Logo: React.FC<LogoProps> = ({
         height={config.height}
         loading="lazy"
         onError={(e) => {
-          console.warn('Logo image failed to load, using fallback');
+          Logger.warn('Logo image failed to load, using fallback');
           const img = e.target as HTMLImageElement;
           const fallbackDiv = img.nextElementSibling as HTMLElement;
           img.style.display = 'none';

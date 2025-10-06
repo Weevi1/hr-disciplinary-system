@@ -9,6 +9,7 @@ import { ThemedButton } from '../common/ThemedButton';
 import DepartmentService from '../../services/DepartmentService';
 import type { Employee } from '../../types/core';
 import type { Department } from '../../types/department';
+import Logger from '../../utils/logger';
 
 interface EmployeePromotionModalProps {
   isOpen: boolean;
@@ -64,7 +65,7 @@ export const EmployeePromotionModal: React.FC<EmployeePromotionModalProps> = ({
         const depts = await DepartmentService.getDepartments(organizationId);
         setDepartments(depts);
       } catch (err) {
-        console.error('Failed to load departments:', err);
+        Logger.error('Failed to load departments:', err);
       } finally {
         setLoadingDepartments(false);
       }
@@ -125,7 +126,7 @@ export const EmployeePromotionModal: React.FC<EmployeePromotionModalProps> = ({
         payload.departmentIds = selectedDepartments;
       }
 
-      console.log('🚀 Promoting employee with payload:', {
+      Logger.debug('🚀 Promoting employee with payload:', {
         ...payload,
         password: '***HIDDEN***', // Don't log the actual password
         employeeData: {
@@ -136,12 +137,12 @@ export const EmployeePromotionModal: React.FC<EmployeePromotionModalProps> = ({
 
       const result = await createOrganizationUser(payload);
 
-      console.log('✅ Employee promoted to manager:', result);
+      Logger.debug('✅ Employee promoted to manager:', result);
       onSuccess();
       onClose();
     } catch (err: any) {
-      console.error('❌ Failed to promote employee:', err);
-      console.error('Error details:', {
+      Logger.error('❌ Failed to promote employee:', err);
+      Logger.error('Error details:', {
         message: err.message,
         code: err.code,
         details: err.details

@@ -4,6 +4,7 @@ import Logger from '../../../utils/logger';
 // ✅ Displays QR code for mobile device scanning
 // ✅ Shows expiry countdown and link management
 // ✅ Integrates with TemporaryLinkService
+// ✅ REDESIGNED: Matches PDFPreviewModal design system
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -18,11 +19,12 @@ import {
   ExternalLink,
   RefreshCw,
   Shield,
-  Timer,
-  Trash2,
-  Eye
+  Timer
 } from 'lucide-react';
 import { TemporaryLinkService } from '@/services/TemporaryLinkService';
+import { ThemedButton } from '../../common/ThemedButton';
+import { ThemedCard } from '../../common/ThemedCard';
+import { ThemedAlert } from '../../common/ThemedCard';
 
 // ============================================
 // INTERFACES
@@ -62,11 +64,11 @@ export const QRCodeDownloadModal: React.FC<QRCodeDownloadModalProps> = ({
   employeeName,
   onLinkGenerated
 }) => {
-  
+
   // ============================================
   // STATE
   // ============================================
-  
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [linkData, setLinkData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +79,7 @@ export const QRCodeDownloadModal: React.FC<QRCodeDownloadModalProps> = ({
     expired: false
   });
   const [copySuccess, setCopySuccess] = useState(false);
+  const hasGeneratedRef = React.useRef(false);
 
   // ============================================
   // GENERATE QR CODE LINK
@@ -162,30 +165,13 @@ export const QRCodeDownloadModal: React.FC<QRCodeDownloadModalProps> = ({
     }
   }, [linkData?.downloadUrl]);
 
-  const handleRevokeLink = useCallback(async () => {
-    if (!linkData?.tokenId) return;
-
-    try {
-      await TemporaryLinkService.revokeTemporaryToken(linkData.tokenId);
-      setLinkData(null);
-      setCountdown({ hours: 0, minutes: 0, seconds: 0, expired: false });
-    } catch (error) {
-      Logger.error('❌ Failed to revoke link:', error)
-    }
-  }, [linkData?.tokenId]);
-
-  const handleTestLink = useCallback(() => {
-    if (linkData?.downloadUrl) {
-      window.open(linkData.downloadUrl, '_blank');
-    }
-  }, [linkData?.downloadUrl]);
-
   // ============================================
   // AUTO-GENERATE ON OPEN
   // ============================================
 
   useEffect(() => {
-    if (isOpen && pdfBlob && !linkData && !isGenerating) {
+    if (isOpen && pdfBlob && !linkData && !isGenerating && !hasGeneratedRef.current) {
+      hasGeneratedRef.current = true;
       generateQRLink();
     }
   }, [isOpen, pdfBlob, linkData, isGenerating, generateQRLink]);
@@ -200,6 +186,7 @@ export const QRCodeDownloadModal: React.FC<QRCodeDownloadModalProps> = ({
       setError(null);
       setCountdown({ hours: 0, minutes: 0, seconds: 0, expired: false });
       setCopySuccess(false);
+      hasGeneratedRef.current = false; // Reset for next open
     }
   }, [isOpen]);
 
@@ -210,196 +197,184 @@ export const QRCodeDownloadModal: React.FC<QRCodeDownloadModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
-        
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="bg-white/20 p-2 rounded-lg">
-                <QrCode className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold">Mobile Download</h3>
-                <p className="text-blue-100 text-sm">Scan to download on your phone</p>
-              </div>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
+
+        {/* Clean Header - Matches PDFPreviewModal */}
+        <div className="bg-white border-b px-6 py-4 flex items-center justify-between flex-shrink-0" style={{ borderColor: 'var(--color-border)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-primary-light)' }}>
+              <QrCode className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div>
+              <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>Mobile Download</h3>
+              <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Scan to download on your phone</p>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
+          </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
-          
-          {/* Document Info */}
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <div className="flex items-center space-x-3">
-              <div className="bg-blue-100 p-2 rounded-lg">
-                <Download className="w-5 h-5 text-blue-600" />
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+
+          {/* Document Info - Using ThemedCard */}
+          <ThemedCard padding="md" className="border" style={{ borderColor: 'var(--color-border)' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'var(--color-success-light)' }}>
+                <Download className="w-5 h-5" style={{ color: 'var(--color-success)' }} />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-gray-900 truncate">{filename}</h4>
+                <h4 className="font-medium text-sm truncate" style={{ color: 'var(--color-text)' }}>{filename}</h4>
                 {employeeName && (
-                  <p className="text-sm text-gray-600">For: {employeeName}</p>
+                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>For: {employeeName}</p>
                 )}
-                <p className="text-xs text-gray-500">
+                <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                   Size: {(pdfBlob.size / 1024).toFixed(1)} KB
                 </p>
               </div>
             </div>
-          </div>
+          </ThemedCard>
 
           {/* Loading State */}
           {isGenerating && (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Generating secure download link...</p>
-              <p className="text-sm text-gray-500 mt-2">This may take a moment</p>
+              <div className="animate-spin rounded-full h-12 w-12 mx-auto mb-4" style={{ borderWidth: '2px', borderColor: 'transparent', borderTopColor: 'var(--color-primary)' }}></div>
+              <p className="text-sm" style={{ color: 'var(--color-text)' }}>Generating secure download link...</p>
+              <p className="text-xs mt-2" style={{ color: 'var(--color-text-secondary)' }}>This may take a moment</p>
             </div>
           )}
 
-          {/* Error State */}
+          {/* Error State - Using ThemedAlert */}
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center space-x-3">
-                <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                <div>
-                  <h4 className="text-red-800 font-medium">Generation Failed</h4>
-                  <p className="text-red-700 text-sm">{error}</p>
+            <ThemedAlert variant="error">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h4 className="font-medium text-sm">Generation Failed</h4>
+                  <p className="text-xs mt-1">{error}</p>
                 </div>
               </div>
-              <button
+              <ThemedButton
+                variant="danger"
+                size="sm"
                 onClick={generateQRLink}
-                className="mt-3 flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm"
                 disabled={isGenerating}
+                className="mt-3"
               >
-                <RefreshCw className="w-4 h-4" />
-                <span>Try Again</span>
-              </button>
-            </div>
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Try Again</span>
+                </div>
+              </ThemedButton>
+            </ThemedAlert>
           )}
 
           {/* Success State with QR Code */}
           {linkData && !countdown.expired && (
-            <div className="space-y-6">
-              
-              {/* Expiry Warning */}
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <div className="flex items-center space-x-3">
-                  <Timer className="w-5 h-5 text-amber-500" />
+            <div className="space-y-4">
+
+              {/* Expiry Warning - Using ThemedAlert */}
+              <ThemedAlert variant="warning" className="border-l-4" style={{ borderLeftColor: 'var(--color-warning)' }}>
+                <div className="flex items-center gap-3">
+                  <Timer className="w-5 h-5" />
                   <div>
-                    <h4 className="text-amber-800 font-medium">Time-Limited Access</h4>
-                    <p className="text-amber-700 text-sm">
+                    <h4 className="font-medium text-sm">Time-Limited Access</h4>
+                    <p className="text-xs mt-1">
                       Link expires in: {countdown.hours > 0 && `${countdown.hours}h `}
                       {countdown.minutes}m {countdown.seconds}s
                     </p>
                   </div>
                 </div>
-              </div>
+              </ThemedAlert>
 
               {/* QR Code Display */}
               <div className="text-center">
-                <div className="bg-white p-6 rounded-xl border-2 border-gray-200 inline-block">
-                  <img 
-                    src={linkData.qrCodeData} 
+                <div className="bg-white p-6 rounded-lg border-2 inline-block" style={{ borderColor: 'var(--color-border)' }}>
+                  <img
+                    src={linkData.qrCodeData}
                     alt="Download QR Code"
                     className="w-64 h-64 mx-auto"
                     style={{ imageRendering: 'pixelated' }}
                   />
                 </div>
                 <div className="mt-4">
-                  <div className="flex items-center justify-center space-x-2 text-gray-600 mb-2">
+                  <div className="flex items-center justify-center gap-2 mb-2" style={{ color: 'var(--color-text)' }}>
                     <Smartphone className="w-4 h-4" />
                     <span className="text-sm">Point your camera at the QR code</span>
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
                     No app needed - works with built-in camera on iOS & Android
                   </p>
                 </div>
               </div>
 
-              {/* Actions */}
+              {/* Actions - Using ThemedButton */}
               <div className="space-y-3">
-                
-                {/* Copy Link */}
-                <button
-                  onClick={handleCopyLink}
-                  className="w-full flex items-center justify-center space-x-3 bg-gray-100 text-gray-700 px-4 py-3 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  {copySuccess ? (
-                    <>
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                      <span>Link Copied!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-5 h-5" />
-                      <span>Copy Download Link</span>
-                    </>
-                  )}
-                </button>
 
-                {/* Action Buttons */}
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={handleTestLink}
-                    className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span>Test Link</span>
-                  </button>
-                  
-                  <button
-                    onClick={handleRevokeLink}
-                    className="flex items-center justify-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    <span>Revoke</span>
-                  </button>
-                </div>
+                {/* Copy Link */}
+                <ThemedButton
+                  variant={copySuccess ? "success" : "secondary"}
+                  size="md"
+                  fullWidth
+                  onClick={handleCopyLink}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    {copySuccess ? (
+                      <>
+                        <CheckCircle className="w-5 h-5" />
+                        <span>Link Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-5 h-5" />
+                        <span>Copy Download Link</span>
+                      </>
+                    )}
+                  </div>
+                </ThemedButton>
               </div>
 
-              {/* Security Notice */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <Shield className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+              {/* Security Notice - Using ThemedAlert */}
+              <ThemedAlert variant="info" className="border-l-4" style={{ borderLeftColor: 'var(--color-info)' }}>
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 flex-shrink-0" />
                   <div>
-                    <h4 className="text-blue-800 font-medium text-sm">Security Features</h4>
-                    <ul className="text-blue-700 text-xs mt-1 space-y-1">
+                    <h4 className="font-medium text-sm">Security Features</h4>
+                    <ul className="text-xs mt-1 space-y-1">
                       <li>• Link expires automatically in 1 hour</li>
                       <li>• Single-use download link</li>
                       <li>• Encrypted token authentication</li>
-                      <li>• Can be revoked instantly</li>
+                      <li>• No app needed - works with any camera</li>
                     </ul>
                   </div>
                 </div>
-              </div>
+              </ThemedAlert>
             </div>
           )}
 
           {/* Expired State */}
           {linkData && countdown.expired && (
             <div className="text-center py-8">
-              <div className="bg-red-100 p-4 rounded-full w-16 h-16 mx-auto mb-4">
-                <Clock className="w-8 h-8 text-red-500 mx-auto" />
+              <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ backgroundColor: 'var(--color-error-light)' }}>
+                <Clock className="w-8 h-8" style={{ color: 'var(--color-error)' }} />
               </div>
-              <h4 className="text-lg font-medium text-gray-900 mb-2">Link Expired</h4>
-              <p className="text-gray-600 mb-4">
+              <h4 className="text-lg font-medium mb-2" style={{ color: 'var(--color-text)' }}>Link Expired</h4>
+              <p className="text-sm mb-4" style={{ color: 'var(--color-text-secondary)' }}>
                 The download link has expired for security reasons.
               </p>
-              <button
+              <ThemedButton
+                variant="primary"
+                size="md"
                 onClick={generateQRLink}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                 disabled={isGenerating}
               >
                 Generate New Link
-              </button>
+              </ThemedButton>
             </div>
           )}
         </div>

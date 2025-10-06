@@ -23,10 +23,6 @@ import {
 
 // Import enhanced warning wizard (now includes audio consent)
 import { EnhancedWarningWizard } from '../warnings/enhanced/EnhancedWarningWizard';
-// Import simplified wizard for 2012-era devices
-import { SimplifiedWarningWizard } from '../warnings/SimplifiedWarningWizard';
-// Import device detection for legacy support
-import { globalDeviceCapabilities } from '../../utils/deviceDetection';
 
 // Import unified modal components
 import { UnifiedCorrectiveCounselling } from '../counselling/UnifiedCorrectiveCounselling';
@@ -626,37 +622,17 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
 
       {/* Audio consent is now integrated into the wizard as first step */}
 
-      {/* Warning Wizard - Enhanced or Simplified based on device capability */}
+      {/* Warning Wizard */}
       {showWarningWizard && (
-        globalDeviceCapabilities?.isLegacyDevice ? (
-          <SimplifiedWarningWizard
-            key="simplified-warning-wizard"
-            isOpen={showWarningWizard}
-            onClose={handleWarningWizardCancel}
-            onSubmit={async (warningData) => {
-              // Convert simplified data to enhanced format
-              try {
-                await API.warnings.create(warningData);
-                handleWarningWizardComplete();
-              } catch (error) {
-                Logger.error('Failed to create warning:', error);
-                throw error;
-              }
-            }}
-            employees={employees}
-            categories={categories}
-          />
-        ) : (
-          <EnhancedWarningWizard
-            key="enhanced-warning-wizard"
-            employees={employees}
-            categories={categories}
-            currentManagerName={currentManagerName}
-            organizationName={organizationName}
-            onComplete={handleWarningWizardComplete}
-            onCancel={handleWarningWizardCancel}
-          />
-        )
+        <EnhancedWarningWizard
+          key="enhanced-warning-wizard"
+          employees={employees}
+          categories={categories}
+          currentManagerName={currentManagerName}
+          organizationName={organizationName}
+          onComplete={handleWarningWizardComplete}
+          onCancel={handleWarningWizardCancel}
+        />
       )}
 
       {/* Unified Modal Components */}

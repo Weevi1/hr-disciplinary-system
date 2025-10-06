@@ -29,6 +29,7 @@ import { ThemedButton } from '../common/ThemedButton';
 
 // Import PDF preview modal
 import { PDFPreviewModal } from '../warnings/enhanced/PDFPreviewModal';
+import Logger from '../../utils/logger';
 
 // ============================================
 // INTERFACES
@@ -124,7 +125,7 @@ ${emailTemplate.body}`;
       setTemplateCopied(true);
       setTimeout(() => setTemplateCopied(false), 3000);
     } catch (err) {
-      console.error('Failed to copy template:', err);
+      Logger.error('Failed to copy template:', err);
     }
   };
 
@@ -135,7 +136,7 @@ ${emailTemplate.body}`;
       setTemplateCopied(true);
       setTimeout(() => setTemplateCopied(false), 3000);
     } catch (err) {
-      console.error('Failed to copy email body:', err);
+      Logger.error('Failed to copy email body:', err);
     }
   };
 
@@ -204,7 +205,7 @@ ${emailTemplate.body}`;
         emailAddress: emailTemplate.to
       });
     } catch (err) {
-      console.error('Failed to complete delivery:', err);
+      Logger.error('Failed to complete delivery:', err);
     } finally {
       setIsUploading(false);
     }

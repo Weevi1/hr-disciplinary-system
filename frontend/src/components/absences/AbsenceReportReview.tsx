@@ -11,6 +11,7 @@ import {
 
 import { useAuth } from '../../auth/AuthContext';
 import { FirebaseService } from '../../services/FirebaseService';
+import { TimeService } from '../../services/TimeService';
 
 // 🏢 COLLECTIONS - Same as ReportAbsence
 const COLLECTIONS = {
@@ -219,9 +220,9 @@ export const AbsenceReportReview: React.FC = () => {
         hrNotes: reviewData.hrNotes.trim() || undefined,
         payrollProcessed: reviewData.payrollProcessed,
         hrReviewedBy: reviewData.hrReviewed ? user.id : undefined,
-        hrReviewedAt: reviewData.hrReviewed ? new Date().toISOString() : undefined,
-        payrollProcessedAt: reviewData.payrollProcessed ? new Date().toISOString() : undefined,
-        updatedAt: new Date().toISOString()
+        hrReviewedAt: reviewData.hrReviewed ? TimeService.getServerTimestamp() : undefined,
+        payrollProcessedAt: reviewData.payrollProcessed ? TimeService.getServerTimestamp() : undefined,
+        updatedAt: TimeService.getServerTimestamp()
       };
 
       // ✅ PATTERN: Use FirebaseService.updateDocument like HRMeetingReview

@@ -35,6 +35,7 @@ import { EnhancedDeliveryWorkflow } from '../hr/EnhancedDeliveryWorkflow';
 import { ThemedCard, ThemedBadge, ThemedAlert } from '../common/ThemedCard';
 import { ThemedButton } from '../common/ThemedButton';
 import { ThemedStatusCard } from '../common/ThemedStatusCard';
+import Logger from '../../utils/logger';
 
 // --- A Reusable Breakpoint Hook (for responsive rendering) ---
 const useBreakpoint = (breakpoint: number) => {
@@ -115,12 +116,12 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
 
   const handleDeliveryComplete = async (notificationId: string, proofData: any) => {
     try {
-      console.log('Delivery completed:', { notificationId, proofData });
+      Logger.debug('Delivery completed:', { notificationId, proofData });
       setShowDeliveryWorkflow(false);
       setSelectedDeliveryNotification(null);
       refreshData();
     } catch (err) {
-      console.error('Failed to complete delivery:', err);
+      Logger.error('Failed to complete delivery:', err);
     }
   };
 

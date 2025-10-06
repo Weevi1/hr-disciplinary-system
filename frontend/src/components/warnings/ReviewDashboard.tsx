@@ -948,7 +948,7 @@ const loadWarnings = useCallback(async () => {
               setShowProofOfDelivery(false);
               setDeliveryWarning(null);
             } catch (error) {
-              console.error('Failed to confirm delivery:', error);
+              Logger.error('Failed to confirm delivery:', error);
               throw error;
             }
           }}

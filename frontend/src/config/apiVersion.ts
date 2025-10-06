@@ -1,3 +1,5 @@
+import Logger from '../utils/logger';
+
 // frontend/src/config/apiVersion.ts
 // API Version Configuration for Cloud Functions
 // Matches backend API versioning system
@@ -54,7 +56,7 @@ export function handleDeprecationWarning(
   metadata: VersionedApiResponse['metadata']
 ): void {
   if (metadata.deprecated && metadata.deprecationWarning) {
-    console.warn(
+    Logger.warn(
       `⚠️ [API DEPRECATION] ${functionName} - ${metadata.deprecationWarning}\n` +
       `Please upgrade to avoid service disruption.`
     );

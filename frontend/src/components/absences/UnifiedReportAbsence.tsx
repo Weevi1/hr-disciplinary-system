@@ -17,8 +17,10 @@ import { CustomDatePicker } from '../common/CustomDatePicker';
 import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
+import { TimeService } from '../../services/TimeService';
 import { API } from '../../api';
 import type { Employee } from '../../types/core';
+import Logger from '../../utils/logger';
 
 interface UnifiedReportAbsenceProps {
   isOpen: boolean;
@@ -131,7 +133,7 @@ export const UnifiedReportAbsence: React.FC<UnifiedReportAbsenceProps> = ({
         }));
         setEmployees(transformedEmployees);
       } catch (error) {
-        console.error('Failed to load employees:', error);
+        Logger.error('Failed to load employees:', error);
         setError('Failed to load employees');
       }
     };
@@ -196,11 +198,11 @@ export const UnifiedReportAbsence: React.FC<UnifiedReportAbsenceProps> = ({
         absenceDate,
         absenceType: absenceType as AbsenceReport['absenceType'],
         reason: reason.trim() || undefined,
-        reportedDate: new Date().toISOString(),
+        reportedDate: TimeService.getServerTimestamp(),
         payrollImpact: selectedAbsenceType?.payrollImpact || false,
         hrReviewed: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        createdAt: TimeService.getServerTimestamp(),
+        updatedAt: TimeService.getServerTimestamp()
       };
 
       // Remove undefined fields for Firebase
@@ -221,7 +223,7 @@ export const UnifiedReportAbsence: React.FC<UnifiedReportAbsenceProps> = ({
         onClose();
       }, 2000);
     } catch (err) {
-      console.error('Failed to submit absence report:', err);
+      Logger.error('Failed to submit absence report:', err);
       setError('Failed to submit absence report. Please try again.');
     } finally {
       setLoading(false);
