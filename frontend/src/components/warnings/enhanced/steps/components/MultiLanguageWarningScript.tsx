@@ -29,6 +29,94 @@ const SA_LANGUAGES = [
   { code: 'ns', name: 'Northern Sotho', nativeName: 'Sepedi' }
 ];
 
+// 🏷️ WARNING LEVEL TRANSLATIONS IN ALL LANGUAGES
+const WARNING_LEVEL_TRANSLATIONS = {
+  en: {
+    counselling: 'Counselling Session',
+    verbal: 'Verbal Warning',
+    first_written: 'First Written Warning',
+    second_written: 'Second Written Warning',
+    final_written: 'Final Written Warning'
+  },
+  af: {
+    counselling: 'Beradingsessie',
+    verbal: 'Mondelinge Waarskuwing',
+    first_written: 'Eerste Geskrewe Waarskuwing',
+    second_written: 'Tweede Geskrewe Waarskuwing',
+    final_written: 'Finale Geskrewe Waarskuwing'
+  },
+  zu: {
+    counselling: 'Iseshini Yokweluleka',
+    verbal: 'Isexwayiso Ngomlomo',
+    first_written: 'Isexwayiso Sokuqala Esibhaliwe',
+    second_written: 'Isexwayiso Sesibili Esibhaliwe',
+    final_written: 'Isexwayiso Sokugcina Esibhaliwe'
+  },
+  xh: {
+    counselling: 'Iseshoni Yokucebisa',
+    verbal: 'Isilumkiso Ngomlomo',
+    first_written: 'Isilumkiso Sokuqala Esibhaliweyo',
+    second_written: 'Isilumkiso Sesibini Esibhaliweyo',
+    final_written: 'Isilumkiso Sokugqibela Esibhaliweyo'
+  },
+  st: {
+    counselling: 'Seboka sa Keletso',
+    verbal: 'Temoso ya Molomo',
+    first_written: 'Temoso ya Pele e Ngotsweng',
+    second_written: 'Temoso ya Bobedi e Ngotsweng',
+    final_written: 'Temoso ya ho Qetela e Ngotsweng'
+  },
+  ts: {
+    counselling: 'Nkarhi wo Tivonela',
+    verbal: 'Xilumkiso xa Marito',
+    first_written: 'Xilumkiso xa Sinthoma xa Ku Tsariwa',
+    second_written: 'Xilumkiso xa Vumbirhi xa Ku Tsariwa',
+    final_written: 'Xilumkiso xa Makumu xa Ku Tsariwa'
+  },
+  ve: {
+    counselling: 'Tshikhala tsha Themendelo',
+    verbal: 'Tivhiso ya Ipfi',
+    first_written: 'Tivhiso ya u Thoma yo Ṅwalwaho',
+    second_written: 'Tivhiso ya vhuvhili yo Ṅwalwaho',
+    final_written: 'Tivhiso ya u Fhedzisela yo Ṅwalwaho'
+  },
+  ss: {
+    counselling: 'Seshoni Sekululeleka',
+    verbal: 'Sixwayiso Ngemlomo',
+    first_written: 'Sixwayiso Sekucala Lesibhaliwe',
+    second_written: 'Sixwayiso Sesibili Lesibhaliwe',
+    final_written: 'Sixwayiso Sekugcina Lesibhaliwe'
+  },
+  tn: {
+    counselling: 'Khuduthamaga ya Kgakololo',
+    verbal: 'Temoso ya Molomo',
+    first_written: 'Temoso ya Ntlha e e Kwadilweng',
+    second_written: 'Temoso ya Bobedi e e Kwadilweng',
+    final_written: 'Temoso ya Bofelo e e Kwadilweng'
+  },
+  nr: {
+    counselling: 'Iseshini Yokululeleka',
+    verbal: 'Isixwayiso Ngomlomo',
+    first_written: 'Isixwayiso Sokuqala Esibhaliwe',
+    second_written: 'Isixwayiso Sesibili Esibhaliwe',
+    final_written: 'Isixwayiso Sokugcina Esibhaliwe'
+  },
+  ns: {
+    counselling: 'Kopano ya Keletšo',
+    verbal: 'Temošo ya Molomo',
+    first_written: 'Temošo ya Pele yeo e Ngwadilwego',
+    second_written: 'Temošo ya Bobedi yeo e Ngwadilwego',
+    final_written: 'Temošo ya Mafelelo yeo e Ngwadilwego'
+  }
+} as const;
+
+// Helper function to get translated warning level
+const getWarningLevelTranslation = (level: string, language: keyof typeof WARNING_SCRIPTS): string => {
+  const levelKey = level.toLowerCase().replace(/ /g, '_') as keyof typeof WARNING_LEVEL_TRANSLATIONS.en;
+  const translations = WARNING_LEVEL_TRANSLATIONS[language];
+  return translations[levelKey] || level;
+};
+
 // 📝 WARNING SCRIPTS IN ALL 11 OFFICIAL LANGUAGES
 const WARNING_SCRIPTS = {
   // 🇬🇧 ENGLISH - Primary/Default
@@ -438,6 +526,9 @@ export const MultiLanguageWarningScript: React.FC<MultiLanguageWarningScriptProp
   const currentScript = WARNING_SCRIPTS[selectedLanguage] || WARNING_SCRIPTS.en;
   const currentLanguageInfo = SA_LANGUAGES.find(lang => lang.code === selectedLanguage) || SA_LANGUAGES[0];
 
+  // Get translated warning level for current language
+  const translatedWarningLevel = getWarningLevelTranslation(warningLevel, selectedLanguage);
+
   const handleScriptComplete = () => {
     setScriptRead(true);
     onScriptRead();
@@ -549,7 +640,7 @@ export const MultiLanguageWarningScript: React.FC<MultiLanguageWarningScriptProp
                 <div className="border-l-4 pl-3" style={{ borderLeftColor: 'var(--color-warning)' }}>
                   <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>4. Warning Details</h5>
                   <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                    {currentScript.warningExplanation(warningLevel)}
+                    {currentScript.warningExplanation(translatedWarningLevel)}
                   </p>
                 </div>
 

@@ -207,19 +207,19 @@ export const warnings = {
         );
         Logger.success(`📁 [NESTED] Warning created: ${warningId}`);
 
-        // Dual-write to flat structure if enabled
+        // Dual-write to sharded structure if enabled
         if (isDualWriteEnabled()) {
           try {
             await WarningService.saveWarning(warning, warningData.organizationId);
-            Logger.debug(`📋 [DUAL-WRITE] Warning also saved to flat structure`);
+            Logger.debug(`📋 [DUAL-WRITE] Warning also saved to sharded structure`);
           } catch (error) {
-            Logger.warn(`⚠️ [DUAL-WRITE] Failed to save to flat structure:`, error);
+            Logger.warn(`⚠️ [DUAL-WRITE] Failed to save to sharded structure:`, error);
           }
         }
       } else {
-        // Use original flat structure
+        // Use sharded organization structure (organizations/{orgId}/warnings/{id})
         warningId = await WarningService.saveWarning(warning, warningData.organizationId);
-        Logger.success(`📋 [FLAT] Warning created: ${warningId}`);
+        Logger.success(`📋 [SHARD] Warning created: ${warningId}`);
 
         // Dual-write to nested structure if enabled
         if (isDualWriteEnabled()) {
@@ -259,27 +259,27 @@ export const warnings = {
         // Use nested structure
         if (!employeeId) {
           // If employeeId not provided, we need to get it from the warning
-          // For now, log a warning and fallback to flat structure
-          Logger.warn(`⚠️ [NESTED] Employee ID required for nested update, falling back to flat structure`);
+          // For now, log a warning and fallback to sharded structure
+          Logger.warn(`⚠️ [NESTED] Employee ID required for nested update, falling back to sharded structure`);
           await this.updateFlatStructure(warningId, updates, orgId);
         } else {
           await NestedDataService.updateWarning(orgId, employeeId, warningId, updates);
           Logger.success(`📁 [NESTED] Warning ${warningId} updated successfully`);
 
-          // Dual-write to flat structure if enabled
+          // Dual-write to sharded structure if enabled
           if (isDualWriteEnabled()) {
             try {
               await this.updateFlatStructure(warningId, updates, orgId);
-              Logger.debug(`📋 [DUAL-WRITE] Warning also updated in flat structure`);
+              Logger.debug(`📋 [DUAL-WRITE] Warning also updated in sharded structure`);
             } catch (error) {
-              Logger.warn(`⚠️ [DUAL-WRITE] Failed to update flat structure:`, error);
+              Logger.warn(`⚠️ [DUAL-WRITE] Failed to update sharded structure:`, error);
             }
           }
         }
       } else {
-        // Use original flat structure
+        // Use sharded organization structure (organizations/{orgId}/warnings/{id})
         await this.updateFlatStructure(warningId, updates, orgId);
-        Logger.success(`📋 [FLAT] Warning ${warningId} updated successfully`);
+        Logger.success(`📋 [SHARD] Warning ${warningId} updated successfully`);
 
         // Dual-write to nested structure if enabled
         if (isDualWriteEnabled() && employeeId) {
@@ -437,18 +437,75 @@ export const warnings = {
 export const employees = {
   /**
    * Get all employees for organization (OPTIMIZED SHARDED with pagination)
+   * ✅ ENHANCED: Includes active warning counts for each employee
    */
   async getAll(organizationId: string, pageSize: number = 100): Promise<Employee[]> {
     try {
-      // Use pagination to avoid loading thousands of employees at once
-      const result = await ShardedDataService.loadEmployees(organizationId, {
-        pageSize,
-        orderField: 'profile.lastName',
-        orderDirection: 'asc'
+      // Load employees and warnings in parallel for better performance
+      const [employeesResult, warningsResult] = await Promise.all([
+        ShardedDataService.loadEmployees(organizationId, {
+          pageSize,
+          orderField: 'profile.lastName',
+          orderDirection: 'asc'
+        }),
+        ShardedDataService.loadWarnings(organizationId)
+      ]);
+
+      const employees = employeesResult.documents;
+      const allWarnings = warningsResult.documents;
+
+      // Count active warnings per employee
+      const warningCounts = new Map<string, number>();
+
+      // NOTE: Using client time for validation checks
+      // Ideally we'd use server time for consistency, but Firebase serverTimestamp()
+      // only works for writes, not reads. Future improvement: Add Cloud Function
+      // endpoint to get server time, or do validation server-side.
+      const now = new Date();
+
+      allWarnings.forEach(warning => {
+        try {
+          // Only count active, non-expired warnings
+          let expiryDate: Date | null = null;
+          if (warning.expiryDate) {
+            // Handle Firestore Timestamp objects
+            if (typeof warning.expiryDate.toDate === 'function') {
+              expiryDate = warning.expiryDate.toDate();
+            } else if (warning.expiryDate instanceof Date) {
+              expiryDate = warning.expiryDate;
+            } else if (typeof warning.expiryDate === 'string' || typeof warning.expiryDate === 'number') {
+              expiryDate = new Date(warning.expiryDate);
+            }
+          }
+
+          const isActive = warning.isActive &&
+                          (!expiryDate || !isNaN(expiryDate.getTime()) && expiryDate > now);
+
+          if (isActive && warning.employeeId) {
+            const currentCount = warningCounts.get(warning.employeeId) || 0;
+            warningCounts.set(warning.employeeId, currentCount + 1);
+          }
+        } catch (dateError) {
+          Logger.warn(`⚠️ [WARNING COUNT] Error processing warning ${warning.id}:`, dateError);
+        }
       });
 
-      Logger.success(`👥 [OPTIMIZED] Loaded ${result.documents.length} employees with pagination (pageSize: ${pageSize})`);
-      return result.documents;
+      // Enrich employees with warning counts
+      const enrichedEmployees = employees.map(employee => {
+        const activeWarnings = warningCounts.get(employee.id) || 0;
+
+        return {
+          ...employee,
+          disciplinaryRecord: {
+            ...employee.disciplinaryRecord,
+            activeWarnings,
+            totalWarnings: employee.disciplinaryRecord?.totalWarnings || activeWarnings
+          }
+        };
+      });
+
+      Logger.success(`👥 [OPTIMIZED] Loaded ${enrichedEmployees.length} employees with warning counts (pageSize: ${pageSize})`);
+      return enrichedEmployees;
     } catch (error) {
       handleError('employees.getAll', error);
     }
