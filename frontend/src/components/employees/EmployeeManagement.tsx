@@ -22,7 +22,6 @@ import { EmployeePromotionModal } from './EmployeePromotionModal';
 import { BulkAssignManagerModal } from './BulkAssignManagerModal';
 import EmployeeOrganogram from './EmployeeOrganogram';
 import EmployeeTableBrowser from './EmployeeTableBrowser';
-import { MobileEmployeeManagement } from './MobileEmployeeManagement';
 import { calculateEmployeePermissions } from '../../types';
 import type { Employee } from '../../types';
 import {
@@ -36,14 +35,6 @@ import Logger from '../../utils/logger';
 
 export const EmployeeManagement: React.FC = () => {
   const { user, organization } = useAuth();
-
-  // Check if we should use mobile version
-  const isMobile = window.innerWidth < 768; // Mobile breakpoint
-
-  // Use mobile component for small screens
-  if (isMobile) {
-    return <MobileEmployeeManagement />;
-  }
 
   // Check if user is an HOD manager - if so, only load their team members
   const isHODManager = user?.role?.id === 'hod-manager';
@@ -85,8 +76,13 @@ export const EmployeeManagement: React.FC = () => {
 
   const totalPages = Math.ceil(filteredEmployees.length / pageSize);
 
+  // Detect mobile on mount and set appropriate default view
+  const isMobile = useMemo(() => window.innerWidth < 768, []);
+
   // UI State - Enhanced with new views
-  const [viewMode, setViewMode] = useState<'organogram' | 'table' | 'cards' | 'archive'>('table'); // Default to table for better data overview
+  const [viewMode, setViewMode] = useState<'organogram' | 'table' | 'cards' | 'archive'>(
+    isMobile ? 'cards' : 'table' // Mobile defaults to cards, desktop to table
+  );
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
@@ -251,9 +247,9 @@ export const EmployeeManagement: React.FC = () => {
       <EmployeeStats employees={filteredEmployees} />
         
       {/* Compact View Controls */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-slate-600">
-          {user?.role?.id === 'hr-manager' 
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+        <div className="text-xs sm:text-sm text-slate-600">
+          {user?.role?.id === 'hr-manager'
             ? 'Full organizational view'
             : user?.role?.id === 'hod-manager'
             ? 'Your team structure'
@@ -262,36 +258,36 @@ export const EmployeeManagement: React.FC = () => {
         <div className="flex bg-slate-100 rounded-lg p-1">
         <button
           onClick={() => setViewMode('organogram')}
-          className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-all text-xs ${
+          className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md font-medium transition-all text-xs ${
             viewMode === 'organogram'
               ? 'bg-white shadow-md text-indigo-600'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <Workflow className="w-3 h-3" />
-          <span>Hierarchy</span>
+          <span className="hidden sm:inline">Hierarchy</span>
         </button>
         <button
           onClick={() => setViewMode('table')}
-          className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-all text-xs ${
+          className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md font-medium transition-all text-xs ${
             viewMode === 'table'
               ? 'bg-white shadow-md text-indigo-600'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <FileSpreadsheet className="w-3 h-3" />
-          <span>Table</span>
+          <span className="hidden sm:inline">Table</span>
         </button>
         <button
           onClick={() => setViewMode('cards')}
-          className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-all text-xs ${
+          className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md font-medium transition-all text-xs ${
             viewMode === 'cards'
               ? 'bg-white shadow-md text-indigo-600'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <Layout className="w-3 h-3" />
-          <span>Cards</span>
+          <span className="hidden sm:inline">Cards</span>
         </button>
       </div>
       </div>
