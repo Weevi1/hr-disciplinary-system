@@ -13,7 +13,7 @@ import Logger from '../../../utils/logger';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
-import { Check, ChevronLeft, ChevronRight, X, FileText, Scale, Send, Mic, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, X, FileText, Scale, Send, Mic, ChevronDown, ChevronUp, Info, AlertTriangle } from 'lucide-react';
 // Import debugging components
 import { useWizardLogging } from '../../../hooks/useWizardLogging';
 
@@ -205,6 +205,17 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   const [lraRecommendation, setLraRecommendation] = useState<EscalationRecommendation | null>(null);
   const [finalWarningId, setFinalWarningId] = useState<string | null>(null);
 
+  // 🆕 Override level from Step 2 (user can override system recommendation)
+  const [overrideLevel, setOverrideLevel] = useState<string | null>(null);
+
+  // 🚨 Final Warning Block - prevents wizard from continuing if employee has final warning
+  const [hasFinalWarningBlock, setHasFinalWarningBlock] = useState(false);
+  const [finalWarningBlockData, setFinalWarningBlockData] = useState<{
+    employeeName: string;
+    categoryName: string;
+    warningDate: string;
+  } | null>(null);
+
   // Finalization state for step 3
   const [finalizeData, setFinalizeData] = useState<{ canFinalize: boolean; finalizeHandler: () => void } | null>(null);
 
@@ -388,29 +399,93 @@ useEffect(() => {
         organizationId: !!organizationId,
         incidentDescription: !!formData.incidentDescription
       };
-      
+
       logging.trackError(new Error('Cannot generate LRA - missing data'), missingData);
       return;
     }
-    
+
     setIsAnalyzing(true);
     logging.trackAPI('generateLRARecommendation', { employeeId, categoryId });
-    
+
+    // 🚨 STEP 1: Fetch active warnings (separate try/catch to handle errors properly)
+    let activeWarnings;
     try {
-      // 🔧 FIXED: Now correctly receives EscalationRecommendation via API with organizationId
+      Logger.debug('🔍 Fetching active warnings for final warning check...');
+      activeWarnings = await API.warnings.getActiveWarnings(employeeId, organizationId);
+      Logger.debug(`✅ Successfully fetched ${activeWarnings.length} active warnings`);
+    } catch (fetchError) {
+      Logger.error('❌ Failed to fetch active warnings:', fetchError);
+      logging.trackError(fetchError as Error, {
+        employeeId,
+        categoryId,
+        context: 'final_warning_verification_failed'
+      });
+
+      // Block wizard - cannot safely proceed without verification
+      const employee = employees.find(e => e.id === employeeId);
+      const category = categories.find(c => c.id === categoryId);
+
+      Logger.debug('🚨 BLOCKING WIZARD - Cannot verify if escalation is safe');
+      setHasFinalWarningBlock(true);
+      setFinalWarningBlockData({
+        employeeName: employee ? `${employee.firstName} ${employee.lastName}` : 'Employee',
+        categoryName: category?.name || 'Category',
+        warningDate: 'cannot_verify_escalation' // Special flag for safety message
+      });
+      setIsAnalyzing(false);
+      return; // Stop wizard progression
+    }
+
+    // 🚨 STEP 2: Check for final warnings (we have data now, so this is safe)
+    const hasFinalWarning = activeWarnings.some(warning =>
+      warning.level === 'final_written' ||
+      warning.level === 'Final Written Warning' ||
+      warning.suggestedLevel === 'final_written'
+    );
+
+    if (hasFinalWarning) {
+      const finalWarning = activeWarnings.find(w =>
+        w.level === 'final_written' ||
+        w.level === 'Final Written Warning' ||
+        w.suggestedLevel === 'final_written'
+      );
+
+      const employee = employees.find(e => e.id === employeeId);
+      const category = categories.find(c => c.id === categoryId);
+
+      Logger.debug('🚨 FINAL WARNING DETECTED - Blocking wizard progression');
+      setHasFinalWarningBlock(true);
+      setFinalWarningBlockData({
+        employeeName: employee ? `${employee.firstName} ${employee.lastName}` : 'Employee',
+        categoryName: category?.name || 'Category',
+        warningDate: finalWarning?.issueDate || new Date().toISOString()
+      });
+      setIsAnalyzing(false);
+      return; // Stop wizard progression
+    }
+
+    // 🚨 STEP 3: Generate LRA recommendation (only if no final warnings)
+    Logger.debug('✅ No final warnings found - proceeding with LRA generation');
+    try {
       const recommendation = await API.warnings.getEscalationRecommendation(
         employeeId,
         categoryId,
         organization?.id || 'default'
       );
-      
+
       setLraRecommendation(recommendation);
       logging.trackAPI('generateLRARecommendation', { employeeId, categoryId }, recommendation);
-      
-    } catch (error) {
-      logging.trackError(error as Error, { employeeId, categoryId, formData });
-      
-      // 🔧 FIXED: Fallback using EscalationRecommendation format with category's escalation path
+
+    } catch (lraError) {
+      logging.trackError(lraError as Error, {
+        employeeId,
+        categoryId,
+        formData,
+        context: 'lra_generation_failed'
+      });
+
+      // 🔧 Fallback ONLY for LRA generation errors (not for final warning checks)
+      Logger.debug('⚠️ LRA generation failed - using fallback recommendation');
       const categoryEscalationPath = selectedCategory?.escalationPath || ['counselling', 'verbal', 'first_written', 'final_written'];
       const fallbackRecommendation: EscalationRecommendation = {
         // Core Recommendation
@@ -420,21 +495,21 @@ useEffect(() => {
                          categoryEscalationPath[0] === 'first_written' ? 'First Written Warning' :
                          'Counselling Session',
         reason: 'Fallback recommendation due to analysis error. Manual review required.',
-        activeWarnings: [],
+        activeWarnings: activeWarnings, // Use the warnings we fetched earlier
         escalationPath: categoryEscalationPath,
         isEscalation: false,
-        
+
         // Essential LRA Compliance
         category: selectedCategory?.name || 'General Misconduct',
         categoryId: categoryId,
         legalBasis: 'LRA Section 188 - Fair reason and procedure',
         legalRequirements: ['Ensure procedural fairness', 'Document thoroughly'],
-        
+
         // Progressive Discipline Context
-        warningCount: 0,
+        warningCount: activeWarnings.length,
         nextExpiryDate: null,
         examples: ['Review case manually', 'Consult HR if needed'],
-        
+
         // Simple Justification
         explanation: 'Unable to analyze history - system error occurred',
         previousWarnings: [],
@@ -442,14 +517,14 @@ useEffect(() => {
         // Backward compatibility
         confidence: 60
       };
-      
+
       setLraRecommendation(fallbackRecommendation);
       logging.trackWarning('Using fallback LRA recommendation', fallbackRecommendation);
-      
+
     } finally {
       setIsAnalyzing(false);
     }
-  }, [organizationId, formData.incidentDescription, selectedCategory, logging]);
+  }, [organizationId, formData.incidentDescription, selectedCategory, logging, employees, categories]);
 
   // ============================================
   // 🔥 FORM DATA UPDATE WITH OPTIMIZED LOGGING
@@ -537,19 +612,26 @@ useEffect(() => {
   // ============================================
   // 🔥 PENDING NAVIGATION HANDLER
   // ============================================
-  
+
   useEffect(() => {
     if (pendingNavigation && !isAnalyzing && lraRecommendation) {
       logging.trackSuccess('LRA_ANALYSIS_COMPLETE_PROCEEDING', {
         pendingStep: pendingNavigation,
         hasRecommendation: !!lraRecommendation
       });
-      
+
       setCurrentStep(pendingNavigation);
       setPendingNavigation(null);
       setIsNavigating(false);
     }
-  }, [pendingNavigation, isAnalyzing, lraRecommendation, logging]);
+
+    // 🚨 Clear pending navigation if final warning block is active
+    if (hasFinalWarningBlock && pendingNavigation) {
+      Logger.debug('🚨 Clearing pending navigation due to final warning block');
+      setPendingNavigation(null);
+      setIsNavigating(false);
+    }
+  }, [pendingNavigation, isAnalyzing, lraRecommendation, hasFinalWarningBlock, logging]);
 
   // ============================================
   // 🔥 STEP NAVIGATION WITH RACE CONDITION PREVENTION
@@ -687,9 +769,12 @@ useEffect(() => {
           
           // Category data
           categoryName: selectedCategory.name || 'Unknown',
-          
+
           // Warning details
-          level: lraRecommendation?.suggestedLevel || 'counselling',
+          // 🆕 Use override level if set, otherwise use system recommendation
+          level: overrideLevel || lraRecommendation?.suggestedLevel || 'counselling',
+          wasOverridden: !!overrideLevel, // Track if manager overrode the recommendation
+          originalRecommendedLevel: lraRecommendation?.suggestedLevel, // Store original for audit trail
           incidentDate: formData.incidentDate,
           incidentTime: formData.incidentTime,
           incidentLocation: formData.incidentLocation,
@@ -901,6 +986,70 @@ useEffect(() => {
   const renderStepContent = useCallback(() => {
     switch (currentStep) {
       case WizardStep.INCIDENT_DETAILS:
+        // 🚨 Show blocking UI if employee has final warning OR cannot verify escalation
+        if (hasFinalWarningBlock && finalWarningBlockData) {
+          const cannotVerify = finalWarningBlockData.warningDate === 'cannot_verify_escalation';
+
+          return (
+            <div className="p-6 space-y-5">
+              {/* Header with employee info */}
+              <div className="p-5 rounded-lg" style={{
+                backgroundColor: 'var(--color-alert-error-bg)',
+                borderLeft: '4px solid var(--color-error)'
+              }}>
+                <div className="flex items-start gap-3 mb-3">
+                  <AlertTriangle className="w-6 h-6 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-error)' }} />
+                  <div className="flex-1">
+                    <h3 className="text-base font-bold mb-1" style={{ color: 'var(--color-error)' }}>
+                      {cannotVerify ? 'HR Approval Required' : 'Cannot Issue Warning'}
+                    </h3>
+                    <p className="text-sm mb-2" style={{ color: 'var(--color-alert-error-text)' }}>
+                      <strong>{finalWarningBlockData.employeeName}</strong> has a Final Written Warning on file.
+                    </p>
+                    <p className="text-sm" style={{ color: 'var(--color-alert-error-text)', opacity: 0.9 }}>
+                      {cannotVerify
+                        ? 'Cannot verify warning history. Contact HR to approve further escalation.'
+                        : 'This is the final step before termination. HR must handle any further escalation.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={async () => {
+                    alert('HR Notification feature coming soon!\n\nFor now, please contact your HR Manager directly via phone or email.');
+                  }}
+                  className="flex-1 px-4 py-3 rounded-lg font-medium text-sm transition-colors"
+                  style={{
+                    backgroundColor: 'var(--color-primary)',
+                    color: 'var(--color-text-inverse)'
+                  }}
+                >
+                  <Send className="w-4 h-4 inline mr-2" />
+                  Notify HR Manager
+                </button>
+                <button
+                  onClick={() => {
+                    setHasFinalWarningBlock(false);
+                    setFinalWarningBlockData(null);
+                    onCancel();
+                  }}
+                  className="px-4 py-3 rounded-lg font-medium text-sm transition-colors"
+                  style={{
+                    backgroundColor: 'var(--color-error)',
+                    color: 'var(--color-text-inverse)'
+                  }}
+                >
+                  <X className="w-4 h-4 inline mr-2" />
+                  Close
+                </button>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <CombinedIncidentStepV2
             employees={employees}
@@ -930,6 +1079,7 @@ useEffect(() => {
             currentSignatures={signatures}
             warningId={finalWarningId}
             audioUploadStatus={audioUploadStatus}
+            onLevelOverride={setOverrideLevel}
           />
         );
 
@@ -972,7 +1122,10 @@ useEffect(() => {
     handleSignaturesComplete,
     signatures,
     audioRecording,
-    handleWizardComplete
+    handleWizardComplete,
+    hasFinalWarningBlock,
+    finalWarningBlockData,
+    onCancel
   ]);
 
   // ============================================
@@ -980,6 +1133,11 @@ useEffect(() => {
   // ============================================
   
   const getNextButtonState = () => {
+    // 🚨 Hide navigation buttons when final warning block is showing
+    if (hasFinalWarningBlock) {
+      return { show: false, disabled: true, loading: false, text: '' };
+    }
+
     if (currentStep === WizardStep.DELIVERY_COMPLETION) {
       // Show "Finalize" button on last step
       return {
@@ -1199,39 +1357,41 @@ return (
       
       {/* 🎯 WIZARD FOOTER - Now using semantic classes */}
       <div className="modal-footer">
-        <div className="modal-footer__nav">
-          {/* Previous Button */}
-          <button
-            onClick={previousStep}
-            disabled={currentStep === WizardStep.INCIDENT_DETAILS || isNavigating}
-            className={`
-              modal-footer__button modal-footer__button--secondary
-              ${(currentStep === WizardStep.INCIDENT_DETAILS || isNavigating) ? 'opacity-50' : ''}
-            `}
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Previous
-          </button>
-
-          {/* Next/Complete Button */}
-          {nextButtonState.show && (
+        {!hasFinalWarningBlock && (
+          <div className="modal-footer__nav">
+            {/* Previous Button */}
             <button
-              onClick={nextStep}
-              disabled={nextButtonState.disabled}
+              onClick={previousStep}
+              disabled={currentStep === WizardStep.INCIDENT_DETAILS || isNavigating}
               className={`
-                modal-footer__button modal-footer__button--primary
-                ${nextButtonState.loading ? 'modal-footer__button--loading' : ''}
+                modal-footer__button modal-footer__button--secondary
+                ${(currentStep === WizardStep.INCIDENT_DETAILS || isNavigating) ? 'opacity-50' : ''}
               `}
             >
-              {!nextButtonState.loading && (
-                <>
-                  {nextButtonState.text}
-                  <ChevronRight className="w-4 h-4" />
-                </>
-              )}
+              <ChevronLeft className="w-4 h-4" />
+              Previous
             </button>
-          )}
-        </div>
+
+            {/* Next/Complete Button */}
+            {nextButtonState.show && (
+              <button
+                onClick={nextStep}
+                disabled={nextButtonState.disabled}
+                className={`
+                  modal-footer__button modal-footer__button--primary
+                  ${nextButtonState.loading ? 'modal-footer__button--loading' : ''}
+                `}
+              >
+                {!nextButtonState.loading && (
+                  <>
+                    {nextButtonState.text}
+                    <ChevronRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Debug Panels - Removed for production */}
