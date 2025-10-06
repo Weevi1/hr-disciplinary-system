@@ -17,14 +17,14 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
   onArchive
 }) => {
   const getProbationStatus = () => {
-    if (!employee.employment.probationEndDate) return null;
-    
+    if (!employee.employment?.probationEndDate) return null;
+
     const endDate = new Date(employee.employment.probationEndDate);
     const today = new Date();
     const daysLeft = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (daysLeft <= 0) return null;
-    
+
     return {
       daysLeft,
       status: daysLeft <= 7 ? 'critical' : daysLeft <= 30 ? 'warning' : 'normal'
@@ -68,13 +68,13 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
         <div className="flex items-start gap-2 text-sm">
           <span className="text-base flex-shrink-0">🏢</span>
           <div className="min-w-0 flex-1">
-            <div className="font-medium text-gray-900 truncate">{employee.profile.department}</div>
-            <div className="text-xs text-gray-600 truncate">{employee.profile.position}</div>
+            <div className="font-medium text-gray-900 truncate">{employee.profile?.department || 'N/A'}</div>
+            <div className="text-xs text-gray-600 truncate">{employee.profile?.position || 'N/A'}</div>
           </div>
         </div>
 
         {/* Contact Info */}
-        {permissions.canViewContactInfo && (
+        {permissions.canViewContactInfo && employee.profile?.email && (
           <div className="flex items-center gap-2 text-sm">
             <span className="text-base flex-shrink-0">📧</span>
             <span className="text-gray-600 truncate text-xs sm:text-sm">{employee.profile.email}</span>
@@ -87,13 +87,13 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
             <span className="text-base">📋</span>
             <span className={`
               inline-flex px-1.5 py-0.5 text-xs font-semibold rounded-full capitalize
-              ${employee.employment.contractType === 'permanent'
+              ${employee.employment?.contractType === 'permanent'
                 ? 'bg-green-100 text-green-800'
-                : employee.employment.contractType === 'contract'
+                : employee.employment?.contractType === 'contract'
                 ? 'bg-blue-100 text-blue-800'
                 : 'bg-yellow-100 text-yellow-800'}
             `}>
-              {employee.employment.contractType}
+              {employee.employment?.contractType || 'N/A'}
             </span>
           </div>
 
@@ -101,13 +101,13 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
             <span className="text-base">⚠️</span>
             <span className={`
               inline-flex px-1.5 py-0.5 text-xs font-bold rounded-full
-              ${employee.disciplinaryRecord.activeWarnings === 0
+              ${(employee.disciplinaryRecord?.activeWarnings || 0) === 0
                 ? 'bg-green-100 text-green-800'
-                : employee.disciplinaryRecord.activeWarnings < 3
+                : (employee.disciplinaryRecord?.activeWarnings || 0) < 3
                 ? 'bg-yellow-100 text-yellow-800'
                 : 'bg-red-100 text-red-800'}
             `}>
-              {employee.disciplinaryRecord.activeWarnings} Warning{employee.disciplinaryRecord.activeWarnings !== 1 ? 's' : ''}
+              {employee.disciplinaryRecord?.activeWarnings || 0} Warning{(employee.disciplinaryRecord?.activeWarnings || 0) !== 1 ? 's' : ''}
             </span>
           </div>
         </div>
@@ -178,7 +178,7 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
             return 'Invalid date';
           }
         })()}</span>
-        {employee.disciplinaryRecord.lastWarningDate && (
+        {employee.disciplinaryRecord?.lastWarningDate && (
           <span className="truncate">Last warning: {new Date(employee.disciplinaryRecord.lastWarningDate).toLocaleDateString()}</span>
         )}
       </div>
