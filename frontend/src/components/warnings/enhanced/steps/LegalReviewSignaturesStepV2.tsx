@@ -10,7 +10,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Scale, FileText, CheckCircle, Users, Clock, Shield,
   Eye, EyeOff, ChevronDown, ChevronUp, Info, Calendar, User,
-  Loader2, RefreshCw, MessageCircle, Volume2, Send, Play, Pause, TrendingUp
+  Loader2, RefreshCw, MessageCircle, Volume2, Send, Play, Pause, TrendingUp, X
 } from 'lucide-react';
 import type { EscalationRecommendation } from '../../../../services/WarningService';
 
@@ -68,6 +68,7 @@ interface LegalReviewSignaturesStepV2Props {
   currentSignatures?: SignatureData;
   warningId?: string | null;
   audioUploadStatus?: 'recording' | 'stopping' | 'uploading' | 'complete' | null;
+  onLevelOverride?: (level: string | null) => void;
 }
 
 const safeText = (value: any, fallback: string = 'Unknown'): string => {
@@ -87,7 +88,8 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
   signaturesFinalized = false,
   currentSignatures,
   warningId,
-  audioUploadStatus
+  audioUploadStatus,
+  onLevelOverride
 }) => {
   // State management
   const [showDetails, setShowDetails] = useState(false);
@@ -97,6 +99,8 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
   const [signatures, setSignatures] = useState<SignatureData>(
     currentSignatures || { manager: null, employee: null }
   );
+  const [overrideLevel, setOverrideLevel] = useState<string | null>(null);
+  const [showOverrideSelector, setShowOverrideSelector] = useState(false);
 
   // Update signatures when currentSignatures prop changes
   useEffect(() => {
@@ -111,6 +115,13 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
       setShowSignatureSection(true);
     }
   }, [scriptReadConfirmed]);
+
+  // Notify parent when override level changes
+  useEffect(() => {
+    if (onLevelOverride) {
+      onLevelOverride(overrideLevel);
+    }
+  }, [overrideLevel, onLevelOverride]);
 
   // Auto-scroll to success alert when signatures are finalized
   useEffect(() => {
@@ -269,10 +280,22 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
         <ThemedCard padding="sm" hover className="border-l-4" style={{ borderLeftColor: 'var(--color-primary)' }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Primary Badge */}
-              <ThemedBadge variant="primary" size="sm" className="font-semibold">
-                {safeText(lraRecommendation?.recommendedLevel)}
-              </ThemedBadge>
+              {/* Primary Badge - CLICKABLE to show override */}
+              <button
+                onClick={() => setShowOverrideSelector(!showOverrideSelector)}
+                className="transition-all hover:opacity-80 active:scale-95"
+                disabled={signaturesFinalized}
+              >
+                <ThemedBadge variant="primary" size="sm" className="font-semibold cursor-pointer">
+                  {overrideLevel
+                    ? (overrideLevel === 'counselling' ? 'Counselling Session' :
+                       overrideLevel === 'verbal' ? 'Verbal Warning' :
+                       overrideLevel === 'first_written' ? 'First Written Warning' :
+                       overrideLevel === 'final_written' ? 'Final Written Warning' : overrideLevel)
+                    : safeText(lraRecommendation?.recommendedLevel)
+                  }
+                </ThemedBadge>
+              </button>
 
               {/* Escalation Indicator */}
               {lraRecommendation?.isEscalation && (
@@ -282,12 +305,17 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
                 </div>
               )}
 
-              {/* Warning Count Visual - Category Specific */}
-              <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              {/* Warning Count Visual - Category Specific - ALSO CLICKABLE */}
+              <button
+                onClick={() => setShowOverrideSelector(!showOverrideSelector)}
+                className="flex items-center gap-1 text-xs hover:opacity-80 active:scale-95 transition-all"
+                style={{ color: 'var(--color-text-secondary)' }}
+                disabled={signaturesFinalized}
+              >
                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--color-primary)' }}></div>
                 <span className="font-medium" style={{ color: 'var(--color-primary)' }}>{lraRecommendation?.categoryWarningCount ?? 0}</span>
                 <span>in category</span>
-              </div>
+              </button>
             </div>
 
             {/* Status Indicator - Step 1 Style */}
@@ -367,6 +395,82 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
         </ThemedCard>
       )}
 
+      {/* Override Warning Level - Shows only when clicked */}
+      {showOverrideSelector && (
+        <ThemedCard padding="md" className="border-2" style={{ borderColor: 'var(--color-warning-light)', backgroundColor: 'var(--color-alert-warning-bg)' }}>
+          <div className="space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2 flex-1">
+                <Info className="w-4 h-4 mt-0.5" style={{ color: 'var(--color-warning)' }} />
+                <div className="flex-1">
+                  <h3 className="font-bold text-sm mb-1" style={{ color: 'var(--color-text)' }}>
+                    ⚖️ Override Recommendation
+                  </h3>
+                  <p className="text-xs leading-relaxed mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+                    The system recommends <strong style={{ color: 'var(--color-text)' }}>{safeText(lraRecommendation?.recommendedLevel)}</strong>.
+                    You may override this to escalate faster or re-issue the same level if circumstances warrant it.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowOverrideSelector(false)}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+                disabled={signaturesFinalized}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                Select Warning Level:
+              </label>
+              <select
+                value={overrideLevel || lraRecommendation?.suggestedLevel || ''}
+                onChange={(e) => {
+                  const newLevel = e.target.value === (lraRecommendation?.suggestedLevel || '') ? null : e.target.value;
+                  setOverrideLevel(newLevel);
+                }}
+                className="w-full px-3 py-2 text-sm rounded-lg border-2 transition-colors"
+                style={{
+                  borderColor: overrideLevel ? 'var(--color-warning)' : 'var(--color-border)',
+                  backgroundColor: 'var(--color-background)',
+                  color: 'var(--color-text)'
+                }}
+                disabled={signaturesFinalized}
+              >
+                <option value="">-- Use System Recommendation --</option>
+                {lraRecommendation?.escalationPath?.map((level: string) => {
+                  const labels: Record<string, string> = {
+                    'counselling': 'Counselling Session',
+                    'verbal': 'Verbal Warning',
+                    'first_written': 'First Written Warning',
+                    'final_written': 'Final Written Warning'
+                  };
+                  return (
+                    <option key={level} value={level}>
+                      {labels[level] || level}
+                      {level === lraRecommendation.suggestedLevel ? ' (Recommended)' : ''}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            {overrideLevel && (
+              <ThemedAlert variant="warning" className="text-xs">
+                <strong>Override Active:</strong> This warning will be issued as <strong>{
+                  overrideLevel === 'counselling' ? 'Counselling Session' :
+                  overrideLevel === 'verbal' ? 'Verbal Warning' :
+                  overrideLevel === 'first_written' ? 'First Written Warning' :
+                  overrideLevel === 'final_written' ? 'Final Written Warning' : overrideLevel
+                }</strong> instead of the recommended level. Future warnings will consider this custom escalation path.
+              </ThemedAlert>
+            )}
+          </div>
+        </ThemedCard>
+      )}
+
       {/* Employee Warning Script Section */}
       <div className="space-y-2">
         <div className="flex items-center gap-2">
@@ -381,7 +485,7 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
             employeeName={`${safeEmployee.firstName} ${safeEmployee.lastName}`}
             managerName={currentManagerName}
             incidentDescription={formData.incidentDescription || 'Workplace incident requiring disciplinary action'}
-            warningLevel={lraRecommendation?.level || 'disciplinary'}
+            warningLevel={overrideLevel || lraRecommendation?.recommendedLevel || 'verbal'}
             onScriptRead={() => setScriptReadConfirmed(true)}
             disabled={scriptReadConfirmed}
           />

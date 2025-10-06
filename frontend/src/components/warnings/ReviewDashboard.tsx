@@ -37,6 +37,7 @@ interface WarningsReviewProps {
   DataService?: any;
   canTakeAction?: boolean;
   userRole?: string;
+  initialEmployeeFilter?: { id: string; name: string }; // For filtering by employee from employee cards
 }
 
 // 🔧 SAFE RENDERING HELPER - Prevents React Error #31
@@ -82,6 +83,7 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
   DataService: DataServiceProp,
   canTakeAction = false,
   userRole = 'viewer',
+  initialEmployeeFilter,
 }) => {
   const { user, organization } = useAuth();
   const organizationId = propOrganizationId || organization?.id;
@@ -94,7 +96,7 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(initialEmployeeFilter?.name || '');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterLevel, setFilterLevel] = useState('all');
   const [filterDepartment, setFilterDepartment] = useState('all');
@@ -181,7 +183,7 @@ const loadWarnings = useCallback(async () => {
     setWarnings(sortedWarnings);
     setFilteredWarnings(sortedWarnings);
 
-    Logger.success(`📊 Loaded ${sortedWarnings.length} active warnings (${useNestedStructure() ? 'NESTED' : 'FLAT'} structure)`);
+    Logger.success(`📊 Loaded ${sortedWarnings.length} active warnings (${useNestedStructure() ? 'NESTED' : 'SHARDED'} structure)`);
 
   } catch (error) {
     Logger.error('❌ Failed to load warnings:', error)
@@ -207,11 +209,12 @@ const loadWarnings = useCallback(async () => {
 
     // Search filter
     if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(warning =>
-        warning.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        warning.employeeNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        warning.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        warning.description.toLowerCase().includes(searchTerm.toLowerCase())
+        warning.employeeName?.toLowerCase().includes(searchLower) ||
+        warning.employeeNumber?.toLowerCase().includes(searchLower) ||
+        warning.category?.toLowerCase().includes(searchLower) ||
+        warning.description?.toLowerCase().includes(searchLower)
       );
     }
 
