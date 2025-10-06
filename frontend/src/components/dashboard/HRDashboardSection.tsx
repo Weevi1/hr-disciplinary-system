@@ -374,12 +374,12 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
 
         {activeView === 'warnings' && (
           <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
-            <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] overflow-hidden" shadow="xl">
-              <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
+            <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] flex flex-col overflow-hidden" shadow="xl">
+              <div className="flex items-center justify-between p-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
                 <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Warnings Overview</h2>
                 <ThemedButton variant="ghost" size="sm" onClick={() => setActiveView(null)}>×</ThemedButton>
               </div>
-              <div className="overflow-y-auto p-4">
+              <div className="flex-1 overflow-y-auto p-4 min-h-0">
                 <WarningsReviewDashboard />
               </div>
             </ThemedCard>

@@ -479,12 +479,12 @@ const loadWarnings = useCallback(async () => {
 
   // Main render
   return (
-    <div className="p-4">
-      {/* Compact Header - Desktop Optimized */}
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-4">
-          <h3 className="text-lg font-semibold text-gray-900">Warning Management</h3>
-          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+    <div className="space-y-4">
+      {/* Compact Header - Mobile Responsive */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+        <div className="flex items-center gap-3">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900">Warning Management</h3>
+          <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
             {warnings.length} total
           </span>
         </div>
@@ -494,7 +494,7 @@ const loadWarnings = useCallback(async () => {
             className="flex items-center gap-2 px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors text-sm"
           >
             <Archive className="w-4 h-4" />
-            <span>Archive</span>
+            <span className="hidden sm:inline">Archive</span>
           </button>
           <button
             onClick={loadWarnings}
@@ -529,8 +529,9 @@ const loadWarnings = useCallback(async () => {
         <>
       {/* Compact Search and Filters Bar */}
       <div className="mb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex-1 max-w-md">
+        {/* Mobile-first: Stack filters vertically on small screens */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
@@ -542,44 +543,46 @@ const loadWarnings = useCallback(async () => {
               />
             </div>
           </div>
-          
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Status</option>
-            <option value="issued">Issued</option>
-            <option value="acknowledged">Acknowledged</option>
-            <option value="appealed">Under Appeal</option>
-            <option value="expired">Expired</option>
-          </select>
-          
-          <select
-            value={filterLevel}
-            onChange={(e) => setFilterLevel(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Levels</option>
-            <option value="counselling">Counselling</option>
-            <option value="verbal">Verbal</option>
-            <option value="first_written">First Written</option>
-            <option value="second_written">Second Written</option>
-            <option value="final_written">Final Written</option>
-            {/* Legacy support */}
-            <option value="written">Written (Legacy)</option>
-            <option value="final">Final (Legacy)</option>
-            <option value="dismissal">Dismissal (Legacy)</option>
-          </select>
-          
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors text-sm flex items-center gap-2"
-          >
-            <Filter className="w-4 h-4" />
-            More
-            {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
+
+          <div className="flex gap-2">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="flex-1 sm:flex-initial px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">All Status</option>
+              <option value="issued">Issued</option>
+              <option value="acknowledged">Acknowledged</option>
+              <option value="appealed">Under Appeal</option>
+              <option value="expired">Expired</option>
+            </select>
+
+            <select
+              value={filterLevel}
+              onChange={(e) => setFilterLevel(e.target.value)}
+              className="flex-1 sm:flex-initial px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">All Levels</option>
+              <option value="counselling">Counselling</option>
+              <option value="verbal">Verbal</option>
+              <option value="first_written">First Written</option>
+              <option value="second_written">Second Written</option>
+              <option value="final_written">Final Written</option>
+              {/* Legacy support */}
+              <option value="written">Written (Legacy)</option>
+              <option value="final">Final (Legacy)</option>
+              <option value="dismissal">Dismissal (Legacy)</option>
+            </select>
+
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors text-sm items-center gap-2 sm:flex hidden"
+            >
+              <Filter className="w-4 h-4" />
+              <span className="hidden lg:inline">More</span>
+              {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
 
         {showFilters && (
@@ -632,7 +635,7 @@ const loadWarnings = useCallback(async () => {
       </div>
 
       {/* Compact Stats Bar */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
@@ -692,8 +695,72 @@ const loadWarnings = useCallback(async () => {
         </div>
       </div>
 
-      {/* Modern Compact Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {/* Mobile Card View - Hidden on Desktop */}
+      <div className="md:hidden space-y-3 mb-4">
+        {paginatedWarnings.map((warning, index) => (
+          <div key={warning.id || `warning-${index}`} className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-start justify-between mb-3">
+              <div className="flex-1">
+                <h4 className="font-semibold text-gray-900 text-sm">{safeRenderText(warning.employeeName)}</h4>
+                <p className="text-xs text-gray-500 mt-1">{safeRenderText(warning.employeeNumber)} • {safeRenderText(warning.department)}</p>
+              </div>
+              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                warning.status === 'issued' ? 'bg-blue-100 text-blue-800' :
+                warning.status === 'acknowledged' ? 'bg-green-100 text-green-800' :
+                warning.status === 'appealed' ? 'bg-orange-100 text-orange-800' :
+                warning.status === 'expired' ? 'bg-gray-100 text-gray-800' :
+                'bg-gray-100 text-gray-600'
+              }`}>
+                {warning.status === 'issued' ? 'Issued' :
+                 warning.status === 'acknowledged' ? 'Acknowledged' :
+                 warning.status === 'appealed' ? 'Under Appeal' :
+                 warning.status === 'expired' ? 'Expired' :
+                 safeRenderText(warning.status, 'Pending')}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div>
+                <p className="text-xs text-gray-500">Level</p>
+                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full mt-1 ${
+                  warning.level === 'counselling' ? 'bg-green-100 text-green-800' :
+                  warning.level === 'verbal' ? 'bg-blue-100 text-blue-800' :
+                  warning.level === 'first_written' ? 'bg-yellow-100 text-yellow-800' :
+                  warning.level === 'second_written' ? 'bg-orange-100 text-orange-800' :
+                  warning.level === 'final_written' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {warning.level === 'counselling' ? 'Counselling' :
+                   warning.level === 'verbal' ? 'Verbal' :
+                   warning.level === 'first_written' ? '1st Written' :
+                   warning.level === 'second_written' ? '2nd Written' :
+                   warning.level === 'final_written' ? 'Final' :
+                   safeRenderText(warning.level, 'Unknown')}
+                </span>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Category</p>
+                <p className="text-sm font-medium text-gray-900 mt-1">{safeRenderText(warning.category)}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+              <p className="text-xs text-gray-500">
+                {warning.issueDate ? new Date(warning.issueDate.seconds ? warning.issueDate.seconds * 1000 : warning.issueDate).toLocaleDateString() : 'N/A'}
+              </p>
+              <button
+                onClick={() => handleViewDetails(warning)}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1.5 hover:bg-blue-50 rounded transition-colors"
+              >
+                View Details
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Table View - Hidden on Mobile */}
+      <div className="hidden md:block bg-white rounded-lg border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
