@@ -33,155 +33,126 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
 
   const probation = getProbationStatus();
 
+  const activeWarnings = employee.disciplinaryRecord?.activeWarnings || 0;
+
   return (
-    <div className={`
-      bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 shadow-md hover:shadow-lg
-      border border-gray-200
-      transition-all duration-200
-      ${!employee.isActive ? 'opacity-75' : ''}
-    `}>
-      {/* Header */}
-      <div className="flex justify-between items-start gap-2 mb-3">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-0.5 truncate">
-            {employee.profile.firstName} {employee.profile.lastName}
-          </h3>
-          <p className="text-xs sm:text-sm text-gray-600">
-            #{employee.profile.employeeNumber}
-          </p>
-        </div>
-
-        {/* Status Badge */}
-        <span className={`
-          inline-flex px-2 py-1 text-xs font-semibold rounded-full flex-shrink-0
-          ${employee.isActive
-            ? 'bg-green-100 text-green-800'
-            : 'bg-gray-100 text-gray-600'}
-        `}>
-          {employee.isActive ? 'Active' : 'Archived'}
-        </span>
-      </div>
-
-      {/* Details - Compact Grid on Mobile */}
-      <div className="space-y-2 mb-3">
-        {/* Department & Position */}
-        <div className="flex items-start gap-2 text-sm">
-          <span className="text-base flex-shrink-0">🏢</span>
-          <div className="min-w-0 flex-1">
-            <div className="font-medium text-gray-900 truncate">{employee.profile?.department || 'N/A'}</div>
-            <div className="text-xs text-gray-600 truncate">{employee.profile?.position || 'N/A'}</div>
+    <div
+      className={`
+        bg-white rounded-lg border border-gray-200 overflow-hidden
+        transition-all duration-200 hover:shadow-md
+        ${!employee.isActive ? 'opacity-60' : ''}
+      `}
+      onClick={permissions.canEdit ? () => onEdit(employee) : undefined}
+      style={{ cursor: permissions.canEdit ? 'pointer' : 'default' }}
+    >
+      {/* Compact Header with Visual Hierarchy */}
+      <div className="px-3 py-3 sm:px-4 sm:py-4">
+        {/* Name & Status Row */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base font-bold text-gray-900 truncate leading-tight">
+              {employee.profile.firstName} {employee.profile.lastName}
+            </h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {employee.profile?.position || 'N/A'}
+            </p>
           </div>
-        </div>
 
-        {/* Contact Info */}
-        {permissions.canViewContactInfo && employee.profile?.email && (
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-base flex-shrink-0">📧</span>
-            <span className="text-gray-600 truncate text-xs sm:text-sm">{employee.profile.email}</span>
-          </div>
-        )}
-
-        {/* Contract Type & Warnings - Side by Side on Mobile */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex items-center gap-1.5 text-xs sm:text-sm">
-            <span className="text-base">📋</span>
-            <span className={`
-              inline-flex px-1.5 py-0.5 text-xs font-semibold rounded-full capitalize
-              ${employee.employment?.contractType === 'permanent'
-                ? 'bg-green-100 text-green-800'
-                : employee.employment?.contractType === 'contract'
-                ? 'bg-blue-100 text-blue-800'
-                : 'bg-yellow-100 text-yellow-800'}
+          {/* Warning Badge - Prominent */}
+          {activeWarnings > 0 && (
+            <div className={`
+              flex items-center gap-1 px-2 py-1 rounded-full flex-shrink-0
+              ${activeWarnings >= 3
+                ? 'bg-red-100'
+                : 'bg-yellow-100'}
             `}>
-              {employee.employment?.contractType || 'N/A'}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-xs sm:text-sm justify-end">
-            <span className="text-base">⚠️</span>
-            <span className={`
-              inline-flex px-1.5 py-0.5 text-xs font-bold rounded-full
-              ${(employee.disciplinaryRecord?.activeWarnings || 0) === 0
-                ? 'bg-green-100 text-green-800'
-                : (employee.disciplinaryRecord?.activeWarnings || 0) < 3
-                ? 'bg-yellow-100 text-yellow-800'
-                : 'bg-red-100 text-red-800'}
-            `}>
-              {employee.disciplinaryRecord?.activeWarnings || 0} Warning{(employee.disciplinaryRecord?.activeWarnings || 0) !== 1 ? 's' : ''}
-            </span>
-          </div>
+              <span className="text-sm">⚠️</span>
+              <span className={`
+                text-xs font-bold
+                ${activeWarnings >= 3 ? 'text-red-700' : 'text-yellow-700'}
+              `}>
+                {activeWarnings}
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Probation Status */}
-        {probation && employee.isActive && (
-          <div className={`
-            flex items-center gap-2 text-xs sm:text-sm p-2 rounded-lg
-            ${probation.status === 'critical' ? 'bg-red-50' :
-              probation.status === 'warning' ? 'bg-yellow-50' : 'bg-blue-50'}
+        {/* Department & Employee Number - Compact */}
+        <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
+          <span className="truncate">{employee.profile?.department || 'N/A'}</span>
+          <span className="text-gray-400">•</span>
+          <span className="flex-shrink-0">#{employee.profile.employeeNumber}</span>
+        </div>
+
+        {/* Quick Info Pills - Mobile Optimized */}
+        <div className="flex flex-wrap gap-1.5">
+          {/* Status Pill */}
+          <span className={`
+            inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full
+            ${employee.isActive
+              ? 'bg-green-50 text-green-700'
+              : 'bg-gray-100 text-gray-600'}
           `}>
-            <span className="text-base flex-shrink-0">⏳</span>
+            <span className="w-1.5 h-1.5 rounded-full ${employee.isActive ? 'bg-green-500' : 'bg-gray-400'}"></span>
+            {employee.isActive ? 'Active' : 'Archived'}
+          </span>
+
+          {/* Contract Type Pill */}
+          <span className={`
+            inline-flex px-2 py-1 text-xs font-medium rounded-full capitalize
+            ${employee.employment?.contractType === 'permanent'
+              ? 'bg-blue-50 text-blue-700'
+              : 'bg-purple-50 text-purple-700'}
+          `}>
+            {employee.employment?.contractType || 'N/A'}
+          </span>
+
+          {/* Probation Pill */}
+          {probation && employee.isActive && (
             <span className={`
-              font-medium
-              ${probation.status === 'critical' ? 'text-red-700' :
-                probation.status === 'warning' ? 'text-yellow-700' : 'text-blue-700'}
+              inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full
+              ${probation.status === 'critical' ? 'bg-red-50 text-red-700' :
+                probation.status === 'warning' ? 'bg-orange-50 text-orange-700' :
+                'bg-blue-50 text-blue-700'}
             `}>
-              Probation: {probation.daysLeft}d left
+              ⏳ {probation.daysLeft}d
             </span>
-          </div>
-        )}
+          )}
+
+          {/* No Warnings Badge */}
+          {activeWarnings === 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700">
+              <span className="text-xs">✓</span> Clean Record
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Actions - Full Width on Mobile */}
+      {/* Actions Bar - Touch Friendly */}
       {permissions.canEdit && (
-        <div className="flex gap-2 pt-3 border-t border-gray-200">
+        <div className="border-t border-gray-100 px-3 py-2 sm:px-4 bg-gray-50/50 flex gap-2">
           <button
-            onClick={() => onEdit(employee)}
-            className="flex-1 py-2 px-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-medium transition-colors text-sm touch-manipulation"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(employee);
+            }}
+            className="flex-1 py-2.5 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors text-sm active:scale-95"
           >
-            <span className="hidden sm:inline">✏️ </span>Edit
+            Edit Details
           </button>
           {employee.isActive && permissions.canArchive && (
             <button
-              onClick={() => onArchive(employee)}
-              className="flex-1 py-2 px-3 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 font-medium transition-colors text-sm touch-manipulation"
+              onClick={(e) => {
+                e.stopPropagation();
+                onArchive(employee);
+              }}
+              className="px-3 py-2.5 border border-gray-300 bg-white text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors text-sm active:scale-95"
             >
-              <span className="hidden sm:inline">📁 </span>Archive
-            </button>
-          )}
-          {!employee.isActive && permissions.canRestore && (
-            <button
-              onClick={() => onEdit(employee)} // For now, restore through edit
-              className="flex-1 py-2 px-3 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 font-medium transition-colors text-sm touch-manipulation"
-            >
-              <span className="hidden sm:inline">♻️ </span>Restore
+              Archive
             </button>
           )}
         </div>
       )}
-
-      {/* Quick Stats Bar - Simplified on Mobile */}
-      <div className="mt-3 pt-3 border-t border-gray-200 flex flex-col sm:flex-row sm:justify-between gap-1 text-xs text-gray-500">
-        <span className="truncate">Started: {(() => {
-          const startDate = employee.profile?.startDate || employee.employment?.startDate;
-          if (!startDate) return 'Not set';
-
-          try {
-            if (startDate && typeof startDate.toDate === 'function') {
-              return startDate.toDate().toLocaleDateString();
-            }
-            if (startDate instanceof Date) {
-              return startDate.toLocaleDateString();
-            }
-            const parsed = new Date(startDate);
-            return !isNaN(parsed.getTime()) ? parsed.toLocaleDateString() : 'Invalid date';
-          } catch (error) {
-            return 'Invalid date';
-          }
-        })()}</span>
-        {employee.disciplinaryRecord?.lastWarningDate && (
-          <span className="truncate">Last warning: {new Date(employee.disciplinaryRecord.lastWarningDate).toLocaleDateString()}</span>
-        )}
-      </div>
     </div>
   );
 };

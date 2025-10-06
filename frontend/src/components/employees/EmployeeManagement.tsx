@@ -175,18 +175,36 @@ export const EmployeeManagement: React.FC = () => {
   }
 
   return (
-    <div className="w-full space-y-3">
-        
-      {/* Mobile-Optimized Header */}
-      <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-white/50 overflow-hidden">
-        <div className="bg-gradient-to-r from-indigo-600 via-purple-700 to-indigo-800 p-2 sm:p-3">
+    <div className="w-full space-y-3 md:space-y-4">
+
+      {/* Compact Mobile Header / Full Desktop Header */}
+      <div className="md:bg-white/95 md:backdrop-blur-sm md:rounded-xl md:shadow-lg md:border md:border-white/50 overflow-hidden">
+        {/* Mobile: Simple Title Bar */}
+        <div className="md:hidden flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">Employees</h3>
+            <p className="text-xs text-gray-500">{filteredEmployees.length} total</p>
+          </div>
+          {permissions.canBulkImport && (
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg font-medium text-sm"
+            >
+              <Upload className="w-4 h-4" />
+              Import
+            </button>
+          )}
+        </div>
+
+        {/* Desktop: Full Header with Gradient */}
+        <div className="hidden md:block bg-gradient-to-r from-indigo-600 via-purple-700 to-indigo-800 p-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="bg-white/20 p-1.5 sm:p-2 rounded-lg backdrop-blur-sm">
-                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                <Users className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                <h3 className="text-lg font-bold text-white tracking-tight">
                   Employee Management
                 </h3>
                 <p className="text-indigo-100 text-xs font-medium">
@@ -197,32 +215,32 @@ export const EmployeeManagement: React.FC = () => {
               </div>
             </div>
 
-            {/* Mobile-Optimized Action Buttons */}
-            <div className="flex gap-1 sm:gap-2">
+            {/* Desktop Action Buttons */}
+            <div className="flex gap-2">
               {permissions.canCreate && (
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-lg font-medium border border-white/30 hover:border-white/50 transition-all text-sm"
+                  className="flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-lg font-medium border border-white/30 hover:border-white/50 transition-all text-sm"
                 >
                   <Plus className="w-4 h-4" />
-                  <span className="hidden sm:inline">Add</span>
+                  <span>Add</span>
                 </button>
               )}
 
               {permissions.canBulkImport && (
                 <button
                   onClick={() => setShowImportModal(true)}
-                  className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow-md transition-all text-sm"
+                  className="flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow-md transition-all text-sm"
                 >
                   <Upload className="w-4 h-4" />
-                  <span className="hidden sm:inline">Import</span>
+                  <span>Import</span>
                 </button>
               )}
 
               {permissions.canViewArchived && (
                 <button
                   onClick={() => setViewMode('archive')}
-                  className="flex items-center gap-1 sm:gap-2 px-2 py-1.5 sm:px-3 sm:py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium shadow-md transition-all text-sm"
+                  className="flex items-center gap-2 px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium shadow-md transition-all text-sm"
                 >
                   <Archive className="w-4 h-4" />
                   <span className="hidden sm:inline">Archive</span>
@@ -243,12 +261,14 @@ export const EmployeeManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Stats - Enhanced Design */}
-      <EmployeeStats employees={filteredEmployees} />
-        
-      {/* Compact View Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-        <div className="text-xs sm:text-sm text-slate-600">
+      {/* Stats - Desktop Only */}
+      <div className="hidden md:block">
+        <EmployeeStats employees={filteredEmployees} />
+      </div>
+
+      {/* View Controls - Desktop Only */}
+      <div className="hidden md:flex md:items-center md:justify-between">
+        <div className="text-sm text-slate-600">
           {user?.role?.id === 'hr-manager'
             ? 'Full organizational view'
             : user?.role?.id === 'hod-manager'
@@ -258,36 +278,36 @@ export const EmployeeManagement: React.FC = () => {
         <div className="flex bg-slate-100 rounded-lg p-1">
         <button
           onClick={() => setViewMode('organogram')}
-          className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md font-medium transition-all text-xs ${
+          className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-all text-xs ${
             viewMode === 'organogram'
               ? 'bg-white shadow-md text-indigo-600'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <Workflow className="w-3 h-3" />
-          <span className="hidden sm:inline">Hierarchy</span>
+          <span>Hierarchy</span>
         </button>
         <button
           onClick={() => setViewMode('table')}
-          className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md font-medium transition-all text-xs ${
+          className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-all text-xs ${
             viewMode === 'table'
               ? 'bg-white shadow-md text-indigo-600'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <FileSpreadsheet className="w-3 h-3" />
-          <span className="hidden sm:inline">Table</span>
+          <span>Table</span>
         </button>
         <button
           onClick={() => setViewMode('cards')}
-          className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md font-medium transition-all text-xs ${
+          className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-all text-xs ${
             viewMode === 'cards'
               ? 'bg-white shadow-md text-indigo-600'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
           <Layout className="w-3 h-3" />
-          <span className="hidden sm:inline">Cards</span>
+          <span>Cards</span>
         </button>
       </div>
       </div>
@@ -328,7 +348,7 @@ export const EmployeeManagement: React.FC = () => {
       )}
 
       {viewMode === 'cards' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pb-24 md:pb-0">
           {paginatedEmployees.map((employee) => (
             <EmployeeCard
               key={employee.id}
@@ -493,6 +513,17 @@ export const EmployeeManagement: React.FC = () => {
             employees={bulkAssignEmployees}
             onAssign={handleBulkAssignManager}
           />
+        )}
+
+        {/* Floating Action Button - Mobile Only */}
+        {permissions.canCreate && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 flex items-center justify-center z-50"
+            aria-label="Add Employee"
+          >
+            <Plus className="w-6 h-6" />
+          </button>
         )}
     </div>
   );
