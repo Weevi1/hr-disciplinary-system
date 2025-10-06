@@ -753,6 +753,44 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 
 ---
 
+### **🔧 Recent Fixes (Session 13) - MULTI-LANGUAGE WARNING SCRIPT & LOGGING CONSISTENCY**
+
+- **Warning Script Translations - All 11 SA Languages 🌍**
+  - ✅ **Issue**: Warning script said generic text instead of specific warning level (Counselling, Verbal, First Written, etc.)
+  - ✅ **Translation System**: Added complete warning level translations for all 11 South African official languages
+  - ✅ **Languages Supported**:
+    - English: Counselling Session, Verbal Warning, First Written Warning, Second Written Warning, Final Written Warning
+    - Afrikaans: Beradingsessie, Mondelinge Waarskuwing, Eerste Geskrewe Waarskuwing, etc.
+    - Zulu: Iseshini Yokweluleka, Isexwayiso Ngomlomo, Isexwayiso Sokuqala Esibhaliwe, etc.
+    - Xhosa, Sotho, Tsonga, Venda, Swati, Tswana, Ndebele, Northern Sotho (all complete)
+  - ✅ **Dynamic Level Detection**: Script uses override level (if manually selected) or LRA recommendation
+  - ✅ **Helper Function**: `getWarningLevelTranslation()` converts system levels to translated text
+  - ✅ **Files Changed**: `frontend/src/components/warnings/enhanced/steps/components/MultiLanguageWarningScript.tsx`
+  - ✅ **Result**: Section 4 of warning script now says "I am issuing you with a First Written Warning" in employee's chosen language
+
+- **Bug Fix - Missing X Icon 🐛**
+  - ✅ **Issue**: Clicking close button (X) on override selector crashed with "X is not defined"
+  - ✅ **Fix**: Added missing `X` icon import from lucide-react
+  - ✅ **Files Changed**: `frontend/src/components/warnings/enhanced/steps/LegalReviewSignaturesStepV2.tsx`
+  - ✅ **Result**: Override selector close button now works correctly
+
+- **Logging Consistency - SHARD Terminology 📋**
+  - ✅ **Issue**: Console logs showed "[FLAT]" but architecture docs call it "sharded"
+  - ✅ **Confusion**: "Flat" vs "Sharded" vs "Nested" - same structure, different names
+  - ✅ **Fix**: Changed all "[FLAT]" labels to "[SHARD]" across codebase
+  - ✅ **Locations Updated**:
+    - Warning creation logs: `📋 [SHARD] Warning created`
+    - Warning update logs: `📋 [SHARD] Warning updated successfully`
+    - Dual-write logs: "saved to sharded structure"
+    - ReviewDashboard logs: `(SHARDED structure)`
+  - ✅ **Files Changed**:
+    - `frontend/src/api/index.ts` - 5 log messages updated
+    - `frontend/src/components/warnings/ReviewDashboard.tsx` - 1 log message updated
+  - ✅ **Result**: Console logs now align with `DATABASE_SHARDING_ARCHITECTURE.md` terminology
+  - ✅ **Architecture**: `organizations/{orgId}/warnings/{id}` = sharded (one subcollection per org)
+
+---
+
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, and **WCAG AA accessibility compliance**.*
 
-*Last Updated: 2025-10-06 - Session 12: Wizard finalization flow, employee data structure fixes, QR duplicate prevention, modal button cleanup, footer integration*
+*Last Updated: 2025-10-06 - Session 13: Multi-language warning script translations, X icon bug fix, logging consistency (FLAT→SHARD)*
