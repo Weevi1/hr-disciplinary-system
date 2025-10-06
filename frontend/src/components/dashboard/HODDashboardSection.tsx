@@ -554,22 +554,34 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
             </h4>
             <div className="space-y-1.5">
               {finalWarningEmployees.slice(0, 4).map((employee) => {
-                // Handle Firestore Timestamp or Date object conversion
+                // Handle Firestore Timestamp or Date object conversion for issue date
                 let issueDate;
                 if (employee.latestFinalWarning.issueDate?.toDate) {
-                  // Firestore Timestamp
                   issueDate = employee.latestFinalWarning.issueDate.toDate();
                 } else if (employee.latestFinalWarning.issueDate?.seconds) {
-                  // Firestore Timestamp in seconds format
                   issueDate = new Date(employee.latestFinalWarning.issueDate.seconds * 1000);
                 } else {
-                  // Regular Date string or Date object
                   issueDate = new Date(employee.latestFinalWarning.issueDate);
+                }
+
+                // Handle Firestore Timestamp or Date object conversion for expiry date
+                let expiryDate;
+                if (employee.latestFinalWarning.expiryDate?.toDate) {
+                  expiryDate = employee.latestFinalWarning.expiryDate.toDate();
+                } else if (employee.latestFinalWarning.expiryDate?.seconds) {
+                  expiryDate = new Date(employee.latestFinalWarning.expiryDate.seconds * 1000);
+                } else {
+                  expiryDate = new Date(employee.latestFinalWarning.expiryDate);
                 }
 
                 const daysSince = Math.floor(
                   (Date.now() - issueDate.getTime()) / (1000 * 60 * 60 * 24)
                 );
+
+                const daysUntilExpiry = Math.floor(
+                  (expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                );
+
                 return (
                   <ThemedCard
                     key={employee.employeeId}
@@ -584,7 +596,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
                           {employee.latestFinalWarning.category} • {daysSince} days ago
                         </div>
                         <div className="text-xs mt-1" style={{ color: 'var(--color-alert-error-text)' }}>
-                          ⚠️ Next offense requires HR intervention
+                          ⚠️ Next offense requires HR intervention • Expires in {daysUntilExpiry} days
                         </div>
                       </div>
                       <div className="text-right">

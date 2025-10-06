@@ -356,6 +356,19 @@ export const warnings = {
   },
 
   /**
+   * Get active warnings for employee (SERVER-SIDE time validation)
+   * 🔒 FRAUD-PROOF: Uses server time to prevent device clock manipulation
+   */
+  async getActiveWarnings(employeeId: string, organizationId: string): Promise<Warning[]> {
+    try {
+      // Use WarningService for server-side active warning validation
+      return await WarningService.getActiveWarnings(employeeId, organizationId);
+    } catch (error) {
+      handleError('warnings.getActiveWarnings', error);
+    }
+  },
+
+  /**
    * Get warning statistics
    */
   async getStats(organizationId: string): Promise<{
