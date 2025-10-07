@@ -624,14 +624,31 @@ export class WarningService {
   static async saveWarning(warningData: Partial<Warning>, organizationId: string): Promise<string> {
     try {
       Logger.debug('💾 [SAVE] Saving warning to database...')
-      
+
       const warningRef = warningData.id ?
         doc(db, 'organizations', organizationId, 'warnings', warningData.id) :
         doc(collection(db, 'organizations', organizationId, 'warnings'));
 
+      // Convert date strings to proper Timestamps
+      const issueDate = warningData.issueDate
+        ? (typeof warningData.issueDate === 'string' ? new Date(warningData.issueDate) : warningData.issueDate)
+        : new Date();
+
+      const incidentDate = warningData.incidentDate
+        ? (typeof warningData.incidentDate === 'string' ? new Date(warningData.incidentDate) : warningData.incidentDate)
+        : new Date();
+
+      // Calculate expiry date based on validity period (default 6 months)
+      const validityMonths = warningData.validityPeriod || 6;
+      const expiryDate = new Date(issueDate);
+      expiryDate.setMonth(expiryDate.getMonth() + validityMonths);
+
       const dataToSave = {
         ...warningData,
         organizationId,
+        issueDate: Timestamp.fromDate(issueDate),
+        expiryDate: Timestamp.fromDate(expiryDate),
+        incidentDate: Timestamp.fromDate(incidentDate),
         updatedAt: TimeService.getServerTimestamp(),
         ...(warningData.id ? {} : { createdAt: TimeService.getServerTimestamp() })
       };
@@ -643,10 +660,10 @@ export class WarningService {
         // Create new document
         await setDoc(warningRef, dataToSave as any);
       }
-      
+
       Logger.success(16339)
       return warningRef.id;
-      
+
     } catch (error) {
       Logger.error('❌ [SAVE] Error saving warning:', error)
       throw error;

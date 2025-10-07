@@ -235,6 +235,44 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 
 ---
 
+### **🔧 Recent Fixes (Session 17) - SIGNATURE TIMESTAMPS & WARNING DATES**
+
+- **Signature Timestamps - SA Timezone 📅**
+  - ✅ **Timestamp on Save**: Applied when "Save Signature" button is clicked (not on draw)
+  - ✅ **Server-Side Time**: Uses current time in South African timezone (Africa/Johannesburg)
+  - ✅ **Format**: "Oct 7, 2025, 12:04 PM" in SA locale
+  - ✅ **Position**: Bottom-right corner of signature PNG
+  - ✅ **Styling**: 10px gray text (#64748b), 8px padding from edges
+  - ✅ **Coverage**: All signatures (Manager, Employee, Witness)
+  - ✅ **Integration**: Timestamp preserved when witness watermark applied
+
+- **Sequential Signature Capture - Enforced Workflow 🔒**
+  - ✅ **Manager First**: Employee/Witness section locked until manager saves signature
+  - ✅ **Visual Feedback**: Dimmed (60% opacity) + warning message when locked
+  - ✅ **Unlock on Save**: Employee/Witness section enables after manager signature saved
+  - ✅ **Clear Progression**: Forces proper sequential workflow (Manager → Employee/Witness)
+  - ✅ **User Guidance**: "Manager must save their signature first" alert message
+
+- **Firebase Storage Rules - Audio Playback Fix 🎧**
+  - ✅ **Root Cause**: Rules checked `resource.size` (existing file) for both read AND write
+  - ✅ **Issue**: Read requests blocked if file ≥2MB
+  - ✅ **Fix Applied**: Split read/write rules - read checks auth only, write validates size
+  - ✅ **Localhost vs Production**: Works in emulator (bypasses email verification) but failed in prod
+  - ✅ **Email Verification**: Removed from read rule (kept for write)
+  - ✅ **Result**: Audio playback now works in production
+
+- **Warning Dates - Invalid Date Fix 📆**
+  - ✅ **Root Cause**: Dates saved as strings ("2025-10-07") instead of Firestore Timestamps
+  - ✅ **Missing Expiry**: `expiryDate` was never calculated or saved
+  - ✅ **Fix Applied**: Convert strings to Date objects, then to Firestore Timestamps
+  - ✅ **Expiry Calculation**: `issueDate` + validity period (3/6/12 months, default 6)
+  - ✅ **Date Handling**: Supports both string and Date inputs with graceful conversion
+  - ✅ **Fields Fixed**: `issueDate`, `expiryDate`, `incidentDate` all use `Timestamp.fromDate()`
+  - ✅ **Files Changed**: `frontend/src/services/WarningService.ts:624-671`, `config/storage.rules`
+  - ✅ **Impact**: New warnings display correct dates in Warning Timeline
+
+---
+
 ### **🔧 Recent Fixes (Session 16) - WARNING SCRIPTS & WITNESS SIGNATURES**
 
 - **Warning Script Rewrite - All 11 SA Languages 📝**
@@ -869,4 +907,4 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, and **WCAG AA accessibility compliance**.*
 
-*Last Updated: 2025-10-07 - Session 16: Warning scripts rewritten (11 SA languages), witness signature system with prominent watermarking*
+*Last Updated: 2025-10-07 - Session 17: Signature timestamps (SA timezone), sequential signature capture, audio playback fix, warning date fix*
