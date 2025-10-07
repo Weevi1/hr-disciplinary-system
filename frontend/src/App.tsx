@@ -50,29 +50,92 @@ import './App.css';
 // LOADING & ERROR SCREENS
 // ============================================
 
-const LoadingScreen = () => (
-  <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center px-4">
-    <div className="text-center">
-      <div className="mb-8">
-        <img
-          src="/logo-128.png"
-          alt="File Logo"
-          className="w-20 h-16 mx-auto object-contain mb-4"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = 'none';
-            (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-          }}
-        />
-        <div className="hidden">
-          <span className="font-bold text-gray-800 text-lg">&lt;File&gt;</span>
+// 🎯 Enhanced Loading Screen with Progressive Status & Progress Bar
+const LoadingScreen = () => {
+  const [loadingStage, setLoadingStage] = React.useState(0);
+  const [statusMessage, setStatusMessage] = React.useState('Connecting to server...');
+
+  // Progressive loading stages
+  const loadingStages = [
+    { message: 'Connecting to server...', duration: 800 },
+    { message: 'Authenticating user...', duration: 1000 },
+    { message: 'Loading organization data...', duration: 1200 },
+    { message: 'Fetching categories...', duration: 800 },
+    { message: 'Preparing your dashboard...', duration: 600 }
+  ];
+
+  React.useEffect(() => {
+    const timers: NodeJS.Timeout[] = [];
+    let cumulativeTime = 0;
+
+    loadingStages.forEach((stage, index) => {
+      const timer = setTimeout(() => {
+        setLoadingStage(index);
+        setStatusMessage(stage.message);
+      }, cumulativeTime);
+      timers.push(timer);
+      cumulativeTime += stage.duration;
+    });
+
+    return () => timers.forEach(timer => clearTimeout(timer));
+  }, []);
+
+  const progress = ((loadingStage + 1) / loadingStages.length) * 100;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center px-4">
+      <div className="text-center max-w-md w-full">
+        <div className="mb-8">
+          <img
+            src="/logo-128.png"
+            alt="File Logo"
+            className="w-20 h-16 mx-auto object-contain mb-4"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+              (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+          <div className="hidden">
+            <span className="font-bold text-gray-800 text-lg">&lt;File&gt;</span>
+          </div>
+          <p className="text-xs text-gray-600 mt-2">by Fifo</p>
         </div>
-        <p className="text-xs text-gray-600 mt-2">by Fifo</p>
+
+        {/* Spinner */}
+        <div className="w-12 h-12 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
+
+        {/* Status Message */}
+        <p className="text-base font-medium text-gray-800 mb-4 transition-all duration-300">
+          {statusMessage}
+        </p>
+
+        {/* Progress Bar */}
+        <div className="w-full bg-gray-200 rounded-full h-2 mb-2 overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        {/* Progress Percentage */}
+        <p className="text-xs text-gray-500">
+          {Math.round(progress)}% complete
+        </p>
+
+        {/* Loading dots animation */}
+        <div className="mt-4 flex items-center justify-center gap-1">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"
+              style={{ animationDelay: `${i * 150}ms` }}
+            />
+          ))}
+        </div>
       </div>
-      <div className="w-8 h-8 border-3 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-      <p className="text-sm text-gray-600">Loading your filing system...</p>
     </div>
-  </div>
-);
+  );
+};
 
 // 🚀 COMPONENT LOADING FALLBACK (for lazy-loaded components)
 const ComponentLoader = ({ text = 'Loading...' }: { text?: string }) => (
