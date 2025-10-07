@@ -226,11 +226,46 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 ---
 
 ### **🎯 Current System State**
-- ✅ All code changes committed (commit `30955563`)
+- ✅ All code changes committed (commit `b095e135`)
 - ✅ Frontend deployed and live
 - ✅ Development server running at http://localhost:3003/
 - ✅ All new features ready for production testing
-- ✅ **HR Dashboard completely rewritten** - Now matches Business Owner Dashboard structure
+- ✅ **Warning scripts rewritten** - All 11 SA languages updated to formal recap format
+- ✅ **Witness signature system** - Prominent watermarking with explicit save buttons
+
+---
+
+### **🔧 Recent Fixes (Session 16) - WARNING SCRIPTS & WITNESS SIGNATURES**
+
+- **Warning Script Rewrite - All 11 SA Languages 📝**
+  - ✅ **Format Change**: Changed from "initial notification" to "formal recap" format
+  - ✅ **Meeting Context**: Scripts now reflect that Step 1 discussion already happened
+  - ✅ **Validity Period**: Added validity period parameter (3/6/12 months) to all languages
+  - ✅ **Rights Cleanup**: Removed 2 redundant employee rights from all 11 languages
+  - ✅ **Witness Introduction**: Scripts now explicitly introduce witness signature option
+  - ✅ **Signature Clarification**: Explains signature = acknowledgment, NOT agreement
+  - ✅ **Languages Updated**: English, Afrikaans, Zulu, Xhosa, Sotho, Tsonga, Venda, Swati, Tswana, Ndebele, Northern Sotho
+
+- **Witness Signature System - Enhanced Watermarking ✍️**
+  - ✅ **Signature Type Toggle**: Radio buttons to select Employee vs Witness signature
+  - ✅ **Explicit Save Buttons**: "Save Signature" button appears after drawing (no auto-save)
+  - ✅ **Prominent Watermark**: Diagonal "WITNESS" text with 48px+ font size
+  - ✅ **Enhanced Visibility**: Stroke outline (80% opacity) + fill (55% opacity) for clarity
+  - ✅ **Scalable Design**: Font and stroke width scale proportionally with signature canvas size
+  - ✅ **Synchronous Application**: Watermark applied at exact moment save button is clicked
+  - ✅ **PDF Integration**: Watermarked signatures appear correctly in generated warning PDFs
+
+- **Signature Capture Flow Improvements 🎯**
+  - ✅ **Draw → Save Pattern**: Signatures no longer auto-save when pen lifts
+  - ✅ **Visual States**: Shows "Save Signature" button when drawn, "Saved" indicator when complete
+  - ✅ **Manager Signature**: Same explicit save flow for consistency
+  - ✅ **Clear Button**: Always available to restart signature capture
+  - ✅ **Better UX**: Clear separation between drawing and finalizing signatures
+
+- **Analyzing Incident Popup - Optimized ⚡**
+  - ✅ **No Artificial Delays**: Popup duration reflects real database operations
+  - ✅ **Real Work**: Fetching active warnings + generating LRA recommendations
+  - ✅ **Best Practice**: Analysis completes before Step 2 for accurate progressive discipline
 
 ---
 
@@ -834,4 +869,4 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, and **WCAG AA accessibility compliance**.*
 
-*Last Updated: 2025-10-06 - Session 15: Enhanced loading screen with progressive status messages and animated progress bar*
+*Last Updated: 2025-10-07 - Session 16: Warning scripts rewritten (11 SA languages), witness signature system with prominent watermarking*
