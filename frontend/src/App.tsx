@@ -333,12 +333,16 @@ const ProtectedLayout = () => {
 // ============================================
 
 const AppRoutes: React.FC = () => {
-  const { user } = useAuth();
-  
+  const { user, loading } = useAuth();
+
   return (
     <Routes>
-      {/* 🎯 FIXED: Redirect authenticated users away from login */}
-      <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <LoginForm />} />
+      {/* 🎯 FIXED: Show loading screen during login, redirect authenticated users */}
+      <Route path="/login" element={
+        loading ? <LoadingScreen /> :
+        user ? <Navigate to="/dashboard" replace /> :
+        <LoginForm />
+      } />
       
       {/* 🎯 All protected routes live inside ProtectedLayout */}
       {/* This ensures OrganizationProvider is available for all child routes */}
