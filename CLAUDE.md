@@ -245,9 +245,12 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
   - ✅ **Visual Feedback**: Larger spinner (48x48), loading dots animation, smooth transitions
   - ✅ **Cleaner Experience**: Brief blank screen (< 1s) while JS loads, then directly to informative loading screen
   - ✅ **Smaller index.html**: Reduced from 5.48 kB → 2.48 kB (55% smaller)
-  - ✅ **Timing**: Each stage has realistic duration (800-1200ms) for smooth progression
-  - ✅ **Login Screen Integration**: Enhanced loading screen now shows when clicking login button (not just on refresh)
+  - ✅ **Timing**: Optimized stage durations (500-700ms each) for faster perceived load time
+  - ✅ **Total Load Time**: Reduced from 4.4s → 2.6s (41% faster)
+  - ✅ **Login Screen Integration**: Loading screen shows IMMEDIATELY when clicking login button
+  - ✅ **Technical Fix**: Added local isLoggingIn state in LoginForm for instant feedback
   - ✅ **Unified Experience**: Same loading screen for all entry points (refresh, login, navigation)
+  - ✅ **Faster Dashboard Prep**: "Preparing your dashboard" reduced from 600ms → 300ms
 
 ---
 
