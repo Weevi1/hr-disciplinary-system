@@ -457,13 +457,22 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
               </span>
               <div className="flex gap-2">
                 {user?.role?.id === 'hr-manager' && (
-                  <button
-                    onClick={() => handleBulkAction('assign-manager')}
-                    className="flex items-center gap-1 px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
-                  >
-                    <Users className="w-3 h-3" />
-                    Assign to Manager
-                  </button>
+                  <>
+                    <button
+                      onClick={() => handleBulkAction('assign-manager')}
+                      className="flex items-center gap-1 px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
+                    >
+                      <Users className="w-3 h-3" />
+                      Assign to Manager
+                    </button>
+                    <button
+                      onClick={() => handleBulkAction('assign-department')}
+                      className="flex items-center gap-1 px-3 py-1 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700"
+                    >
+                      <Building className="w-3 h-3" />
+                      Assign to Department
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={() => handleBulkAction('export')}

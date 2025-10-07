@@ -162,7 +162,8 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
       // ✅ Use the actual warning level from formData (which includes manual overrides)
       warningLevel: formData.level || lraRecommendation?.suggestedLevel || 'counselling',
       issueDate: new Date(),
-      deliveryMethod: deliveryChoice?.method || 'email'
+      deliveryMethod: deliveryChoice?.method || 'email',
+      status: formData.status // Extract status for PDF watermarking
     };
   }, [warningData, deliveryChoice]);
 
@@ -218,6 +219,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
       const pdfData = {
         warningId: extractedData.warningId,
         issuedDate: extractedData.issueDate,
+        status: extractedData.status, // Include status for OVERTURNED watermark
         employee: {
           firstName: extractedData.employee.firstName,
           lastName: extractedData.employee.lastName,
@@ -324,6 +326,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
       const pdfData = {
         warningId: extractedData.warningId,
         issuedDate: extractedData.issueDate,
+        status: extractedData.status, // Include status for OVERTURNED watermark
         employee: {
           firstName: extractedData.employee.firstName,
           lastName: extractedData.employee.lastName,

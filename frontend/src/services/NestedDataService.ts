@@ -120,7 +120,7 @@ export class NestedDataService {
     employeeId: string
   ): Promise<Employee & { summary?: EmployeeSummary }> {
     try {
-      const employeeRef = doc(db, `organizations/${organizationId}/employees`, employeeId);
+      const employeeRef = doc(db, `organizations/${organizationId}/employees/${employeeId}`);
       const employeeSnap = await getDoc(employeeRef);
 
       if (!employeeSnap.exists()) {
@@ -332,14 +332,14 @@ export class NestedDataService {
       const batch = writeBatch(db);
 
       // 1. Update warning in employee's subcollection
-      const warningRef = doc(db, `organizations/${organizationId}/employees/${employeeId}/warnings`, warningId);
+      const warningRef = doc(db, `organizations/${organizationId}/employees/${employeeId}/warnings/${warningId}`);
       batch.update(warningRef, {
         ...updates,
         updatedAt: serverTimestamp()
       });
 
       // 2. Update activeWarnings index if needed
-      const indexRef = doc(db, `organizations/${organizationId}/indexes/activeWarnings`, warningId);
+      const indexRef = doc(db, `organizations/${organizationId}/indexes/activeWarnings/${warningId}`);
       if (updates.status === 'archived' || updates.isActive === false) {
         // Remove from active index
         batch.delete(indexRef);

@@ -95,7 +95,6 @@ export const useEmployeeImport = () => {
               email: row.email.toLowerCase(),
               phoneNumber: row.phoneNumber || '',
               whatsappNumber: row.whatsappNumber || '',
-              department: row.department || '',
               position: row.position || '',
               startDate: row.startDate || '',
               contractType: (row.contractType?.toLowerCase() || 'permanent') as any,
@@ -179,7 +178,7 @@ export const useEmployeeImport = () => {
             email: row.email,
             phoneNumber: row.phoneNumber || '',
             whatsappNumber: row.whatsappNumber || '',
-            department: row.department,
+            department: '', // Department will be assigned later via bulk action
             position: row.position,
             startDate: row.startDate,
             contractType: row.contractType as any || 'permanent',

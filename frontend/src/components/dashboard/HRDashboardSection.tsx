@@ -26,6 +26,7 @@ import { useDashboardData } from '../../hooks/dashboard/useDashboardData';
 import { useHRReportsData } from '../../hooks/dashboard/useHRReportsData';
 import { useHistoricalWarningCountdown } from '../../hooks/useHistoricalWarningCountdown';
 import WarningsReviewDashboard from '../warnings/ReviewDashboard';
+import WarningDetailsModal from '../warnings/modals/WarningDetailsModal';
 import { EmployeeManagement } from '../employees/EmployeeManagement';
 import { ManualWarningEntry } from '../warnings/ManualWarningEntry';
 import { DepartmentManagement } from '../admin/DepartmentManagement';
@@ -62,8 +63,12 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
   const { user } = useAuth();
   const { organization, categories } = useOrganization();
   const isDesktop = useBreakpoint(768);
-  const [activeView, setActiveView] = useState<'urgent' | 'warnings' | 'employees' | null>(null);
+  const [activeView, setActiveView] = useState<'urgent' | 'warnings' | 'employees' | 'departments' | null>(null);
   const [employeeWarningFilter, setEmployeeWarningFilter] = useState<{ id: string; name: string } | null>(null);
+
+  // Shared modal state for all WarningsReviewDashboard instances
+  const [selectedWarning, setSelectedWarning] = useState<any>(null);
+  const [showWarningDetails, setShowWarningDetails] = useState(false);
 
   // 🚀 UNIFIED DASHBOARD DATA
   const {
@@ -93,10 +98,12 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
   );
 
   // 📊 HR METRICS
+  // Filter out archived warnings (expired/overturned) from all metrics
+  const activeWarnings = warnings?.filter(w => w.status !== 'expired' && w.status !== 'overturned') || [];
   const warningStats = {
-    totalActive: warnings?.length || 0,
-    undelivered: warnings?.filter(w => !w.delivered && w.status !== 'expired')?.length || 0,
-    highSeverity: warnings?.filter(w => (w.severity === 'high' || w.category?.severity === 'gross_misconduct') && w.status !== 'expired')?.length || 0
+    totalActive: activeWarnings.length,
+    undelivered: activeWarnings.filter(w => !w.delivered).length,
+    highSeverity: activeWarnings.filter(w => w.severity === 'high' || w.category?.severity === 'gross_misconduct').length
   };
 
   const employeeStats = {
@@ -318,11 +325,28 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
               <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
             </div>
           </ThemedCard>
+
+          <ThemedCard
+            padding="md"
+            shadow="sm"
+            hover
+            onClick={() => setActiveView('departments')}
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+            style={{ minHeight: '64px', willChange: 'transform' }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Building2 className="w-5 h-5" style={{ color: 'var(--color-info)' }} />
+                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Departments</span>
+              </div>
+              <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
+            </div>
+          </ThemedCard>
         </div>
 
         {/* Mobile Modals for each view */}
         {activeView === 'urgent' && (
-          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
+          <div className="lg:hidden fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
             <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] overflow-hidden" shadow="xl">
               <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
                 <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Urgent Tasks</h2>
@@ -396,7 +420,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
         )}
 
         {activeView === 'warnings' && (
-          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
+          <div className="lg:hidden fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
             <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] flex flex-col overflow-hidden" shadow="xl">
               <div className="flex items-center justify-between p-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
                 <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>
@@ -408,14 +432,20 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
                 }}>×</ThemedButton>
               </div>
               <div className="flex-1 overflow-y-auto p-4 min-h-0">
-                <WarningsReviewDashboard initialEmployeeFilter={employeeWarningFilter || undefined} />
+                <WarningsReviewDashboard
+                  initialEmployeeFilter={employeeWarningFilter || undefined}
+                  selectedWarning={selectedWarning}
+                  showDetails={showWarningDetails}
+                  onViewDetails={(warning) => { setSelectedWarning(warning); setShowWarningDetails(true); }}
+                  onCloseDetails={() => { setSelectedWarning(null); setShowWarningDetails(false); }}
+                />
               </div>
             </ThemedCard>
           </div>
         )}
 
         {activeView === 'employees' && (
-          <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
+          <div className="lg:hidden fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
             <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] flex flex-col overflow-hidden" shadow="xl">
               <div className="flex items-center justify-between p-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
                 <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Employees</h2>
@@ -423,6 +453,20 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
               </div>
               <div className="flex-1 overflow-y-auto min-h-0">
                 <EmployeeManagement />
+              </div>
+            </ThemedCard>
+          </div>
+        )}
+
+        {activeView === 'departments' && organization && (
+          <div className="lg:hidden fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
+            <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] overflow-hidden" shadow="xl">
+              <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Departments</h2>
+                <ThemedButton variant="ghost" size="sm" onClick={() => setActiveView(null)}>×</ThemedButton>
+              </div>
+              <div className="overflow-y-auto">
+                <DepartmentManagement isOpen={true} onClose={() => setActiveView(null)} organizationId={organization.id} inline={true} />
               </div>
             </ThemedCard>
           </div>
@@ -545,7 +589,8 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
             {[
               { id: 'urgent', label: 'Urgent Tasks', icon: AlertTriangle, count: hrReportsCount.absenceReports.unread + hrReportsCount.hrMeetings.unread + warningStats.undelivered },
               { id: 'warnings', label: 'Warnings', icon: Shield },
-              { id: 'employees', label: 'Employees', icon: Building2 }
+              { id: 'employees', label: 'Employees', icon: Building2 },
+              { id: 'departments', label: 'Departments', icon: Building2 }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -572,7 +617,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
         <div className="p-4">
           {/* Urgent Tasks Tab */}
           {activeView === 'urgent' && (
-            <div className="space-y-4">
+            <div className="hidden lg:block space-y-4">
               {/* Priority Tasks List */}
               <div className="bg-white rounded-lg border border-red-200 shadow-sm">
                 <div className="p-4 border-b border-red-100 bg-red-50">
@@ -750,7 +795,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
 
           {/* Warnings Tab */}
           {activeView === 'warnings' && (
-            <div className="space-y-4">
+            <div className="hidden lg:block space-y-4">
               {/* Manual Warning Entry Button with Countdown */}
               {!countdown.isExpired && (
                 <div className="flex justify-between items-center">
@@ -814,15 +859,33 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
 
               {/* Full Warnings Dashboard - Inline */}
               <div className="bg-white rounded-lg border border-gray-200">
-                <WarningsReviewDashboard initialEmployeeFilter={employeeWarningFilter || undefined} />
+                <WarningsReviewDashboard
+                  initialEmployeeFilter={employeeWarningFilter || undefined}
+                  selectedWarning={selectedWarning}
+                  showDetails={showWarningDetails}
+                  onViewDetails={(warning) => { setSelectedWarning(warning); setShowWarningDetails(true); }}
+                  onCloseDetails={() => { setSelectedWarning(null); setShowWarningDetails(false); }}
+                />
               </div>
             </div>
           )}
 
           {/* Employees Tab */}
           {activeView === 'employees' && (
-            <div className="space-y-4">
+            <div className="hidden lg:block space-y-4">
               <EmployeeManagement />
+            </div>
+          )}
+
+          {/* Departments Tab */}
+          {activeView === 'departments' && organization && (
+            <div className="hidden lg:block">
+              <DepartmentManagement
+                isOpen={true}
+                onClose={() => setActiveView('urgent')}
+                organizationId={organization.id}
+                inline={true}
+              />
             </div>
           )}
         </div>
@@ -865,6 +928,18 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
           }}
         />
       )}
+
+      {/* Warning Details Modal - Shared across all ReviewDashboard instances */}
+      <WarningDetailsModal
+        warning={selectedWarning}
+        isOpen={showWarningDetails}
+        onClose={() => {
+          setSelectedWarning(null);
+          setShowWarningDetails(false);
+        }}
+        canTakeAction={true}
+        userRole="hr"
+      />
     </div>
   );
 });

@@ -222,7 +222,7 @@ class DepartmentService {
   private async updateManagerInfo(organizationId: string, departmentId: string, managerId: string): Promise<void> {
     try {
       // Fetch manager details from employees collection
-      const employeeRef = doc(db, `organizations/${organizationId}/employees`, managerId);
+      const employeeRef = doc(db, `organizations/${organizationId}/employees/${managerId}`);
       const employeeSnap = await getDoc(employeeRef);
 
       if (employeeSnap.exists()) {

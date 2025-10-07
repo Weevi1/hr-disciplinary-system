@@ -302,7 +302,7 @@ export const warnings = {
    */
   async updateFlatStructure(warningId: string, updates: Partial<Warning>, orgId: string): Promise<void> {
     // Use ShardedDataService to update the warning with all fields
-    const warningRef = doc(db, `organizations/${orgId}/warnings`, warningId);
+    const warningRef = doc(db, `organizations/${orgId}/warnings/${warningId}`);
 
     // Prepare update data with timestamp
     const updateData = {
@@ -321,10 +321,7 @@ export const warnings = {
 
     await updateDoc(warningRef, updateData);
 
-    // If status was updated, also use DataService for compatibility
-    if (updates.status) {
-      await DataServiceV2.updateWarningStatus(warningId, updates.status, orgId);
-    }
+    Logger.debug(`📋 [SHARD] Warning ${warningId} updated in sharded structure`);
   },
 
   /**
@@ -405,7 +402,7 @@ export const warnings = {
    */
   async archive(warningId: string, organizationId: string, reason: 'appealed' | 'overturned' | 'expired' | 'manual'): Promise<void> {
     try {
-      const warningRef = doc(db, `organizations/${organizationId}/warnings`, warningId);
+      const warningRef = doc(db, `organizations/${organizationId}/warnings/${warningId}`);
 
       await updateDoc(warningRef, {
         isArchived: true,

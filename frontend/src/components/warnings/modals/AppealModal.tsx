@@ -127,10 +127,10 @@ export const AppealModal: React.FC<AppealModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
-        
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+
         {/* Header */}
-        <div className="bg-gradient-to-r from-amber-600 to-orange-700 p-6 text-white">
+        <div className="bg-gradient-to-r from-amber-600 to-orange-700 p-6 text-white flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-3 rounded-xl">
@@ -154,7 +154,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-6 max-h-[calc(90vh-140px)] overflow-y-auto">
+        <div className="p-6 flex-1 overflow-y-auto min-h-0">
           
           {/* Warning Details */}
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
@@ -279,7 +279,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Calendar className="w-4 h-4" />
             <span>Appeal deadline: {appealDeadline.toLocaleDateString()}</span>
