@@ -14,12 +14,12 @@
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    width: 100vw !important;
+    width: 100% !important; /* Use 100% instead of 100vw to avoid horizontal scroll on mobile */
     height: 100vh !important;
     margin: 0 !important;
     padding: 0 !important;
     z-index: 9999 !important;
-    
+
     /* Desktop: Overlay with centered modal */
     background: rgba(15, 23, 42, 0.6) !important;
     backdrop-filter: blur(8px) !important;
