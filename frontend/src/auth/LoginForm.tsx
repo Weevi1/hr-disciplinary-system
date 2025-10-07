@@ -1,5 +1,5 @@
 // frontend/src/auth/LoginForm.tsx - Professional Login Screen
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { useAuth } from './AuthContext';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
@@ -9,24 +9,101 @@ interface LoginFormProps {
   onSuccess?: () => void;
 }
 
+// Enhanced Loading Screen Component
+const LoadingScreen = () => {
+  const [loadingStage, setLoadingStage] = useState(0);
+  const [statusMessage, setStatusMessage] = useState('Connecting to server...');
+
+  const loadingStages = [
+    { message: 'Connecting to server...', duration: 500 },
+    { message: 'Authenticating user...', duration: 600 },
+    { message: 'Loading organization data...', duration: 700 },
+    { message: 'Fetching categories...', duration: 500 },
+    { message: 'Preparing your dashboard...', duration: 300 }
+  ];
+
+  useEffect(() => {
+    const timers: NodeJS.Timeout[] = [];
+    let cumulativeTime = 0;
+
+    loadingStages.forEach((stage, index) => {
+      const timer = setTimeout(() => {
+        setLoadingStage(index);
+        setStatusMessage(stage.message);
+      }, cumulativeTime);
+      timers.push(timer);
+      cumulativeTime += stage.duration;
+    });
+
+    return () => timers.forEach(timer => clearTimeout(timer));
+  }, []);
+
+  const progress = ((loadingStage + 1) / loadingStages.length) * 100;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center px-4">
+      <div className="text-center max-w-md w-full">
+        <div className="mb-8">
+          <Logo size="xlarge" showText={true} />
+        </div>
+
+        <div className="w-12 h-12 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
+
+        <p className="text-base font-medium text-gray-800 mb-4 transition-all duration-300">
+          {statusMessage}
+        </p>
+
+        <div className="w-full bg-gray-200 rounded-full h-2 mb-2 overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        <p className="text-xs text-gray-500">
+          {Math.round(progress)}% complete
+        </p>
+
+        <div className="mt-4 flex items-center justify-center gap-1">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"
+              style={{ animationDelay: `${i * 150}ms` }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const LoginForm = ({ onSuccess }: LoginFormProps) => {
-  const { login, loading } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoggingIn(true);
 
     try {
       await login(email, password);
       onSuccess?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
+      setIsLoggingIn(false);
     }
   };
+
+  // Show loading screen immediately when logging in
+  if (isLoggingIn) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
