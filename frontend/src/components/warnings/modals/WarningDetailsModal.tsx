@@ -16,6 +16,7 @@ import {
 import { AudioPlaybackWidget } from '../AudioPlaybackWidget';
 import { PDFPreviewModal } from '../enhanced/PDFPreviewModal';
 import { SignatureDisplay } from '../SignatureDisplay';
+import { useOrganization } from '../../../contexts/OrganizationContext';
 
 // ============================================
 // INTERFACES & TYPES
@@ -66,7 +67,22 @@ const safeText = (value: any, fallback: string = 'Not specified'): string => {
 const safeDate = (date: any, fallback: string = 'Not set'): string => {
   if (!date) return fallback;
   try {
-    const dateObj = date instanceof Date ? date : new Date(date);
+    let dateObj: Date;
+
+    // Handle Firestore timestamp format
+    if (date.seconds !== undefined) {
+      dateObj = new Date(date.seconds * 1000);
+    } else if (date instanceof Date) {
+      dateObj = date;
+    } else {
+      dateObj = new Date(date);
+    }
+
+    // Check if date is valid
+    if (isNaN(dateObj.getTime())) {
+      return fallback;
+    }
+
     return dateObj.toLocaleDateString('en-ZA', {
       year: 'numeric',
       month: 'short',
@@ -82,6 +98,34 @@ const safeDateTime = (date: any, time?: string): string => {
   if (!dateStr || dateStr === 'Not set') return 'Not specified';
   if (!time) return dateStr;
   return `${dateStr} at ${time}`;
+};
+
+// Helper to convert any date format to ISO date string (YYYY-MM-DD) for form inputs
+const toISODateString = (date: any): string => {
+  if (!date) return new Date().toISOString().split('T')[0];
+  try {
+    let dateObj: Date;
+
+    // Handle Firestore timestamp format
+    if (date.seconds !== undefined) {
+      dateObj = new Date(date.seconds * 1000);
+    } else if (date instanceof Date) {
+      dateObj = date;
+    } else if (typeof date === 'string') {
+      dateObj = new Date(date);
+    } else {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    // Check if date is valid
+    if (isNaN(dateObj.getTime())) {
+      return new Date().toISOString().split('T')[0];
+    }
+
+    return dateObj.toISOString().split('T')[0];
+  } catch {
+    return new Date().toISOString().split('T')[0];
+  }
 };
 
 // ============================================
@@ -143,7 +187,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
   onAppealOutcome,
   canManageAppeals = false
 }) => {
-  
+
   // ============================================
   // STATE HOOKS
   // ============================================
@@ -174,6 +218,12 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
   
   const modalRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
+
+  // ============================================
+  // CONTEXT HOOKS
+  // ============================================
+
+  const { organization } = useOrganization();
 
   // ============================================
   // MEMOIZED DATA
@@ -213,8 +263,18 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
       escalationReason: safeText(warning.escalationReason),
       acknowledgedAt: warning.acknowledgedAt ? safeDate(warning.acknowledgedAt) : null,
       acknowledgedBy: safeText(warning.acknowledgedBy),
+
+      // Appeal information
       appealSubmitted: Boolean(warning.appealSubmitted),
       appealDate: warning.appealDate ? safeDate(warning.appealDate) : null,
+      appealDetails: warning.appealDetails || null,
+      appealOutcome: warning.appealOutcome || null,
+      appealDecisionDate: warning.appealDecisionDate ? safeDate(warning.appealDecisionDate) : null,
+      appealReasoning: safeText(warning.appealReasoning, ''),
+      hrNotes: safeText(warning.hrNotes, ''),
+      followUpRequired: Boolean(warning.followUpRequired),
+      followUpDate: warning.followUpDate ? safeDate(warning.followUpDate) : null,
+
       createdAt: safeDate(warning.createdAt),
       updatedAt: safeDate(warning.updatedAt)
     };
@@ -300,6 +360,66 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
     setShowPDFPreview(true);
   }, []);
 
+  const handlePrintAppealReport = useCallback(async () => {
+    if (!warningData) return;
+
+    try {
+      Logger.debug('📋 Generating standalone appeal report...');
+
+      // Import the PDF service
+      const { PDFGenerationService } = await import('../../../services/PDFGenerationService');
+
+      // Generate appeal report PDF
+      const pdfBlob = await PDFGenerationService.generateAppealReportPDF({
+        warningId: warning.id || 'N/A',
+        employee: {
+          firstName: warningData.employeeName.split(' ')[0] || 'Unknown',
+          lastName: warningData.employeeName.split(' ').slice(1).join(' ') || 'Employee',
+          employeeNumber: warningData.employeeNumber,
+          department: warningData.department,
+          position: warningData.position
+        },
+        category: warningData.category,
+        warningLevel: warningData.level,
+        issueDate: warning.issueDate?.seconds ? new Date(warning.issueDate.seconds * 1000) : new Date(),
+        organization: {
+          name: organization?.name || 'Organization',
+          branding: organization?.branding
+        },
+        appealDetails: warningData.appealDetails ? {
+          grounds: warningData.appealDetails.grounds,
+          details: warningData.appealDetails.details,
+          requestedOutcome: warningData.appealDetails.requestedOutcome,
+          submittedAt: warningData.appealDetails.submittedAt ? new Date(warningData.appealDetails.submittedAt) : undefined,
+          submittedBy: warningData.appealDetails.submittedBy
+        } : undefined,
+        appealOutcome: warningData.appealOutcome as 'upheld' | 'overturned' | 'modified' | 'reduced' | undefined,
+        appealDecisionDate: warning.appealDecisionDate?.seconds ? new Date(warning.appealDecisionDate.seconds * 1000) : undefined,
+        appealReasoning: warningData.appealReasoning,
+        hrNotes: warningData.hrNotes,
+        followUpRequired: warningData.followUpRequired,
+        followUpDate: warning.followUpDate?.seconds ? new Date(warning.followUpDate.seconds * 1000) : undefined
+      });
+
+      // Download the PDF
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Appeal_Report_${warning.id || 'Unknown'}_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      Logger.success('✅ Appeal report downloaded');
+    } catch (error) {
+      Logger.error('❌ Failed to generate appeal report:', error);
+      console.error('Full error details:', error);
+      console.error('Warning data:', warningData);
+      console.error('Organization:', organization);
+      alert(`Failed to generate appeal report: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }, [warningData, warning, organization]);
 
   const handleViewSignatures = useCallback(() => {
     if (warningData?.hasSignatures) {
@@ -722,6 +842,98 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
                 </div>
               </div>
 
+              {/* Appeal History Section */}
+              {(warningData.appealSubmitted || warningData.appealOutcome) && (
+                <div className="mt-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Scale className="w-4 h-4 text-purple-600" />
+                    Appeal History
+                  </h4>
+
+                  {/* Employee Appeal */}
+                  {warningData.appealSubmitted && warningData.appealDetails && (
+                    <div className="mb-4 p-3 bg-white rounded-lg border border-purple-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-purple-900 uppercase">Employee Appeal</span>
+                        <span className="text-xs text-gray-600">{warningData.appealDate}</span>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        {warningData.appealDetails.grounds && (
+                          <div>
+                            <span className="font-medium text-gray-700">Grounds:</span>
+                            <p className="text-gray-600 mt-1">{warningData.appealDetails.grounds}</p>
+                          </div>
+                        )}
+                        {warningData.appealDetails.details && (
+                          <div>
+                            <span className="font-medium text-gray-700">Additional Details:</span>
+                            <p className="text-gray-600 mt-1">{warningData.appealDetails.details}</p>
+                          </div>
+                        )}
+                        {warningData.appealDetails.requestedOutcome && (
+                          <div>
+                            <span className="font-medium text-gray-700">Requested Outcome:</span>
+                            <p className="text-gray-600 mt-1">{warningData.appealDetails.requestedOutcome}</p>
+                          </div>
+                        )}
+                        {warningData.appealDetails.submittedBy && (
+                          <div className="text-xs text-gray-500 mt-2">
+                            Submitted by: {warningData.appealDetails.submittedBy}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* HR Decision */}
+                  {warningData.appealOutcome && (
+                    <div className="p-3 bg-white rounded-lg border border-purple-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-purple-900 uppercase">HR Decision</span>
+                        <span className="text-xs text-gray-600">{warningData.appealDecisionDate || 'Pending'}</span>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-gray-700">Outcome:</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            warningData.appealOutcome === 'overturned' ? 'bg-green-100 text-green-800' :
+                            warningData.appealOutcome === 'upheld' ? 'bg-red-100 text-red-800' :
+                            warningData.appealOutcome === 'modified' ? 'bg-blue-100 text-blue-800' :
+                            warningData.appealOutcome === 'reduced' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {warningData.appealOutcome === 'overturned' ? 'Warning Overturned' :
+                             warningData.appealOutcome === 'upheld' ? 'Appeal Upheld - Warning Stands' :
+                             warningData.appealOutcome === 'modified' ? 'Warning Modified' :
+                             warningData.appealOutcome === 'reduced' ? 'Warning Reduced' :
+                             warningData.appealOutcome}
+                          </span>
+                        </div>
+                        {warningData.appealReasoning && (
+                          <div>
+                            <span className="font-medium text-gray-700">HR Reasoning:</span>
+                            <p className="text-gray-600 mt-1">{warningData.appealReasoning}</p>
+                          </div>
+                        )}
+                        {warningData.hrNotes && (
+                          <div>
+                            <span className="font-medium text-gray-700">HR Notes:</span>
+                            <p className="text-gray-600 mt-1">{warningData.hrNotes}</p>
+                          </div>
+                        )}
+                        {warningData.followUpRequired && (
+                          <div className="mt-2 p-2 bg-yellow-50 rounded border border-yellow-200">
+                            <span className="text-xs font-medium text-yellow-800">
+                              ⚠️ Follow-up required{warningData.followUpDate ? ` by ${warningData.followUpDate}` : ''}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                 <div className="flex items-center gap-3">
@@ -737,12 +949,12 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
                   
                   <button
                     onClick={handlePreviewPDF}
-                    className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm"
+                    className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium"
                   >
                     <FileText className="w-4 h-4" />
-                    View PDF
+                    {(warningData.appealSubmitted || warningData.appealOutcome) ? 'View PDF (with Appeal)' : 'View PDF'}
                   </button>
-                  
+
                   {warningData.hasSignatures && (
                     <button
                       onClick={handleViewSignatures}
@@ -752,59 +964,25 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
                       Signatures
                     </button>
                   )}
+
+                  {/* Print Appeal Report button - only show if appeal exists */}
+                  {(warningData.appealSubmitted || warningData.appealOutcome) && (
+                    <button
+                      onClick={handlePrintAppealReport}
+                      className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                    >
+                      <Scale className="w-4 h-4" />
+                      Print Appeal Report
+                    </button>
+                  )}
                 </div>
-                
-                {canTakeAction && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={handleRejectClick}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                    >
-                      Reject
-                    </button>
-                    <button
-                      onClick={handleApprove}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                    >
-                      Approve
-                    </button>
-                  </div>
-                )}
+
+                {/* Reject/Approve buttons removed - not applicable for issued warnings */}
               </div>
             </div>
           </div>
 
-          {/* Rejection Dialog */}
-          {showRejectDialog && (
-            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-lg max-w-md w-full p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Reject Warning</h3>
-                <p className="text-sm text-gray-600 mb-4">Please provide a reason for rejecting this warning:</p>
-                <textarea
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                  placeholder="Enter rejection reason..."
-                />
-                <div className="flex gap-3 mt-4">
-                  <button
-                    onClick={() => setShowRejectDialog(false)}
-                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 font-medium transition-colors text-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleReject}
-                    disabled={!rejectReason.trim() || actionState.loading}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium transition-colors text-sm"
-                  >
-                    {actionState.loading ? 'Processing...' : 'Reject Warning'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Reject/Approve dialog removed - not applicable for issued warnings */}
         </div>
       </div>
 
@@ -910,13 +1088,14 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
               description: warning.categoryName || warning.category || 'General'
             },
             formData: {
-              incidentDate: warning.incidentDate?.toISOString?.()?.split('T')[0] || new Date().toISOString().split('T')[0],
+              incidentDate: toISODateString(warning.incidentDate),
               incidentTime: warning.incidentTime || '12:00',
               incidentLocation: warning.incidentLocation || '',
               incidentDescription: warning.incidentDescription || warning.description || '',
               additionalNotes: warning.additionalNotes || '',
               validityPeriod: warning.validityPeriod || 6,
-              issueDate: warning.issueDate?.toISOString?.()?.split('T')[0] || new Date().toISOString().split('T')[0]
+              issueDate: toISODateString(warning.issueDate),
+              status: warning.status // Pass warning status for PDF watermarking
             },
             signatures: warning.signatures || { manager: null, employee: null },
             lraRecommendation: {
@@ -970,13 +1149,14 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
               description: warning.categoryName || warning.category || 'General'
             },
             formData: {
-              incidentDate: warning.incidentDate?.toISOString?.()?.split('T')[0] || new Date().toISOString().split('T')[0],
+              incidentDate: toISODateString(warning.incidentDate),
               incidentTime: warning.incidentTime || '12:00',
               incidentLocation: warning.incidentLocation || '',
               incidentDescription: warning.incidentDescription || warning.description || '',
               additionalNotes: warning.additionalNotes || '',
               validityPeriod: warning.validityPeriod || 6,
-              issueDate: warning.issueDate?.toISOString?.()?.split('T')[0] || new Date().toISOString().split('T')[0]
+              issueDate: toISODateString(warning.issueDate),
+              status: warning.status // Pass warning status for PDF watermarking
             },
             signatures: warning.signatures || { manager: null, employee: null },
             lraRecommendation: {

@@ -273,6 +273,53 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 
 ---
 
+### **🔧 Recent Fixes (Session 17) - APPEAL REPORT SYSTEM**
+
+- **Standalone Appeal Report PDF Generator 📋**
+  - ✅ **New Service Method**: `generateAppealReportPDF()` in PDFGenerationService.ts
+  - ✅ **Dedicated Document**: Generates standalone appeal decision report (separate from warning PDF)
+  - ✅ **Professional Layout**:
+    - Branded header with organization name
+    - Warning reference section (employee, department, warning level, category)
+    - Appeal submission section (grounds, details, requested outcome, submission date/by)
+    - HR decision section (outcome, reasoning, notes, follow-up requirements)
+    - HR authorization signature lines
+  - ✅ **Color-Coded Outcomes**:
+    - 🟢 Green badge: "APPEAL APPROVED - WARNING OVERTURNED"
+    - 🔴 Red badge: "APPEAL DENIED - WARNING STANDS"
+    - 🟠 Orange badge: "APPEAL PARTIALLY APPROVED - WARNING MODIFIED/REDUCED"
+  - ✅ **Multi-Page Support**: Proper page numbering ("Page 1 of 2", "Page 2 of 2")
+  - ✅ **Footer on All Pages**: "Official Appeal Decision Report - Confidential HR Document"
+
+- **WarningDetailsModal Improvements 🎯**
+  - ✅ **Removed Legacy Buttons**: Deleted confusing "Reject" and "Approve" buttons (not applicable for issued warnings)
+  - ✅ **New Purple Button**: "Print Appeal Report" appears when appeal history exists
+  - ✅ **Updated Green Button**: "View PDF (with Appeal)" when appeal exists, includes OVERTURNED watermark
+  - ✅ **Appeal History Display**: Comprehensive section showing:
+    - Employee appeal submission (grounds, details, requested outcome, date)
+    - HR decision (outcome badge, reasoning, notes, follow-up requirements)
+  - ✅ **Date Parsing Fixes**:
+    - Enhanced `safeDate()` to handle Firestore timestamps (`{ seconds, nanoseconds }`)
+    - New `toISODateString()` helper for PDF form inputs
+    - Fixed "Invalid Date" display issues
+
+- **Archive View Integration ⚖️**
+  - ✅ **Overturned Warnings**: Archive shows appeal decision details
+  - ✅ **Metrics Fix**: "Undelivered Warnings" no longer counts overturned warnings
+  - ✅ **Stats Dashboard**: Total archived, overturned appeals, naturally expired
+
+- **Bug Fixes 🐛**
+  - ✅ **Fixed**: `TypeError: this.loadJsPDF is not a function` - Changed to direct jsPDF import
+  - ✅ **Fixed**: Page numbering showed "Page 1 of 1" when 2 pages existed - Footer now added after all content
+  - ✅ **Fixed**: Modal state management for dual ReviewDashboard instances (mobile + desktop)
+
+- **Files Changed**:
+  - `frontend/src/services/PDFGenerationService.ts:1116-1405` - New appeal report generator
+  - `frontend/src/components/warnings/modals/WarningDetailsModal.tsx` - UI updates, appeal display, print handler
+  - `frontend/src/components/dashboard/HRDashboardSection.tsx` - Shared modal state, removed duplicate instance issues
+
+---
+
 ### **🔧 Recent Fixes (Session 16) - WARNING SCRIPTS & WITNESS SIGNATURES**
 
 - **Warning Script Rewrite - All 11 SA Languages 📝**
@@ -907,4 +954,4 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, and **WCAG AA accessibility compliance**.*
 
-*Last Updated: 2025-10-07 - Session 17: Signature timestamps (SA timezone), sequential signature capture, audio playback fix, warning date fix*
+*Last Updated: 2025-10-07 - Session 17: Appeal Report System - Standalone PDF generator with multi-page support, modal improvements, date parsing fixes*

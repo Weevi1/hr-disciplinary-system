@@ -20,6 +20,7 @@ import { EmployeeArchiveModal } from './EmployeeArchiveModal';
 // EmployeeArchive moved to _legacy - archive list view functionality to be reimplemented if needed
 import { EmployeePromotionModal } from './EmployeePromotionModal';
 import { BulkAssignManagerModal } from './BulkAssignManagerModal';
+import { BulkAssignDepartmentModal } from './BulkAssignDepartmentModal';
 import EmployeeOrganogram from './EmployeeOrganogram';
 import EmployeeTableBrowser from './EmployeeTableBrowser';
 import { calculateEmployeePermissions } from '../../types';
@@ -91,6 +92,8 @@ export const EmployeeManagement: React.FC = () => {
   const [promotingEmployee, setPromotingEmployee] = useState<Employee | null>(null);
   const [bulkAssignEmployees, setBulkAssignEmployees] = useState<Employee[]>([]);
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
+  const [bulkAssignDeptEmployees, setBulkAssignDeptEmployees] = useState<Employee[]>([]);
+  const [showBulkAssignDeptModal, setShowBulkAssignDeptModal] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const permissions = calculateEmployeePermissions(user?.role.id, user?.departmentIds);
@@ -126,6 +129,11 @@ export const EmployeeManagement: React.FC = () => {
         setBulkAssignEmployees(employees);
         setShowBulkAssignModal(true);
         break;
+      case 'assign-department':
+        // Open bulk assign department modal
+        setBulkAssignDeptEmployees(employees);
+        setShowBulkAssignDeptModal(true);
+        break;
       case 'export':
         // Export selected employees
         Logger.debug('Exporting employees:', employees);
@@ -144,7 +152,8 @@ export const EmployeeManagement: React.FC = () => {
 
     // Update all selected employees with the new manager
     const updatePromises = bulkAssignEmployees.map(employee =>
-      updateEmployee(employee.id, {
+      updateEmployee({
+        ...employee,
         employment: {
           ...employee.employment,
           managerId
@@ -157,6 +166,26 @@ export const EmployeeManagement: React.FC = () => {
     setShowBulkAssignModal(false);
     setBulkAssignEmployees([]);
   }, [bulkAssignEmployees, organizationId, updateEmployee, loadEmployees]);
+
+  const handleBulkAssignDepartment = useCallback(async (departmentName: string) => {
+    if (!organizationId) return;
+
+    // Update all selected employees with the new department
+    const updatePromises = bulkAssignDeptEmployees.map(employee =>
+      updateEmployee({
+        ...employee,
+        profile: {
+          ...employee.profile,
+          department: departmentName
+        }
+      })
+    );
+
+    await Promise.all(updatePromises);
+    await loadEmployees();
+    setShowBulkAssignDeptModal(false);
+    setBulkAssignDeptEmployees([]);
+  }, [bulkAssignDeptEmployees, organizationId, updateEmployee, loadEmployees]);
 
   if (loading) {
     // Use simplified loading for legacy devices
@@ -606,6 +635,18 @@ export const EmployeeManagement: React.FC = () => {
             }}
             employees={bulkAssignEmployees}
             onAssign={handleBulkAssignManager}
+          />
+        )}
+
+        {showBulkAssignDeptModal && (
+          <BulkAssignDepartmentModal
+            isOpen={showBulkAssignDeptModal}
+            onClose={() => {
+              setShowBulkAssignDeptModal(false);
+              setBulkAssignDeptEmployees([]);
+            }}
+            employees={bulkAssignDeptEmployees}
+            onAssign={handleBulkAssignDepartment}
           />
         )}
 

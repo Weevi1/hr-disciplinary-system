@@ -302,10 +302,10 @@ export class DatabaseShardingService {
       }
 
       const querySnapshot = await getDocs(queryRef)
-      
+
       const documents: T[] = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+        ...doc.data(),
+        id: doc.id  // IMPORTANT: Must be after spread to avoid being overwritten by empty id field in data
       } as T))
 
       const queryTime = Date.now() - startTime
@@ -366,10 +366,10 @@ export class DatabaseShardingService {
       }
 
       const querySnapshot = await getDocs(queryRef)
-      
+
       const documents: T[] = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+        ...doc.data(),
+        id: doc.id  // IMPORTANT: Must be after spread to avoid being overwritten by empty id field in data
       } as T))
 
       const queryTime = Date.now() - startTime

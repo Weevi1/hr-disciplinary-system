@@ -657,7 +657,7 @@ service cloud.firestore {
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isBusinessOwner())
+        (belongsToOrganization(organizationId) && isHRManager())
       );
     }
 

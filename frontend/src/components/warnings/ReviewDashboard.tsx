@@ -38,6 +38,11 @@ interface WarningsReviewProps {
   canTakeAction?: boolean;
   userRole?: string;
   initialEmployeeFilter?: { id: string; name: string }; // For filtering by employee from employee cards
+  // External modal control (for shared state between multiple instances)
+  selectedWarning?: Warning | null;
+  showDetails?: boolean;
+  onViewDetails?: (warning: Warning) => void;
+  onCloseDetails?: () => void;
 }
 
 // 🔧 SAFE RENDERING HELPER - Prevents React Error #31
@@ -84,6 +89,10 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
   canTakeAction = false,
   userRole = 'viewer',
   initialEmployeeFilter,
+  selectedWarning: externalSelectedWarning,
+  showDetails: externalShowDetails,
+  onViewDetails: externalOnViewDetails,
+  onCloseDetails: externalOnCloseDetails,
 }) => {
   const { user, organization } = useAuth();
   const organizationId = propOrganizationId || organization?.id;
@@ -93,6 +102,7 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
   // State management
   const [warnings, setWarnings] = useState<Warning[]>([]);
   const [filteredWarnings, setFilteredWarnings] = useState<Warning[]>([]);
+  const [archivedWarnings, setArchivedWarnings] = useState<Warning[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -102,8 +112,13 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
   const [filterDepartment, setFilterDepartment] = useState('all');
   const [sortBy, setSortBy] = useState<'date' | 'employee' | 'level' | 'status'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [selectedWarning, setSelectedWarning] = useState<Warning | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
+
+  // Use external state if provided, otherwise use internal state
+  const [internalSelectedWarning, setInternalSelectedWarning] = useState<Warning | null>(null);
+  const [internalShowDetails, setInternalShowDetails] = useState(false);
+  const selectedWarning = externalSelectedWarning !== undefined ? externalSelectedWarning : internalSelectedWarning;
+  const showDetails = externalShowDetails !== undefined ? externalShowDetails : internalShowDetails;
+
   const [showFilters, setShowFilters] = useState(false);
   const [showProofOfDelivery, setShowProofOfDelivery] = useState(false);
   const [deliveryWarning, setDeliveryWarning] = useState<Warning | null>(null);
@@ -166,13 +181,18 @@ const loadWarnings = useCallback(async () => {
       // Use original flat structure
       Logger.debug('🔄 Loading warnings via API layer for org:', organizationId)
       data = await API.warnings.getAll(organizationId);
+      Logger.debug(`🔍 [DEBUG] Loaded ${data.length} warnings with IDs:`, data.map(w => `${w.employeeName}: id="${w.id}"`));
     }
 
-    // Filter out archived warnings from main view
+    // Split warnings into active and archived
     const activeWarnings = data.filter(warning =>
       !warning.isArchived &&
       warning.status !== 'expired' &&
       warning.status !== 'overturned'
+    );
+
+    const archived = data.filter(warning =>
+      warning.status === 'expired' || warning.status === 'overturned'
     );
 
     // Sort by creation date (newest first)
@@ -180,10 +200,17 @@ const loadWarnings = useCallback(async () => {
       new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
     );
 
+    const sortedArchived = archived.sort((a, b) =>
+      new Date(b.appealDecisionDate || b.updatedAt || 0).getTime() - new Date(a.appealDecisionDate || a.updatedAt || 0).getTime()
+    );
+
+    Logger.debug(`🔍 [DEBUG] After filtering/sorting, ${sortedWarnings.length} active warnings, ${sortedArchived.length} archived with IDs:`, sortedWarnings.map(w => `${w.employeeName}: id="${w.id}"`));
+
     setWarnings(sortedWarnings);
     setFilteredWarnings(sortedWarnings);
+    setArchivedWarnings(sortedArchived);
 
-    Logger.success(`📊 Loaded ${sortedWarnings.length} active warnings (${useNestedStructure() ? 'NESTED' : 'SHARDED'} structure)`);
+    Logger.success(`📊 Loaded ${sortedWarnings.length} active warnings, ${sortedArchived.length} archived (${useNestedStructure() ? 'NESTED' : 'SHARDED'} structure)`);
 
   } catch (error) {
     Logger.error('❌ Failed to load warnings:', error)
@@ -273,23 +300,33 @@ const loadWarnings = useCallback(async () => {
   const paginatedWarnings = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     const end = start + itemsPerPage;
-    return filteredWarnings.slice(start, end);
+    const paginated = filteredWarnings.slice(start, end);
+    Logger.debug(`🔍 [DEBUG] Paginated warnings (page ${currentPage}) with IDs:`, paginated.map(w => `${w.employeeName}: id="${w.id}"`));
+    return paginated;
   }, [filteredWarnings, currentPage]);
 
   const totalPages = Math.ceil(filteredWarnings.length / itemsPerPage);
 
-  // Modal handlers
+  // Modal handlers - use external callbacks if provided, otherwise internal state
   const handleViewDetails = useCallback((warning: Warning) => {
     Logger.debug('Opening warning details for:', warning.id)
-    setSelectedWarning(warning);
-    setShowDetails(true);
-  }, []);
+    if (externalOnViewDetails) {
+      externalOnViewDetails(warning);
+    } else {
+      setInternalSelectedWarning(warning);
+      setInternalShowDetails(true);
+    }
+  }, [externalOnViewDetails]);
 
   const handleCloseModal = useCallback(() => {
     Logger.debug('Closing warning details modal')
-    setShowDetails(false);
-    setSelectedWarning(null);
-  }, []);
+    if (externalOnCloseDetails) {
+      externalOnCloseDetails();
+    } else {
+      setInternalShowDetails(false);
+      setInternalSelectedWarning(null);
+    }
+  }, [externalOnCloseDetails]);
 
   // Enhanced appeal submission with legal compliance
   const handleAppealSubmission = useCallback(async (appealData: {
@@ -300,7 +337,18 @@ const loadWarnings = useCallback(async () => {
   }) => {
     try {
       setLoading(true);
-      
+
+      // Validate warningId exists
+      if (!appealData.warningId) {
+        throw new Error('Warning ID is missing. Please try again.');
+      }
+
+      if (!organizationId) {
+        throw new Error('Organization ID is missing. Please try again.');
+      }
+
+      Logger.debug(`📝 Submitting appeal for warning: ${appealData.warningId}`)
+
       // Submit appeal with complete legal documentation
       await API.warnings.update(appealData.warningId, {
         appealSubmitted: true,
@@ -488,16 +536,25 @@ const loadWarnings = useCallback(async () => {
         <div className="flex items-center gap-3">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900">Warning Management</h3>
           <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-            {warnings.length} total
+            {warnings.length} active
           </span>
+          {archivedWarnings.length > 0 && (
+            <span className="text-xs sm:text-sm text-gray-500 bg-orange-100 px-2 py-1 rounded-full">
+              {archivedWarnings.length} archived
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setViewMode('archive')}
-            className="flex items-center gap-2 px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors text-sm"
+            onClick={() => setViewMode(viewMode === 'archive' ? 'warnings' : 'archive')}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+              viewMode === 'archive'
+                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                : 'bg-orange-600 hover:bg-orange-700 text-white'
+            }`}
           >
             <Archive className="w-4 h-4" />
-            <span className="hidden sm:inline">Archive</span>
+            <span className="hidden sm:inline">{viewMode === 'archive' ? 'Active Warnings' : 'Archive'}</span>
           </button>
           <button
             onClick={loadWarnings}
@@ -519,14 +576,183 @@ const loadWarnings = useCallback(async () => {
 
       {/* Conditional rendering based on view mode */}
       {viewMode === 'archive' ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500">Warning archive view is being reimplemented. Please use the filters to find archived warnings.</p>
-          <button
-            onClick={() => setViewMode('warnings')}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Back to Warnings
-          </button>
+        <div className="space-y-4">
+          {/* Archive Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Archive className="w-5 h-5 text-gray-600" />
+                Warning Archive
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                View expired and overturned warnings with appeal decision history
+              </p>
+            </div>
+            <button
+              onClick={() => setViewMode('warnings')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
+            >
+              <ChevronDown className="w-4 h-4 rotate-90" />
+              Back to Active Warnings
+            </button>
+          </div>
+
+          {/* Archive Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <div className="flex items-center gap-3">
+                <Archive className="w-8 h-8 text-gray-600" />
+                <div>
+                  <div className="text-2xl font-bold text-gray-900">{archivedWarnings.length}</div>
+                  <div className="text-sm text-gray-600">Total Archived</div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+              <div className="flex items-center gap-3">
+                <RefreshCw className="w-8 h-8 text-orange-600" />
+                <div>
+                  <div className="text-2xl font-bold text-orange-900">
+                    {archivedWarnings.filter(w => w.status === 'overturned').length}
+                  </div>
+                  <div className="text-sm text-orange-700">Overturned Appeals</div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <div className="flex items-center gap-3">
+                <Clock className="w-8 h-8 text-blue-600" />
+                <div>
+                  <div className="text-2xl font-bold text-blue-900">
+                    {archivedWarnings.filter(w => w.status === 'expired').length}
+                  </div>
+                  <div className="text-sm text-blue-700">Naturally Expired</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Archived Warnings List */}
+          {archivedWarnings.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+              <Archive className="w-16 h-16 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No archived warnings</p>
+              <p className="text-sm text-gray-400 mt-1">Expired and overturned warnings will appear here</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {archivedWarnings.map((warning, index) => (
+                <div
+                  key={warning.id || `archived-${index}`}
+                  className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h4 className="font-semibold text-gray-900">{safeRenderText(warning.employeeName)}</h4>
+                        <span className="text-xs text-gray-500">
+                          {safeRenderText(warning.employeeNumber)} • {safeRenderText(warning.department)}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                        <div>
+                          <p className="text-xs text-gray-500">Warning Level</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {warning.level === 'counselling' ? 'Counselling' :
+                             warning.level === 'verbal' ? 'Verbal' :
+                             warning.level === 'first_written' ? 'First Written' :
+                             warning.level === 'second_written' ? 'Second Written' :
+                             warning.level === 'final_written' ? 'Final Written' :
+                             safeRenderText(warning.level, 'Unknown')}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Category</p>
+                          <p className="text-sm font-medium text-gray-900">{safeRenderText(warning.category)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Issue Date</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {warning.issueDate ? new Date(warning.issueDate.seconds ? warning.issueDate.seconds * 1000 : warning.issueDate).toLocaleDateString() : 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Status</p>
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            warning.status === 'overturned' ? 'bg-orange-100 text-orange-800' :
+                            warning.status === 'expired' ? 'bg-gray-100 text-gray-800' :
+                            'bg-gray-100 text-gray-600'
+                          }`}>
+                            {warning.status === 'overturned' ? 'Overturned' :
+                             warning.status === 'expired' ? 'Expired' :
+                             safeRenderText(warning.status, 'Archived')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Appeal Decision Details (for overturned warnings) */}
+                      {warning.status === 'overturned' && warning.appealDecisionDate && (
+                        <div className="bg-orange-50 rounded-lg p-3 border border-orange-200 mt-3">
+                          <div className="flex items-start gap-2">
+                            <Scale className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium text-orange-900 mb-1">Appeal Decision</p>
+                              <p className="text-xs text-orange-800 mb-2">
+                                <strong>Outcome:</strong> {warning.appealOutcome === 'overturned' ? 'Warning Overturned' : safeRenderText(warning.appealOutcome)}
+                              </p>
+                              {warning.appealReasoning && (
+                                <p className="text-xs text-orange-800 mb-2">
+                                  <strong>Reasoning:</strong> {safeRenderText(warning.appealReasoning)}
+                                </p>
+                              )}
+                              {warning.hrNotes && (
+                                <p className="text-xs text-orange-800 mb-2">
+                                  <strong>HR Notes:</strong> {safeRenderText(warning.hrNotes)}
+                                </p>
+                              )}
+                              <p className="text-xs text-orange-700">
+                                <strong>Decision Date:</strong> {new Date(warning.appealDecisionDate).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Expiry Info (for naturally expired warnings) */}
+                      {warning.status === 'expired' && (
+                        <div className="bg-blue-50 rounded-lg p-3 border border-blue-200 mt-3">
+                          <div className="flex items-start gap-2">
+                            <Clock className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-xs font-medium text-blue-900 mb-1">Natural Expiry</p>
+                              <p className="text-xs text-blue-800">
+                                This warning expired after its validity period completed without further incidents.
+                              </p>
+                              {warning.expiryDate && (
+                                <p className="text-xs text-blue-700 mt-1">
+                                  <strong>Expired On:</strong> {new Date(warning.expiryDate).toLocaleDateString()}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* View Details Button */}
+                    <button
+                      onClick={() => handleViewDetails(warning)}
+                      className="px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors flex items-center gap-1"
+                    >
+                      <Eye className="w-4 h-4" />
+                      View
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -889,6 +1115,7 @@ const loadWarnings = useCallback(async () => {
                       {warning.status !== 'appealed' && isWithinAppealPeriod(warning) && (
                         <button
                           onClick={() => {
+                            Logger.debug(`📋 Opening appeal modal for warning:`, { id: warning.id, employeeName: warning.employeeName });
                             setAppealWarning(warning);
                             setShowAppealModal(true);
                           }}
@@ -981,14 +1208,7 @@ const loadWarnings = useCallback(async () => {
         </div>
       )}
 
-      {/* Working Modal with Full Functionality */}
-      <WarningDetailsModal
-        warning={selectedWarning}
-        isOpen={showDetails}
-        onClose={handleCloseModal}
-        canTakeAction={canTakeAction}
-        userRole={userRole}
-      />
+      {/* WarningDetailsModal removed - now rendered in parent component for shared state */}
 
       {/* Proof of Delivery Modal */}
       {deliveryWarning && (

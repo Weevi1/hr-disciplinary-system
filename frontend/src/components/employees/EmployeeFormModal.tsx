@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { API } from '../../api';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
+import DepartmentService from '../../services/DepartmentService';
 import { createEmployeeFromForm, createFormFromEmployee, generateEmployeeNumber } from '../../types';
-import type { Employee, User } from '../../types';
+import type { Employee, User, Department } from '../../types';
 import type { EmployeeFormData } from '../../types';
 import { X, User as UserIcon, Building, Settings, Save, Loader2 } from 'lucide-react';
 
@@ -47,6 +48,8 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [managers, setManagers] = useState<User[]>([]);
   const [loadingManagers, setLoadingManagers] = useState(false);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
 
   // Disable body scroll when modal is open and scroll to top
   useEffect(() => {
@@ -93,6 +96,25 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
     };
 
     loadManagers();
+  }, [organization]);
+
+  // Load departments for the dropdown
+  useEffect(() => {
+    const loadDepartments = async () => {
+      if (!organization) return;
+
+      try {
+        setLoadingDepartments(true);
+        const depts = await DepartmentService.getDepartments(organization.id);
+        setDepartments(depts);
+      } catch (error) {
+        Logger.error('Failed to load departments:', error);
+      } finally {
+        setLoadingDepartments(false);
+      }
+    };
+
+    loadDepartments();
   }, [organization]);
 
   // Initialize form data when employee prop changes
@@ -316,14 +338,23 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Department *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     required
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
-                    placeholder="Human Resources"
-                  />
+                    disabled={loadingDepartments}
+                  >
+                    <option value="">Select Department</option>
+                    {departments.map(dept => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                  {loadingDepartments && (
+                    <div className="text-sm text-gray-500 mt-1">Loading departments...</div>
+                  )}
                 </div>
 
                 <div>

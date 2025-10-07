@@ -124,7 +124,6 @@ export interface CSVImportRow {
   email: string;
   phoneNumber?: string;
   whatsappNumber?: string;
-  department: string;
   position: string;
   startDate: string;
   contractType?: string;
@@ -558,13 +557,12 @@ export const generateSampleCSV = (): string => {
     'email',
     'phoneNumber',
     'whatsappNumber',
-    'department',
     'position',
     'startDate',
     'contractType',
     'probationEndDate'
   ];
-  
+
   const sampleRows = [
     [
       'EMP001',
@@ -573,7 +571,6 @@ export const generateSampleCSV = (): string => {
       'john.doe@company.com',
       '+27123456789',
       '+27123456789',
-      'Engineering',
       'Software Developer',
       '2024-01-15',
       'permanent',
@@ -586,7 +583,6 @@ export const generateSampleCSV = (): string => {
       'sarah.johnson@company.com',
       '+27987654321',
       '+27987654321',
-      'Human Resources',
       'HR Manager',
       '2023-06-01',
       'permanent',
@@ -599,7 +595,6 @@ export const generateSampleCSV = (): string => {
       'michael.smith@company.com',
       '+27555123456',
       '', // No WhatsApp number
-      'Operations',
       'Operations Coordinator',
       '2024-11-01',
       'contract',
