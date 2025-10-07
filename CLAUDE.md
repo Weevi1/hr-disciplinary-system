@@ -236,12 +236,15 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 
 ### **🔧 Recent Fixes (Session 15) - ENHANCED LOADING SCREEN**
 
-- **Post-Login Loading Screen - Progressive Status & Progress Bar 📊**
-  - ✅ **5 Loading Stages**: Connecting → Authenticating → Loading Org Data → Fetching Categories → Preparing Dashboard
+- **Unified Loading Screens - Progressive Status & Progress Bar 📊**
+  - ✅ **Two-Stage Loading**: Initial (index.html) → Authentication (App.tsx)
+  - ✅ **Initial Load Screen**: Light blue/gray gradient, logo, "Loading application...", animated progress bar
+  - ✅ **Auth Screen - 5 Stages**: Connecting → Authenticating → Loading Org Data → Fetching Categories → Preparing Dashboard
   - ✅ **Animated Progress Bar**: Smooth gradient progress bar with percentage display (0-100%)
   - ✅ **Status Messages**: Clear, informative messages at each stage
-  - ✅ **Visual Feedback**: Larger spinner (12x12), loading dots animation, smooth transitions
-  - ✅ **Better UX**: Users know exactly what's happening instead of generic "Loading your filing system..."
+  - ✅ **Visual Feedback**: Larger spinner (48x48), loading dots animation, smooth transitions
+  - ✅ **Better UX**: Replaced generic "Loading your filing system..." and blue gradient with consistent design
+  - ✅ **Visual Consistency**: Both screens now use matching light blue/gray gradient background
   - ✅ **Timing**: Each stage has realistic duration (800-1200ms) for smooth progression
 
 ---
