@@ -108,15 +108,16 @@
     
     <!-- 📱 HIDE LOADING & REGISTER SW -->
     <script>
-      // Hide loading screen when app loads
-      window.addEventListener('load', () => {
+      // Hide loading screen as soon as React app is ready
+      window.addEventListener('DOMContentLoaded', () => {
+        // Small delay to ensure React has started mounting
         setTimeout(() => {
           const loading = document.getElementById('mobile-loading');
           if (loading) {
             loading.style.opacity = '0';
             setTimeout(() => loading.remove(), 300);
           }
-        }, 1000);
+        }, 100);
       });
       
       // Register basic service worker (no dependencies)
