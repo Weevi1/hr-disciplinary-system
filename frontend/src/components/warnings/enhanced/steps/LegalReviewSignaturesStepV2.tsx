@@ -101,6 +101,7 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
   );
   const [overrideLevel, setOverrideLevel] = useState<string | null>(null);
   const [showOverrideSelector, setShowOverrideSelector] = useState(false);
+  const [signatureType, setSignatureType] = useState<'employee' | 'witness'>('employee'); // Employee or Witness signature
 
   // Update signatures when currentSignatures prop changes
   useEffect(() => {
@@ -166,9 +167,69 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
     setSignatures(prev => ({ ...prev, manager: signature }));
   }, []);
 
-  const handleEmployeeSignature = useCallback((signature: string | null) => {
-    setSignatures(prev => ({ ...prev, employee: signature }));
+  // Helper function to add "WITNESS" watermark to signature
+  const addWitnessWatermark = useCallback((signatureDataUrl: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+
+        // Draw the original signature
+        ctx.drawImage(img, 0, 0);
+
+        // Add "WITNESS" watermark - PROMINENT & CLEAR
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(-Math.PI / 6); // Rotate 30 degrees
+
+        // Scale font size based on canvas width (minimum 48px, scales up for larger signatures)
+        const fontSize = Math.max(48, canvas.width / 8);
+        ctx.font = `bold ${fontSize}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Add text stroke for better visibility
+        ctx.strokeStyle = 'rgba(220, 38, 38, 0.8)'; // Dark red outline at 80% opacity
+        ctx.lineWidth = fontSize / 16; // Scale stroke width with font size
+        ctx.strokeText('WITNESS', 0, 0);
+
+        // Fill text with semi-transparent red
+        ctx.fillStyle = 'rgba(220, 38, 38, 0.55)'; // Semi-transparent red at 55% opacity
+        ctx.fillText('WITNESS', 0, 0);
+
+        ctx.restore();
+
+        // Convert to data URL
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => reject(new Error('Failed to load signature image'));
+      img.src = signatureDataUrl;
+    });
   }, []);
+
+  const handleEmployeeSignature = useCallback(async (signature: string | null) => {
+    if (signature && signatureType === 'witness') {
+      // Apply watermark if witness signature
+      try {
+        const watermarkedSignature = await addWitnessWatermark(signature);
+        setSignatures(prev => ({ ...prev, employee: watermarkedSignature }));
+      } catch (error) {
+        console.error('Failed to apply witness watermark:', error);
+        // Fall back to original signature if watermarking fails
+        setSignatures(prev => ({ ...prev, employee: signature }));
+      }
+    } else {
+      // Normal employee signature - no watermark
+      setSignatures(prev => ({ ...prev, employee: signature }));
+    }
+  }, [signatureType, addWitnessWatermark]);
 
   // Handle complete signatures and finalize
   const handleCompleteSignatures = useCallback(() => {
@@ -178,11 +239,11 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
       ...signatures,
       timestamp: new Date().toISOString(),
       managerName: currentManagerName,
-      employeeName: `${safeEmployee.firstName} ${safeEmployee.lastName}`
+      employeeName: selectedEmployee ? `${(selectedEmployee as any).profile?.firstName || 'Unknown'} ${(selectedEmployee as any).profile?.lastName || 'Employee'}` : 'Unknown Employee'
     };
     
     onSignaturesComplete(finalSignatures, true);
-  }, [signatures, allSignaturesComplete, signaturesFinalized, currentManagerName, safeEmployee, onSignaturesComplete]);
+  }, [signatures, allSignaturesComplete, signaturesFinalized, currentManagerName, selectedEmployee, onSignaturesComplete]);
 
   // Show loading state during analysis - Themed
   if (isAnalyzing) {
@@ -228,12 +289,6 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
           </div>
           <div className="flex items-start gap-2">
             <span className="text-base">3️⃣</span>
-            <span className="text-sm" style={{ color: 'var(--color-text)' }}>
-              <strong>Conduct a private meeting</strong> with the employee
-            </span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-base">4️⃣</span>
             <span className="text-sm" style={{ color: 'var(--color-text)' }}>
               <strong>Collect both signatures</strong> (yours and employee's)
             </span>
@@ -482,10 +537,11 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
             <strong>Read this script before your meeting.</strong> It ensures you cover all legal requirements and communicate clearly with the employee.
           </p>
           <MultiLanguageWarningScript
-            employeeName={`${safeEmployee.firstName} ${safeEmployee.lastName}`}
+            employeeName={selectedEmployee ? `${(selectedEmployee as any).profile?.firstName || 'Unknown'} ${(selectedEmployee as any).profile?.lastName || 'Employee'}` : 'Unknown Employee'}
             managerName={currentManagerName}
             incidentDescription={formData.incidentDescription || 'Workplace incident requiring disciplinary action'}
             warningLevel={overrideLevel || lraRecommendation?.recommendedLevel || 'verbal'}
+            validityPeriod={formData.validityPeriod}
             onScriptRead={() => setScriptReadConfirmed(true)}
             disabled={scriptReadConfirmed}
           />
@@ -572,16 +628,65 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5" style={{ color: 'var(--color-success)' }} />
-                  <span className="text-xs font-medium" style={{ color: 'var(--color-text)' }}>Employee</span>
-                  <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{safeEmployee.firstName} {safeEmployee.lastName}</span>
+                  <span className="text-xs font-medium" style={{ color: 'var(--color-text)' }}>
+                    {signatureType === 'employee' ? 'Employee' : 'Witness'}
+                  </span>
+                  <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                    {selectedEmployee ? `${(selectedEmployee as any).profile?.firstName || 'Unknown'} ${(selectedEmployee as any).profile?.lastName || 'Employee'}` : 'Unknown Employee'}
+                  </span>
                 </div>
                 {signatures.employee && <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />}
               </div>
+
+              {/* Signature Type Toggle */}
+              {!signaturesFinalized && (
+                <div className="mb-3 p-2 rounded border" style={{
+                  backgroundColor: 'var(--color-card-background)',
+                  borderColor: 'var(--color-border-light)'
+                }}>
+                  <div className="text-xs font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                    Signature Type:
+                  </div>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="signatureType"
+                        value="employee"
+                        checked={signatureType === 'employee'}
+                        onChange={(e) => setSignatureType(e.target.value as 'employee' | 'witness')}
+                        className="w-4 h-4"
+                        style={{ accentColor: 'var(--color-success)' }}
+                      />
+                      <span className="text-xs" style={{ color: 'var(--color-text)' }}>Employee Signature</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="signatureType"
+                        value="witness"
+                        checked={signatureType === 'witness'}
+                        onChange={(e) => setSignatureType(e.target.value as 'employee' | 'witness')}
+                        className="w-4 h-4"
+                        style={{ accentColor: 'var(--color-warning)' }}
+                      />
+                      <span className="text-xs" style={{ color: 'var(--color-text)' }}>Witness Signature</span>
+                    </label>
+                  </div>
+                  <div className="mt-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                    {signatureType === 'employee'
+                      ? 'Employee signs to acknowledge notification'
+                      : 'Witness confirms this warning was explained to the employee'
+                    }
+                  </div>
+                </div>
+              )}
+
               <DigitalSignaturePad
                 onSignatureComplete={handleEmployeeSignature}
                 disabled={signaturesFinalized}
-                label="Employee Signature"
-                placeholder="Employee signature"
+                label={signatureType === 'employee' ? 'Employee Signature' : 'Witness Signature'}
+                placeholder={signatureType === 'employee' ? 'Employee signature' : 'Witness signature'}
                 initialSignature={signatures.employee}
                 width={300}
                 height={80}

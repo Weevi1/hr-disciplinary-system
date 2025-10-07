@@ -50,37 +50,13 @@ import './App.css';
 // LOADING & ERROR SCREENS
 // ============================================
 
-// 🎯 Enhanced Loading Screen with Progressive Status & Progress Bar
+// 🎯 Enhanced Loading Screen with Real-Time Progress Tracking
 const LoadingScreen = () => {
-  const [loadingStage, setLoadingStage] = React.useState(0);
-  const [statusMessage, setStatusMessage] = React.useState('Connecting to server...');
+  const { loadingProgress } = useAuth();
 
-  // Progressive loading stages (faster timing)
-  const loadingStages = [
-    { message: 'Connecting to server...', duration: 500 },
-    { message: 'Authenticating user...', duration: 600 },
-    { message: 'Loading organization data...', duration: 700 },
-    { message: 'Fetching categories...', duration: 500 },
-    { message: 'Preparing your dashboard...', duration: 300 }
-  ];
-
-  React.useEffect(() => {
-    const timers: NodeJS.Timeout[] = [];
-    let cumulativeTime = 0;
-
-    loadingStages.forEach((stage, index) => {
-      const timer = setTimeout(() => {
-        setLoadingStage(index);
-        setStatusMessage(stage.message);
-      }, cumulativeTime);
-      timers.push(timer);
-      cumulativeTime += stage.duration;
-    });
-
-    return () => timers.forEach(timer => clearTimeout(timer));
-  }, []);
-
-  const progress = ((loadingStage + 1) / loadingStages.length) * 100;
+  // Default values if no progress data yet
+  const statusMessage = loadingProgress?.message || 'Connecting to server...';
+  const progress = loadingProgress?.progress || 10;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center px-4">

@@ -1,5 +1,5 @@
 // frontend/src/auth/LoginForm.tsx - Professional Login Screen
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useAuth } from './AuthContext';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
@@ -9,36 +9,13 @@ interface LoginFormProps {
   onSuccess?: () => void;
 }
 
-// Enhanced Loading Screen Component
+// Enhanced Loading Screen Component with Real-Time Progress
 const LoadingScreen = () => {
-  const [loadingStage, setLoadingStage] = useState(0);
-  const [statusMessage, setStatusMessage] = useState('Connecting to server...');
+  const { loadingProgress } = useAuth();
 
-  const loadingStages = [
-    { message: 'Connecting to server...', duration: 500 },
-    { message: 'Authenticating user...', duration: 600 },
-    { message: 'Loading organization data...', duration: 700 },
-    { message: 'Fetching categories...', duration: 500 },
-    { message: 'Preparing your dashboard...', duration: 300 }
-  ];
-
-  useEffect(() => {
-    const timers: NodeJS.Timeout[] = [];
-    let cumulativeTime = 0;
-
-    loadingStages.forEach((stage, index) => {
-      const timer = setTimeout(() => {
-        setLoadingStage(index);
-        setStatusMessage(stage.message);
-      }, cumulativeTime);
-      timers.push(timer);
-      cumulativeTime += stage.duration;
-    });
-
-    return () => timers.forEach(timer => clearTimeout(timer));
-  }, []);
-
-  const progress = ((loadingStage + 1) / loadingStages.length) * 100;
+  // Default values if no progress data yet
+  const statusMessage = loadingProgress?.message || 'Connecting to server...';
+  const progress = loadingProgress?.progress || 10;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center px-4">
@@ -116,9 +93,6 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
             <div className="mb-4">
               <Logo size="xlarge" showText={true} />
             </div>
-            <p className="text-sm text-gray-600">
-              Online File Creation and Filing System
-            </p>
           </div>
 
           {/* Form */}
@@ -179,14 +153,14 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={isLoggingIn}
                 className={`w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors ${
-                  loading
+                  isLoggingIn
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
                 }`}
               >
-                {loading ? (
+                {isLoggingIn ? (
                   <div className="flex items-center">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                     Signing in...
@@ -201,7 +175,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
           {/* Footer */}
           <div className="px-8 py-4 bg-gray-50 border-t border-gray-100">
             <p className="text-xs text-center text-gray-500">
-              Streamlined Digital Filing Solutions
+              Fully Integrated Fully Online
             </p>
           </div>
         </div>

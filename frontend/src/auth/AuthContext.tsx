@@ -69,11 +69,19 @@ const normalizeUserRole = (rawRole: any) => {
   };
 };
 
+// Loading progress type
+export interface LoadingProgress {
+  stage: number;
+  message: string;
+  progress: number; // 0-100
+}
+
 // Context types
 interface AuthContextType {
   user: User | null;
   organization: Organization | null;
   loading: boolean;
+  loadingProgress: LoadingProgress | null;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -85,12 +93,14 @@ interface AuthState {
   user: User | null;
   organization: Organization | null;
   loading: boolean;
+  loadingProgress: LoadingProgress | null;
   error: string | null;
 }
 
 // Action types
 type AuthAction =
   | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_LOADING_PROGRESS'; payload: LoadingProgress | null }
   | { type: 'SET_USER'; payload: User | null }
   | { type: 'SET_ORGANIZATION'; payload: Organization | null }
   | { type: 'SET_ERROR'; payload: string | null }
@@ -101,26 +111,31 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
   switch (action.type) {
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
+    case 'SET_LOADING_PROGRESS':
+      return { ...state, loadingProgress: action.payload };
     case 'SET_USER':
-      return { 
-        ...state, 
-        user: action.payload, 
+      return {
+        ...state,
+        user: action.payload,
         loading: false,
+        loadingProgress: null, // Clear progress when user is set
         error: null // Clear error when user is set successfully
       };
     case 'SET_ORGANIZATION':
       return { ...state, organization: action.payload };
     case 'SET_ERROR':
-      return { 
-        ...state, 
-        error: action.payload, 
-        loading: false 
+      return {
+        ...state,
+        error: action.payload,
+        loading: false,
+        loadingProgress: null // Clear progress on error
       };
     case 'LOGOUT':
       return {
         user: null,
         organization: null,
         loading: false,
+        loadingProgress: null,
         error: null
       };
     default:
@@ -133,6 +148,7 @@ const initialState: AuthState = {
   user: null,
   organization: null,
   loading: true,
+  loadingProgress: null,
   error: null
 };
 
@@ -146,11 +162,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // 🔥 Firebase Auth State Listener - Production Ready with Role Normalization
   useEffect(() => {
     Logger.debug('🔐 Initializing Firebase authentication...')
-    
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       try {
+        // Stage 0: Initial connection (10% progress)
+        dispatch({
+          type: 'SET_LOADING_PROGRESS',
+          payload: { stage: 0, message: 'Connecting to server...', progress: 10 }
+        });
+
         if (firebaseUser) {
           Logger.debug('👤 Firebase user authenticated:', firebaseUser.email)
+
+          // Stage 1: User authenticated (30% progress)
+          dispatch({
+            type: 'SET_LOADING_PROGRESS',
+            payload: { stage: 1, message: 'Authenticating user...', progress: 30 }
+          });
 
           // 🚀 PRODUCTION OPTIMIZATION: Use O(1) UserOrgIndex lookup instead of O(n) organization search
           // This works for ALL user types: Business Owner, HR Manager, HOD Manager, Super User, Reseller
@@ -194,6 +222,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // 🎯 SCALABLE LOOKUP: Single index query instead of searching ALL organizations
           const result = await UserOrgIndexService.getUserWithOrganization(firebaseUser.uid);
 
+          // Stage 2: User profile loaded (60% progress)
+          dispatch({
+            type: 'SET_LOADING_PROGRESS',
+            payload: { stage: 2, message: 'Loading user profile...', progress: 60 }
+          });
+
           if (result) {
             // 🔍 Check if custom claims need to be refreshed
             const idTokenResult = await firebaseUser.getIdTokenResult();
@@ -225,6 +259,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             // Load organization if needed (not for system users)
             if (result.organizationId && result.organizationId !== 'system') {
+              // Stage 3: Loading organization data (80% progress)
+              dispatch({
+                type: 'SET_LOADING_PROGRESS',
+                payload: { stage: 3, message: 'Loading organization data...', progress: 80 }
+              });
+
               const orgData = await FirebaseService.getDocument<Organization>(
                 COLLECTIONS.ORGANIZATIONS,
                 result.organizationId
@@ -233,6 +273,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 dispatch({ type: 'SET_ORGANIZATION', payload: orgData });
               }
             }
+
+            // Stage 4: Preparing dashboard (95% progress)
+            dispatch({
+              type: 'SET_LOADING_PROGRESS',
+              payload: { stage: 4, message: 'Preparing your dashboard...', progress: 95 }
+            });
 
             Logger.success(`✅ User authenticated via index: ${result.user.email} → ${result.organizationId}`);
           } else {
@@ -464,6 +510,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user: state.user,
     organization: state.organization,
     loading: state.loading,
+    loadingProgress: state.loadingProgress,
     error: state.error,
     login,
     logout,
