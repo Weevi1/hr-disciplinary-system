@@ -37,6 +37,7 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
   
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
+  const [hasUnsavedSignature, setHasUnsavedSignature] = useState(false);
   const [strokes, setStrokes] = useState<SignatureStroke[]>([]);
   const [canvasReady, setCanvasReady] = useState(false);
 
@@ -145,22 +146,28 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
   // Stop drawing
   const stopDrawing = useCallback(() => {
     if (!isDrawing) return;
-    
+
     setIsDrawing(false);
-    setHasSignature(true);
-    
-    // Save signature
+    setHasUnsavedSignature(true);
+  }, [isDrawing]);
+
+  // Save signature
+  const saveSignature = useCallback(() => {
+    if (disabled) return;
+
     const canvas = canvasRef.current;
     if (canvas) {
       const dataURL = canvas.toDataURL('image/png');
+      setHasSignature(true);
+      setHasUnsavedSignature(false);
       onSignatureComplete(dataURL);
     }
-  }, [isDrawing, onSignatureComplete]);
+  }, [disabled, onSignatureComplete]);
 
   // Clear signature
   const clearSignature = useCallback(() => {
     if (disabled) return;
-    
+
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
@@ -168,8 +175,9 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
     // Clear canvas
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     setHasSignature(false);
+    setHasUnsavedSignature(false);
     setStrokes([]);
     onSignatureComplete(null);
   }, [disabled, onSignatureComplete]);
@@ -275,13 +283,24 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
           {hasSignature && (
             <div className="flex items-center gap-1 text-xs text-green-600">
               <Check className="w-3 h-3" />
-              <span>Signed</span>
+              <span>Saved</span>
             </div>
+          )}
+          {hasUnsavedSignature && !hasSignature && (
+            <button
+              type="button"
+              onClick={saveSignature}
+              disabled={disabled}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded disabled:opacity-50"
+            >
+              <Check className="w-3 h-3" />
+              Save Signature
+            </button>
           )}
           <button
             type="button"
             onClick={clearSignature}
-            disabled={disabled || !hasSignature}
+            disabled={disabled || (!hasSignature && !hasUnsavedSignature)}
             className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-red-600 disabled:opacity-50"
           >
             <RefreshCw className="w-3 h-3" />
