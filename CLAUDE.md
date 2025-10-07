@@ -246,6 +246,8 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
   - ✅ **Cleaner Experience**: Brief blank screen (< 1s) while JS loads, then directly to informative loading screen
   - ✅ **Smaller index.html**: Reduced from 5.48 kB → 2.48 kB (55% smaller)
   - ✅ **Timing**: Each stage has realistic duration (800-1200ms) for smooth progression
+  - ✅ **Login Screen Integration**: Enhanced loading screen now shows when clicking login button (not just on refresh)
+  - ✅ **Unified Experience**: Same loading screen for all entry points (refresh, login, navigation)
 
 ---
 
