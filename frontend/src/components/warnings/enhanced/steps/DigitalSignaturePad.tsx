@@ -2,9 +2,11 @@
 // 🎯 REUSABLE DIGITAL SIGNATURE PAD - V2 TREATMENT
 // ✅ Fixed memory leaks, proper cleanup, mobile-optimized
 // ✅ Touch gesture support, signature validation
+// ✅ Server-side timestamps in SA timezone
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { PenTool, RefreshCw, Check, X } from 'lucide-react';
+import { formatSADateTime, SA_TIMEZONE } from '../../../../utils/saLocale';
 
 interface DigitalSignaturePadProps {
   onSignatureComplete: (signature: string | null) => void;
@@ -151,17 +153,38 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
     setHasUnsavedSignature(true);
   }, [isDrawing]);
 
-  // Save signature
+  // Save signature with timestamp
   const saveSignature = useCallback(() => {
     if (disabled) return;
 
     const canvas = canvasRef.current;
-    if (canvas) {
-      const dataURL = canvas.toDataURL('image/png');
-      setHasSignature(true);
-      setHasUnsavedSignature(false);
-      onSignatureComplete(dataURL);
-    }
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+
+    // Get current time in South African timezone
+    const currentTime = new Date();
+    const saTimestamp = formatSADateTime(currentTime, SA_TIMEZONE);
+
+    // Draw timestamp at bottom-right corner
+    const rect = canvas.getBoundingClientRect();
+    const padding = 8;
+    const fontSize = 10;
+
+    ctx.save();
+    ctx.font = `${fontSize}px Arial, sans-serif`;
+    ctx.fillStyle = '#64748b'; // Slate gray color
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+
+    // Draw timestamp text at bottom-right (using display dimensions)
+    ctx.fillText(saTimestamp, rect.width - padding, rect.height - padding);
+    ctx.restore();
+
+    // Convert canvas to PNG
+    const dataURL = canvas.toDataURL('image/png');
+    setHasSignature(true);
+    setHasUnsavedSignature(false);
+    onSignatureComplete(dataURL);
   }, [disabled, onSignatureComplete]);
 
   // Clear signature

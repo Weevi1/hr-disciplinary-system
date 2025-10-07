@@ -10,7 +10,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Scale, FileText, CheckCircle, Users, Clock, Shield,
   Eye, EyeOff, ChevronDown, ChevronUp, Info, Calendar, User,
-  Loader2, RefreshCw, MessageCircle, Volume2, Send, Play, Pause, TrendingUp, X
+  Loader2, RefreshCw, MessageCircle, Volume2, Send, Play, Pause, TrendingUp, X, AlertTriangle
 } from 'lucide-react';
 import type { EscalationRecommendation } from '../../../../services/WarningService';
 
@@ -624,7 +624,10 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
             </div>
 
             {/* Employee Row */}
-            <div className="rounded-lg p-2" style={{ backgroundColor: 'var(--color-alert-success-bg)' }}>
+            <div className="rounded-lg p-2" style={{
+              backgroundColor: 'var(--color-alert-success-bg)',
+              opacity: !signatures.manager ? 0.6 : 1
+            }}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5" style={{ color: 'var(--color-success)' }} />
@@ -638,8 +641,23 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
                 {signatures.employee && <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />}
               </div>
 
+              {/* Manager signature required notice */}
+              {!signatures.manager && !signaturesFinalized && (
+                <div className="mb-3 p-2 rounded border" style={{
+                  backgroundColor: 'var(--color-alert-warning-bg)',
+                  borderColor: 'var(--color-warning)'
+                }}>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" style={{ color: 'var(--color-warning)' }} />
+                    <span className="text-xs font-medium" style={{ color: 'var(--color-alert-warning-text)' }}>
+                      Manager must save their signature first
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Signature Type Toggle */}
-              {!signaturesFinalized && (
+              {!signaturesFinalized && signatures.manager && (
                 <div className="mb-3 p-2 rounded border" style={{
                   backgroundColor: 'var(--color-card-background)',
                   borderColor: 'var(--color-border-light)'
@@ -684,7 +702,7 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
 
               <DigitalSignaturePad
                 onSignatureComplete={handleEmployeeSignature}
-                disabled={signaturesFinalized}
+                disabled={signaturesFinalized || !signatures.manager}
                 label={signatureType === 'employee' ? 'Employee Signature' : 'Witness Signature'}
                 placeholder={signatureType === 'employee' ? 'Employee signature' : 'Witness signature'}
                 initialSignature={signatures.employee}
