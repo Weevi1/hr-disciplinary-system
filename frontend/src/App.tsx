@@ -55,13 +55,13 @@ const LoadingScreen = () => {
   const [loadingStage, setLoadingStage] = React.useState(0);
   const [statusMessage, setStatusMessage] = React.useState('Connecting to server...');
 
-  // Progressive loading stages
+  // Progressive loading stages (faster timing)
   const loadingStages = [
-    { message: 'Connecting to server...', duration: 800 },
-    { message: 'Authenticating user...', duration: 1000 },
-    { message: 'Loading organization data...', duration: 1200 },
-    { message: 'Fetching categories...', duration: 800 },
-    { message: 'Preparing your dashboard...', duration: 600 }
+    { message: 'Connecting to server...', duration: 500 },
+    { message: 'Authenticating user...', duration: 600 },
+    { message: 'Loading organization data...', duration: 700 },
+    { message: 'Fetching categories...', duration: 500 },
+    { message: 'Preparing your dashboard...', duration: 300 }
   ];
 
   React.useEffect(() => {
