@@ -6,13 +6,15 @@ import Logger from '../../../utils/logger';
 // ✅ Can be used as fallback when QR system has issues
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
-  X, 
-  Download, 
-  Eye, 
-  FileText, 
-  Loader2, 
-  CheckCircle, 
+import { usePreventBodyScroll } from '../../../hooks/usePreventBodyScroll';
+import { Z_INDEX } from '../../../constants/zIndex';
+import {
+  X,
+  Download,
+  Eye,
+  FileText,
+  Loader2,
+  CheckCircle,
   AlertTriangle,
   RefreshCw,
   FileWarning,
@@ -81,7 +83,10 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
   title = "Warning Document Download"
 }) => {
   const { organization } = useOrganization();
-  
+
+  // Prevent body scroll when modal is open
+  usePreventBodyScroll(isOpen);
+
   // PDF Generation State
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -342,7 +347,7 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.modal }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full h-[90vh] overflow-hidden flex flex-col">
         
         {/* Header */}

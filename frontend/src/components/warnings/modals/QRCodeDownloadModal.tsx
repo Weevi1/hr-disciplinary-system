@@ -7,6 +7,8 @@ import Logger from '../../../utils/logger';
 // ✅ REDESIGNED: Matches PDFPreviewModal design system
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { usePreventBodyScroll } from '../../../hooks/usePreventBodyScroll';
+import { Z_INDEX } from '../../../constants/zIndex';
 import {
   X,
   QrCode,
@@ -64,6 +66,9 @@ export const QRCodeDownloadModal: React.FC<QRCodeDownloadModalProps> = ({
   employeeName,
   onLinkGenerated
 }) => {
+
+  // Prevent body scroll when modal is open
+  usePreventBodyScroll(isOpen);
 
   // ============================================
   // STATE
@@ -197,7 +202,7 @@ export const QRCodeDownloadModal: React.FC<QRCodeDownloadModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.modalNested1 }}>
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
 
         {/* Clean Header - Matches PDFPreviewModal */}

@@ -102,7 +102,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
   const activeWarnings = warnings?.filter(w => w.status !== 'expired' && w.status !== 'overturned') || [];
   const warningStats = {
     totalActive: activeWarnings.length,
-    undelivered: activeWarnings.filter(w => !w.delivered).length,
+    undelivered: activeWarnings.filter(w => w.status !== 'delivered').length,
     highSeverity: activeWarnings.filter(w => w.severity === 'high' || w.category?.severity === 'gross_misconduct').length
   };
 
@@ -438,6 +438,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
                   showDetails={showWarningDetails}
                   onViewDetails={(warning) => { setSelectedWarning(warning); setShowWarningDetails(true); }}
                   onCloseDetails={() => { setSelectedWarning(null); setShowWarningDetails(false); }}
+                  onWarningUpdated={refreshData}
                 />
               </div>
             </ThemedCard>
@@ -865,6 +866,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
                   showDetails={showWarningDetails}
                   onViewDetails={(warning) => { setSelectedWarning(warning); setShowWarningDetails(true); }}
                   onCloseDetails={() => { setSelectedWarning(null); setShowWarningDetails(false); }}
+                  onWarningUpdated={refreshData}
                 />
               </div>
             </div>

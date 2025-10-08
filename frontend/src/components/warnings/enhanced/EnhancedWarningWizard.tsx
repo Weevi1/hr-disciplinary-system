@@ -1087,6 +1087,7 @@ useEffect(() => {
           <LegalReviewSignaturesStepV2
             lraRecommendation={lraRecommendation}
             selectedEmployee={selectedEmployee}
+            selectedCategory={selectedCategory}
             formData={formData}
             currentManagerName={currentManagerName}
             onSignaturesComplete={handleSignaturesComplete}

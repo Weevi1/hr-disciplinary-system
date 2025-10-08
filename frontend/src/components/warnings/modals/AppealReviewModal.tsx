@@ -5,6 +5,9 @@
 
 import React, { useState, useCallback } from 'react';
 import Logger from '../../../utils/logger';
+import { usePreventBodyScroll } from '../../../hooks/usePreventBodyScroll';
+import { useModalDialog } from '../../../hooks/useFocusTrap';
+import { Z_INDEX } from '../../../constants/zIndex';
 import {
   X,
   Scale,
@@ -129,6 +132,17 @@ export const AppealReviewModal: React.FC<AppealReviewModalProps> = ({
   const [followUpDate, setFollowUpDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Prevent body scroll when modal is open
+  usePreventBodyScroll(isOpen);
+
+  // Set up focus trap and ARIA
+  const { containerRef, ariaProps } = useModalDialog({
+    isOpen,
+    onClose,
+    titleId: 'appeal-review-title',
+    descriptionId: 'appeal-review-description',
+  });
+
   // Format date helper
   const formatDate = (date: any) => {
     if (!date) return 'Unknown';
@@ -176,28 +190,38 @@ export const AppealReviewModal: React.FC<AppealReviewModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.modal }}>
+      <div
+        ref={containerRef}
+        {...ariaProps}
+        className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col"
+      >
+        {/* Header - Fixed */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-100 rounded-lg">
               <Scale className="w-6 h-6 text-purple-600" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">Appeal Review</h2>
-              <p className="text-sm text-gray-600">Review and decide on employee appeal</p>
+              <h2 id="appeal-review-title" className="text-xl font-semibold text-gray-900">
+                Appeal Review
+              </h2>
+              <p id="appeal-review-description" className="text-sm text-gray-600">
+                Review and decide on employee appeal
+              </p>
             </div>
           </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Close appeal review modal"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
           {/* Warning Summary */}
           <div className="bg-gray-50 rounded-lg p-4">
             <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center gap-2">
@@ -411,8 +435,8 @@ export const AppealReviewModal: React.FC<AppealReviewModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+        {/* Footer - Fixed */}
+        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <div className="flex items-center gap-2 text-xs text-gray-600">
             <Info className="w-4 h-4" />
             <span>This decision will be automatically documented and employee will be notified</span>

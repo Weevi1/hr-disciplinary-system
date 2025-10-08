@@ -177,23 +177,23 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
   const deliveryOptions: DeliveryOption[] = [
     {
       id: 'email',
-      name: 'Email Delivery',
+      name: 'Email',
       icon: Mail,
-      description: 'HR will deliver via email with read receipt tracking',
+      description: 'Receive warning document via email',
       available: !!selectedEmployee?.email
     },
     {
       id: 'whatsapp',
-      name: 'WhatsApp Business',
+      name: 'WhatsApp',
       icon: MessageSquare,
-      description: 'HR will deliver via WhatsApp Business with confirmation',
+      description: 'Receive warning document via WhatsApp',
       available: !!selectedEmployee?.phone
     },
     {
       id: 'printed',
-      name: 'Print & Hand Deliver',
+      name: 'Printed Copy',
       icon: Printer,
-      description: 'HR will print and hand deliver with signed receipt',
+      description: 'Receive a printed physical copy',
       available: true
     }
   ];
@@ -254,9 +254,8 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
         warningCategory: lraRecommendation?.category || formData.category || 'General',
         incidentDate: formData.incidentDate,
         
-        // Delivery details
-        deliveryMethod: selectedDeliveryMethod,
-        isEmployeePreference: selectedEmployee?.deliveryPreference === selectedDeliveryMethod,
+        // Delivery details - save as employee's requested method
+        employeeRequestedDeliveryMethod: selectedDeliveryMethod,
         
         // Creator details
         createdBy: user.id,
@@ -493,12 +492,15 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
         </div>
       </ThemedCard>
 
-      {/* Delivery Method - Simplified */}
+      {/* Delivery Method - Employee Preference */}
       <div className="space-y-3">
         <h3 className="font-semibold text-sm flex items-center gap-2" style={{ color: 'var(--color-text)' }}>
-          <Send className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
-          How should HR deliver this warning?
+          <User className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+          How would the employee like to receive this warning?
         </h3>
+        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+          Ask the employee their preference. HR can adjust this later if needed.
+        </p>
 
         {/* Compact Delivery Options */}
         <div className="grid grid-cols-1 gap-2">

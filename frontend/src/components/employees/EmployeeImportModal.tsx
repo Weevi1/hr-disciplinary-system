@@ -4,6 +4,8 @@ import { useAuth } from '../../auth/AuthContext';
 import { useEmployeeImport } from '../../hooks/employees/useEmployeeImport';
 import { generateSampleCSV } from '../../types';
 import type { CSVImportRow, CSVImportResult } from '../../types';
+import { usePreventBodyScroll } from '../../hooks/usePreventBodyScroll';
+import { Z_INDEX } from '../../constants/zIndex';
 
 interface EmployeeImportModalProps {
   onClose: () => void;
@@ -26,8 +28,11 @@ export const EmployeeImportModal: React.FC<EmployeeImportModalProps> = ({
     handleImport,
     resetImport
   } = useEmployeeImport();
-  
+
   const [currentStep, setCurrentStep] = useState<'upload' | 'preview' | 'importing' | 'result'>('upload');
+
+  // Prevent body scroll when modal is open
+  usePreventBodyScroll(true);
 
   const downloadTemplate = () => {
     const csvContent = generateSampleCSV();
@@ -69,7 +74,7 @@ export const EmployeeImportModal: React.FC<EmployeeImportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.modal }}>
       <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-xl">
         {/* Header */}
         <div className="bg-white border-b border-gray-200 p-3 flex items-center justify-between">

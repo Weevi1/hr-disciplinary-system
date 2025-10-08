@@ -8,6 +8,7 @@ import { Volume2, Globe, Check, Users, FileText, Clock } from 'lucide-react';
 interface MultiLanguageWarningScriptProps {
   employeeName: string;
   managerName: string;
+  categoryName: string;
   incidentDescription: string;
   warningLevel: string;
   validityPeriod: 3 | 6 | 12; // months
@@ -123,365 +124,333 @@ const WARNING_SCRIPTS = {
   // 🇬🇧 ENGLISH - Primary/Default
   en: {
     greeting: (employeeName: string, managerName: string) =>
-      `${employeeName}, as we've discussed, this meeting is to formalize the written warning regarding the workplace incident that occurred.`,
+      `${employeeName}, this meeting is to formalize the written warning for the workplace incident we discussed.`,
 
-    purpose: () =>
-      "We've already covered the details of what happened. Now I need to formally explain the warning level, the validity period, your rights, and the consequences if similar behavior occurs again. This process follows the Labour Relations Act and our company's disciplinary policy.",
-
-    incident: (description: string) =>
-      `To recap what we discussed earlier: ${description}. This behavior is not acceptable under our workplace standards and company policies, and it must be corrected immediately.`,
+    incident: (categoryName: string, description: string) =>
+      `Charge: ${categoryName}. Details: ${description}. This behavior violates our workplace policies and must stop immediately.`,
 
     warningExplanation: (level: string, validityPeriod: number) =>
-      `This is a ${level}. It will remain on your employment record for ${validityPeriod} months from today's date. During this validity period, you are expected to demonstrate immediate and sustained improvement in your conduct.`,
+      `This is a ${level}. It remains on your record for ${validityPeriod} months. You must demonstrate immediate and sustained improvement.`,
 
     rights: () =>
-      "Now, it's very important that you understand your rights:",
+      "Your rights under the Labour Relations Act:",
 
     rightsList: () => [
-      "You have the right to appeal this warning within 48 hours if you believe it is unfair or procedurally incorrect. Your appeal must be submitted in writing to HR.",
-      "This disciplinary process is progressive - if similar conduct occurs during the validity period of this warning, it may result in further disciplinary action, up to and including dismissal for gross misconduct.",
-      "All information will be kept confidential and only shared with relevant management and HR personnel."
+      "Appeal: You may appeal this warning in writing to HR within 48 hours if you believe it is unfair or procedurally incorrect.",
+      "Progressive Discipline: Similar conduct during this warning's validity period may result in further disciplinary action, up to dismissal.",
+      "Confidentiality: This information is confidential and shared only with relevant management and HR."
     ],
 
     witnessOption: () =>
-      "Your signature on this document acknowledges that this warning has been explained to you and that you understand its contents and your rights. Your signature does NOT mean you agree with the warning - it simply confirms you have been properly notified. If you choose not to sign, that is your right. In that case, a witness will sign to confirm that this warning was explained to you in your presence and that you were informed of all your rights. The warning remains valid regardless of whether you sign it or a witness signs it.",
+      "Your signature confirms you understand this warning and your rights - not that you agree with it. If you refuse to sign, a witness will confirm the warning was explained. The warning is valid either way.",
 
     questions: () =>
-      "Do you have any questions about this warning, the validity period, the consequences, or your rights? I want to make sure you fully understand everything before we proceed with signatures.",
+      "Do you have any questions about this warning or your rights?",
 
     closing: () =>
-      "Thank you. We will now proceed to collect signatures to formalize this warning. Remember, this is an opportunity for you to correct your conduct. We expect to see immediate improvement, and we hope this will be the end of this matter."
+      "We will now collect signatures. Immediate improvement is required."
   },
 
   // 🇿🇦 AFRIKAANS
   af: {
     greeting: (employeeName: string, managerName: string) =>
-      `${employeeName}, soos ons bespreek het, is hierdie vergadering om die skriftelike waarskuwing te formaliseer rakende die werkplek incident wat plaasgevind het.`,
+      `${employeeName}, hierdie vergadering is om die skriftelike waarskuwing te formaliseer vir die werkplek incident wat ons bespreek het.`,
 
-    purpose: () =>
-      "Ons het reeds die besonderhede van wat gebeur het gedek. Nou moet ek formeel die waarskuwingsvlak, die geldigheidsperiode, jou regte, en die gevolge verduidelik as soortgelyke gedrag weer voorkom. Hierdie proses volg die Wet op Arbeidsverhoudinge en ons maatskappy se dissiplinêre beleid.",
-
-    incident: (description: string) =>
-      `Om op te som wat ons vroeër bespreek het: ${description}. Hierdie gedrag is nie aanvaarbaar onder ons werkplek standaarde en maatskappy beleide nie, en dit moet onmiddellik reggestel word.`,
+    incident: (categoryName: string, description: string) =>
+      `Aanklag: ${categoryName}. Besonderhede: ${description}. Hierdie gedrag oortree ons werkplek beleide en moet onmiddellik stop.`,
 
     warningExplanation: (level: string, validityPeriod: number) =>
-      `Dit is 'n ${level}. Dit sal in jou werkrekord bly vir ${validityPeriod} maande vanaf vandag se datum. Gedurende hierdie geldigheidsperiode word daar van jou verwag om onmiddellike en volgehoue verbetering in jou gedrag te toon.`,
+      `Dit is 'n ${level}. Dit bly op jou rekord vir ${validityPeriod} maande. Jy moet onmiddellike en volgehoue verbetering toon.`,
 
     rights: () =>
-      "Nou, dit is baie belangrik dat jy jou regte verstaan:",
+      "Jou regte onder die Wet op Arbeidsverhoudinge:",
 
     rightsList: () => [
-      "Jy het die reg om hierdie waarskuwing binne 48 uur te appelieer as jy glo dit is onregverdig of prosedureel verkeerd. Jou appèl moet skriftelik by HR ingedien word.",
-      "Hierdie dissiplinêre proses is progressief - as soortgelyke gedrag gedurende die geldigheidsperiode van hierdie waarskuwing voorkom, kan dit lei tot verdere dissiplinêre aksie, tot en met ontslag vir growwe wangedrag.",
-      "Alle inligting sal vertroulik gehou word en slegs met relevante bestuur en HR personeel gedeel word."
+      "Appèl: Jy mag hierdie waarskuwing binne 48 uur skriftelik by HR appelieer as jy glo dit is onregverdig of prosedureel verkeerd.",
+      "Progressiewe Dissipline: Soortgelyke gedrag gedurende hierdie waarskuwing se geldigheidsperiode kan lei tot verdere dissiplinêre aksie, tot en met ontslag.",
+      "Vertroulikheid: Hierdie inligting is vertroulik en word slegs met relevante bestuur en HR gedeel."
     ],
 
     witnessOption: () =>
-      "Jou handtekening op hierdie dokument erken dat hierdie waarskuwing aan jou verduidelik is en dat jy die inhoud en jou regte verstaan. Jou handtekening beteken NIE dat jy met die waarskuwing saamstem nie - dit bevestig bloot dat jy behoorlik in kennis gestel is. As jy kies om nie te teken nie, is dit jou reg. In daardie geval sal 'n getuie teken om te bevestig dat hierdie waarskuwing aan jou in jou teenwoordigheid verduidelik is en dat jy van al jou regte ingelig is. Die waarskuwing bly geldig ongeag of jy dit teken of 'n getuie dit teken.",
+      "Jou handtekening bevestig dat jy hierdie waarskuwing en jou regte verstaan - nie dat jy daarmee saamstem nie. As jy weier om te teken, sal 'n getuie bevestig dat die waarskuwing verduidelik is. Die waarskuwing is beide kante geldig.",
 
     questions: () =>
-      "Het jy enige vrae oor hierdie waarskuwing, die geldigheidsperiode, die gevolge, of jou regte? Ek wil seker maak dat jy alles ten volle verstaan voordat ons voortgaan met handtekeninge.",
+      "Het jy enige vrae oor hierdie waarskuwing of jou regte?",
 
     closing: () =>
-      "Dankie. Ons sal nou voortgaan om handtekeninge te versamel om hierdie waarskuwing te formaliseer. Onthou, dit is 'n geleentheid vir jou om jou gedrag reg te stel. Ons verwag onmiddellike verbetering, en ons hoop dit sal die einde van hierdie saak wees."
+      "Ons sal nou handtekeninge versamel. Onmiddellike verbetering word vereis."
   },
 
   // 🏴󠁺󠁡󠁺󠁵󠁿 ZULU - isiZulu
   zu: {
     greeting: (employeeName: string, managerName: string) =>
-      `${employeeName}, njengoba sixoxe, le mihlangano iwukuqinisa isixwayiso esibhaliwe mayelana nesigameko somsebenzi esenzekile.`,
+      `${employeeName}, le mihlangano iwukuqinisa isixwayiso esibhaliwe ngesigameko somsebenzi esasixoxayo.`,
 
-    purpose: () =>
-      "Sesivele saxoxa imininingwane yalokho okwenzekile. Manje ngidinga ukuchaza ngokusemthethweni izinga lesixwayiso, isikhathi sokusebenza, amalungelo akho, nemiphumela uma ukuziphatha okufanayo kuphinde kwenzeke. Le nqubo ilandela uMthetho Wobudlelwano Basebenzi kanye nenqubomgomo yokuqeqesha yenkampani yethu.",
-
-    incident: (description: string) =>
-      `Ukuphinda kulokho esikuxoxe kuqala: ${description}. Lokhu kuziphatha akwamukeleki ngaphansi kwezindinganiso zethu zendawo yomsebenzi nezinqubomgomo zenkampani, futhi kumele kulungiswe masinyane.`,
+    incident: (categoryName: string, description: string) =>
+      `Icala: ${categoryName}. Imininingwane: ${description}. Lokhu kuziphatha kuphula izinqubomgomo zethu zomsebenzi futhi kumele kume masinyane.`,
 
     warningExplanation: (level: string, validityPeriod: number) =>
-      `Lesi isixwayiso se-${level}. Sizosala kumarekhodi akho womsebenzi izinyanga ezingu-${validityPeriod} kusukela namuhla. Phakathi nalesi sikhathi sokusebenza, kulindeleke ukuba ukhombise ukuthuthuka okusheshayo nokuqhubekayo ekuziphatheni kwakho.`,
+      `Lesi isixwayiso se-${level}. Sihlala kumarekhodi akho izinyanga ezingu-${validityPeriod}. Kumele ubonise ukuthuthuka okusheshayo nokuqhubekayo.`,
 
     rights: () =>
-      "Manje, kubalulekile kakhulu ukuthi uqonde amalungelo akho:",
+      "Amalungelo akho ngaphansi koMthetho Wobudlelwano Basebenzi:",
 
     rightsList: () => [
-      "Unelungelo lokuphikisa lesi sixwayiso phakathi namahora angu-48 uma ukholelwa ukuthi asilungile noma asenziwa ngendlela engalungile. Isicelo sakho sokubhena kufanele sinikezwe ngokubhaliwe ku-HR.",
-      "Le nqubo yokuqeqesha iyaqhubeka - uma ukuziphatha okufanayo kwenzeka phakathi nesikhathi sokusebenza salesi sixwayiso, kungase kuholele esinyweni esinye sokuqeqesha, kuya ekuxoshweni ngenxa yokuziphatha okubi kakhulu.",
-      "Lonke ulwazi luzogcinwa luyimfihlo futhi lubelane kuphela nabapha boholi nabadlulisi be-HR abadingekayo."
+      "Ukuphikisa: Ungaphikisa lesi sixwayiso ngokubhaliwe ku-HR ngamahora angu-48 uma ukholelwa ukuthi asilungile noma asenziwa kabi.",
+      "Ukuqeqesha Okuqhubekayo: Ukuziphatha okufanayo ngesikhathi lesi sixwayiso kungase kuholele esinyweni esinye sokuqeqesha, kuya ekuxoshweni.",
+      "Ubumfihlo: Lolu lwazi luyimfihlo futhi lubelane kuphela nabaphathi abadingekayo kanye ne-HR."
     ],
 
     witnessOption: () =>
-      "Ukusayina kwakho kule dokhumenti kuyavuma ukuthi lesi sixwayiso sikuchazelwe futhi uyaqonda okuqukethwe namalungelo akho. Ukusayina kwakho AKUSHO ukuthi uyavuma nesixwayiso - kusho nje ukuthi wazisiwe ngendlela efanele. Uma ukhetha ukungasayini, yilelo ilungelo lakho. Kuleso sigameko, ufakazi uzosayina ukuqinisekisa ukuthi lesi sixwayiso sikuchazelwe ebukheneni bakho nokuthi wazisiwa ngawo onke amalungelo akho. Isixwayiso sihlala sisebenza kungakhathaliseki ukuthi uyasisayina noma ufakazi uyasisayina.",
+      "Ukusayina kwakho kuqinisekisa ukuthi uyaqonda lesi sixwayiso namalungelo akho - hhayi ukuthi uyavuma. Uma wenqaba ukusayina, ufakazi uzoqinisekisa ukuthi isixwayiso sichaziwe. Isixwayiso sisebenza ngazo zombili izindlela.",
 
     questions: () =>
-      "Ingabe unemibuzo mayelana nalesi sixwayiso, isikhathi sokusebenza, imiphumela, noma amalungelo akho? Ngifuna ukuqinisekisa ukuthi uqonda konke ngokugcwele ngaphambi kokuqhubeka nezimo zokusayina.",
+      "Ingabe unemibuzo ngalesi sixwayiso noma amalungelo akho?",
 
     closing: () =>
-      "Ngiyabonga. Manje sizokwenza ukuqoqa izimo zokusayina ukuqinisa lesi sixwayiso. Khumbula, leli ithuba lokuthi ulungise ukuziphatha kwakho. Silindele ukubona ukuthuthuka okusheshayo, futhi sithemba ukuthi lokhu kuzoba ukuphela kwalolu daba."
+      "Manje sizoqoqa izimo zokusayina. Ukuthuthuka okusheshayo kuyadingeka."
   },
 
   // 🏴󠁺󠁡󠁸󠁨󠁿 XHOSA - isiXhosa
   xh: {
     greeting: (employeeName: string, managerName: string) =>
-      `${employeeName}, njengoko sixoxile, le ntlanganiso ikuqinisekisa isilumkiso esibhaliweyo malunga nesiganeko emsebenzini esenzekileyo.`,
+      `${employeeName}, le ntlanganiso ikuqinisekisa isilumkiso esibhaliweyo ngesiganeko emsebenzini esasixoxayo.`,
 
-    purpose: () =>
-      "Sele sixoxile ngeenkcukacha zoko kwenzekileyo. Ngoku kufuneka ndichaze ngokusemthethweni inqanaba lesilumkiso, ixesha lokusebenza, amalungelo akho, kunye neziphumo ukuba ukuziphatha okufanayo kuphinde kwenzeke. Le nkqubo ilandela uMthetho woBudlelwane baBasebenzi kunye nemigaqo-nkqubo yenkampani yethu yokulungisa.",
-
-    incident: (description: string) =>
-      `Ukuphinda oko saxoxe ngako ngaphambili: ${description}. Oku kuziphatha akwamkelekanga phantsi kwemigangatho yethu yendawo yomsebenzi kunye nemigaqo-nkqubo yenkampani, kwaye kufuneka kulungiswe ngokukhawuleza.`,
+    incident: (categoryName: string, description: string) =>
+      `Ityala: ${categoryName}. Iinkcukacha: ${description}. Oku kuziphatha kuphula imigaqo-nkqubo yethu yomsebenzi kwaye kufuneka kuyeke ngokukhawuleza.`,
 
     warningExplanation: (level: string, validityPeriod: number) =>
-      `Esi yisilumkiso se-${level}. Siza kuhlala kwiirekhodi zakho zomsebenzi iinyanga ezingu-${validityPeriod} ukusuka kulo mhla. Ngeli xesha lokusebenza, kulindeleke ukukhombisa uphuculo olukhawulezayo noluqhubekayo ekuziphatheni kwakho.`,
+      `Esi yisilumkiso se-${level}. Sihlala kwiirekhodi zakho iinyanga ezingu-${validityPeriod}. Kufuneka ubonise uphuculo olukhawulezayo noluqhubekayo.`,
 
     rights: () =>
-      "Ngoku, kubalulekile kakhulu ukuba uqonde amalungelo akho:",
+      "Amalungelo akho phantsi koMthetho woBudlelwane baBasebenzi:",
 
     rightsList: () => [
-      "Unelungelo lokubhena esi silumkiso ngaphakathi kweeyure ezingama-48 ukuba ukholelwa ukuba asifanelekanga okanye asenziwa kakubi. Isibheno sakho kufuneka sinikezelwe ngokubhaliwe kwi-HR.",
-      "Le nkqubo yokulungisa iyaqhubeka - ukuba ukuziphatha okufanayo kwenzeka ngeli xesha lokusebenza lwesi silumkiso, kunokukhokelela kwelinye inyathelo lokulungisa, kuya ekugxothweni ngenxa yokuziphatha okugwenxa kakhulu.",
-      "Lonke ulwazi luya kugcinwa luyimfihlo kwaye lwabiwe kuphela nabaphathi abafanelekileyo nabasebenzi be-HR."
+      "Isibheno: Ungabhena esi silumkiso ngokubhaliwe kwi-HR kwiiyure ezingama-48 ukuba ukholelwa ukuba asifanelekanga okanye senziwa kakubi.",
+      "Ukulungisa Okuqhubekayo: Ukuziphatha okufanayo ngeli xesha lesi silumkiso kunokukhokelela kwelinye inyathelo lokulungisa, kuya ekugxothweni.",
+      "Ubumfihlo: Olu lwazi luyimfihlo kwaye lwabiwe kuphela kubaphathi abafanelekileyo nakwi-HR."
     ],
 
     witnessOption: () =>
-      "Utyikityo lwakho kolu xwebhu luvuma ukuba esi silumkiso sichaziwe kuwe kwaye uyakuqonda okuqulethwe kunye namalungelo akho. Utyikityo lwakho ALUSITHI uyavumelana nesilumkiso - lusithi kuphela ukuba waziswa ngokufanelekileyo. Ukuba ukhetha ukungasayini, lelo lilungelo lakho. Kwimeko enjalo, ingqina iya kusayina ukuqinisekisa ukuba esi silumkiso sichaziwe kuwe ubukho bakho kwaye waziswa ngawo onke amalungelo akho. Isilumkiso sihlala sisebenza nokuba usisayinile okanye ingqina iyasisayina.",
+      "Utyikityo lwakho luqinisekisa ukuba uyaqonda esi silumkiso namalungelo akho - hayi ukuba uyavuma. Ukuba ukhaba ukusayina, ingqina iya kuqinisekisa ukuba isilumkiso sichaziwe. Isilumkiso sisebenza ngazo zombini iindlela.",
 
     questions: () =>
-      "Ingaba unemibuzo malunga nesi silumkiso, ixesha lokusebenza, iziphumo, okanye amalungelo akho? Ndifuna ukuqinisekisa ukuba uyakuqonda konke ngokupheleleyo ngaphambi kokuqhubeka neetyikityo.",
+      "Ingaba unemibuzo ngesi silumkiso okanye amalungelo akho?",
 
     closing: () =>
-      "Enkosi. Ngoku siya kuqhubeka ukuqokelela iityikityo ukuqinisekisa esi silumkiso. Khumbula, eli lithuba lakho lokulungisa ukuziphatha kwakho. Silindele ukubona uphuculo olukhawulezayo, kwaye sinethemba lokuba oku kuya kuba sisiphelo sale meko."
+      "Ngoku siya kuqokelela iityikityo. Uphuculo olukhawulezayo luyafuneka."
   },
 
   // 🏴󠁺󠁡󠁳󠁴󠁿 SOTHO - Sesotho
   st: {
     greeting: (employeeName: string, managerName: string) =>
-      `${employeeName}, joalo ka ha re buisaneng, kopano ena ke ho tiisa temoso e ngotsoeng mabapi le ketsahalo ea mosebetsi e etsahetseng.`,
+      `${employeeName}, kopano ena ke ho tiisa temoso e ngotsoeng ka ketsahalo ea mosebetsi eo re e buisaneng.`,
 
-    purpose: () =>
-      "Re se re buisane ka lintlha tsa se etsahetseng. Joale ke hloka ho hlalosa ka molao boemo ba temoso, nako ea tšebetso, litokelo tsa hao, le ditlamorao haeba boits'oaro bo tšoanang bo hlaha hape. Tshebetso ena e latela Molao oa Likamano tsa Basebetsi le pholisi ea kgetho ea khamphani ea rona.",
-
-    incident: (description: string) =>
-      `Ho pheta se re buisaneng ka sona pele: ${description}. Boitshwaro bona ha bo amohelehe ka tlasa litekanyetso tsa rona tsa sebaka sa mosebetsi le dipholisi tsa khamphani, 'me e tlameha ho lokisoa hang-hang.`,
+    incident: (categoryName: string, description: string) =>
+      `Lengolo: ${categoryName}. Lintlha: ${description}. Boitshwaro bona bo senya dipholisi tsa rona tsa mosebetsi 'me bo tlameha ho ema hang-hang.`,
 
     warningExplanation: (level: string, validityPeriod: number) =>
-      `Ena ke temoso ea ${level}. E tla lula lirekoting tsa hao tsa mosebetsi likhoeli tse ${validityPeriod} ho tloha kajeno. Nakong ena ea tšebetso, ho lebelletsoe hore o bonts'e ntlafatso e potlakileng le e tsoelang pele boitshwarong ba hao.`,
+      `Ena ke temoso ea ${level}. E lula lirekoting tsa hao likhoeli tse ${validityPeriod}. O tlameha ho bonts'a ntlafatso e potlakileng le e tsoelang pele.`,
 
     rights: () =>
-      "Joale, ho bohlokwa haholo hore o utloisise litokelo tsa hao:",
+      "Litokelo tsa hao ka tlasa Molao oa Likamano tsa Basebetsi:",
 
     rightsList: () => [
-      "O na le tokelo la ho ipeela temoso ena ka mora dihora tse 48 haeba o lumela hore ha e nepahale kapa e etsoa hampe. Kopo ea hao ea ho ipeela e tlameha ho fanoa ka ho ngola ho HR.",
-      "Tshebetso ena ea kgetho e tsoela pele - haeba boitshwaro bo tšoanang bo etsahala nakong ea tšebetso ea temoso ena, ho ka hlahisa khato e 'ngoe ea kgetho, ho fihla tlōsong ka lebaka la boitshwaro bo bobe haholo.",
-      "Tlhahisoleseding eohle e tla bolokoa e le lekunutu 'me e arolelane feela le bataoli ba hlokahalang le basebetsi ba HR."
+      "Ho Ipeela: O ka ipeela temoso ena ka ho ngola ho HR ka mora dihora tse 48 haeba o lumela hore ha e nepahale kapa e etsoa hambe.",
+      "Kgetho e Tsoelang Pele: Boitshwaro bo tšoanang nakong ea temoso ena bo ka hlahisa khato e 'ngoe ea kgetho, ho fihla tlōsong.",
+      "Lekunutu: Tlhahisoleseding ena e lekunutu 'me e arolelane feela le bataoli ba hlokahalang le HR."
     ],
 
     witnessOption: () =>
-      "Saeno ea hao tokomaneng ena e amohela hore temoso ena e hlalositsoe ho uena 'me o utloisisa litaba le litokelo tsa hao. Saeno ea hao HA E BOLELE hore o lumela le temoso - e bolela feela hore o tsebisitsoe ka nepo. Haeba o khetha ho se saene, ke tokelo la hao. Tabeng eo, paki e tla saena ho tiisa hore temoso ena e hlalositsoe ho uena sebakeng sa hao le hore o tsebisitsoe litokelo tsa hao tsohle. Temoso e lula e sebetsa ho sa natsoe hore na o e saenile kapa paki e e saenile.",
+      "Saeno ea hao e tiisa hore o utloisisa temoso ena le litokelo tsa hao - eseng hore o lumela. Haeba o hana ho saena, paki e tla tiisa hore temoso e hlalositsoe. Temoso e sebetsa ka tsela ka bobeli.",
 
     questions: () =>
-      "Na o na le lipotso mabapi le temoso ena, nako ea tšebetso, ditlamorao, kapa litokelo tsa hao? Ke batla ho netefatsa hore o utloisisa tsohle ka botlalo pele re tsoela pele ka mesaeno.",
+      "Na o na le lipotso ka temoso ena kapa litokelo tsa hao?",
 
     closing: () =>
-      "Kea leboha. Joale re tla tsoela pele ho bokella mesaeno ho tiisa temoso ena. Hopola, ena ke monyetla oa hao oa ho lokisa boitshwaro ba hao. Re lebeletse ho bona ntlafatso e potlakileng, 'me re ts'epa hore ena e tla ba qetello ea taba ena."
+      "Joale re tla bokella mesaeno. Ntlafatso e potlakileng e hlokahala."
   },
 
   // 🏴󠁺󠁡󠁴󠁳󠁿 TSONGA - Xitsonga
   ts: {
     greeting: (employeeName: string, managerName: string) =>
-      `${employeeName}, tanihileswi hi burisene, nhlanganiso lowu i ku tiyisa xilumkiso lexi tsariweke hi timhaka ta xivangelo xa ntirho lexi nga endleke.`,
+      `${employeeName}, nhlanganiso lowu i ku tiyisa xilumkiso lexi tsariweke xa xivangelo xa ntirho lexi hi xi burisaneke.`,
 
-    purpose: () =>
-      "Hi se hi burisene hi swileriso swa leswi nga endleke. Sweswi ndzi lava ku hlamusela hi ndlela ya nawu mpimo wa xilumkiso, nkarhi wa ku tirhisa, timfanelo ta wena, ni mimpikiselo loko mavanyiselo yo fana ma nga hluvukisa hi n'wana. Nongonoko lowu wu landzela Nawu wa Vuhlanganisi bya Vatirhi ni pholisi ya ndzulavulo ya khamphani ya hina.",
-
-    incident: (description: string) =>
-      `Ku phindha leswi hi swi burisene khale: ${description}. Mavanyiselo lawa ma nga amukeleriwi hi ka tlhelo ka swiyimo swa hina swa ndhawu ya ntirho ni tipholisi ta khamphani, naswona ma fanele ku lulamisiwa hi ku hatlisa.`,
+    incident: (categoryName: string, description: string) =>
+      `Nyungulo: ${categoryName}. Swileriso: ${description}. Mavanyiselo lawa ma tyela tipholisi ta hina ta ntirho naswona ma fanele ku yima hi ku hatlisa.`,
 
     warningExplanation: (level: string, validityPeriod: number) =>
-      `Lexi i xilumkiso xa ${level}. Xi ta tshama eka rhekhodo ya wena ya ntirho tin'hweti ta ${validityPeriod} ku suka namuntlha. Eka nkarhi lowu wa ku tirhisa, ku languteriwa leswaku u kombisa ku antswisa loku hatlisaka ni loku ya emahlweni eka mavanyiselo ya wena.`,
+      `Lexi i xilumkiso xa ${level}. Xi tshama eka rhekhodo ya wena tin'hweti ta ${validityPeriod}. U fanele ku kombisa ku antswisa loku hatlisaka ni loku ya emahlweni.`,
 
     rights: () =>
-      "Sweswi, swa nkoka swinene leswaku u twisisa timfanelo ta wena:",
+      "Timfanelo ta wena hi ka tlhelo ka Nawu wa Vuhlanganisi bya Vatirhi:",
 
     rightsList: () => [
-      "U na timfanelo ro appila xilumkiso lexi hi nkarhi wa tawa ta 48 loko u tshemba leswaku a xi lulamanga kumbe xi endliwile hambi. Xikombelo xa wena xo appila xi fanele ku nyikeriwa hi ku tsala eka HR.",
-      "Nongonoko lowu wa ndzulavulo wu ya emahlweni - loko mavanyiselo yo fana ma nga endleka eka nkarhi wa ku tirhisa wa xilumkiso lexi, swi nga endla leswaku ku va goza rin'wana ra ndzulavulo, ku ya eka ku herisiwa hikuva ka mavanyiselo yo biha swinene.",
-      "Rungula hinkwaro ri ta hlayisiwa ri ri swihlayiselo naswona ri avelaniwa ntsena na vafambisi lava lavekaka ni vatirhi va HR."
+      "Ku Appila: U nga appila xilumkiso lexi hi ku tsala eka HR hi nkarhi wa tawa ta 48 loko u tshemba leswaku a xi lulamanga kumbe xi endliwile hambi.",
+      "Ndzulavulo wo ya Emahlweni: Mavanyiselo yo fana eka nkarhi wa ku tirhisa wa xilumkiso lexi swi nga endla ku va goza rin'wana ra ndzulavulo, ku ya eka ku herisiwa.",
+      "Swihlayiselo: Rungula leri i swihlayiselo naswona ri avelaniwa ntsena na vafambisi lava lavekaka ni HR."
     ],
 
     witnessOption: () =>
-      "Vusayini bya wena eka tsalwa leri byi amukela leswaku xilumkiso lexi xi hlamuseriwile eka wena naswona u twisisa leswi nga endzeni ni timfanelo ta wena. Vusayini bya wena A BYI VULI leswaku u pfumela ni xilumkiso - byi vula ntsena leswaku u tivisisiwile hi ndlela yo lulamela. Loko u hlawula ku nga sayini, sweswo i timfanelo ta wena. Eka xiyimo lexinyana, nhlamulo a nga ta ku sayina ku tiyisisa leswaku xilumkiso lexi xi hlamuseriwile eka wena hi vukona bya wena naswona u tivisisiwile hi timfanelo ta wena hinkwato. Xilumkiso xi hlaya xi tirhaka hambi leswaku u xi sayinile kumbe nhlamulo a xi sayinile.",
+      "Vusayini bya wena byi tiyisisa leswaku u twisisa xilumkiso lexi ni timfanelo ta wena - ku nga ri leswaku u pfumela. Loko u vavisa ku sayini, nhlamulo a nga tiyisisa leswaku xilumkiso xi hlamuseriwile. Xilumkiso xi tirhaka hi tindlela hinkwato.",
 
     questions: () =>
-      "Xana u na swivutiso hi xilumkiso lexi, nkarhi wa ku tirhisa, mimpikiselo, kumbe timfanelo ta wena? Ndzi lava ku tiyisisa leswaku u twisisa hinkwaswo hi ku helela ka ku ya emahlweni ni vusayini.",
+      "Xana u na swivutiso hi xilumkiso lexi kumbe timfanelo ta wena?",
 
     closing: () =>
-      "Inkomu. Sweswi hi ta ya emahlweni ku hlengeleta vusayini ku tiyisa xilumkiso lexi. Tsundzuka, leswi i nkarhi wa wena wo lulamisa mavanyiselo ya wena. Hi langutera ku vona ku antswisa loku hatlisaka, naswona hi tshemba leswaku leswi swi ta va makumu wa xiyimo lexi."
+      "Sweswi hi ta hlengeleta vusayini. Ku antswisa loku hatlisaka ku laveka."
   },
   // 🏴󠁺󠁡󠁶󠁥󠁿 VENDA - Tshivenda
   ve: {
     greeting: (employeeName: string, managerName: string) =>
-      `${employeeName}, sa zwe ra amba, iyi meetingi ndi ya u tiyisedza tivhiso yo ṅwalwaho nga ha zwithu zwa mushumo zwine zwa itika.`,
+      `${employeeName}, iyi meetingi ndi ya u tiyisedza tivhiso yo ṅwalwaho nga ha zwithu zwa mushumo zwine ra zwi amba.`,
 
-    purpose: () =>
-      "Ro vha ro amba nga ha zwine zwa itika. Zwino ndi tea u talutshedzisa nga ndila ya mulayo vhuimo ha tivhiso, tshifhinga tsha u shuma, pfanelo dzavho, na mvelelo arali maitele a tshi tou fana a tshi itea hafhu. Uyu muitero u tevhedza Mulayo wa Vhushaka ha Vhashumi na polisi ya mulandu ya khamphani yashu.",
-
-    incident: (description: string) =>
-      `U dovhola zwine ra zwi amba khaladzi: ${description}. Maitele aya a si kha fhasi ha zwiyimo zwashu zwa fhethu ha mushumo na mipholisi ya khamphani, nahone a tea u khwiniswa zwino-zwino.`,
+    incident: (categoryName: string, description: string) =>
+      `Mulandu: ${categoryName}. Vhubvo: ${description}. Maitele aya a tyela mipholisi yashu ya mushumo nahone a tea u ima zwino-zwino.`,
 
     warningExplanation: (level: string, validityPeriod: number) =>
-      `Iyi ndi tivhiso ya ${level}. I do dzula kha rekhodho yavho ya mushumo minwedzi ya ${validityPeriod} u bva ḓuvha la namusi. Nga tshifhinga tsha u shuma hetshi, hu tea uri no kombedza u khwinisa ha u tavhanya na u fhiraho phanḓa kha maitele avho.`,
+      `Iyi ndi tivhiso ya ${level}. I dzula kha rekhodho yavho minwedzi ya ${validityPeriod}. No tea u kombedza u khwinisa ha u tavhanya na u fhiraho phanḓa.`,
 
     rights: () =>
-      "Zwino, zwa konḓelele uri no pfesese pfanelo dzavho:",
+      "Pfanelo dzavho kha fhasi ha Mulayo wa Vhushaka ha Vhashumi:",
 
     rightsList: () => [
-      "No na pfanelo ya u appela iyi tivhiso nga tshifhinga tsha awara dza 48 arali no tenda uri a i kha fhasi ha vhulungana kana yo itiwa zwi si zwone. Kumbelo yavho ya u appela i tea u nedziwa hu tshi ṅwalwa kha HR.",
-      "Uyu muitero wa mulandu u khou fhiraho phanḓa - arali maitele a tshi tou fana a tshi itea nga tshifhinga tsha u shuma ha iyi tivhiso, zwi nga vha zwa khwinisa kha magato mafhelo a mulandu, u swika kha u thithiswa nga nṱha ha maitele mabe khulwane.",
-      "Mafhungo othe o do bulukanywa sa swihlayiselo nahone o do abelaniwa fhedzi na vhaṱhohi vhane vha tea nahone na vhashumi vha HR."
+      "U Appela: No nga appela iyi tivhiso hu tshi ṅwalwa kha HR nga tshifhinga tsha awara dza 48 arali no tenda uri a i kha fhasi ha vhulungana kana yo itiwa zwi si zwone.",
+      "Mulandu wo Fhiraho Phanḓa: Maitele a tshi tou fana nga tshifhinga tsha u shuma ha iyi tivhiso zwi nga khwinisa kha magato mafhelo a mulandu, u swika kha u thithiswa.",
+      "Swihlayiselo: Mafhungo othe ndi swihlayiselo nahone o abelaniwa fhedzi na vhaṱhohi vhane vha tea na vhashumi vha HR."
     ],
 
     witnessOption: () =>
-      "U saena havho kha iyi bugu zwi amba uri iyi tivhiso yo talutshedzelwa kwavho nahone no pfesesa zwine zwo bulwa na pfanelo dzavho. U saena havho A ZWI AMBA uri no tendelana na tivhiso - zwi amba fhedzi uri no divhiswa nga ndila yo teaho. Arali no nanga u si saini, ndi pfanelo yavho. Kha zwenezwo, muhumbeli o do saini u tiyisedza uri iyi tivhiso yo talutshedzelwa kwavho mbele yavho nahone no divhisiwa pfanelo dzavho dzoṱhe. Tivhiso i khou sala i khou shuma hu sa nwali uri no i saena kana muhumbeli o i saena.",
+      "U saena havho zwi tiyisedza uri no pfesesa iyi tivhiso na pfanelo dzavho - zwi si uri no tendelana. Arali no nanga u si saini, muhumbeli o do tiyisedza uri tivhiso yo talutshedzelwa. Tivhiso i shuma nga ndila dzoṱhe.",
 
     questions: () =>
-      "Vho na mbudziso nga ha iyi tivhiso, tshifhinga tsha u shuma, mvelelo, kana pfanelo dzavho? Ndi khou toda u tiyisedza uri no pfesesa zwoṱhe nga u fhedzisesa phanḓa ha u fhiraho phanḓa nga masaena.",
+      "Vho na mbudziso nga ha iyi tivhiso kana pfanelo dzavho?",
 
     closing: () =>
-      "Ndo livhuwa. Zwino ro do fhiraho phanḓa u kuvhanganya masaena u tiyisedza iyi tivhiso. Humbulani, iyi ndi tshifhinga tshavho tsha u khwinisa maitele avho. Ri khou lindela u vhona u khwinisa ha u tavhanya, nahone ri khou humbela uri zwi vhe tshiphelo tsha iyi nyimele."
+      "Zwino ro do kuvhanganya masaena. U khwinisa ha u tavhanya hu a tea."
   },
   // 🏴󠁺󠁡󠁳󠁳󠁿 SWATI - siSwati
   ss: {
     greeting: (employeeName: string, managerName: string) =>
-      `${employeeName}, njengobe sakhuluma, loluhlangano ngalokucinisekisa sixwayiso lesibhaliwe ngesehlo lemsebenzi lesehlekeleko.`,
+      `${employeeName}, loluhlangano ngalokucinisekisa sixwayiso lesibhaliwe ngesehlo lemsebenzi lesakhulumako.`,
 
-    purpose: () =>
-      "Sese sakhuluma ngalokucondze ngeloko kwentekako. Manje ngidvinga kuchaza ngelitsatfu lesilinganiso sesixwayiso, sikhatsi sekuphila, emalungelo akho, nemiphumela uma kutiphatsa lekufanako kuphindze kwenteke. Lenqubo ilandzela Umtsetfo weTinhlangano teTisebenzi kanye nephalisinkomba yekulajiswa yekhamphani yaletfu.",
-
-    incident: (description: string) =>
-      `Kuphindza loko sasakhuluma ngako ngaphambile: ${description}. Loku kutiphatsa akwemukelekile ngansi kwetingcikitelo tetfu tendzawo yemsebenzi kanye nephalisinkomba yekhamphani, futhi kumele kulungiswe masinyane.`,
+    incident: (categoryName: string, description: string) =>
+      `Licala: ${categoryName}. Tincukacha: ${description}. Loku kutiphatsa kuhlubuka nephalisinkomba yaletfu yemsebenzi futhi kumele kume masinyane.`,
 
     warningExplanation: (level: string, validityPeriod: number) =>
-      `Lesi yisixwayiso se-${level}. Sitawuhlala emarekhodini akho emsebenzi etinyanga letingu-${validityPeriod} kusuka lamuhla. Ngelesikhatsi sekuphila, kulindelekile kutsi ubonise kuntfula lokushesha nekucondzaphambili kutiphatsa kwakho.`,
+      `Lesi yisixwayiso se-${level}. Sihlala emarekhodini akho etinyanga letingu-${validityPeriod}. Kumele ubonise kuntfula lokushesha nekucondzaphambili.`,
 
     rights: () =>
-      "Manje, kubalulekile kakhulu kutsi uwatizwe emalungelo akho:",
+      "Emalungelo akho ngansi kweMtsetfo weTinhlangano teTisebenzi:",
 
     rightsList: () => [
-      "Unelilungelo lekuphikisana nalesi sixwayiso ngetikhatsi tetinshintfu tange-48 uma ukholwa kutsi asifanele noma senziwa hambi. Sicelo sakho sekuphikisana kufanele sanikelwe ngekubhalwa ku-HR.",
-      "Lenqubo yekulajiswa iyacondzaphambili - uma kutiphatsa lekufanako kwenteka ngelesikhatsi sekuphila salesixwayiso, kungase kuholele kusinyatselo sesinye sekulajiswa, kuya ekuxoshwa ngenxa yekutiphatsa lekubi kakhulu.",
-      "Tonkhe lwati lutawugcinwa luyimfihlo futhi lutsatfwe kubaphati labadzingekako kuphela kanye netisebenzi te-HR."
+      "Kuphikisana: Ungaphikisana nalesi sixwayiso ngekubhalwa ku-HR ngetikhatsi tetinshintfu tange-48 uma ukholwa kutsi asifanele noma senziwa hambi.",
+      "Kulajiswa Lokucondzaphambili: Kutiphatsa lekufanako ngelesikhatsi sekuphila salesixwayiso kungase kuholele kusinyatselo sesinye sekulajiswa, kuya ekuxoshwa.",
+      "Buyimfihlo: Lwati luyimfihlo futhi lutsatfwe kubaphati labadzingekako kuphela ne-HR."
     ],
 
     witnessOption: () =>
-      "Kusayina kwakho kule ncwadzi kusamukela kutsi lesixwayiso sichaziwe kuwe futhi uyatizwa lokutsiwe kanye nemalungelo akho. Kusayina kwakho AKUSHO kutsi uyavuma nesixwayiso - kusho nje kutsi watiswa ngendlela lefanele. Uma ukhetsa kungasayini, yilelo ilungelo lakho. Kuleso sigameko, umfakazi utawusayina kucincisekisa kutsi lesixwayiso sichaziwe kuwe ekubeni kwakho futhi watiswa ngemalungelo akho onkhe. Sixwayiso sihlala sisebenta noma usisayinile noma umfakazi uyasisayina.",
+      "Kusayina kwakho kucincisekisa kutsi uyatizwa lesixwayiso nemalungelo akho - kusho nje kutsi uyavuma. Uma ukhetsa kungasayini, umfakazi utawucincisekisa kutsi sixwayiso sichaziwe. Sixwayiso sisebenta ngatindzlela tonkhe.",
 
     questions: () =>
-      "Ingabe unemibuto ngalesi sixwayiso, sikhatsi sekuphila, imiphumela, noma emalungelo akho? Ngifuna kucincisekisa kutsi uyakutizwa konke kachubeka ngaphambili nekusayina.",
+      "Ingabe unemibuto ngalesi sixwayiso noma emalungelo akho?",
 
     closing: () =>
-      "Ngiyabonga. Manje sitawucondzaphambili kutfola kusayina kucincisekisa lesixwayiso. Khumbulanani, loku kuyindzawo yakho yekulungisa kutiphatsa kwakho. Silindele kubona kuntfula lokushesha, futhi sitfemba kutsi loku kutabe kugcina kwale ndzaba."
+      "Manje sitawutfola kusayina. Kuntfula lokushesha kuyadingeka."
   },
   // 🏴󠁺󠁡󠁴󠁮󠁿 TSWANA - Setswana
   tn: {
     greeting: (employeeName: string, managerName: string) =>
-      `${employeeName}, jaaka re buisane, kopano eno ke go tiisa temoso e e kwadilweng ka kgang ya tiro e e diragetseng.`,
+      `${employeeName}, kopano eno ke go tiisa temoso e e kwadilweng ka kgang ya tiro e re neng re buisana ka yone.`,
 
-    purpose: () =>
-      "Re setse re buisane ka dintlha tsa se se diragetseng. Jaanong ke tshwanetse go tlhalosa ka semolao seelo sa temoso, nako ya go bereka, ditshwanelo tsa gago, le ditlamorago fa boitshwaro jo bo tshwanang bo ka diragala gape. Thulaganyo eno e latela Molao wa Dikamano tsa Badiri le pholisi ya kgalemelo ya khampani ya rona.",
-
-    incident: (description: string) =>
-      `Go boeletsa se re neng re buisana ka sone pele: ${description}. Boitshwaro jono ga bo amogelwe ka fa tlase ga ditekanyetso tsa rona tsa lefelo la tiro le dipholisi tsa khampani, mme bo tshwanetse go baakanyediwa ka bonako.`,
+    incident: (categoryName: string, description: string) =>
+      `Molato: ${categoryName}. Dintlha: ${description}. Boitshwaro jono bo tlola dipholisi tsa rona tsa tiro mme bo tshwanetse go ema ka bonako.`,
 
     warningExplanation: (level: string, validityPeriod: number) =>
-      `Eno ke temoso ya ${level}. E tla nna mo rekotong ya gago ya tiro dikgwedi tse ${validityPeriod} go simolola gompieno. Ka nako eno ya go bereka, o solofetswe go bontsha tokafatso e e bonalang le e e tswelelang mo boitshwarong jwa gago.`,
+      `Eno ke temoso ya ${level}. E nna mo rekotong ya gago dikgwedi tse ${validityPeriod}. O tshwanetse go bontsha tokafatso e e bonalang le e e tswelelang.`,
 
     rights: () =>
-      "Jaanong, go botlhokwa thata gore o tlhaloganye ditshwanelo tsa gago:",
+      "Ditshwanelo tsa gago ka fa tlase ga Molao wa Dikamano tsa Badiri:",
 
     rightsList: () => [
-      "O na le tshwanelo ya go boipiletsa temoso eno mo diureng tse 48 fa o dumela gore ga e siame kgotsa e dirwa ka phoso. Boipiletso jwa gago bo tshwanetse go neelwa ka go kwala go HR.",
-      "Thulaganyo eno ya kgalemelo e tswelela - fa boitshwaro jo bo tshwanang bo diragala ka nako ya go bereka ya temoso eno, go ka felela ka kgato e nngwe ya kgalemelo, go fitlha kwa go tlosiwa tiro ka ntlha ya boitshwaro jo bo maswe thata.",
-      "Tshedimosetso yotlhe e tla bolokwa e le sephiri mme e abelane fela le batsamaisi ba ba tlhokegang le badiri ba HR."
+      "Go Boipiletsa: O ka boipiletsa temoso eno ka go kwala go HR mo diureng tse 48 fa o dumela gore ga e siame kgotsa e dirwa ka phoso.",
+      "Kgalemelo e e Tswelelang: Boitshwaro jo bo tshwanang ka nako ya go bereka ya temoso eno go ka felela ka kgato e nngwe ya kgalemelo, go fitlha kwa go tlosiwa tiro.",
+      "Sephiri: Tshedimosetso yotlhe e sephiri mme e abelane fela le batsamaisi ba ba tlhokegang le HR."
     ],
 
     witnessOption: () =>
-      "Go saena ga gago mo tokomaning eno go amogela gore temoso eno e tlhalosetse wena mme o tlhaloganya se se mo go yone le ditshwanelo tsa gago. Go saena ga gago GA GO REYE gore o dumalana le temoso - go raya fela gore o itsisitswe ka tsela e e siameng. Fa o tlhopha go sa saena, ke tshwanelo ya gago. Mo maemong a, paki e tla saena go netefatsa gore temoso eno e tlhalosetse wena mo go bonweng ga gago le gore o itsisitswe ka ditshwanelo tsa gago tsotlhe. Temoso e nna e bereka go sa kgathalesege gore o e saenile kgotsa paki e e saenile.",
+      "Go saena ga gago go netefatsa gore o tlhaloganya temoso eno le ditshwanelo tsa gago - ga go reye gore o dumelana. Fa o tlhopha go sa saena, paki e tla netefatsa gore temoso e tlhalosetse. Temoso e bereka ka ditsela tsotlhe.",
 
     questions: () =>
-      "A o na le dipotso ka temoso eno, nako ya go bereka, ditlamorago, kgotsa ditshwanelo tsa gago? Ke batla go netefatsa gore o tlhaloganya tsotlhe pele re tswelela ka go saena.",
+      "A o na le dipotso ka temoso eno kgotsa ditshwanelo tsa gago?",
 
     closing: () =>
-      "Ke a leboga. Jaanong re tla tswelela go kokoanya mesaeno go tiisa temoso eno. Gopola, seno ke sebaka sa gago sa go baakanya boitshwaro jwa gago. Re lebeletse go bona tokafatso e e bonalang, mme re tshepa gore seno se tla nna bokhutlo jwa kgang eno."
+      "Jaanong re tla kokoanya mesaeno. Tokafatso e e bonalang e a tlhokega."
   },
   // 🏴󠁺󠁡󠁮󠁲󠁿 NDEBELE - isiNdebele
   nr: {
     greeting: (employeeName: string, managerName: string) =>
-      `${employeeName}, njengalokuthi sakhulumako, leli hlangano ngolokuqinisekisa isixwayiso esibhaliwe ngodaba lomsebenzi olwenzekako.`,
+      `${employeeName}, leli hlangano ngolokuqinisekisa isixwayiso esibhaliwe ngodaba lomsebenzi esasixoxako.`,
 
-    purpose: () =>
-      "Sesivele saxoxa ngemininingwane yalokho okwenzekako. Manje ngidinga ukuchaza ngomthetho izinga lesixwayiso, isikhathi sokusebenza, amalungelo akho, nemiphumela uma ukuziphatha okufanako kuphinde kwenzeke. Le nqubo ilandela uMthetho weBudlelwano Basebenzi kanye nenqubomgomo yokuqeqesha yenkampani yethu.",
-
-    incident: (description: string) =>
-      `Ukuphinda lokho esikuxoxe kuqala: ${description}. Lokhu kuziphatha akwamukelekile ngaphansi kwezindinganiso zethu zendawo yomsebenzi nezinqubomgomo zenkampani, futhi kumele kulungiswe masinyane.`,
+    incident: (categoryName: string, description: string) =>
+      `Icala: ${categoryName}. Imininingwane: ${description}. Lokhu kuziphatha kuphula izinqubomgomo zethu zomsebenzi futhi kumele kume masinyane.`,
 
     warningExplanation: (level: string, validityPeriod: number) =>
-      `Lesi yisixwayiso se-${level}. Sizosala emarekhodi akho omsebenzi izinyanga ezingu-${validityPeriod} kusukela namuhla. Ngalesi sikhathi sokusebenza, kulindelwe ukuthi ukhombise ukuthuthuka okusheshayo nokuqhubekayo ekuziphatheni kwakho.`,
+      `Lesi yisixwayiso se-${level}. Sihlala emarekhodi akho izinyanga ezingu-${validityPeriod}. Kumele ubonise ukuthuthuka okusheshayo nokuqhubekayo.`,
 
     rights: () =>
-      "Manje, kubaluleke kakhulu ukuthi uqonde amalungelo akho:",
+      "Amalungelo akho ngaphansi koMthetho weBudlelwano Basebenzi:",
 
     rightsList: () => [
-      "Unelungelo lokubhena lesi sixwayiso phakathi namahora angama-48 uma ukholelwa ukuthi asilungile noma asenziwa ngendlela engalungile. Isicelo sakho sokubhena kufanele sinikezwe ngokubhaliwe ku-HR.",
-      "Le nqubo yokuqeqesha iyaqhubeka - uma ukuziphatha okufanayo kwenzeka phakathi nesikhathi sokusebenza salesi sixwayiso, kungase kuholele esinyweni esinye sokuqeqesha, kuya ekuxoshweni ngenxa yokuziphatha okubi kakhulu.",
-      "Lonke ulwazi luzogcinwa luyimfihlo futhi lubelane kuphela nabapha boholi abadingekayo nabadlulisi be-HR."
+      "Ukubhena: Ungabhena lesi sixwayiso ngokubhaliwe ku-HR ngamahora angama-48 uma ukholelwa ukuthi asilungile noma asenziwa kabi.",
+      "Ukuqeqesha Okuqhubekayo: Ukuziphatha okufanayo ngesikhathi lesi sixwayiso kungase kuholele esinyweni esinye sokuqeqesha, kuya ekuxoshweni.",
+      "Ubumfihlo: Lonke ulwazi luyimfihlo futhi lubelane kuphela nabaphathi abadingekayo ne-HR."
     ],
 
     witnessOption: () =>
-      "Ukusayina kwakho kule dokhumenti kuyavuma ukuthi lesi sixwayiso sikuchazelwe futhi uyaqonda okuqukethwe namalungelo akho. Ukusayina kwakho AKUSHO ukuthi uyavuma nesixwayiso - kusho nje ukuthi wazisiwe ngendlela efanele. Uma ukhetha ukungasayini, lelo ilungelo lakho. Kuleso sigameko, umfakazi uzosayina ukuqinisekisa ukuthi lesi sixwayiso sikuchazelwe ebukheneni bakho nokuthi wazisiwa ngawo onke amalungelo akho. Isixwayiso sihlala sisebenza noma uyasisayina noma umfakazi uyasisayina.",
+      "Ukusayina kwakho kuqinisekisa ukuthi uqonda lesi sixwayiso namalungelo akho - hhayi ukuthi uyavuma. Uma wenqaba ukusayina, umfakazi uzoqinisekisa ukuthi isixwayiso sichaziwe. Isixwayiso sisebenza ngazo zombili izindlela.",
 
     questions: () =>
-      "Ingabe unemibuzo ngalesi sixwayiso, isikhathi sokusebenza, imiphumela, noma amalungelo akho? Ngifuna ukuqinisekisa ukuthi uqonda konke ngokuphelele ngaphambi kokuqhubeka nezimo zokusayina.",
+      "Ingabe unemibuzo ngalesi sixwayiso noma amalungelo akho?",
 
     closing: () =>
-      "Ngiyabonga. Manje sizokwanda siqhubeke nokuqoqa izimo zokusayina ukuqinisekisa lesi sixwayiso. Khumbula, lokhu kuyithuba lokuthi ulungise ukuziphatha kwakho. Silindele ukubona ukuthuthuka okusheshayo, futhi sithemba ukuthi lokhu kuzoba ukuphela kwalolu daba."
+      "Manje sizoqoqa izimo zokusayina. Ukuthuthuka okusheshayo kuyadingeka."
   },
   // 🏴󠁺󠁡󠁮󠁳󠁿 NORTHERN SOTHO - Sepedi
   ns: {
     greeting: (employeeName: string, managerName: string) =>
-      `${employeeName}, bjalo ka ge re boledišanego, kopano ye ke go tiišetša temošo ye e ngwadilwego mabapi le tiragalo ya mošomo yeo e diregile go.`,
+      `${employeeName}, kopano ye ke go tiišetša temošo ye e ngwadilwego ya tiragalo ya mošomo yeo re boledišanego ka yona.`,
 
-    purpose: () =>
-      "Re šetše re boledišane ka dintlha tša se se diregile go. Bjale ke swanetše go hlaloša ka molao maemo a temošo, nako ya go šoma, ditokelo tša gago, le ditlamorago ge boitshwaro bjo bjo swanago bo ka direga gape. Tshepedišo ye e latela Molao wa Dikamano tša Bašomi le pholisi ya kgalemo ya khamphani ya rena.",
-
-    incident: (description: string) =>
-      `Go boeletša seo re boledišanego ka sona pele: ${description}. Boitshwaro bjo ga bjo amogelwe ka fase ga ditekanyetšo tša rena tša lefelo la mošomo le dipholisi tša khamphani, gomme bo swanetše go baakanywa ka pela.`,
+    incident: (categoryName: string, description: string) =>
+      `Molato: ${categoryName}. Dintlha: ${description}. Boitshwaro bjo bo thuba dipholisi tša rena tša mošomo gomme bo swanetše go ema ka pela.`,
 
     warningExplanation: (level: string, validityPeriod: number) =>
-      `Ye ke temošo ya ${level}. E tla dula go direkoto tša gago tša mošomo dikgwedi tše ${validityPeriod} go thoma lehono. Ka nako ye ya go šoma, go lebelletšwe gore o bontšhe kaonafatšo ye e bonalago le yeo e tšwelelago boitshwarong bja gago.`,
+      `Ye ke ${level}. E dula go direkoto tša gago dikgwedi tše ${validityPeriod}. O swanetše go bontšha kaonafatšo ye e lebelelago le ye e tšwelelago.`,
 
     rights: () =>
-      "Bjale, go bohlokwa kudu gore o kwešiše ditokelo tša gago:",
+      "Ditokelo tša gago ka fase ga Molao wa Dikamano tša Bašomi:",
 
     rightsList: () => [
-      "O na le tokelo ya go boipiletša temošo ye ka gare ga diiri tše 48 ge o dumela gore ga e nepagetšego goba e dirwa ka phošo. Boipiletšo bja gago bo swanetše go fiwa ka go ngwala go HR.",
-      "Tshepedišo ye ya kgalemo e tšwela pele - ge boitshwaro bjo bjo swanago bo direga ka nako ya go šoma ya temošo ye, go ka fela ka kgato ye nngwe ya kgalemo, go fihla go tlošweng mošomo ka lebaka la boitshwaro bjo bobe kudu.",
-      "Tshedimošo ka moka e tlago bolokwa e le sephiri gomme e abelanwa feela le balaodi ba bohlokwa le bašomi ba HR."
+      "Boipiletšo: O ka boipiletša temošo ye ka go ngwala go HR ka gare ga diiri tše 48 ge o dumela gore ga e nepagetšego goba e dirwa ka phošo.",
+      "Kgalemo ye e Tšwelago Pele: Boitshwaro bjo bjo swanago ka nako ya go šoma ya temošo ye bo ka fela ka kgato ye nngwe ya kgalemo, go fihla go tlošweng mošomo.",
+      "Sephiri: Tshedimošo ye ke sephiri gomme e abelanwa feela le balaodi le HR."
     ],
 
     witnessOption: () =>
-      "Go saena ga gago tokong ye go amogela gore temošo ye e hlalošitšwe go wena gomme o kwešiša seo se lego go yona le ditokelo tša gago. Go saena ga gago GA GO REYE gore o dumelelana le temošo - go bolela fela gore o tsebišitšwe ka tsela ye e nepagetšego. Ge o kgetha go se saene, ke tokelo ya gago. Maemong ao, paki e tlago saena go netefatša gore temošo ye e hlalošitšwe go wena pele ga gago le gore o tsebišitšwe ka ditokelo tša gago ka moka. Temošo e dula e šoma ntle le go ela hloko gore o e saenile goba paki e e saenile.",
+      "Go saena ga gago go netefatša gore o kwešiša temošo ye le ditokelo tša gago - e sego gore o dumelelana le yona. Ge o gana go saena, paki e tlago netefatša gore temošo e hlalošitšwe. Temošo e šoma ka ditsela tše ka bobedi.",
 
     questions: () =>
-      "Na o na le dipotšišo ka temošo ye, nako ya go šoma, ditlamorago, goba ditokelo tša gago? Ke nyaka go netefatša gore o kwešiša tše ka moka pele re tšwelapele ka mesaeno.",
+      "Na o na le dipotšišo ka temošo ye goba ditokelo tša gago?",
 
     closing: () =>
-      "Ke leboga. Bjale re tlago tšwelapele go kgoboketša mesaeno go tiišetša temošo ye. Gopola, se ke sebaka sa gago sa go baakanya boitshwaro bja gago. Re lebelletše go bona kaonafatšo ye e bonalago, gomme re holofela gore se se tlabe bokhutlo bja taba ye."
+      "Bjale re tlago kgoboketša mesaeno. Kaonafatšo ye e lebelelago e a nyakega."
   }
 } as const;
 
 export const MultiLanguageWarningScript: React.FC<MultiLanguageWarningScriptProps> = ({
   employeeName,
   managerName,
+  categoryName,
   incidentDescription,
   warningLevel,
   validityPeriod,
@@ -613,31 +582,23 @@ export const MultiLanguageWarningScript: React.FC<MultiLanguageWarningScriptProp
 
                 {/* Greeting */}
                 <div className="border-l-4 pl-3" style={{ borderLeftColor: 'var(--color-warning)' }}>
-                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>1. Opening & Introduction</h5>
+                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>1. Opening</h5>
                   <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
                     {currentScript.greeting(employeeName, managerName)}
                   </p>
                 </div>
 
-                {/* Purpose */}
-                <div className="border-l-4 pl-3" style={{ borderLeftColor: 'var(--color-info)' }}>
-                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>2. Meeting Purpose</h5>
-                  <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                    {currentScript.purpose()}
-                  </p>
-                </div>
-
                 {/* Incident Description */}
                 <div className="border-l-4 pl-3" style={{ borderLeftColor: 'var(--color-error)' }}>
-                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>3. Incident Details</h5>
+                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>2. Incident Details</h5>
                   <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                    {currentScript.incident(incidentDescription)}
+                    {currentScript.incident(categoryName, incidentDescription)}
                   </p>
                 </div>
 
                 {/* Warning Explanation */}
                 <div className="border-l-4 pl-3" style={{ borderLeftColor: 'var(--color-warning)' }}>
-                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>4. Warning Details</h5>
+                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>3. Warning Level & Validity</h5>
                   <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
                     {currentScript.warningExplanation(translatedWarningLevel, validityPeriod)}
                   </p>
@@ -645,7 +606,7 @@ export const MultiLanguageWarningScript: React.FC<MultiLanguageWarningScriptProp
 
                 {/* Employee Rights */}
                 <div className="border-l-4 pl-3" style={{ borderLeftColor: 'var(--color-success)' }}>
-                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>5. Your Rights</h5>
+                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>4. Your Rights</h5>
                   <p className="text-xs leading-relaxed mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                     {currentScript.rights()}
                   </p>
@@ -661,23 +622,18 @@ export const MultiLanguageWarningScript: React.FC<MultiLanguageWarningScriptProp
 
                 {/* Witness Option */}
                 <div className="border-l-4 pl-3" style={{ borderLeftColor: 'var(--color-secondary)' }}>
-                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>6. Witness & Signature Rights</h5>
+                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>5. Signature Explanation</h5>
                   <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
                     {currentScript.witnessOption()}
                   </p>
                 </div>
 
-                {/* Questions */}
+                {/* Questions & Closing */}
                 <div className="border-l-4 pl-3" style={{ borderLeftColor: 'var(--color-info)' }}>
-                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>7. Questions & Clarifications</h5>
-                  <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>6. Questions & Closing</h5>
+                  <p className="text-xs leading-relaxed mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                     {currentScript.questions()}
                   </p>
-                </div>
-
-                {/* Closing */}
-                <div className="border-l-4 pl-3" style={{ borderLeftColor: 'var(--color-text-tertiary)' }}>
-                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>8. Closing</h5>
                   <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
                     {currentScript.closing()}
                   </p>

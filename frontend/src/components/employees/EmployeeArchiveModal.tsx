@@ -18,6 +18,17 @@ export const EmployeeArchiveModal: React.FC<EmployeeArchiveModalProps> = ({
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Prevent body scroll when modal is open
+  usePreventBodyScroll(true);
+
+  // Set up focus trap and ARIA
+  const { containerRef, ariaProps} = useModalDialog({
+    isOpen: true,
+    onClose,
+    titleId: 'archive-modal-title',
+    descriptionId: 'archive-modal-description',
+  });
+
   const handleArchive = async () => {
     // 🔍 DEBUG: Log all the data we're working with
     Logger.debug('🔍 DEBUGGING - Archive Modal Data:', {
@@ -57,12 +68,18 @@ export const EmployeeArchiveModal: React.FC<EmployeeArchiveModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.modal }}>
+      <div
+        ref={containerRef}
+        {...ariaProps}
+        className="bg-white rounded-2xl max-w-md w-full shadow-2xl"
+      >
         <div className="p-6">
-          <h2 className="text-2xl font-bold text-amber-600 mb-4">⚠️ Archive Employee</h2>
-          
-          <p className="text-gray-700 mb-4">
+          <h2 id="archive-modal-title" className="text-2xl font-bold text-amber-600 mb-4">
+            ⚠️ Archive Employee
+          </h2>
+
+          <p id="archive-modal-description" className="text-gray-700 mb-4">
             Are you sure you want to archive <strong>{employee.profile.firstName} {employee.profile.lastName}</strong>?
           </p>
           

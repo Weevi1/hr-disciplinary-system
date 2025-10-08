@@ -221,7 +221,12 @@ export class PDFGenerationService {
       } else {
         Logger.debug('⏭️ Skipping additional notes section (no data)');
       }
-      
+
+      // 8.5. Employee Rights and Next Steps Section - LRA Compliant
+      Logger.debug('⚖️ Adding employee rights and next steps section...')
+      currentY = this.addEmployeeRightsSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+      Logger.success('✅ Employee rights section added')
+
       // 9. Signatures Section - Always add, even if no digital signatures
       Logger.debug('✍️ Adding signatures section...')
       currentY = this.addSignaturesSection(doc, data.signatures, data.employee, currentY, pageWidth, margin, pageHeight, bottomMargin);
@@ -720,7 +725,143 @@ export class PDFGenerationService {
     
     return notesY + 5;
   }
-  
+
+  /**
+   * Employee Rights and Next Steps Section
+   * LRA-compliant information about employee rights, appeal process, and next steps
+   */
+  private static addEmployeeRightsSection(
+    doc: any,
+    data: WarningPDFData,
+    startY: number,
+    pageWidth: number,
+    margin: number,
+    pageHeight: number,
+    bottomMargin: number
+  ): number {
+    // Ensure section fits on page (need about 95mm for full section)
+    startY = this.checkPageOverflow(doc, startY, 95, pageHeight, bottomMargin);
+
+    // Section header with icon
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(51, 51, 51);
+    doc.text('⚖️  EMPLOYEE RIGHTS AND NEXT STEPS', margin, startY);
+
+    // Light blue background box for entire section
+    const sectionWidth = pageWidth - margin * 2;
+    const sectionHeight = 85; // Approximate height
+    doc.setFillColor(239, 246, 255); // Light blue #EFF6FF
+    doc.setDrawColor(59, 130, 246); // Blue border #3B82F6
+    doc.setLineWidth(0.5);
+    doc.rect(margin, startY + 3, sectionWidth, sectionHeight, 'FD'); // Fill and Draw
+
+    let currentY = startY + 12;
+    const contentMargin = margin + 5; // Indent content inside box
+
+    // === YOUR RIGHTS SUBSECTION ===
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(37, 99, 235); // Darker blue for subsection headers
+    doc.text('Your Rights:', contentMargin, currentY);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    currentY += 6;
+
+    // Right to Appeal
+    const appealText = `• Right to Appeal: You may appeal this warning within 48 hours by submitting a written appeal to HR. If your internal appeal is unsuccessful, you may refer the matter to the CCMA within 30 days.`;
+    const appealLines = this.wrapText(doc, appealText, sectionWidth - 15);
+    appealLines.forEach(line => {
+      doc.text(line, contentMargin, currentY);
+      currentY += 4;
+    });
+    currentY += 1;
+
+    // Right to Representation
+    const repText = `• Right to Representation: You have the right to be represented by a fellow employee or shop steward during disciplinary proceedings.`;
+    const repLines = this.wrapText(doc, repText, sectionWidth - 15);
+    repLines.forEach(line => {
+      doc.text(line, contentMargin, currentY);
+      currentY += 4;
+    });
+    currentY += 1;
+
+    // Signing Rights
+    const signText = `• Signing This Document: Your signature acknowledges that this warning has been explained to you. It does NOT mean you agree with the warning.`;
+    const signLines = this.wrapText(doc, signText, sectionWidth - 15);
+    signLines.forEach(line => {
+      doc.text(line, contentMargin, currentY);
+      currentY += 4;
+    });
+    currentY += 1;
+
+    // Confidentiality
+    const confText = `• Confidentiality: All information will be kept confidential and shared only with relevant management and HR personnel.`;
+    const confLines = this.wrapText(doc, confText, sectionWidth - 15);
+    confLines.forEach(line => {
+      doc.text(line, contentMargin, currentY);
+      currentY += 4;
+    });
+    currentY += 3;
+
+    // === WHAT HAPPENS NEXT SUBSECTION ===
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(37, 99, 235);
+    doc.text('What Happens Next:', contentMargin, currentY);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    currentY += 6;
+
+    // Validity period
+    const validityPeriod = data.validityPeriod || 6;
+    const validityText = `• This warning remains valid for ${validityPeriod} months from the date of issue.`;
+    doc.text(validityText, contentMargin, currentY);
+    currentY += 4;
+
+    // Progressive discipline
+    const progressiveText = `• During this period, similar conduct may result in further disciplinary action, up to and including dismissal.`;
+    const progressiveLines = this.wrapText(doc, progressiveText, sectionWidth - 15);
+    progressiveLines.forEach(line => {
+      doc.text(line, contentMargin, currentY);
+      currentY += 4;
+    });
+    currentY += 1;
+
+    // Improvement expectation
+    const improvementText = `• You are expected to demonstrate immediate and sustained improvement in your conduct.`;
+    const improvementLines = this.wrapText(doc, improvementText, sectionWidth - 15);
+    improvementLines.forEach(line => {
+      doc.text(line, contentMargin, currentY);
+      currentY += 4;
+    });
+    currentY += 3;
+
+    // === IMPORTANT NOTICE SUBSECTION ===
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(37, 99, 235);
+    doc.text('Important Notice:', contentMargin, currentY);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    currentY += 6;
+
+    const noticeText = `If you believe this warning is procedurally unfair or unjust, you have recourse through your company's internal appeal process or the Commission for Conciliation, Mediation and Arbitration (CCMA).`;
+    const noticeLines = this.wrapText(doc, noticeText, sectionWidth - 15);
+    noticeLines.forEach(line => {
+      doc.text(line, contentMargin, currentY);
+      currentY += 4;
+    });
+
+    return startY + sectionHeight + 10; // Return position after the box with some spacing
+  }
+
   /**
    * Signatures Section
    */
@@ -1495,8 +1636,24 @@ export class PDFGenerationService {
   /**
    * Format date consistently
    */
-  private static formatDate(date: Date): string {
-    return date.toLocaleDateString('en-ZA', {
+  private static formatDate(date: Date | any): string {
+    // Handle Firestore Timestamp format
+    let dateObj: Date;
+
+    if (!date) {
+      dateObj = new Date();
+    } else if (date.seconds !== undefined) {
+      // Firestore Timestamp: { seconds, nanoseconds }
+      dateObj = new Date(date.seconds * 1000);
+    } else if (date instanceof Date) {
+      dateObj = date;
+    } else if (typeof date === 'string' || typeof date === 'number') {
+      dateObj = new Date(date);
+    } else {
+      dateObj = new Date();
+    }
+
+    return dateObj.toLocaleDateString('en-ZA', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
