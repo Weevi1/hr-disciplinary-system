@@ -4,7 +4,7 @@ import Logger from '../utils/logger';
 // ✅ Creates notifications for HR when warnings need to be delivered
 // ✅ Integrates with existing notification system
 
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
 // ============================================
@@ -15,38 +15,38 @@ export interface DeliveryNotification {
   id: string;
   organizationId: string;
   warningId: string;
-  
+
   // Employee details
   employeeId: string;
   employeeName: string;
   employeeEmail?: string;
   employeePhone?: string;
-  
+
   // Warning details
   warningLevel: string;
   warningCategory: string;
   incidentDate: string;
-  
+
   // Delivery details
-  deliveryMethod: 'email' | 'whatsapp' | 'printed';
-  deliveryPreference: 'employee_choice' | 'manager_choice';
+  employeeRequestedDeliveryMethod: 'email' | 'whatsapp' | 'printed'; // Employee's preference from wizard
+  deliveryMethod?: 'email' | 'whatsapp' | 'printed'; // Actual method HR chooses (set when HR selects)
   contactDetails: {
     email?: string;
     phone?: string;
     address?: string;
   };
-  
+
   // Status tracking
   status: 'pending' | 'in_progress' | 'delivered' | 'failed';
   assignedTo?: string; // HR user ID
   priority: 'normal' | 'high' | 'urgent';
-  
+
   // Metadata
   createdAt: Date;
   updatedAt: Date;
   createdBy: string;
   createdByName: string;
-  
+
   // Delivery tracking
   deliveryAttempts: number;
   deliveryDate?: Date;
@@ -58,22 +58,21 @@ export interface DeliveryNotification {
 export interface CreateDeliveryNotificationRequest {
   warningId: string;
   organizationId: string;
-  
+
   // Employee info
   employeeId: string;
   employeeName: string;
   employeeEmail?: string;
   employeePhone?: string;
-  
+
   // Warning info
   warningLevel: string;
   warningCategory: string;
   incidentDate: string;
-  
-  // Delivery info
-  deliveryMethod: 'email' | 'whatsapp' | 'printed';
-  isEmployeePreference: boolean;
-  
+
+  // Delivery info - employee's requested delivery method
+  employeeRequestedDeliveryMethod: 'email' | 'whatsapp' | 'printed';
+
   // Creator info
   createdBy: string;
   createdByName: string;
@@ -104,28 +103,28 @@ export class DeliveryNotificationService {
       const notificationData = {
         organizationId: request.organizationId,
         warningId: request.warningId,
-        
+
         // Employee details
         employeeId: request.employeeId,
         employeeName: request.employeeName,
         employeeEmail: request.employeeEmail,
         employeePhone: request.employeePhone,
-        
+
         // Warning details
         warningLevel: request.warningLevel,
         warningCategory: request.warningCategory,
         incidentDate: request.incidentDate,
-        
+
         // Delivery details
-        deliveryMethod: request.deliveryMethod,
-        deliveryPreference: request.isEmployeePreference ? 'employee_choice' : 'manager_choice',
+        employeeRequestedDeliveryMethod: request.employeeRequestedDeliveryMethod,
+        // deliveryMethod will be set when HR selects actual method
         contactDetails,
-        
+
         // Status
         status: 'pending',
         priority,
         deliveryAttempts: 0,
-        
+
         // Metadata
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -156,7 +155,7 @@ export class DeliveryNotificationService {
    * Update delivery notification status
    */
   static async updateDeliveryStatus(
-    notificationId: string, 
+    notificationId: string,
     status: DeliveryNotification['status'],
     notes?: string,
     deliveredBy?: string
@@ -166,21 +165,53 @@ export class DeliveryNotificationService {
         status,
         updatedAt: serverTimestamp()
       };
-      
+
       if (status === 'delivered') {
         updateData.deliveryDate = serverTimestamp();
         updateData.deliveredBy = deliveredBy;
       }
-      
+
       if (notes) {
         updateData.deliveryNotes = notes;
       }
-      
+
       // Update in Firestore (you'll need to implement this)
       Logger.debug('📝 Updating delivery status:', notificationId, status)
-      
+
     } catch (error) {
       Logger.error('❌ Failed to update delivery status:', error)
+      throw error;
+    }
+  }
+
+  /**
+   * Update delivery notification with HR's selected delivery method
+   */
+  static async updateDeliveryMethod(
+    organizationId: string,
+    notificationId: string,
+    deliveryMethod: 'email' | 'whatsapp' | 'printed'
+  ): Promise<void> {
+    try {
+      Logger.debug('📝 Updating delivery method:', { notificationId, deliveryMethod })
+
+      const notificationRef = doc(
+        db,
+        'organizations',
+        organizationId,
+        'deliveryNotifications',
+        notificationId
+      );
+
+      await updateDoc(notificationRef, {
+        deliveryMethod: deliveryMethod,
+        status: 'in_progress',
+        updatedAt: serverTimestamp()
+      });
+
+      Logger.success('✅ Delivery method updated successfully');
+    } catch (error) {
+      Logger.error('❌ Failed to update delivery method:', error);
       throw error;
     }
   }
@@ -206,28 +237,22 @@ export class DeliveryNotificationService {
   }
   
   /**
-   * Prepare contact details based on delivery method
+   * Prepare contact details - include all available contact methods
+   * since HR will choose the actual delivery method later
    */
   private static prepareContactDetails(request: CreateDeliveryNotificationRequest) {
     const details: { email?: string; phone?: string; address?: string } = {};
-    
-    switch (request.deliveryMethod) {
-      case 'email':
-        if (request.employeeEmail) {
-          details.email = request.employeeEmail;
-        }
-        break;
-      case 'whatsapp':
-        if (request.employeePhone) {
-          details.phone = request.employeePhone;
-        }
-        break;
-      case 'printed':
-        // For printed delivery, HR will need employee's physical location/address
-        details.address = 'To be confirmed by HR';
-        break;
+
+    // Include all available contact methods
+    if (request.employeeEmail) {
+      details.email = request.employeeEmail;
     }
-    
+    if (request.employeePhone) {
+      details.phone = request.employeePhone;
+    }
+    // Address will be confirmed by HR if needed for printed delivery
+    details.address = 'To be confirmed by HR';
+
     return details;
   }
   

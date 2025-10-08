@@ -5,6 +5,8 @@ import Logger from '../../../utils/logger';
 // 🎯 Single action location, clear hierarchy, no duplicate buttons
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { usePreventBodyScroll } from '../../../hooks/usePreventBodyScroll';
+import { Z_INDEX } from '../../../constants/zIndex';
 import {
   X,
   Download,
@@ -71,6 +73,9 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
   title = "Warning Document"
 }) => {
   const { organization } = useOrganization();
+
+  // Prevent body scroll when modal is open
+  usePreventBodyScroll(isOpen);
 
   // PDF State
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
@@ -429,7 +434,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
   if (isMobile) {
     return (
       <>
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.modal }} onClick={onClose}>
           <div
             className="bg-white rounded-lg w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
@@ -618,7 +623,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
   // DESKTOP LAYOUT - Sidebar + Preview
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.modal }}>
         <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full h-[90vh] overflow-hidden flex">
 
           {/* Left Sidebar - Actions */}

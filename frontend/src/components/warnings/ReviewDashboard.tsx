@@ -24,8 +24,11 @@ import type { Warning } from '../../types/warning';
 // Import the working modal
 import WarningDetailsModal from './modals/WarningDetailsModal';
 import { ProofOfDeliveryModal } from './modals/ProofOfDeliveryModal';
+import { DeliveryMethodSelectionModal } from './modals/DeliveryMethodSelectionModal';
 import { AppealModal } from './modals/AppealModal';
 import { AppealReviewModal } from './modals/AppealReviewModal';
+import { EnhancedDeliveryWorkflow } from '../hr/EnhancedDeliveryWorkflow';
+import { DeliveryNotificationService } from '../../services/DeliveryNotificationService';
 // WarningArchive moved to _legacy - archive functionality integrated into ReviewDashboard
 
 // Warning interface imported from API layer types
@@ -43,6 +46,8 @@ interface WarningsReviewProps {
   showDetails?: boolean;
   onViewDetails?: (warning: Warning) => void;
   onCloseDetails?: () => void;
+  // Callback when warning is updated (e.g., delivery completed)
+  onWarningUpdated?: () => void;
 }
 
 // 🔧 SAFE RENDERING HELPER - Prevents React Error #31
@@ -61,23 +66,31 @@ const safeRenderText = (value: any, fallback: string = 'Unknown'): string => {
   return String(value);
 };
 
+// Helper function to convert Firestore Timestamp to Date
+const convertFirestoreTimestampToDate = (timestamp: any): Date => {
+  if (!timestamp) return new Date();
+  if (timestamp instanceof Date) return timestamp;
+  if (timestamp.seconds) {
+    return new Date(timestamp.seconds * 1000);
+  }
+  return new Date(timestamp);
+};
+
 // Helper function to check if warning is within appeal period
 const isWithinAppealPeriod = (warning: Warning): boolean => {
   if (!warning.issueDate) return false;
-  
+
   // Handle Firestore timestamp format
-  const issueDate = warning.issueDate.seconds 
-    ? new Date(warning.issueDate.seconds * 1000)
-    : new Date(warning.issueDate);
-  
+  const issueDate = convertFirestoreTimestampToDate(warning.issueDate);
+
   // Appeal period starts from when warning was issued, not delivered
   const appealDeadline = new Date(issueDate);
-  
+
   // Add appeal period (typically 30 days for warnings)
   appealDeadline.setDate(appealDeadline.getDate() + 30);
-  
+
   const now = new Date();
-  
+
   return now <= appealDeadline;
 };
 
@@ -93,6 +106,7 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
   showDetails: externalShowDetails,
   onViewDetails: externalOnViewDetails,
   onCloseDetails: externalOnCloseDetails,
+  onWarningUpdated,
 }) => {
   const { user, organization } = useAuth();
   const organizationId = propOrganizationId || organization?.id;
@@ -122,7 +136,13 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
   const [showFilters, setShowFilters] = useState(false);
   const [showProofOfDelivery, setShowProofOfDelivery] = useState(false);
   const [deliveryWarning, setDeliveryWarning] = useState<Warning | null>(null);
-  
+
+  // Delivery method selection modal state (NEW)
+  const [showMethodSelection, setShowMethodSelection] = useState(false);
+  const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState<'email' | 'whatsapp' | 'printed' | null>(null);
+  const [showDeliveryWorkflow, setShowDeliveryWorkflow] = useState(false);
+  const [employeeContactDetails, setEmployeeContactDetails] = useState<{ email?: string; phone?: string }>({});
+
   // Appeal modal state
   const [showAppealModal, setShowAppealModal] = useState(false);
   const [appealWarning, setAppealWarning] = useState<Warning | null>(null);
@@ -1102,9 +1122,36 @@ const loadWarnings = useCallback(async () => {
                       
                       {warning.deliveryStatus !== 'delivered' && warning.status !== 'appealed' && (
                         <button
-                          onClick={() => {
-                            setDeliveryWarning(warning);
-                            setShowProofOfDelivery(true);
+                          onClick={async () => {
+                            try {
+                              Logger.debug('📬 Opening delivery method selection for warning:', warning.id);
+                              setDeliveryWarning(warning);
+
+                              // Fetch employee contact details
+                              Logger.debug('📇 Fetching employee contact details for:', warning.employeeId);
+                              const employee = await API.employees.getById(warning.employeeId, organizationId);
+
+                              if (employee) {
+                                setEmployeeContactDetails({
+                                  email: employee.profile.email,
+                                  phone: employee.profile.phoneNumber || employee.profile.whatsappNumber
+                                });
+                                Logger.debug('✅ Employee contact details fetched:', {
+                                  email: employee.profile.email,
+                                  phone: employee.profile.phoneNumber
+                                });
+                              } else {
+                                Logger.warn('⚠️ Employee not found:', warning.employeeId);
+                                setEmployeeContactDetails({});
+                              }
+
+                              setShowMethodSelection(true);
+                            } catch (error) {
+                              Logger.error('❌ Failed to fetch employee contact details:', error);
+                              // Still open modal, but with no contact details
+                              setEmployeeContactDetails({});
+                              setShowMethodSelection(true);
+                            }
                           }}
                           className="text-orange-600 hover:text-orange-800 text-xs px-2 py-1 hover:bg-orange-50 rounded transition-colors"
                         >
@@ -1210,17 +1257,120 @@ const loadWarnings = useCallback(async () => {
 
       {/* WarningDetailsModal removed - now rendered in parent component for shared state */}
 
-      {/* Proof of Delivery Modal */}
+      {/* NEW: Delivery Method Selection Modal */}
+      {showMethodSelection && deliveryWarning && (
+        <DeliveryMethodSelectionModal
+          isOpen={showMethodSelection}
+          onClose={() => {
+            setShowMethodSelection(false);
+            setSelectedDeliveryMethod(null);
+            setEmployeeContactDetails({});
+          }}
+          onMethodSelected={async (method) => {
+            try {
+              Logger.debug('📝 HR selected delivery method:', method);
+
+              // Update the delivery notification with HR's chosen method
+              if (organizationId && deliveryWarning.deliveryNotificationId) {
+                await DeliveryNotificationService.updateDeliveryMethod(
+                  organizationId,
+                  deliveryWarning.deliveryNotificationId,
+                  method
+                );
+              }
+
+              // Save selected method and close selection modal
+              setSelectedDeliveryMethod(method);
+              setShowMethodSelection(false);
+
+              // Open the delivery workflow with selected method
+              setShowDeliveryWorkflow(true);
+            } catch (error) {
+              Logger.error('Failed to update delivery method:', error);
+              alert('Failed to update delivery method. Please try again.');
+            }
+          }}
+          employeeRequestedMethod={(deliveryWarning as any).employeeRequestedDeliveryMethod}
+          employeeName={deliveryWarning.employeeName || 'Unknown'}
+          employeeEmail={employeeContactDetails.email}
+          employeePhone={employeeContactDetails.phone}
+        />
+      )}
+
+      {/* NEW: Enhanced Delivery Workflow */}
+      {showDeliveryWorkflow && deliveryWarning && selectedDeliveryMethod && (
+        <EnhancedDeliveryWorkflow
+          isOpen={showDeliveryWorkflow}
+          notification={{
+            id: deliveryWarning.deliveryNotificationId || deliveryWarning.id,
+            warningId: deliveryWarning.id,
+            employeeName: deliveryWarning.employeeName || 'Unknown',
+            employeeEmail: employeeContactDetails.email,
+            employeePhone: employeeContactDetails.phone,
+            warningLevel: deliveryWarning.level || 'counselling',
+            warningCategory: deliveryWarning.category || 'General',
+            deliveryMethod: selectedDeliveryMethod,
+            priority: 'normal',
+            status: 'in_progress',
+            createdAt: convertFirestoreTimestampToDate(deliveryWarning.issueDate),
+            createdByName: deliveryWarning.createdByName || 'Manager',
+            pdfUrl: deliveryWarning.pdfUrl,
+            contactDetails: {
+              email: employeeContactDetails.email,
+              phone: employeeContactDetails.phone
+            }
+          }}
+          onDeliveryComplete={async (notificationId, proofData) => {
+            try {
+              Logger.debug('✅ Delivery completed:', proofData);
+
+              // Update warning status
+              await API.warnings.update(deliveryWarning.id, {
+                status: 'delivered',
+                deliveredAt: proofData.deliveredAt,
+                deliveryMethod: proofData.deliveryMethod,
+                proofImage: proofData.proofImage
+              }, organization?.id);
+
+              // Refresh warnings list
+              await loadWarnings();
+
+              // Notify parent component to refresh its metrics
+              onWarningUpdated?.();
+
+              // Close workflow
+              setShowDeliveryWorkflow(false);
+              setDeliveryWarning(null);
+              setSelectedDeliveryMethod(null);
+              setEmployeeContactDetails({});
+            } catch (error) {
+              Logger.error('Failed to complete delivery:', error);
+              throw error;
+            }
+          }}
+          onClose={() => {
+            setShowDeliveryWorkflow(false);
+            setDeliveryWarning(null);
+            setSelectedDeliveryMethod(null);
+            setEmployeeContactDetails({});
+          }}
+        />
+      )}
+
+      {/* OLD: Proof of Delivery Modal (Kept as fallback) */}
       {deliveryWarning && (
         <ProofOfDeliveryModal
           isOpen={showProofOfDelivery}
           onClose={() => {
             setShowProofOfDelivery(false);
             setDeliveryWarning(null);
+            setEmployeeContactDetails({});
           }}
           warningId={deliveryWarning.id || ''}
-          employeeName={safeRenderText(deliveryWarning.employee)}
+          employeeName={deliveryWarning.employeeName || 'Unknown'}
+          employeeEmail={employeeContactDetails.email}
           deliveryMethod={deliveryWarning.deliveryMethod || 'email'}
+          warningData={deliveryWarning}
           onDeliveryConfirmed={async (proofData) => {
             try {
               // Upload proof and update warning status
@@ -1233,10 +1383,11 @@ const loadWarnings = useCallback(async () => {
 
               // Refresh warnings list
               await loadWarnings();
-              
+
               // Close modal
               setShowProofOfDelivery(false);
               setDeliveryWarning(null);
+              setEmployeeContactDetails({});
             } catch (error) {
               Logger.error('Failed to confirm delivery:', error);
               throw error;

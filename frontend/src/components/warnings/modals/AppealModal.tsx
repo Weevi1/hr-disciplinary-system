@@ -4,11 +4,14 @@
 // ✅ User-friendly but legally compliant
 
 import React, { useState, useCallback } from 'react';
-import { 
-  X, 
-  FileText, 
-  AlertTriangle, 
-  Info, 
+import { usePreventBodyScroll } from '../../../hooks/usePreventBodyScroll';
+import { useModalDialog } from '../../../hooks/useFocusTrap';
+import { Z_INDEX } from '../../../constants/zIndex';
+import {
+  X,
+  FileText,
+  AlertTriangle,
+  Info,
   Calendar,
   User,
   CheckCircle,
@@ -80,6 +83,17 @@ export const AppealModal: React.FC<AppealModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Prevent body scroll when modal is open
+  usePreventBodyScroll(isOpen);
+
+  // Set up focus trap and ARIA
+  const { containerRef, ariaProps } = useModalDialog({
+    isOpen,
+    onClose,
+    titleId: 'appeal-modal-title',
+    descriptionId: 'appeal-modal-description',
+  });
+
   // Calculate appeal deadline (30 days from issue date)
   const issueDate = warning.issueDate?.seconds 
     ? new Date(warning.issueDate.seconds * 1000)
@@ -126,10 +140,14 @@ export const AppealModal: React.FC<AppealModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.modal }}>
+      <div
+        ref={containerRef}
+        {...ariaProps}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col"
+      >
 
-        {/* Header */}
+        {/* Header - Fixed */}
         <div className="bg-gradient-to-r from-amber-600 to-orange-700 p-6 text-white flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -137,8 +155,10 @@ export const AppealModal: React.FC<AppealModalProps> = ({
                 <FileText className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-xl font-bold">Appeal Disciplinary Warning</h2>
-                <p className="text-sm opacity-90">
+                <h2 id="appeal-modal-title" className="text-xl font-bold">
+                  Appeal Disciplinary Warning
+                </h2>
+                <p id="appeal-modal-description" className="text-sm opacity-90">
                   Submit formal appeal as per Labour Relations Act
                 </p>
               </div>
@@ -147,13 +167,14 @@ export const AppealModal: React.FC<AppealModalProps> = ({
               onClick={onClose}
               disabled={isSubmitting}
               className="p-2 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50"
+              aria-label="Close appeal modal"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        {/* Content */}
+        {/* Content - Scrollable */}
         <div className="p-6 flex-1 overflow-y-auto min-h-0">
           
           {/* Warning Details */}
@@ -278,7 +299,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer - Fixed */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Calendar className="w-4 h-4" />

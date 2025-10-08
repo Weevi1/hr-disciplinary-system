@@ -57,9 +57,17 @@ interface SignatureData {
   employeeName?: string;
 }
 
+interface WarningCategory {
+  id: string;
+  name: string;
+  severity: string;
+  description?: string;
+}
+
 interface LegalReviewSignaturesStepV2Props {
   lraRecommendation: EscalationRecommendation | null;
   selectedEmployee: Employee | undefined;
+  selectedCategory?: WarningCategory;
   formData: FormData;
   currentManagerName: string;
   onSignaturesComplete: (signatures: SignatureData, finalized?: boolean) => void;
@@ -81,6 +89,7 @@ const safeText = (value: any, fallback: string = 'Unknown'): string => {
 export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Props> = ({
   lraRecommendation,
   selectedEmployee,
+  selectedCategory,
   formData,
   currentManagerName,
   onSignaturesComplete,
@@ -539,6 +548,7 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
           <MultiLanguageWarningScript
             employeeName={selectedEmployee ? `${(selectedEmployee as any).profile?.firstName || 'Unknown'} ${(selectedEmployee as any).profile?.lastName || 'Employee'}` : 'Unknown Employee'}
             managerName={currentManagerName}
+            categoryName={selectedCategory?.name || 'General Misconduct'}
             incidentDescription={formData.incidentDescription || 'Workplace incident requiring disciplinary action'}
             warningLevel={overrideLevel || lraRecommendation?.recommendedLevel || 'verbal'}
             validityPeriod={formData.validityPeriod}

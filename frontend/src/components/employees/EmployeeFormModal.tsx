@@ -9,6 +9,9 @@ import { createEmployeeFromForm, createFormFromEmployee, generateEmployeeNumber 
 import type { Employee, User, Department } from '../../types';
 import type { EmployeeFormData } from '../../types';
 import { X, User as UserIcon, Building, Settings, Save, Loader2 } from 'lucide-react';
+import { usePreventBodyScroll } from '../../hooks/usePreventBodyScroll';
+import { useModalDialog } from '../../hooks/useFocusTrap';
+import { Z_INDEX } from '../../constants/zIndex';
 
 // Helper function to get role ID from either string or object role format
 const getRoleId = (role: any): string => {
@@ -51,23 +54,16 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loadingDepartments, setLoadingDepartments] = useState(false);
 
-  // Disable body scroll when modal is open and scroll to top
-  useEffect(() => {
-    // Save original body style and scroll position
-    const originalStyle = window.getComputedStyle(document.body).overflow;
-    const originalScrollY = window.scrollY;
+  // Prevent body scroll when modal is open
+  usePreventBodyScroll(true);
 
-    // Scroll to top to ensure modal is visible
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    // Disable body scroll
-    document.body.style.overflow = 'hidden';
-
-    // Cleanup function to restore scroll
-    return () => {
-      document.body.style.overflow = originalStyle;
-    };
-  }, []);
+  // Set up focus trap and ARIA
+  const { containerRef, ariaProps } = useModalDialog({
+    isOpen: true,
+    onClose,
+    titleId: 'employee-form-title',
+    descriptionId: 'employee-form-description',
+  });
 
   // Load managers for the dropdown
   useEffect(() => {
@@ -191,8 +187,9 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
   };
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      style={{ zIndex: Z_INDEX.modal }}
       onClick={(e) => {
         // Close modal if clicking backdrop
         if (e.target === e.currentTarget) {
@@ -200,14 +197,18 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
         }
       }}
     >
-      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+      <div
+        ref={containerRef}
+        {...ariaProps}
+        className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200 flex-shrink-0">
           <div>
-            <h2 className="text-xl font-bold text-slate-800">
+            <h2 id="employee-form-title" className="text-xl font-bold text-slate-800">
               {employee ? 'Edit Employee' : basicMode ? 'Quick Add Employee' : 'Add New Employee'}
             </h2>
-            <p className="text-sm text-slate-600 mt-1">
+            <p id="employee-form-description" className="text-sm text-slate-600 mt-1">
               {basicMode
                 ? 'Basic details only - HR can complete the full profile later'
                 : 'Fill in the employee details below'
@@ -218,6 +219,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
             type="button"
             onClick={onClose}
             className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            aria-label="Close employee form modal"
           >
             <X className="w-5 h-5" />
           </button>

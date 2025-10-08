@@ -7,6 +7,8 @@ import Logger from '../../../utils/logger';
 // ✅ Integrates with existing warning data structure
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { usePreventBodyScroll } from '../../../hooks/usePreventBodyScroll';
+import { Z_INDEX } from '../../../constants/zIndex';
 import {
   X,
   Download,
@@ -75,6 +77,9 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
   
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // Prevent body scroll when modal is open
+  usePreventBodyScroll(isOpen);
 
   const [state, setState] = useState<ViewerState>({
     isLoading: true,
@@ -330,7 +335,7 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
   // CRITICAL: Show error if no valid warning provided
   if (!isValidWarning) {
     return (
-      <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm ${className}`}>
+      <div className={`fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm ${className}`} style={{ zIndex: Z_INDEX.modalNested1 }}>
         <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md mx-4">
           <div className="text-center">
             <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
@@ -354,7 +359,8 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
 
   return (
     <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm ${className}`}
+      className={`fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm ${className}`}
+      style={{ zIndex: Z_INDEX.modalNested1 }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div 

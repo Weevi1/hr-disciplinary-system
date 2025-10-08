@@ -26,10 +26,9 @@ import {
 // Import themed components
 import { ThemedCard, ThemedBadge, ThemedAlert } from '../common/ThemedCard';
 import { ThemedButton } from '../common/ThemedButton';
-
-// Import PDF preview modal
-import { PDFPreviewModal } from '../warnings/enhanced/PDFPreviewModal';
 import Logger from '../../utils/logger';
+import { API } from '../../api';
+import { useAuth } from '../../auth/AuthContext';
 
 // ============================================
 // INTERFACES
@@ -71,8 +70,9 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
   onDeliveryComplete,
   isProcessing
 }) => {
+  const { organization } = useAuth();
   const [printed, setPrinted] = useState(false);
-  const [showPDFPreview, setShowPDFPreview] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [deliveryChecklist, setDeliveryChecklist] = useState<DeliveryChecklistItem[]>([
     {
       id: 'hand_delivered',
@@ -80,51 +80,16 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
       completed: false,
       required: true,
       description: 'Personally delivered the printed warning to the employee'
-    },
-    {
-      id: 'employee_present',
-      label: 'Employee was present during delivery',
-      completed: false,
-      required: true,
-      description: 'Confirmed employee identity and presence during delivery'
-    },
-    {
-      id: 'signature_obtained',
-      label: 'Employee signature obtained',
-      completed: false,
-      required: true,
-      description: 'Employee signed acknowledgment of receipt on physical document'
-    },
-    {
-      id: 'copy_filed',
-      label: 'Signed copy filed in employee records',
-      completed: false,
-      required: true,
-      description: 'Filed the signed physical copy in the employee\'s personnel file'
     }
   ]);
 
   const [filingChecklist, setFilingChecklist] = useState<DeliveryChecklistItem[]>([
     {
-      id: 'original_filed',
-      label: 'Original signed document filed',
+      id: 'delivery_complete',
+      label: 'Delivery process completed',
       completed: false,
       required: true,
-      description: 'Original signed warning document placed in employee\'s personnel file'
-    },
-    {
-      id: 'copy_retained',
-      label: 'Copy retained by HR',
-      completed: false,
-      required: true,
-      description: 'Photocopy of signed document retained in HR files'
-    },
-    {
-      id: 'system_updated',
-      label: 'Digital system updated',
-      completed: false,
-      required: true,
-      description: 'Employee record system updated to reflect warning delivery'
+      description: 'Confirm warning has been delivered to employee'
     }
   ]);
 
@@ -136,9 +101,98 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
     additionalNotes: ''
   });
 
-  // Handle PDF preview and print
-  const openPDFPreview = () => {
-    setShowPDFPreview(true);
+  // Fetch full warning data and generate PDF
+  const generatePDFForWarning = useCallback(async () => {
+    if (!organization) {
+      alert('Organization data not loaded');
+      return null;
+    }
+
+    try {
+      setIsGeneratingPDF(true);
+      Logger.debug('📄 Fetching warning data to generate PDF:', notification.warningId);
+
+      // Fetch warning data
+      const warningData = await API.warnings.getById(notification.warningId, organization.id);
+
+      if (!warningData) {
+        throw new Error('Warning data not found');
+      }
+
+      Logger.debug('✅ Warning data fetched, fetching employee data...');
+
+      // Fetch employee data
+      const employee = await API.employees.getById(warningData.employeeId, organization.id);
+
+      if (!employee) {
+        throw new Error('Employee data not found');
+      }
+
+      Logger.debug('✅ Employee data fetched, generating PDF...');
+
+      // Transform nested employee structure to flat structure expected by PDFGenerationService
+      const flattenedEmployee = {
+        firstName: employee.profile?.firstName || '',
+        lastName: employee.profile?.lastName || '',
+        employeeNumber: employee.employment?.employeeNumber || employee.id,
+        department: employee.profile?.department || employee.employment?.department || '',
+        position: employee.employment?.position || '',
+        email: employee.profile?.email || '',
+        phone: employee.profile?.phone || ''
+      };
+
+      Logger.debug('👤 Flattened employee for PDF:', flattenedEmployee);
+
+      // Map warning data fields to match PDFGenerationService interface
+      const pdfData = {
+        warningId: warningData.id || notification.warningId,
+        warningLevel: warningData.level || 'counselling',
+        category: warningData.category || 'General',
+        description: warningData.description || '',
+        incidentDate: warningData.incidentDate || warningData.issueDate || new Date(),
+        incidentTime: warningData.incidentTime || '',
+        incidentLocation: warningData.incidentLocation || '',
+        issuedDate: warningData.issueDate || warningData.createdAt || new Date(),
+        validityPeriod: warningData.validityPeriod || 6,
+        employee: flattenedEmployee,
+        organization: organization,
+        signatures: warningData.signatures || {},
+        additionalNotes: warningData.additionalNotes || ''
+      };
+
+      Logger.debug('📄 Mapped PDF data:', pdfData);
+
+      // Import PDF service and generate
+      const { PDFGenerationService } = await import('../../services/PDFGenerationService');
+
+      const pdfBlob = await PDFGenerationService.generateWarningPDF(pdfData);
+
+      Logger.success('✅ PDF generated successfully');
+
+      return pdfBlob;
+    } catch (error) {
+      Logger.error('❌ Failed to generate PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+      return null;
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  }, [notification.warningId, organization]);
+
+  // Handle PDF preview
+  const openPDFPreview = async () => {
+    // If PDF URL exists, open it directly in a new tab
+    if (notification.pdfUrl) {
+      window.open(notification.pdfUrl, '_blank');
+      return;
+    }
+
+    // Generate PDF and open it
+    const pdfBlob = await generatePDFForWarning();
+    if (pdfBlob) {
+      const url = URL.createObjectURL(pdfBlob);
+      window.open(url, '_blank');
+    }
   };
 
   const handlePrint = () => {
@@ -146,10 +200,9 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
   };
 
   // Direct print function
-  const printDocument = useCallback(() => {
-    // This would typically trigger the PDF generation and print dialog
+  const printDocument = useCallback(async () => {
+    // If PDF URL exists, use it directly
     if (notification.pdfUrl) {
-      // Open PDF in new window and trigger print
       const printWindow = window.open(notification.pdfUrl, '_blank');
       if (printWindow) {
         printWindow.onload = () => {
@@ -157,11 +210,22 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
           setPrinted(true);
         };
       }
-    } else {
-      // Fallback: Show PDF preview modal for printing
-      setShowPDFPreview(true);
+      return;
     }
-  }, [notification.pdfUrl]);
+
+    // Generate PDF and print it
+    const pdfBlob = await generatePDFForWarning();
+    if (pdfBlob) {
+      const url = URL.createObjectURL(pdfBlob);
+      const printWindow = window.open(url, '_blank');
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+          setPrinted(true);
+        };
+      }
+    }
+  }, [notification.pdfUrl, generatePDFForWarning]);
 
   // Handle checklist item toggle
   const toggleChecklistItem = (checklistType: 'delivery' | 'filing', itemId: string) => {
@@ -238,7 +302,6 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
               <div className="text-sm">
                 <strong>Printing Requirements:</strong>
                 <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>Print on official company letterhead if available</li>
                   <li>Use high-quality paper (minimum 80gsm)</li>
                   <li>Ensure all text is clearly legible</li>
                   <li>Print multiple copies (original + HR copy)</li>
@@ -271,19 +334,39 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
                 <ThemedButton
                   variant="secondary"
                   onClick={openPDFPreview}
+                  disabled={isGeneratingPDF}
                   className="flex items-center gap-2"
                 >
-                  <Eye className="w-4 h-4" />
-                  Preview Document
+                  {isGeneratingPDF ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Generating PDF...
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-4 h-4" />
+                      Preview Document
+                    </>
+                  )}
                 </ThemedButton>
 
                 <ThemedButton
                   variant="primary"
                   onClick={printDocument}
+                  disabled={isGeneratingPDF}
                   className="flex items-center gap-2"
                 >
-                  <Printer className="w-4 h-4" />
-                  Print Document
+                  {isGeneratingPDF ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Generating PDF...
+                    </>
+                  ) : (
+                    <>
+                      <Printer className="w-4 h-4" />
+                      Print Document
+                    </>
+                  )}
                 </ThemedButton>
               </div>
 
@@ -372,18 +455,6 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
                   className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                 />
               </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Witness Name (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Name of witness present during delivery"
-                  value={deliveryDetails.witnessName}
-                  onChange={(e) => setDeliveryDetails(prev => ({ ...prev, witnessName: e.target.value }))}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                />
-              </div>
             </div>
 
             {/* Delivery Checklist */}
@@ -412,20 +483,6 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Additional Notes */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Additional Notes
-              </label>
-              <textarea
-                rows={3}
-                placeholder="Any additional notes about the delivery process..."
-                value={deliveryDetails.additionalNotes}
-                onChange={(e) => setDeliveryDetails(prev => ({ ...prev, additionalNotes: e.target.value }))}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-              />
             </div>
 
             {/* Continue Button */}
@@ -460,28 +517,17 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
             </div>
             <div>
               <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
-                Step 3: File Documentation
+                Step 3: Finalize Delivery
               </h3>
               <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                File the signed documents and complete the delivery process
+                Confirm delivery completion
               </p>
             </div>
           </div>
 
           <div className="space-y-6">
-            <ThemedAlert variant="warning">
-              <div className="text-sm">
-                <strong>Important:</strong> Proper filing is crucial for legal compliance and audit purposes.
-                Ensure all documents are filed in the correct employee personnel file.
-              </div>
-            </ThemedAlert>
-
-            {/* Filing Checklist */}
+            {/* Completion Checklist */}
             <div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <FolderOpen className="w-5 h-5 text-blue-600" />
-                Filing Checklist
-              </h4>
               <div className="space-y-3">
                 {filingChecklist.map((item) => (
                   <div key={item.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
@@ -504,20 +550,6 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
               </div>
             </div>
 
-            {/* Delivery Summary */}
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h5 className="font-semibold text-blue-900 mb-2">Delivery Summary</h5>
-              <div className="space-y-1 text-sm text-blue-800">
-                <div><strong>Employee:</strong> {notification.employeeName}</div>
-                <div><strong>Warning Type:</strong> {notification.warningLevel}</div>
-                <div><strong>Delivery Date:</strong> {deliveryDetails.deliveryDate} at {deliveryDetails.deliveryTime}</div>
-                <div><strong>Location:</strong> {deliveryDetails.deliveryLocation || 'Not specified'}</div>
-                {deliveryDetails.witnessName && (
-                  <div><strong>Witness:</strong> {deliveryDetails.witnessName}</div>
-                )}
-              </div>
-            </div>
-
             {/* Complete Process Button */}
             <ThemedButton
               variant="success"
@@ -534,35 +566,12 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
               ) : (
                 <>
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Complete Print Delivery Process
+                  Complete Delivery
                 </>
               )}
             </ThemedButton>
           </div>
         </ThemedCard>
-      )}
-
-      {/* PDF Preview Modal */}
-      {showPDFPreview && (
-        <PDFPreviewModal
-          isOpen={showPDFPreview}
-          onClose={() => setShowPDFPreview(false)}
-          warningData={{
-            employee: {
-              firstName: notification.employeeName.split(' ')[0] || notification.employeeName,
-              lastName: notification.employeeName.split(' ').slice(1).join(' ') || '',
-              employeeNumber: 'EMP001', // This should come from notification data
-              department: 'N/A' // This should come from notification data
-            },
-            category: notification.warningCategory,
-            level: notification.warningLevel,
-            description: 'Warning document details',
-            incidentDate: new Date(),
-            issueDate: new Date()
-          }}
-          onDownload={handlePrint}
-          showPrintButton={true}
-        />
       )}
     </div>
   );

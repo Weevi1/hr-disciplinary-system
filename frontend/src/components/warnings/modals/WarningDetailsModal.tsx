@@ -7,6 +7,8 @@ import Logger from '../../../utils/logger';
 // 🎯 Optimized for HR dashboard integration
 
 import React, { useState, useCallback, useMemo, useRef } from 'react';
+import { usePreventBodyScroll } from '../../../hooks/usePreventBodyScroll';
+import { Z_INDEX } from '../../../constants/zIndex';
 import {
   X, AlertTriangle, Clock, CheckCircle, Eye, Shield, Scale, Building,
   Calendar, User, MapPin, FileText, Download, Share2,
@@ -218,6 +220,9 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
   
   const modalRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
+
+  // Prevent body scroll when modal is open
+  usePreventBodyScroll(isOpen);
 
   // ============================================
   // CONTEXT HOOKS
@@ -695,15 +700,16 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
 
   return (
     <>
-      <div 
+      <div
         ref={backdropRef}
         className={`
-          fixed inset-0 z-40 flex items-center justify-center p-4
+          fixed inset-0 flex items-center justify-center p-4
           bg-black/60 backdrop-blur-xl
           transition-all duration-500 ease-out
           ${isAnimating ? 'opacity-0' : 'opacity-100'}
           ${className}
         `}
+        style={{ zIndex: Z_INDEX.modal }}
         onClick={(e) => e.target === backdropRef.current && handleClose()}
       >
         {/* Main Modal Container - V2 Clean Design */}
@@ -990,7 +996,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
       
       {/* Audio Modal - Clean Design */}
       {showAudioModal && warningData?.hasAudio && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50" style={{ zIndex: Z_INDEX.modalNested1 }}>
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Audio Recording</h3>
@@ -1013,7 +1019,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
       
       {/* Signatures Modal - Clean Design */}
       {showSignatureModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50" style={{ zIndex: Z_INDEX.modalNested1 }}>
           <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Digital Signatures</h3>
@@ -1193,7 +1199,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
 
       {/* Audio Modal */}
       {showAudioModal && warningData?.hasAudio && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ zIndex: Z_INDEX.modalNested1 }}>
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <div>
@@ -1222,7 +1228,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
 
       {/* Signature Modal */}
       {showSignatureModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ zIndex: Z_INDEX.modalNested1 }}>
           <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <div>
@@ -1284,7 +1290,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
 
       {/* Individual Signature View Modal */}
       {selectedSignature && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ zIndex: Z_INDEX.modalNested2 }}>
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-auto">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <div>

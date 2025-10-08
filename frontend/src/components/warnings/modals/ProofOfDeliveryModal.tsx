@@ -5,28 +5,37 @@
 // ✅ Screenshot capture instructions
 
 import React, { useState, useRef, useCallback } from 'react';
-import { 
-  X, 
-  Upload, 
-  Image, 
-  Check, 
-  AlertTriangle, 
-  Info, 
-  Mail, 
-  MessageSquare, 
+import {
+  X,
+  Upload,
+  Image,
+  Check,
+  AlertTriangle,
+  Info,
+  Mail,
+  MessageSquare,
   Printer,
   Camera,
   FileImage,
   Loader2,
-  CheckCircle
+  CheckCircle,
+  Download,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
+import { useOrganization } from '../../../contexts/OrganizationContext';
+import Logger from '../../../utils/logger';
+import { usePreventBodyScroll } from '../../../hooks/usePreventBodyScroll';
+import { Z_INDEX } from '../../../constants/zIndex';
 
 interface ProofOfDeliveryModalProps {
   isOpen: boolean;
   onClose: () => void;
   warningId: string;
   employeeName: string;
+  employeeEmail?: string;
   deliveryMethod: 'email' | 'whatsapp' | 'printed';
+  warningData?: any; // Full warning data for PDF generation
   onDeliveryConfirmed: (proofData: {
     warningId: string;
     deliveryMethod: string;
@@ -91,16 +100,48 @@ export const ProofOfDeliveryModal: React.FC<ProofOfDeliveryModalProps> = ({
   onClose,
   warningId,
   employeeName,
+  employeeEmail,
   deliveryMethod,
+  warningData,
   onDeliveryConfirmed
 }) => {
+  const { organization } = useOrganization();
   const [proofImage, setProofImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Prevent body scroll when modal is open
+  usePreventBodyScroll(isOpen);
+
   const config = deliveryMethodConfig[deliveryMethod];
+
+  // Email template for warning delivery
+  const emailSubject = `Warning Notice - ${warningData?.category || 'Disciplinary Action'}`;
+  const emailBody = `Dear ${employeeName},
+
+Please find attached your formal warning notice regarding ${warningData?.category || 'the recent incident'}.
+
+This document outlines:
+- The incident details and circumstances
+- The warning level issued
+- Your rights and the next steps
+- The validity period of this warning
+
+Please review the attached PDF carefully. If you have any questions or wish to discuss this matter, please contact your HR department.
+
+This is an official HR document and should be kept for your records.
+
+Best regards,
+${organization?.companyName || 'HR Department'}`;
+
+  // Generate mailto link
+  const mailtoLink = employeeEmail
+    ? `mailto:${employeeEmail}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`
+    : '#';
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -183,12 +224,106 @@ export const ProofOfDeliveryModal: React.FC<ProofOfDeliveryModalProps> = ({
     }
   }, []);
 
+  // Copy email script to clipboard
+  const handleCopyScript = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(emailBody);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      Logger.error('Failed to copy to clipboard:', err);
+    }
+  }, [emailBody]);
+
+  // Download PDF
+  const handleDownloadPDF = useCallback(async () => {
+    // Helper to convert Firestore timestamp to Date
+    const convertToDate = (timestamp: any): Date => {
+      if (!timestamp) return new Date();
+      if (timestamp.seconds !== undefined) {
+        // Firestore Timestamp
+        return new Date(timestamp.seconds * 1000);
+      }
+      if (timestamp instanceof Date) {
+        return timestamp;
+      }
+      return new Date(timestamp);
+    };
+    if (!warningData || !organization) {
+      setError('Missing warning data or organization information');
+      return;
+    }
+
+    setIsDownloadingPDF(true);
+    setError(null);
+
+    try {
+      // Prepare PDF data - convert Firestore timestamps to Date objects
+      const pdfData = {
+        warningId: warningData.id || warningId,
+        issuedDate: convertToDate(warningData.issueDate),
+
+        employee: {
+          firstName: warningData.employeeName?.split(' ')[0] || 'Unknown',
+          lastName: warningData.employeeName?.split(' ').slice(1).join(' ') || 'Employee',
+          employeeNumber: warningData.employeeNumber || 'N/A',
+          department: warningData.department || 'Unknown',
+          position: warningData.position || 'Unknown',
+          email: employeeEmail || ''
+        },
+
+        warningLevel: warningData.level || 'verbal',
+        category: warningData.category || 'General Misconduct',
+        description: warningData.description || '',
+
+        incidentDate: convertToDate(warningData.incidentDate),
+        incidentTime: warningData.incidentTime || '09:00',
+        incidentLocation: warningData.incidentLocation || '',
+
+        organization: organization,
+        additionalNotes: warningData.additionalNotes || '',
+        validityPeriod: warningData.validityPeriod || 6,
+
+        legalCompliance: {
+          isCompliant: true,
+          framework: 'LRA Section 188',
+          requirements: warningData.legalRequirements || []
+        }
+      };
+
+      // Lazy-load PDF generation service
+      const { PDFGenerationService } = await import('@/services/PDFGenerationService');
+      const blob = await PDFGenerationService.generateWarningPDF(pdfData);
+
+      // Generate filename
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `Warning_${warningData.category?.replace(/\s+/g, '_') || 'Document'}_${employeeName.replace(/\s+/g, '_')}_${date}.pdf`;
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      Logger.debug('✅ PDF downloaded:', filename);
+    } catch (err) {
+      Logger.error('❌ PDF download failed:', err);
+      setError(err instanceof Error ? err.message : 'Failed to download PDF');
+    } finally {
+      setIsDownloadingPDF(false);
+    }
+  }, [warningData, organization, warningId, employeeName, employeeEmail]);
+
   if (!isOpen) return null;
 
   const IconComponent = config.icon;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.modalNested1 }}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className={`bg-gradient-to-r from-${config.color}-600 to-${config.color}-700 p-6 text-white`}>
@@ -218,28 +353,146 @@ export const ProofOfDeliveryModal: React.FC<ProofOfDeliveryModalProps> = ({
           {/* Instructions */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">
-              Delivery Instructions
+              📋 Step-by-Step Instructions
             </h3>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <ol className="space-y-2">
-                {config.instructions.map((instruction, index) => (
-                  <li key={index} className="flex items-start gap-3 text-sm">
-                    <span className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">
-                      {index + 1}
-                    </span>
-                    <span className="text-gray-700">{instruction}</span>
-                  </li>
-                ))}
+                <li className="flex items-start gap-3 text-sm">
+                  <span className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">
+                    1
+                  </span>
+                  <span className="text-gray-700">Download the warning PDF document using the button below</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm">
+                  <span className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">
+                    2
+                  </span>
+                  <span className="text-gray-700">Copy the email message text below</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm">
+                  <span className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">
+                    3
+                  </span>
+                  <span className="text-gray-700">Click "Open Email" to launch your email client with pre-filled message</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm">
+                  <span className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">
+                    4
+                  </span>
+                  <span className="text-gray-700">Attach the downloaded PDF to your email and send</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm">
+                  <span className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">
+                    5
+                  </span>
+                  <span className="text-gray-700">Take a screenshot of the sent email (timestamp and recipient visible)</span>
+                </li>
+                <li className="flex items-start gap-3 text-sm">
+                  <span className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">
+                    6
+                  </span>
+                  <span className="text-gray-700">Upload the screenshot as proof of delivery below</span>
+                </li>
               </ol>
             </div>
           </div>
 
+          {/* Email Tools Section (for email delivery only) */}
+          {deliveryMethod === 'email' && (
+            <>
+              {/* Download PDF Button */}
+              <div className="mb-6">
+                <h4 className="text-md font-medium text-gray-900 mb-3 flex items-center gap-2">
+                  <Download className="w-4 h-4 text-blue-600" />
+                  Step 1: Download Warning PDF
+                </h4>
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={isDownloadingPDF}
+                  className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isDownloadingPDF ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Generating PDF...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-5 h-5" />
+                      Download Warning PDF
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Email Script Section */}
+              <div className="mb-6">
+                <h4 className="text-md font-medium text-gray-900 mb-3 flex items-center gap-2">
+                  <Copy className="w-4 h-4 text-blue-600" />
+                  Step 2: Copy Email Message
+                </h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-600">EMAIL SUBJECT:</span>
+                    <button
+                      onClick={handleCopyScript}
+                      className="text-xs flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      {copySuccess ? (
+                        <>
+                          <CheckCircle className="w-3 h-3" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          Copy Message
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="bg-white border border-gray-300 rounded p-2 mb-3">
+                    <p className="text-sm font-medium text-gray-900">{emailSubject}</p>
+                  </div>
+                  <span className="text-xs font-semibold text-gray-600 block mb-2">EMAIL BODY:</span>
+                  <div className="bg-white border border-gray-300 rounded p-3 max-h-48 overflow-y-auto">
+                    <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans">{emailBody}</pre>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mailto Link Button */}
+              <div className="mb-6">
+                <h4 className="text-md font-medium text-gray-900 mb-3 flex items-center gap-2">
+                  <ExternalLink className="w-4 h-4 text-blue-600" />
+                  Step 3: Open Your Email Client
+                </h4>
+                {employeeEmail ? (
+                  <a
+                    href={mailtoLink}
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-lg font-semibold transition-all"
+                  >
+                    <Mail className="w-5 h-5" />
+                    Open Email to {employeeEmail}
+                  </a>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-amber-700">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-sm font-medium">Employee email not available. Please send email manually.</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
           {/* Screenshot Instructions (for email/whatsapp) */}
-          {config.requiresProof && (
+          {config.requiresProof && deliveryMethod === 'email' && (
             <div className="mb-6">
               <h4 className="text-md font-medium text-gray-900 mb-3 flex items-center gap-2">
                 <Camera className="w-4 h-4 text-gray-600" />
-                Screenshot Instructions
+                Step 5: Screenshot Instructions
               </h4>
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -259,8 +512,9 @@ export const ProofOfDeliveryModal: React.FC<ProofOfDeliveryModalProps> = ({
           {/* Upload Area (for email/whatsapp) */}
           {config.requiresProof && (
             <div className="mb-6">
-              <h4 className="text-md font-medium text-gray-900 mb-3">
-                Upload Proof of Delivery
+              <h4 className="text-md font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <Upload className="w-4 h-4 text-blue-600" />
+                {deliveryMethod === 'email' ? 'Step 6: Upload Proof of Delivery' : 'Upload Proof of Delivery'}
               </h4>
               
               {!proofImage ? (

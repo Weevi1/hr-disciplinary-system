@@ -6,6 +6,8 @@ import Logger from '../../../../utils/logger';
 // ✅ Clear legal disclosure and consent tracking
 
 import React, { useState } from 'react';
+import { usePreventBodyScroll } from '../../../../hooks/usePreventBodyScroll';
+import { Z_INDEX } from '../../../../constants/zIndex';
 import {
   Mic,
   X,
@@ -38,10 +40,13 @@ export const AudioConsentModal: React.FC<AudioConsentModalProps> = ({
   onCancel
 }) => {
 
+  // Prevent body scroll when modal is open
+  usePreventBodyScroll(isOpen);
+
   // ============================================
   // STATE
   // ============================================
-  
+
   const [isAcknowledged, setIsAcknowledged] = useState(false);
 
   // ============================================
@@ -70,7 +75,7 @@ export const AudioConsentModal: React.FC<AudioConsentModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60] p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.modal }}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[95vh] overflow-hidden flex flex-col">
         
         {/* ============================================ */}

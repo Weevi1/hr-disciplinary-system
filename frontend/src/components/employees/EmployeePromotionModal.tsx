@@ -10,6 +10,9 @@ import DepartmentService from '../../services/DepartmentService';
 import type { Employee } from '../../types/core';
 import type { Department } from '../../types/department';
 import Logger from '../../utils/logger';
+import { usePreventBodyScroll } from '../../hooks/usePreventBodyScroll';
+import { useModalDialog } from '../../hooks/useFocusTrap';
+import { Z_INDEX } from '../../constants/zIndex';
 
 interface EmployeePromotionModalProps {
   isOpen: boolean;
@@ -38,22 +41,21 @@ export const EmployeePromotionModal: React.FC<EmployeePromotionModalProps> = ({
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  // Scroll to top and disable body scroll when modal opens
+  // Prevent body scroll when modal is open
+  usePreventBodyScroll(isOpen);
+
+  // Set up focus trap and ARIA
+  const { containerRef, ariaProps } = useModalDialog({
+    isOpen,
+    onClose,
+    titleId: 'promote-modal-title',
+    descriptionId: 'promote-modal-description',
+  });
+
+  // Scroll to top when modal opens
   useEffect(() => {
     if (isOpen) {
-      // Save original body style
-      const originalStyle = window.getComputedStyle(document.body).overflow;
-
-      // Scroll to top to ensure modal is visible
       window.scrollTo({ top: 0, behavior: 'smooth' });
-
-      // Disable body scroll
-      document.body.style.overflow = 'hidden';
-
-      // Cleanup function to restore scroll
-      return () => {
-        document.body.style.overflow = originalStyle;
-      };
     }
   }, [isOpen]);
 
@@ -154,7 +156,7 @@ export const EmployeePromotionModal: React.FC<EmployeePromotionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div className="fixed inset-0 flex items-center justify-center bg-black/50 p-4" style={{ zIndex: Z_INDEX.modal }}>
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
@@ -367,7 +369,7 @@ export const EmployeePromotionModal: React.FC<EmployeePromotionModalProps> = ({
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer - Fixed */}
         <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
           <ThemedButton
             variant="outline"
