@@ -243,20 +243,30 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 ---
 
 ### **🎯 Current System State**
-- ✅ All code changes committed (commit `b095e135`)
+- ✅ All code changes committed (Session 21)
 - ✅ Frontend deployed and live
 - ✅ Development server running at http://localhost:3003/
 - ✅ All new features ready for production testing
+- ✅ **PDF A4 Formatting** - Professional A4 documents with optimized spacing and typography
 - ✅ **Warning scripts rewritten** - All 11 SA languages updated to formal recap format
 - ✅ **Witness signature system** - Prominent watermarking with explicit save buttons
 
 ---
 
-## 🔧 Latest Updates (Session 20)
+## 🔧 Latest Updates (Session 21)
 
 **See `RECENT_UPDATES.md` and `SESSION_HISTORY.md` for complete change history**
 
-### Most Recent Changes (Session 20 - 2025-10-08)
+### Most Recent Changes (Session 21 - 2025-10-10)
+- **PDF A4 Formatting Fixes**: Comprehensive formatting improvements for professional A4 warning documents
+  - **Previous Disciplinary Action Section**: Reduced font from 14pt to 12pt, increased padding and line spacing
+  - **Consequences Section**: Removed emoji (⚠️), split heading across 2 lines to prevent cut-off, increased box height and padding
+  - **Employee Rights Section**: Removed emoji (⚖️), increased box height from 85mm to 102mm, optimized line spacing from 4.5 to 5mm
+  - **Spacing Improvements**: Increased spacing after Employee Rights box from 12mm to 35mm to eliminate overlap with Signatures section
+  - **All sections**: Reduced heading font sizes from 14pt to 12pt for proper A4 readability
+  - **Result**: Clean, professional PDFs with no emoji rendering issues, no text cut-off, proper spacing throughout
+
+### Session 20 Changes (2025-10-08)
 - **Modal Accessibility Completion**: Fixed 2 remaining modals missing accessibility features from Week 2-3 implementation
   - **DeliveryMethodSelectionModal**: Added focus trap, ARIA labels, keyboard navigation, `min-h-0` for proper scrolling
   - **EmployeeFormModal**: Replaced manual body scroll with `usePreventBodyScroll()` hook, added focus trap, ARIA labels, standardized z-index
@@ -313,4 +323,4 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, and **WCAG AA accessibility compliance**.*
 
-*Last Updated: 2025-10-08 - Session 20: Modal Accessibility Completion*
+*Last Updated: 2025-10-10 - Session 21: PDF A4 Formatting Fixes*

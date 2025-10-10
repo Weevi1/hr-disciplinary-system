@@ -14,6 +14,8 @@ interface MultiLanguageWarningScriptProps {
   validityPeriod: 3 | 6 | 12; // months
   onScriptRead: () => void;
   disabled?: boolean;
+  activeWarnings?: any[]; // Previous warnings for recitation
+  issuedDate?: Date | string; // For consequences section
 }
 
 // 🏴󠁺󠁡󠁺󠁡󠁿 SOUTH AFRICAN OFFICIAL LANGUAGES
@@ -119,6 +121,40 @@ const getWarningLevelTranslation = (level: string, language: keyof typeof WARNIN
   return translations[levelKey] || level;
 };
 
+// Helper function to format dates consistently
+const formatDate = (date: Date | string | any): string => {
+  if (!date) return 'Unknown Date';
+
+  let dateObj: Date;
+  if (date.seconds !== undefined) {
+    // Firestore Timestamp
+    dateObj = new Date(date.seconds * 1000);
+  } else if (date instanceof Date) {
+    dateObj = date;
+  } else if (typeof date === 'string') {
+    dateObj = new Date(date);
+  } else {
+    return 'Unknown Date';
+  }
+
+  return dateObj.toLocaleDateString('en-ZA', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
+// Helper function to format previous warnings list
+const formatWarningsList = (warnings: any[] | undefined): Array<{ date: string; offense: string; level: string }> => {
+  if (!warnings || warnings.length === 0) return [];
+
+  return warnings.map(w => ({
+    date: formatDate(w.issuedDate || w.issueDate),
+    offense: w.categoryName || w.category || 'General Misconduct',
+    level: w.level || w.warningLevel || 'verbal'
+  }));
+};
+
 // 📝 WARNING SCRIPTS IN ALL 11 OFFICIAL LANGUAGES
 const WARNING_SCRIPTS = {
   // 🇬🇧 ENGLISH - Primary/Default
@@ -131,6 +167,14 @@ const WARNING_SCRIPTS = {
 
     warningExplanation: (level: string, validityPeriod: number) =>
       `This is a ${level}. It remains on your record for ${validityPeriod} months. You must demonstrate immediate and sustained improvement.`,
+
+    previousWarningsRecitation: (warnings: Array<{ date: string; offense: string; level: string }>) =>
+      warnings.length > 0
+        ? `You have ${warnings.length} previous warning${warnings.length > 1 ? 's' : ''} still valid on file: ${warnings.map((w, i) => `${i + 1}) Date: ${w.date}, Offense: ${w.offense}, Level: ${w.level}`).join('. ')}.`
+        : "You have no previous disciplinary action on file.",
+
+    consequencesStatement: (issueDate: string) =>
+      `Any further transgressions related or unrelated to the offences shall result in further disciplinary action which can lead to a disciplinary hearing and it can result in dismissal. Refer to counselling dated ${issueDate}.`,
 
     rights: () =>
       "Your rights under the Labour Relations Act:",
@@ -162,6 +206,14 @@ const WARNING_SCRIPTS = {
     warningExplanation: (level: string, validityPeriod: number) =>
       `Dit is 'n ${level}. Dit bly op jou rekord vir ${validityPeriod} maande. Jy moet onmiddellike en volgehoue verbetering toon.`,
 
+    previousWarningsRecitation: (warnings: Array<{ date: string; offense: string; level: string }>) =>
+      warnings.length > 0
+        ? `Jy het ${warnings.length} vorige waarskuwing${warnings.length > 1 ? 's' : ''} nog geldig op lêer: ${warnings.map((w, i) => `${i + 1}) Datum: ${w.date}, Oortreding: ${w.offense}, Vlak: ${w.level}`).join('. ')}.`
+        : "Jy het geen vorige dissiplinêre aksie op lêer nie.",
+
+    consequencesStatement: (issueDate: string) =>
+      `Enige verdere oortredinge verwant of nie-verwant aan die oortredings sal lei tot verdere dissiplinêre aksie wat kan lei tot 'n dissiplinêre verhoor en dit kan lei tot ontslag. Verwys na berading gedateer ${issueDate}.`,
+
     rights: () =>
       "Jou regte onder die Wet op Arbeidsverhoudinge:",
 
@@ -191,6 +243,14 @@ const WARNING_SCRIPTS = {
 
     warningExplanation: (level: string, validityPeriod: number) =>
       `Lesi isixwayiso se-${level}. Sihlala kumarekhodi akho izinyanga ezingu-${validityPeriod}. Kumele ubonise ukuthuthuka okusheshayo nokuqhubekayo.`,
+
+    previousWarningsRecitation: (warnings: Array<{ date: string; offense: string; level: string }>) =>
+      warnings.length > 0
+        ? `Unezixwayiso ezingu-${warnings.length} ezidlule ezisasebenza efayeleni: ${warnings.map((w, i) => `${i + 1}) Usuku: ${w.date}, Icala: ${w.offense}, Izinga: ${w.level}`).join('. ')}.`
+        : "Awunayo imithetho yokuqeqesha yangaphambilini efayeleni.",
+
+    consequencesStatement: (issueDate: string) =>
+      `Noma iziphi iziphambeko ezingeziwe ezihlobene noma ezingahlobene neziphambeko zizoholela esinyweni esinye sokuqeqesha esingase siholele enkundleni yokuqeqesha futhi singase siholele ekuxoshweni. Bheka ukweluleka kwalesi sikhathi ngo ${issueDate}.`,
 
     rights: () =>
       "Amalungelo akho ngaphansi koMthetho Wobudlelwano Basebenzi:",
@@ -222,6 +282,14 @@ const WARNING_SCRIPTS = {
     warningExplanation: (level: string, validityPeriod: number) =>
       `Esi yisilumkiso se-${level}. Sihlala kwiirekhodi zakho iinyanga ezingu-${validityPeriod}. Kufuneka ubonise uphuculo olukhawulezayo noluqhubekayo.`,
 
+    previousWarningsRecitation: (warnings: Array<{ date: string; offense: string; level: string }>) =>
+      warnings.length > 0
+        ? `Unezilumkiso ezingu-${warnings.length} zangaphambili ezisefayileni: ${warnings.map((w, i) => `${i + 1}) Umhla: ${w.date}, Ityala: ${w.offense}, Inqanaba: ${w.level}`).join('. ')}.`
+        : "Akukho manyathelo okulungisa angaphambili kwifayile.",
+
+    consequencesStatement: (issueDate: string) =>
+      `Naziphi na iziphoso ezongezelelweyo ezinxulumene okanye ezinganxulumaniyo neziphoso ziya kubangela inyathelo lokulungisa olongezelelweyo elinokukhokelela kwindibano yokulungisa kwaye linokubangela ukugxothwa. Khangela ukucebisana kwangemini ka ${issueDate}.`,
+
     rights: () =>
       "Amalungelo akho phantsi koMthetho woBudlelwane baBasebenzi:",
 
@@ -251,6 +319,14 @@ const WARNING_SCRIPTS = {
 
     warningExplanation: (level: string, validityPeriod: number) =>
       `Ena ke temoso ea ${level}. E lula lirekoting tsa hao likhoeli tse ${validityPeriod}. O tlameha ho bonts'a ntlafatso e potlakileng le e tsoelang pele.`,
+
+    previousWarningsRecitation: (warnings: Array<{ date: string; offense: string; level: string }>) =>
+      warnings.length > 0
+        ? `O na le litemoso tse ${warnings.length} tsa pele tse sa ntse li sebetsa faeleng: ${warnings.map((w, i) => `${i + 1}) Letsatsi: ${w.date}, Lengolo: ${w.offense}, Boemo: ${w.level}`).join('. ')}.`
+        : "Ha o na litemoso tsa kgetho ea pele faeleng.",
+
+    consequencesStatement: (issueDate: string) =>
+      `Litšenyo life kapa life tse eketsehileng tse amanang kapa tse sa amaneng le litšenyo li tla fella ka khato e eketsehileng ea kgetho e ka lebisang kgutlisetsong ea kgetho 'me e ka lebisa tlōsong. Sheba keletso ea letsatsi la ${issueDate}.`,
 
     rights: () =>
       "Litokelo tsa hao ka tlasa Molao oa Likamano tsa Basebetsi:",
@@ -282,6 +358,14 @@ const WARNING_SCRIPTS = {
     warningExplanation: (level: string, validityPeriod: number) =>
       `Lexi i xilumkiso xa ${level}. Xi tshama eka rhekhodo ya wena tin'hweti ta ${validityPeriod}. U fanele ku kombisa ku antswisa loku hatlisaka ni loku ya emahlweni.`,
 
+    previousWarningsRecitation: (warnings: Array<{ date: string; offense: string; level: string }>) =>
+      warnings.length > 0
+        ? `U na swilumkiso swa ${warnings.length} swa khale leswi nga ha tirhaka eka fayili: ${warnings.map((w, i) => `${i + 1}) Siku: ${w.date}, Nyungulo: ${w.offense}, Mpimo: ${w.level}`).join('. ')}.`
+        : "A wu na swiyimo swa ndzulavulo swa khale eka fayili.",
+
+    consequencesStatement: (issueDate: string) =>
+      `Swo biha swihi na swihi leswi engetelekeke leswi fambelanaka kumbe leswi nga fambelangi ni swo biha swi ta fana ni goza rin'wana ra ndzulavulo leri nga endlaka leswaku ku va ni nhlengeletano ya ndzulavulo naswona swi nga endla ku herisiwa. Languta rivonelo ra siku ra ${issueDate}.`,
+
     rights: () =>
       "Timfanelo ta wena hi ka tlhelo ka Nawu wa Vuhlanganisi bya Vatirhi:",
 
@@ -310,6 +394,14 @@ const WARNING_SCRIPTS = {
 
     warningExplanation: (level: string, validityPeriod: number) =>
       `Iyi ndi tivhiso ya ${level}. I dzula kha rekhodho yavho minwedzi ya ${validityPeriod}. No tea u kombedza u khwinisa ha u tavhanya na u fhiraho phanḓa.`,
+
+    previousWarningsRecitation: (warnings: Array<{ date: string; offense: string; level: string }>) =>
+      warnings.length > 0
+        ? `No na tivhiso dza ${warnings.length} dza khale dzine dza kha shuma kha fayili: ${warnings.map((w, i) => `${i + 1}) Datumu: ${w.date}, Mulandu: ${w.offense}, Vhusedzi: ${w.level}`).join('. ')}.`
+        : "A huna zwiga zwa mulandu wa khale kha fayili.",
+
+    consequencesStatement: (issueDate: string) =>
+      `Phambano dzoṱhe dzo engedzeaho dzo vhalana kana dzi sa vhalani na phambano dzi ḓo vha ni magoza maṅwe a mulandu ane a nga vha ni mushumo wa u dzudzanya mulandu nahone zwi nga vha ni u thithiswa. Vhonani themendelo ya ḓuvha ḽa ${issueDate}.`,
 
     rights: () =>
       "Pfanelo dzavho kha fhasi ha Mulayo wa Vhushaka ha Vhashumi:",
@@ -340,6 +432,14 @@ const WARNING_SCRIPTS = {
     warningExplanation: (level: string, validityPeriod: number) =>
       `Lesi yisixwayiso se-${level}. Sihlala emarekhodini akho etinyanga letingu-${validityPeriod}. Kumele ubonise kuntfula lokushesha nekucondzaphambili.`,
 
+    previousWarningsRecitation: (warnings: Array<{ date: string; offense: string; level: string }>) =>
+      warnings.length > 0
+        ? `Unetixwayiso letingu-${warnings.length} letekadze letisasebenta kufayela: ${warnings.map((w, i) => `${i + 1}) Lusuku: ${w.date}, Licala: ${w.offense}, Libanga: ${w.level}`).join('. ')}.`
+        : "Awunato tilajiso tetekadze kufayela.",
+
+    consequencesStatement: (issueDate: string) =>
+      `Noma ngutiphi tibhodloko letingetwe letihlobene noma letingahlobeni netibhodloko titawuholela kulajiswa lokucondzako lokungase kuholele emhlanganweni wekulajiswa futhi kungase kuholele ekuxoshwa. Buka tikululeko telilanga la ${issueDate}.`,
+
     rights: () =>
       "Emalungelo akho ngansi kweMtsetfo weTinhlangano teTisebenzi:",
 
@@ -368,6 +468,14 @@ const WARNING_SCRIPTS = {
 
     warningExplanation: (level: string, validityPeriod: number) =>
       `Eno ke temoso ya ${level}. E nna mo rekotong ya gago dikgwedi tse ${validityPeriod}. O tshwanetse go bontsha tokafatso e e bonalang le e e tswelelang.`,
+
+    previousWarningsRecitation: (warnings: Array<{ date: string; offense: string; level: string }>) =>
+      warnings.length > 0
+        ? `O na le ditemoso tse ${warnings.length} tsa kwa morago tse di sa ntse di bereka mo faeleng: ${warnings.map((w, i) => `${i + 1}) Letlha: ${w.date}, Molato: ${w.offense}, Mokgwa: ${w.level}`).join('. ')}.`
+        : "Ga o na kgalemelo ya kwa morago mo faeleng.",
+
+    consequencesStatement: (issueDate: string) =>
+      `Diphoso dipe fela tse di oketsegileng tse di amanang kgotsa tse di sa amaneng le diphoso di tla felela ka kgato e nngwe ya kgalemelo e e ka felang ka kopano ya kgalemelo mme e ka felela ka go tlosa tiro. Bona kgakololo ya letlha la ${issueDate}.`,
 
     rights: () =>
       "Ditshwanelo tsa gago ka fa tlase ga Molao wa Dikamano tsa Badiri:",
@@ -398,6 +506,14 @@ const WARNING_SCRIPTS = {
     warningExplanation: (level: string, validityPeriod: number) =>
       `Lesi yisixwayiso se-${level}. Sihlala emarekhodi akho izinyanga ezingu-${validityPeriod}. Kumele ubonise ukuthuthuka okusheshayo nokuqhubekayo.`,
 
+    previousWarningsRecitation: (warnings: Array<{ date: string; offense: string; level: string }>) =>
+      warnings.length > 0
+        ? `Unezixwayiso ezingu-${warnings.length} ezakudala ezisasebenza kufayela: ${warnings.map((w, i) => `${i + 1}) Usuku: ${w.date}, Icala: ${w.offense}, Izinga: ${w.level}`).join('. ')}.`
+        : "Awunayo imithetho yokuqeqesha yangakudala kufayela.",
+
+    consequencesStatement: (issueDate: string) =>
+      `Noma iziphi iziphambeko ezingeziwe ezihlobene noma ezingahlobeni neziphambeko zizoholela esinyweni esinye sokuqeqesha esingase siholele enkundleni yokuqeqesha futhi singase siholele ekuxoshweni. Bheka ukweluleka ngosuku luka ${issueDate}.`,
+
     rights: () =>
       "Amalungelo akho ngaphansi koMthetho weBudlelwano Basebenzi:",
 
@@ -427,6 +543,14 @@ const WARNING_SCRIPTS = {
     warningExplanation: (level: string, validityPeriod: number) =>
       `Ye ke ${level}. E dula go direkoto tša gago dikgwedi tše ${validityPeriod}. O swanetše go bontšha kaonafatšo ye e lebelelago le ye e tšwelelago.`,
 
+    previousWarningsRecitation: (warnings: Array<{ date: string; offense: string; level: string }>) =>
+      warnings.length > 0
+        ? `O na le ditemošo tše ${warnings.length} tša peleng tšeo di sa šomago mo faeleng: ${warnings.map((w, i) => `${i + 1}) Letšatši: ${w.date}, Molato: ${w.offense}, Seemo: ${w.level}`).join('. ')}.`
+        : "Ga o na kgalemelo ya peleng mo faeleng.",
+
+    consequencesStatement: (issueDate: string) =>
+      `Diphošo dife goba dife tše di oketšegilego tše di amanago goba tše di sa amaneg le diphošo di tla fela ka kgato ye nngwe ya kgalemo yeo e ka felago ka kopano ya kgalemo gomme e ka fela ka go tlošwa mošomong. Lebelela keletšo ya letšatši la ${issueDate}.`,
+
     rights: () =>
       "Ditokelo tša gago ka fase ga Molao wa Dikamano tša Bašomi:",
 
@@ -455,7 +579,9 @@ export const MultiLanguageWarningScript: React.FC<MultiLanguageWarningScriptProp
   warningLevel,
   validityPeriod,
   onScriptRead,
-  disabled = false
+  disabled = false,
+  activeWarnings = [],
+  issuedDate
 }) => {
   const [selectedLanguage, setSelectedLanguage] = useState<keyof typeof WARNING_SCRIPTS>('en');
   const [showFullScript, setShowFullScript] = useState(false);
@@ -466,6 +592,12 @@ export const MultiLanguageWarningScript: React.FC<MultiLanguageWarningScriptProp
 
   // Get translated warning level for current language
   const translatedWarningLevel = getWarningLevelTranslation(warningLevel, selectedLanguage);
+
+  // Format warnings for display
+  const formattedWarnings = formatWarningsList(activeWarnings);
+
+  // Format issue date for consequences section
+  const formattedIssueDate = formatDate(issuedDate || new Date());
 
   const handleScriptComplete = () => {
     setScriptRead(true);
@@ -604,9 +736,25 @@ export const MultiLanguageWarningScript: React.FC<MultiLanguageWarningScriptProp
                   </p>
                 </div>
 
+                {/* Previous Warnings Recitation */}
+                <div className="border-l-4 pl-3" style={{ borderLeftColor: 'var(--color-secondary)' }}>
+                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>4. Previous Warnings on File</h5>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    {currentScript.previousWarningsRecitation(formattedWarnings)}
+                  </p>
+                </div>
+
+                {/* Consequences Statement */}
+                <div className="border-l-4 pl-3" style={{ borderLeftColor: 'var(--color-error)' }}>
+                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>5. Consequences</h5>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                    {currentScript.consequencesStatement(formattedIssueDate)}
+                  </p>
+                </div>
+
                 {/* Employee Rights */}
                 <div className="border-l-4 pl-3" style={{ borderLeftColor: 'var(--color-success)' }}>
-                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>4. Your Rights</h5>
+                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>6. Your Rights</h5>
                   <p className="text-xs leading-relaxed mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                     {currentScript.rights()}
                   </p>
@@ -622,7 +770,7 @@ export const MultiLanguageWarningScript: React.FC<MultiLanguageWarningScriptProp
 
                 {/* Witness Option */}
                 <div className="border-l-4 pl-3" style={{ borderLeftColor: 'var(--color-secondary)' }}>
-                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>5. Signature Explanation</h5>
+                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>7. Signature Explanation</h5>
                   <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
                     {currentScript.witnessOption()}
                   </p>
@@ -630,7 +778,7 @@ export const MultiLanguageWarningScript: React.FC<MultiLanguageWarningScriptProp
 
                 {/* Questions & Closing */}
                 <div className="border-l-4 pl-3" style={{ borderLeftColor: 'var(--color-info)' }}>
-                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>6. Questions & Closing</h5>
+                  <h5 className="font-medium mb-1 text-sm" style={{ color: 'var(--color-text)' }}>8. Questions & Closing</h5>
                   <p className="text-xs leading-relaxed mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                     {currentScript.questions()}
                   </p>
