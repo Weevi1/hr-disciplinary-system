@@ -265,6 +265,14 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
   - **Spacing Improvements**: Increased spacing after Employee Rights box from 12mm to 35mm to eliminate overlap with Signatures section
   - **All sections**: Reduced heading font sizes from 14pt to 12pt for proper A4 readability
   - **Result**: Clean, professional PDFs with no emoji rendering issues, no text cut-off, proper spacing throughout
+- **CRITICAL: Firestore Timestamp Date Fix**: Fixed historical warnings showing incorrect dates in PDFs
+  - **Problem**: Old warnings were showing today's date (10 October 2025) instead of their original issue date in signatures and document fields
+  - **Root Cause**: Firestore Timestamp objects (`{ seconds, nanoseconds }`) were not being converted to JavaScript Date objects in PrintDeliveryGuide.tsx
+  - **Solution**: Added `convertTimestampToDate()` helper function that properly converts Firestore Timestamps using `new Date(timestamp.seconds * 1000)`
+  - **Files Modified**:
+    - `frontend/src/components/hr/PrintDeliveryGuide.tsx` (lines 146-177) - Added timestamp conversion for `issuedDate` and `incidentDate`
+    - `frontend/src/services/PDFGenerationService.ts` (lines 933-1010) - Updated signature dates to use `issuedDate` parameter
+  - **Impact**: Historical warnings now display their correct original dates, ensuring legal compliance and accurate record-keeping
 
 ### Session 20 Changes (2025-10-08)
 - **Modal Accessibility Completion**: Fixed 2 remaining modals missing accessibility features from Week 2-3 implementation
