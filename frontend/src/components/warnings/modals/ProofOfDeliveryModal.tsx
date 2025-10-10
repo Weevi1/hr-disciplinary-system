@@ -27,6 +27,7 @@ import { useOrganization } from '../../../contexts/OrganizationContext';
 import Logger from '../../../utils/logger';
 import { usePreventBodyScroll } from '../../../hooks/usePreventBodyScroll';
 import { Z_INDEX } from '../../../constants/zIndex';
+import { transformWarningDataForPDF } from '../../../utils/pdfDataTransformer';
 
 interface ProofOfDeliveryModalProps {
   isOpen: boolean;
@@ -237,18 +238,6 @@ ${organization?.companyName || 'HR Department'}`;
 
   // Download PDF
   const handleDownloadPDF = useCallback(async () => {
-    // Helper to convert Firestore timestamp to Date
-    const convertToDate = (timestamp: any): Date => {
-      if (!timestamp) return new Date();
-      if (timestamp.seconds !== undefined) {
-        // Firestore Timestamp
-        return new Date(timestamp.seconds * 1000);
-      }
-      if (timestamp instanceof Date) {
-        return timestamp;
-      }
-      return new Date(timestamp);
-    };
     if (!warningData || !organization) {
       setError('Missing warning data or organization information');
       return;
@@ -258,38 +247,29 @@ ${organization?.companyName || 'HR Department'}`;
     setError(null);
 
     try {
-      // Prepare PDF data - convert Firestore timestamps to Date objects
-      const pdfData = {
-        warningId: warningData.id || warningId,
-        issuedDate: convertToDate(warningData.issueDate),
-
-        employee: {
-          firstName: warningData.employeeName?.split(' ')[0] || 'Unknown',
-          lastName: warningData.employeeName?.split(' ').slice(1).join(' ') || 'Employee',
-          employeeNumber: warningData.employeeNumber || 'N/A',
-          department: warningData.department || 'Unknown',
-          position: warningData.position || 'Unknown',
-          email: employeeEmail || ''
-        },
-
-        warningLevel: warningData.level || 'verbal',
-        category: warningData.category || 'General Misconduct',
-        description: warningData.description || '',
-
-        incidentDate: convertToDate(warningData.incidentDate),
-        incidentTime: warningData.incidentTime || '09:00',
-        incidentLocation: warningData.incidentLocation || '',
-
-        organization: organization,
-        additionalNotes: warningData.additionalNotes || '',
-        validityPeriod: warningData.validityPeriod || 6,
-
-        legalCompliance: {
-          isCompliant: true,
-          framework: 'LRA Section 188',
-          requirements: warningData.legalRequirements || []
-        }
+      // 🔒 SECURITY-CRITICAL: Use unified PDF data transformer
+      // Build employee object from warning data
+      const employeeData = {
+        firstName: warningData.employeeName?.split(' ')[0] || 'Unknown',
+        lastName: warningData.employeeName?.split(' ').slice(1).join(' ') || 'Employee',
+        employeeNumber: warningData.employeeNumber || 'N/A',
+        department: warningData.department || 'Unknown',
+        position: warningData.position || 'Unknown',
+        email: employeeEmail || ''
       };
+
+      // Use unified transformer to ensure consistency
+      const pdfData = transformWarningDataForPDF(
+        warningData,
+        employeeData,
+        organization
+      );
+
+      Logger.debug('📄 Generating PDF with unified transformer data:', {
+        warningId: pdfData.warningId,
+        employee: `${pdfData.employee.firstName} ${pdfData.employee.lastName}`,
+        category: pdfData.category
+      });
 
       // Lazy-load PDF generation service
       const { PDFGenerationService } = await import('@/services/PDFGenerationService');
@@ -297,7 +277,7 @@ ${organization?.companyName || 'HR Department'}`;
 
       // Generate filename
       const date = new Date().toISOString().split('T')[0];
-      const filename = `Warning_${warningData.category?.replace(/\s+/g, '_') || 'Document'}_${employeeName.replace(/\s+/g, '_')}_${date}.pdf`;
+      const filename = `Warning_${(warningData.category || 'Document').replace(/\s+/g, '_')}_${employeeName.replace(/\s+/g, '_')}_${date}.pdf`;
 
       // Create download link
       const url = URL.createObjectURL(blob);
@@ -309,7 +289,7 @@ ${organization?.companyName || 'HR Department'}`;
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      Logger.debug('✅ PDF downloaded:', filename);
+      Logger.success('✅ PDF downloaded:', filename);
     } catch (err) {
       Logger.error('❌ PDF download failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to download PDF');

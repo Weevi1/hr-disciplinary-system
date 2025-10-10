@@ -23,6 +23,7 @@ import {
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import { QRCodeDownloadModal } from '../modals/QRCodeDownloadModal';
 import { measureAsync, TraceNames } from '../../../config/performance';
+import { transformWarningDataForPDF } from '../../../utils/pdfDataTransformer';
 
 // ============================================
 // INTERFACES
@@ -105,7 +106,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
   // ============================================
 
   const extractedData = useMemo(() => {
-    if (!warningData) return null;
+    if (!warningData || !organization) return null;
 
     const wizardState = warningData.wizardState || warningData;
     const selectedEmployee = wizardState.selectedEmployee || warningData.selectedEmployee || warningData.employee;
@@ -114,79 +115,55 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
     const signatures = wizardState.signatures || warningData.signatures || {};
     const lraRecommendation = wizardState.lraRecommendation || warningData.lraRecommendation;
 
-    // Extract employee data from profile structure
-    const employeeData = selectedEmployee ? {
-      id: selectedEmployee.id,
-      firstName: selectedEmployee.profile?.firstName || selectedEmployee.firstName || 'Unknown',
-      lastName: selectedEmployee.profile?.lastName || selectedEmployee.lastName || 'Employee',
-      employeeId: selectedEmployee.profile?.employeeNumber || selectedEmployee.employeeId || selectedEmployee.id || 'N/A',
-      position: selectedEmployee.employment?.position || selectedEmployee.position || 'Unknown Position',
-      department: selectedEmployee.employment?.department || selectedEmployee.profile?.department || selectedEmployee.department || 'Unknown Department',
-      email: selectedEmployee.profile?.email || selectedEmployee.email || '',
-      phone: selectedEmployee.profile?.phoneNumber || selectedEmployee.phone || ''
-    } : {
-      id: formData.employeeId || 'unknown',
-      firstName: 'Employee',
-      lastName: 'Not Selected',
-      employeeId: formData.employeeId || 'N/A',
-      position: 'Unknown Position',
-      department: 'Unknown Department',
-      email: '',
-      phone: ''
-    };
-
-    const categoryData = selectedCategory ? {
-      id: selectedCategory.id,
-      name: selectedCategory.name || 'General Misconduct',
-      severity: selectedCategory.severity || 'medium'
-    } : {
-      id: formData.categoryId || 'unknown',
-      name: 'Category Not Selected',
-      severity: 'medium'
-    };
-
-    // Helper function to convert Firestore Timestamp to Date
-    const convertTimestampToDate = (timestamp: any): Date => {
-      if (!timestamp) return new Date();
-      // Check if it's a Firestore Timestamp with seconds property
-      if (timestamp.seconds) {
-        return new Date(timestamp.seconds * 1000);
-      }
-      // Check if it's already a Date object
-      if (timestamp instanceof Date) {
-        return timestamp;
-      }
-      // Try to parse as date string
-      const parsed = new Date(timestamp);
-      return isNaN(parsed.getTime()) ? new Date() : parsed;
-    };
-
-    return {
-      warningId: `WRN_${Date.now()}`,
+    // 🔒 SECURITY-CRITICAL: Map wizard data to warning data structure
+    // This must match the structure expected by transformWarningDataForPDF
+    const warningDataStructure = {
+      id: formData.id || formData.warningId || `WRN_${Date.now()}`,
       organizationId: wizardState.organizationId || warningData.organizationId,
-      employee: employeeData,
-      category: categoryData,
-      isComplete: !!(selectedEmployee && selectedCategory),
-      incident: {
-        date: formData.incidentDate || new Date().toISOString().split('T')[0],
-        time: formData.incidentTime || '09:00',
-        location: formData.incidentLocation || '',
-        description: formData.incidentDescription || ''
-      },
-      additionalNotes: formData.additionalNotes || '',
+      level: formData.level || lraRecommendation?.suggestedLevel || 'counselling',
+      category: selectedCategory?.name || formData.category || 'General Misconduct',
+      description: formData.incidentDescription || formData.description || '',
+      incidentDate: formData.incidentDate,
+      incidentTime: formData.incidentTime || '09:00',
+      incidentLocation: formData.incidentLocation || '',
+      issueDate: formData.issueDate || formData.issuedDate,
       validityPeriod: formData.validityPeriod || 6,
-      signatures: {
-        manager: signatures.manager,
-        employee: signatures.employee
+      signatures: signatures,
+      additionalNotes: formData.additionalNotes || '',
+      status: formData.status,
+      disciplineRecommendation: lraRecommendation,
+      legalCompliance: {
+        isCompliant: true,
+        framework: 'LRA Section 188',
+        requirements: lraRecommendation?.legalRequirements || []
       },
-      recommendation: lraRecommendation,
-      // ✅ Use the actual warning level from formData (which includes manual overrides)
-      warningLevel: formData.level || lraRecommendation?.suggestedLevel || 'counselling',
-      issueDate: convertTimestampToDate(formData.issueDate || formData.issuedDate),
-      deliveryMethod: deliveryChoice?.method || 'email',
-      status: formData.status // Extract status for PDF watermarking
+      deliveryChoice: deliveryChoice ? {
+        method: deliveryChoice.method,
+        timestamp: new Date(),
+        chosenBy: 'Manager',
+        contactDetails: deliveryChoice.contactDetails
+      } : undefined
     };
-  }, [warningData, deliveryChoice]);
+
+    // 🔒 SECURITY-CRITICAL: Use unified PDF data transformer
+    // This ensures ALL PDFs look IDENTICAL regardless of generation method
+    try {
+      const pdfData = transformWarningDataForPDF(
+        warningDataStructure,
+        selectedEmployee,
+        organization
+      );
+
+      // Return extracted data with isComplete flag for UI
+      return {
+        ...pdfData,
+        isComplete: !!(selectedEmployee && selectedCategory && formData.incidentDescription)
+      };
+    } catch (error) {
+      Logger.error('❌ Failed to transform wizard data for PDF:', error);
+      return null;
+    }
+  }, [warningData, deliveryChoice, organization]);
 
   // ============================================
   // FILENAME GENERATION
@@ -237,57 +214,16 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
         await new Promise(resolve => setTimeout(resolve, 400));
       }
 
-      const pdfData = {
-        warningId: extractedData.warningId,
-        issuedDate: extractedData.issueDate,
-        status: extractedData.status, // Include status for OVERTURNED watermark
-        employee: {
-          firstName: extractedData.employee.firstName,
-          lastName: extractedData.employee.lastName,
-          employeeNumber: extractedData.employee.employeeId,
-          department: extractedData.employee.department,
-          position: extractedData.employee.position,
-          email: extractedData.employee.email
-        },
-        // ✅ Use the actual warning level (includes manual overrides from Step 2)
-        warningLevel: extractedData.warningLevel || 'counselling',
-        category: extractedData.category.name,
-        description: extractedData.incident.description,
-        incidentDate: new Date(extractedData.incident.date),
-        incidentTime: extractedData.incident.time,
-        incidentLocation: extractedData.incident.location,
-        organization: organization,
-        signatures: extractedData.signatures,
-        additionalNotes: extractedData.additionalNotes,
-        validityPeriod: extractedData.validityPeriod,
-        legalCompliance: {
-          isCompliant: true,
-          framework: 'LRA Section 188',
-          requirements: extractedData.recommendation?.legalRequirements || []
-        },
-        disciplineRecommendation: extractedData.recommendation ? {
-          suggestedLevel: extractedData.recommendation.suggestedLevel,
-          reason: extractedData.recommendation.reason || 'Progressive discipline escalation',
-          warningCount: extractedData.recommendation.warningCount || 0,
-          activeWarnings: extractedData.recommendation.previousWarnings || [],
-          legalRequirements: extractedData.recommendation.legalRequirements || []
-        } : undefined,
-        deliveryChoice: deliveryChoice ? {
-          method: deliveryChoice.method,
-          timestamp: new Date(),
-          chosenBy: 'Manager',
-          contactDetails: deliveryChoice.contactDetails
-        } : undefined
-      };
-
+      // 🔒 SECURITY-CRITICAL: extractedData is already transformed by the unified transformer
+      // No need to rebuild the structure - use it directly
       const { PDFGenerationService } = await import('@/services/PDFGenerationService');
 
       const blob = await measureAsync(
         TraceNames.GENERATE_WARNING_PDF,
-        () => PDFGenerationService.generateWarningPDF(pdfData),
+        () => PDFGenerationService.generateWarningPDF(extractedData),
         {
           employee: `${extractedData.employee.firstName} ${extractedData.employee.lastName}`,
-          category: extractedData.category.name
+          category: extractedData.category
         }
       );
 
@@ -344,48 +280,23 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
     setIsGeneratingQR(true);
 
     try {
-      const pdfData = {
-        warningId: extractedData.warningId,
-        issuedDate: extractedData.issueDate,
-        status: extractedData.status, // Include status for OVERTURNED watermark
-        employee: {
-          firstName: extractedData.employee.firstName,
-          lastName: extractedData.employee.lastName,
-          employeeNumber: extractedData.employee.employeeId,
-          department: extractedData.employee.department,
-          position: extractedData.employee.position,
-          email: extractedData.employee.email
-        },
-        // ✅ Use the actual warning level (includes manual overrides from Step 2)
-        warningLevel: extractedData.warningLevel || 'counselling',
-        category: extractedData.category.name,
-        description: extractedData.incident.description,
-        incidentDate: new Date(extractedData.incident.date),
-        incidentTime: extractedData.incident.time,
-        incidentLocation: extractedData.incident.location,
-        organization: organization,
-        signatures: extractedData.signatures,
-        additionalNotes: extractedData.additionalNotes,
-        validityPeriod: extractedData.validityPeriod,
-        legalCompliance: {
-          isCompliant: true,
-          framework: 'LRA Section 188',
-          requirements: extractedData.recommendation?.legalRequirements || []
-        },
-        disciplineRecommendation: extractedData.recommendation ? {
-          suggestedLevel: extractedData.recommendation.suggestedLevel,
-          reason: extractedData.recommendation.reason || 'Progressive discipline escalation',
-          warningCount: extractedData.recommendation.warningCount || 0,
-          activeWarnings: extractedData.recommendation.previousWarnings || [],
-          legalRequirements: extractedData.recommendation.legalRequirements || []
-        } : undefined
-      };
-
+      // 🔒 SECURITY-CRITICAL: extractedData is already transformed by the unified transformer
+      // No need to rebuild the structure - use it directly to ensure consistency
       const { PDFGenerationService } = await import('@/services/PDFGenerationService');
-      const qrBlob = await PDFGenerationService.generateWarningPDF(pdfData);
+
+      const qrBlob = await measureAsync(
+        TraceNames.GENERATE_WARNING_PDF,
+        () => PDFGenerationService.generateWarningPDF(extractedData),
+        {
+          employee: `${extractedData.employee.firstName} ${extractedData.employee.lastName}`,
+          category: extractedData.category
+        }
+      );
 
       setQrPdfBlob(qrBlob);
       setShowQRModal(true);
+
+      Logger.success('✅ QR PDF generated successfully');
 
     } catch (error) {
       Logger.error('❌ QR PDF generation failed:', error)

@@ -29,6 +29,7 @@ import { ThemedButton } from '../common/ThemedButton';
 import Logger from '../../utils/logger';
 import { API } from '../../api';
 import { useAuth } from '../../auth/AuthContext';
+import { transformWarningDataForPDF } from '../../utils/pdfDataTransformer';
 
 // ============================================
 // INTERFACES
@@ -130,62 +131,11 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
 
       Logger.debug('✅ Employee data fetched, generating PDF...');
 
-      // Transform nested employee structure to flat structure expected by PDFGenerationService
-      const flattenedEmployee = {
-        firstName: employee.profile?.firstName || '',
-        lastName: employee.profile?.lastName || '',
-        employeeNumber: employee.employment?.employeeNumber || employee.id,
-        department: employee.profile?.department || employee.employment?.department || '',
-        position: employee.employment?.position || '',
-        email: employee.profile?.email || '',
-        phone: employee.profile?.phone || ''
-      };
+      // 🔒 SECURITY-CRITICAL: Use unified PDF data transformer
+      // This ensures ALL PDFs for this warning will look IDENTICAL
+      const pdfData = transformWarningDataForPDF(warningData, employee, organization);
 
-      Logger.debug('👤 Flattened employee for PDF:', flattenedEmployee);
-
-      // 🔍 DEBUG: Log the full warning data to see what dates we have
-      Logger.debug('📅 WARNING DATE FIELDS:', {
-        issueDate: warningData.issueDate,
-        issuedDate: warningData.issuedDate,
-        createdAt: warningData.createdAt,
-        incidentDate: warningData.incidentDate,
-        allFields: Object.keys(warningData)
-      });
-
-      // Helper function to convert Firestore Timestamp to Date
-      const convertTimestampToDate = (timestamp: any): Date => {
-        if (!timestamp) return new Date();
-        // Check if it's a Firestore Timestamp with seconds property
-        if (timestamp.seconds) {
-          return new Date(timestamp.seconds * 1000);
-        }
-        // Check if it's already a Date object
-        if (timestamp instanceof Date) {
-          return timestamp;
-        }
-        // Try to parse as date string
-        const parsed = new Date(timestamp);
-        return isNaN(parsed.getTime()) ? new Date() : parsed;
-      };
-
-      // Map warning data fields to match PDFGenerationService interface
-      const pdfData = {
-        warningId: warningData.id || notification.warningId,
-        warningLevel: warningData.level || 'counselling',
-        category: warningData.category || 'General',
-        description: warningData.description || '',
-        incidentDate: convertTimestampToDate(warningData.incidentDate || warningData.issueDate),
-        incidentTime: warningData.incidentTime || '',
-        incidentLocation: warningData.incidentLocation || '',
-        issuedDate: convertTimestampToDate(warningData.issueDate || warningData.createdAt),
-        validityPeriod: warningData.validityPeriod || 6,
-        employee: flattenedEmployee,
-        organization: organization,
-        signatures: warningData.signatures || {},
-        additionalNotes: warningData.additionalNotes || ''
-      };
-
-      Logger.debug('📄 Mapped PDF data:', pdfData);
+      Logger.debug('📄 Transformed PDF data:', pdfData);
 
       // Import PDF service and generate
       const { PDFGenerationService } = await import('../../services/PDFGenerationService');

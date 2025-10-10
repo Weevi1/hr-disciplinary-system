@@ -30,6 +30,8 @@ import {
   RefreshCw
 } from 'lucide-react';
 import type { Warning } from '../../types/warning';
+import { transformWarningDataForPDF } from '../../../utils/pdfDataTransformer';
+import { useOrganization } from '../../../contexts/OrganizationContext';
 
 // ============================================
 // INTERFACES
@@ -70,11 +72,12 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
   initialZoom = 1,
   className = ''
 }) => {
+  const { organization } = useOrganization();
 
   // ============================================
   // REFS & STATE
   // ============================================
-  
+
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -147,17 +150,41 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
       // If no existing PDF, generate one on-the-fly
       if (!pdfUrl) {
         Logger.debug('🔄 Generating PDF on-the-fly for warning:', warningId)
-        
+
         try {
+          // 🔒 SECURITY-CRITICAL: Use unified PDF data transformer
+          // Build employee object from warning data
+          const employeeData = {
+            firstName: safeWarning.employeeName?.split(' ')[0] || 'Unknown',
+            lastName: safeWarning.employeeName?.split(' ').slice(1).join(' ') || 'Employee',
+            employeeNumber: safeWarning.employeeNumber || employeeNumber,
+            department: safeWarning.department || 'Unknown',
+            position: safeWarning.position || 'Unknown',
+            email: safeWarning.employeeEmail || ''
+          };
+
+          // Use unified transformer to ensure consistency
+          const pdfData = transformWarningDataForPDF(
+            safeWarning,
+            employeeData,
+            organization
+          );
+
+          Logger.debug('📄 Generating PDF with unified transformer data:', {
+            warningId: pdfData.warningId,
+            employee: `${pdfData.employee.firstName} ${pdfData.employee.lastName}`,
+            category: pdfData.category
+          });
+
           // Import PDFGenerationService dynamically
           const { PDFGenerationService } = await import('@/services/PDFGenerationService');
-          
+
           // Generate PDF blob
-          const pdfBlob = await PDFGenerationService.generateWarningPDF(safeWarning);
-          
+          const pdfBlob = await PDFGenerationService.generateWarningPDF(pdfData);
+
           // Create object URL
           pdfUrl = URL.createObjectURL(pdfBlob);
-          Logger.success(4674)
+          Logger.success('✅ PDF generated successfully for viewer');
         } catch (genError) {
           Logger.error('❌ PDF generation failed:', genError)
           throw new Error('Failed to generate PDF document');

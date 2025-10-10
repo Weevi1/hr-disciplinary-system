@@ -22,6 +22,7 @@ import {
   Printer
 } from 'lucide-react';
 import { useOrganization } from '../../../contexts/OrganizationContext';
+import { transformWarningDataForPDF } from '../../../utils/pdfDataTransformer';
 
 // ============================================
 // INTERFACES MATCHING YOUR WARNING WIZARD
@@ -96,9 +97,9 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
   const [generationStep, setGenerationStep] = useState<string>('');
   const [downloadCount, setDownloadCount] = useState(0);
 
-  // Data extraction (simplified version of your existing logic)
+  // 🔒 SECURITY-CRITICAL: Use unified PDF data transformer
   const extractedData = useMemo(() => {
-    if (!warningData) return null;
+    if (!warningData || !organization) return null;
 
     const wizardState = warningData.wizardState || warningData;
     const selectedEmployee = wizardState.selectedEmployee || warningData.selectedEmployee;
@@ -107,74 +108,54 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
     const signatures = wizardState.signatures || warningData.signatures || {};
     const lraRecommendation = wizardState.lraRecommendation || warningData.lraRecommendation;
 
-    const employeeData = selectedEmployee ? {
-      id: selectedEmployee.id,
-      firstName: selectedEmployee.firstName || 'Unknown',
-      lastName: selectedEmployee.lastName || 'Employee',
-      employeeId: selectedEmployee.employeeId || selectedEmployee.id || 'N/A',
-      position: selectedEmployee.position || 'Unknown Position',
-      department: selectedEmployee.department || 'Unknown Department',
-      email: selectedEmployee.email || '',
-      phone: selectedEmployee.phone || ''
-    } : {
-      id: formData.employeeId || 'unknown',
-      firstName: 'Employee',
-      lastName: 'Not Selected',
-      employeeId: formData.employeeId || 'N/A',
-      position: 'Unknown Position',
-      department: 'Unknown Department',
-      email: '',
-      phone: ''
-    };
-
-    const categoryData = selectedCategory ? {
-      id: selectedCategory.id,
-      name: selectedCategory.name || 'General Misconduct',
-      severity: selectedCategory.severity || 'medium',
-      description: selectedCategory.description || '',
-      lraSection: selectedCategory.lraSection || 'LRA Section 188'
-    } : {
-      id: formData.categoryId || 'unknown',
-      name: 'Category Not Selected',
-      severity: 'medium',
-      description: 'Category details not available',
-      lraSection: 'LRA Section 188'
-    };
-
-    return {
-      warningId: `WRN_${Date.now()}`,
+    // Map wizard data to warning data structure
+    const warningDataStructure = {
+      id: formData.id || formData.warningId || `WRN_${Date.now()}`,
       organizationId: wizardState.organizationId || warningData.organizationId,
-      employee: employeeData,
-      category: categoryData,
-      isComplete: !!(selectedEmployee && selectedCategory),
-      hasEmployee: !!selectedEmployee,
-      hasCategory: !!selectedCategory,
-      incident: {
-        date: formData.incidentDate || new Date().toISOString().split('T')[0],
-        time: formData.incidentTime || '09:00',
-        location: formData.incidentLocation || '',
-        description: formData.incidentDescription || ''
-      },
-      additionalNotes: formData.additionalNotes || '',
+      level: formData.level || lraRecommendation?.suggestedLevel || 'counselling',
+      category: selectedCategory?.name || formData.category || 'General Misconduct',
+      description: formData.incidentDescription || formData.description || '',
+      incidentDate: formData.incidentDate,
+      incidentTime: formData.incidentTime || '09:00',
+      incidentLocation: formData.incidentLocation || '',
+      issueDate: formData.issueDate || formData.issuedDate,
       validityPeriod: formData.validityPeriod || 6,
-      signatures: {
-        manager: signatures.manager,
-        employee: signatures.employee
-      },
-      recommendation: lraRecommendation,
-      issueDate: new Date(),
-      deliveryMethod: deliveryChoice?.method || 'download'
+      signatures: signatures,
+      additionalNotes: formData.additionalNotes || '',
+      status: formData.status,
+      disciplineRecommendation: lraRecommendation
     };
-  }, [warningData, deliveryChoice]);
+
+    // Use unified transformer to ensure consistency
+    try {
+      const pdfData = transformWarningDataForPDF(
+        warningDataStructure,
+        selectedEmployee,
+        organization
+      );
+
+      // Add UI flags for template
+      return {
+        ...pdfData,
+        isComplete: !!(selectedEmployee && selectedCategory),
+        hasEmployee: !!selectedEmployee,
+        hasCategory: !!selectedCategory
+      };
+    } catch (error) {
+      Logger.error('❌ Failed to transform wizard data for PDF:', error);
+      return null;
+    }
+  }, [warningData, deliveryChoice, organization]);
 
   // PDF filename generation
   const generatedFilename = useMemo(() => {
     if (!extractedData) return 'Warning_Document.pdf';
-    
+
     const employeeName = `${extractedData.employee.firstName}_${extractedData.employee.lastName}`;
     const date = new Date().toISOString().split('T')[0];
-    const categoryShort = extractedData.category.name.replace(/\s+/g, '_').substring(0, 20);
-    
+    // category is now a string, not an object
+    const categoryShort = (extractedData.category || 'Warning').replace(/\s+/g, '_').substring(0, 20);
+
     return `Warning_${categoryShort}_${employeeName}_${date}.pdf`;
   }, [extractedData]);
 
@@ -185,8 +166,8 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
       return;
     }
 
-    const hasMinimumData = extractedData.incident.description || 
-                          extractedData.incident.location || 
+    const hasMinimumData = extractedData.description ||
+                          extractedData.incidentLocation ||
                           extractedData.additionalNotes;
 
     if (!hasMinimumData) {
@@ -196,7 +177,7 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
 
     setIsGenerating(true);
     setError(null);
-    
+
     const steps = [
       'Preparing document data...',
       'Applying organization branding...',
@@ -211,67 +192,25 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
         await new Promise(resolve => setTimeout(resolve, 300));
       }
 
-      const pdfData = {
+      // 🔒 SECURITY-CRITICAL: extractedData is already transformed by the unified transformer
+      // No need to rebuild the structure - use it directly to ensure consistency
+      Logger.debug('📄 Generating PDF with unified transformer data:', {
         warningId: extractedData.warningId,
-        issuedDate: extractedData.issueDate,
-        
-        employee: {
-          firstName: extractedData.employee.firstName,
-          lastName: extractedData.employee.lastName,
-          employeeNumber: extractedData.employee.employeeId,
-          department: extractedData.employee.department,
-          position: extractedData.employee.position,
-          email: extractedData.employee.email
-        },
-        
-        warningLevel: extractedData.recommendation?.suggestedLevel || 'verbal',
-        category: extractedData.category.name,
-        description: extractedData.incident.description,
-        
-        incidentDate: new Date(extractedData.incident.date),
-        incidentTime: extractedData.incident.time,
-        incidentLocation: extractedData.incident.location,
-        
-        organization: organization,
-        signatures: extractedData.signatures,
-        additionalNotes: extractedData.additionalNotes,
-        validityPeriod: extractedData.validityPeriod,
-        
-        legalCompliance: {
-          isCompliant: true,
-          framework: 'LRA Section 188',
-          requirements: extractedData.recommendation?.legalRequirements || []
-        },
-        
-        disciplineRecommendation: extractedData.recommendation ? {
-          suggestedLevel: extractedData.recommendation.suggestedLevel,
-          reason: extractedData.recommendation.reason || 'Progressive discipline escalation',
-          warningCount: extractedData.recommendation.warningCount || 0,
-          activeWarnings: extractedData.recommendation.previousWarnings || [],
-          legalRequirements: extractedData.recommendation.legalRequirements || []
-        } : undefined,
-        
-        deliveryChoice: deliveryChoice ? {
-          method: deliveryChoice.method,
-          timestamp: new Date(),
-          chosenBy: 'Manager',
-          contactDetails: deliveryChoice.contactDetails
-        } : undefined
-      };
-
-      Logger.debug(8949)
+        employee: `${extractedData.employee.firstName} ${extractedData.employee.lastName}`,
+        category: extractedData.category
+      });
 
       // Lazy-load PDF generation service (reduces initial bundle by ~578 KB)
       const { PDFGenerationService } = await import('@/services/PDFGenerationService');
-      const blob = await PDFGenerationService.generateWarningPDF(pdfData);
-      
+      const blob = await PDFGenerationService.generateWarningPDF(extractedData);
+
       setPdfBlob(blob);
       setFilename(generatedFilename);
-      
+
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
 
-      Logger.debug('✅ PDF generated for simple download:', {
+      Logger.success('✅ PDF generated for simple download:', {
         filename: generatedFilename,
         size: `${(blob.size / 1024).toFixed(1)} KB`
       });
@@ -359,7 +298,7 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
                 <h2 className="text-2xl font-bold">{title}</h2>
                 {extractedData && (
                   <p className="text-green-100">
-                    {extractedData.employee.firstName} {extractedData.employee.lastName} - {extractedData.category.name}
+                    {extractedData.employee.firstName} {extractedData.employee.lastName} - {extractedData.category}
                   </p>
                 )}
               </div>
