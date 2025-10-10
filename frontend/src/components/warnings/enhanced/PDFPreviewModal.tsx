@@ -145,6 +145,22 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
       severity: 'medium'
     };
 
+    // Helper function to convert Firestore Timestamp to Date
+    const convertTimestampToDate = (timestamp: any): Date => {
+      if (!timestamp) return new Date();
+      // Check if it's a Firestore Timestamp with seconds property
+      if (timestamp.seconds) {
+        return new Date(timestamp.seconds * 1000);
+      }
+      // Check if it's already a Date object
+      if (timestamp instanceof Date) {
+        return timestamp;
+      }
+      // Try to parse as date string
+      const parsed = new Date(timestamp);
+      return isNaN(parsed.getTime()) ? new Date() : parsed;
+    };
+
     return {
       warningId: `WRN_${Date.now()}`,
       organizationId: wizardState.organizationId || warningData.organizationId,
@@ -166,7 +182,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
       recommendation: lraRecommendation,
       // ✅ Use the actual warning level from formData (which includes manual overrides)
       warningLevel: formData.level || lraRecommendation?.suggestedLevel || 'counselling',
-      issueDate: new Date(),
+      issueDate: convertTimestampToDate(formData.issueDate || formData.issuedDate),
       deliveryMethod: deliveryChoice?.method || 'email',
       status: formData.status // Extract status for PDF watermarking
     };

@@ -143,6 +143,15 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
 
       Logger.debug('👤 Flattened employee for PDF:', flattenedEmployee);
 
+      // 🔍 DEBUG: Log the full warning data to see what dates we have
+      Logger.debug('📅 WARNING DATE FIELDS:', {
+        issueDate: warningData.issueDate,
+        issuedDate: warningData.issuedDate,
+        createdAt: warningData.createdAt,
+        incidentDate: warningData.incidentDate,
+        allFields: Object.keys(warningData)
+      });
+
       // Helper function to convert Firestore Timestamp to Date
       const convertTimestampToDate = (timestamp: any): Date => {
         if (!timestamp) return new Date();
