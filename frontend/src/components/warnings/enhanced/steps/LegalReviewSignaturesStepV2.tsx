@@ -554,6 +554,8 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
             validityPeriod={formData.validityPeriod}
             onScriptRead={() => setScriptReadConfirmed(true)}
             disabled={scriptReadConfirmed}
+            activeWarnings={lraRecommendation?.activeWarnings}
+            issuedDate={formData.issueDate}
           />
         </ThemedCard>
       </div>

@@ -195,13 +195,17 @@ export class PDFGenerationService {
       currentY = this.addIncidentDetailsSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
       Logger.success(5387)
       
-      // 6. Progressive Discipline Analysis (if available)
+      // 6. Previous Disciplinary Action + Consequences (if available)
       if (data.disciplineRecommendation) {
-        Logger.debug('📈 Adding progressive discipline section...')
-        currentY = this.addProgressiveDisciplineSection(doc, data.disciplineRecommendation, currentY, pageWidth, margin, pageHeight, bottomMargin);
-        Logger.success(5796)
+        Logger.debug('📋 Adding previous disciplinary action section...')
+        currentY = this.addPreviousDisciplinaryActionSection(doc, data.disciplineRecommendation, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        Logger.success('✅ Previous disciplinary action section added')
+
+        Logger.debug('⚠️ Adding consequences section...')
+        currentY = this.addConsequencesSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        Logger.success('✅ Consequences section added')
       } else {
-        Logger.debug('⏭️ Skipping progressive discipline section (no data)');
+        Logger.debug('⏭️ Skipping progressive discipline sections (no data)');
       }
       
       // 7. Legal Compliance Section
@@ -598,50 +602,110 @@ export class PDFGenerationService {
   }
   
   /**
-   * Progressive Discipline Analysis Section
+   * Previous Disciplinary Action Section - NUMBERED LIST FORMAT (Template Style)
+   * Shows clear numbered list of previous warnings with dates and offenses
    */
-  private static addProgressiveDisciplineSection(
-    doc: any, 
-    recommendation: WarningPDFData['disciplineRecommendation'], 
-    startY: number, 
-    pageWidth: number, 
+  private static addPreviousDisciplinaryActionSection(
+    doc: any,
+    recommendation: WarningPDFData['disciplineRecommendation'],
+    startY: number,
+    pageWidth: number,
     margin: number,
     pageHeight: number,
     bottomMargin: number
   ): number {
     if (!recommendation) return startY;
-    
-    // Check if we have enough space (need about 35mm)
-    startY = this.checkPageOverflow(doc, startY, 35, pageHeight, bottomMargin);
-    
-    doc.setFontSize(14);
+
+    // Calculate height dynamically based on number of warnings
+    const baseHeight = 28;
+    const warningCount = recommendation.activeWarnings?.length || 0;
+    const warningHeight = warningCount > 0 ? warningCount * 6 + 20 : 20;
+    const totalHeight = baseHeight + warningHeight;
+
+    startY = this.checkPageOverflow(doc, startY, totalHeight, pageHeight, bottomMargin);
+
+    // Section title - REDUCED FONT SIZE for A4
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(51, 51, 51);
-    doc.text('PROGRESSIVE DISCIPLINE ANALYSIS', margin, startY);
-    
+    doc.text('PREVIOUS DISCIPLINARY ACTION (Still Valid on File)', margin, startY);
+
+    // Gray box for section - INCREASED PADDING
+    doc.setDrawColor(200, 200, 200);
+    doc.setFillColor(248, 248, 248);
+    doc.setLineWidth(0.3);
+    doc.rect(margin, startY + 4, pageWidth - (margin * 2), warningHeight, 'FD');
+
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
-    
-    let analysisY = startY + 8;
-    
-    doc.text(`Recommended Level: ${this.getWarningLevelDisplay(recommendation.suggestedLevel)}`, margin, analysisY);
-    analysisY += 5;
-    
-    doc.text(`Previous Warnings: ${recommendation.warningCount}`, margin, analysisY);
-    analysisY += 5;
-    
-    if (recommendation.reason) {
-      doc.text('Escalation Reason:', margin, analysisY);
-      analysisY += 4;
-      const reasonLines = this.wrapText(doc, recommendation.reason, pageWidth - margin * 2);
-      reasonLines.forEach(line => {
-        doc.text(line, margin + 3, analysisY);
-        analysisY += 4;
+
+    let listY = startY + 12;
+
+    // Display warnings in numbered format - INCREASED LINE SPACING
+    if (recommendation.activeWarnings && recommendation.activeWarnings.length > 0) {
+      recommendation.activeWarnings.forEach((warning: any, index: number) => {
+        const warningDate = this.formatDate(warning.issuedDate || warning.issueDate || new Date());
+        const category = warning.categoryName || warning.category || 'General Misconduct';
+        const level = this.getWarningLevelDisplay(warning.level || warning.warningLevel || 'verbal');
+
+        const line = `${index + 1}) Date: ${warningDate} | Offense: ${category} | Level: ${level}`;
+        doc.text(line, margin + 5, listY);
+        listY += 6;
       });
+    } else {
+      // No previous warnings
+      doc.text('No previous disciplinary action on file', margin + 5, listY);
     }
-    
-    return analysisY + 5;
+
+    return startY + warningHeight + 12;
+  }
+
+  /**
+   * Consequences Section - STANDALONE WARNING BOX (Template Style)
+   * Clear prominent section about consequences of continued behavior
+   */
+  private static addConsequencesSection(
+    doc: any,
+    data: WarningPDFData,
+    startY: number,
+    pageWidth: number,
+    margin: number,
+    pageHeight: number,
+    bottomMargin: number
+  ): number {
+    // Check if we have enough space (need about 40mm)
+    startY = this.checkPageOverflow(doc, startY, 40, pageHeight, bottomMargin);
+
+    // Section title - REDUCED FONT SIZE and SPLIT HEADING for A4
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(51, 51, 51);
+    doc.text('WARNING: CONSEQUENCES IF EMPLOYEE', margin, startY);
+    doc.text('DOES NOT CHANGE BEHAVIOUR', margin, startY + 5);
+
+    // Red/Orange warning box - INCREASED PADDING and HEIGHT
+    const sectionHeight = 30;
+    doc.setFillColor(254, 226, 226); // Light red #FEE2E2
+    doc.setDrawColor(239, 68, 68); // Red border #EF4444
+    doc.setLineWidth(0.5);
+    doc.rect(margin, startY + 8, pageWidth - (margin * 2), sectionHeight, 'FD');
+
+    // Warning text
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(127, 29, 29); // Dark red text for readability
+
+    const consequencesText = `Any further transgressions related or unrelated to the offences shall result in further disciplinary action which can lead to a disciplinary hearing and it can result in dismissal. Refer to counselling dated ${this.formatDate(data.issuedDate)}.`;
+
+    const lines = this.wrapText(doc, consequencesText, pageWidth - (margin * 2) - 15);
+    let textY = startY + 16; // Increased top padding
+    lines.forEach(line => {
+      doc.text(line, margin + 5, textY);
+      textY += 5; // Improved line spacing
+    });
+
+    return startY + sectionHeight + 12;
   }
   
   /**
@@ -739,25 +803,25 @@ export class PDFGenerationService {
     pageHeight: number,
     bottomMargin: number
   ): number {
-    // Ensure section fits on page (need about 95mm for full section)
-    startY = this.checkPageOverflow(doc, startY, 95, pageHeight, bottomMargin);
+    // Ensure section fits on page (need about 110mm for full section)
+    startY = this.checkPageOverflow(doc, startY, 110, pageHeight, bottomMargin);
 
-    // Section header with icon
-    doc.setFontSize(14);
+    // Section header - REDUCED FONT SIZE and NO EMOJI for A4
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(51, 51, 51);
-    doc.text('⚖️  EMPLOYEE RIGHTS AND NEXT STEPS', margin, startY);
+    doc.text('EMPLOYEE RIGHTS AND NEXT STEPS', margin, startY);
 
-    // Light blue background box for entire section
+    // Light blue background box for entire section - INCREASED HEIGHT and PADDING for A4
     const sectionWidth = pageWidth - margin * 2;
-    const sectionHeight = 85; // Approximate height
+    const sectionHeight = 102; // Further increased height for proper A4 spacing
     doc.setFillColor(239, 246, 255); // Light blue #EFF6FF
     doc.setDrawColor(59, 130, 246); // Blue border #3B82F6
     doc.setLineWidth(0.5);
-    doc.rect(margin, startY + 3, sectionWidth, sectionHeight, 'FD'); // Fill and Draw
+    doc.rect(margin, startY + 4, sectionWidth, sectionHeight, 'FD'); // Fill and Draw
 
-    let currentY = startY + 12;
-    const contentMargin = margin + 5; // Indent content inside box
+    let currentY = startY + 14; // Further increased top padding
+    const contentMargin = margin + 8; // Further increased indent for content inside box
 
     // === YOUR RIGHTS SUBSECTION ===
     doc.setFontSize(11);
@@ -768,43 +832,43 @@ export class PDFGenerationService {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
-    currentY += 6;
+    currentY += 7; // Increased spacing after header
 
-    // Right to Appeal
+    // Right to Appeal - OPTIMIZED LINE SPACING for A4
     const appealText = `• Right to Appeal: You may appeal this warning within 48 hours by submitting a written appeal to HR. If your internal appeal is unsuccessful, you may refer the matter to the CCMA within 30 days.`;
-    const appealLines = this.wrapText(doc, appealText, sectionWidth - 15);
+    const appealLines = this.wrapText(doc, appealText, sectionWidth - 20);
     appealLines.forEach(line => {
       doc.text(line, contentMargin, currentY);
-      currentY += 4;
+      currentY += 5; // Further improved spacing for A4
     });
-    currentY += 1;
+    currentY += 2.5;
 
-    // Right to Representation
+    // Right to Representation - OPTIMIZED LINE SPACING for A4
     const repText = `• Right to Representation: You have the right to be represented by a fellow employee or shop steward during disciplinary proceedings.`;
-    const repLines = this.wrapText(doc, repText, sectionWidth - 15);
+    const repLines = this.wrapText(doc, repText, sectionWidth - 20);
     repLines.forEach(line => {
       doc.text(line, contentMargin, currentY);
-      currentY += 4;
+      currentY += 5; // Further improved spacing for A4
     });
-    currentY += 1;
+    currentY += 2.5;
 
-    // Signing Rights
+    // Signing Rights - OPTIMIZED LINE SPACING for A4
     const signText = `• Signing This Document: Your signature acknowledges that this warning has been explained to you. It does NOT mean you agree with the warning.`;
-    const signLines = this.wrapText(doc, signText, sectionWidth - 15);
+    const signLines = this.wrapText(doc, signText, sectionWidth - 20);
     signLines.forEach(line => {
       doc.text(line, contentMargin, currentY);
-      currentY += 4;
+      currentY += 5; // Further improved spacing for A4
     });
-    currentY += 1;
+    currentY += 2.5;
 
-    // Confidentiality
+    // Confidentiality - OPTIMIZED LINE SPACING for A4
     const confText = `• Confidentiality: All information will be kept confidential and shared only with relevant management and HR personnel.`;
-    const confLines = this.wrapText(doc, confText, sectionWidth - 15);
+    const confLines = this.wrapText(doc, confText, sectionWidth - 20);
     confLines.forEach(line => {
       doc.text(line, contentMargin, currentY);
-      currentY += 4;
+      currentY += 5; // Further improved spacing for A4
     });
-    currentY += 3;
+    currentY += 3.5;
 
     // === WHAT HAPPENS NEXT SUBSECTION ===
     doc.setFontSize(11);
@@ -815,31 +879,31 @@ export class PDFGenerationService {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
-    currentY += 6;
+    currentY += 7; // Increased spacing after header
 
-    // Validity period
+    // Validity period - OPTIMIZED SPACING for A4
     const validityPeriod = data.validityPeriod || 6;
     const validityText = `• This warning remains valid for ${validityPeriod} months from the date of issue.`;
     doc.text(validityText, contentMargin, currentY);
-    currentY += 4;
+    currentY += 5;
 
-    // Progressive discipline
+    // Progressive discipline - OPTIMIZED LINE SPACING for A4
     const progressiveText = `• During this period, similar conduct may result in further disciplinary action, up to and including dismissal.`;
-    const progressiveLines = this.wrapText(doc, progressiveText, sectionWidth - 15);
+    const progressiveLines = this.wrapText(doc, progressiveText, sectionWidth - 20);
     progressiveLines.forEach(line => {
       doc.text(line, contentMargin, currentY);
-      currentY += 4;
+      currentY += 5; // Further improved spacing for A4
     });
-    currentY += 1;
+    currentY += 2.5;
 
-    // Improvement expectation
+    // Improvement expectation - OPTIMIZED LINE SPACING for A4
     const improvementText = `• You are expected to demonstrate immediate and sustained improvement in your conduct.`;
-    const improvementLines = this.wrapText(doc, improvementText, sectionWidth - 15);
+    const improvementLines = this.wrapText(doc, improvementText, sectionWidth - 20);
     improvementLines.forEach(line => {
       doc.text(line, contentMargin, currentY);
-      currentY += 4;
+      currentY += 5; // Further improved spacing for A4
     });
-    currentY += 3;
+    currentY += 3.5;
 
     // === IMPORTANT NOTICE SUBSECTION ===
     doc.setFontSize(11);
@@ -850,16 +914,17 @@ export class PDFGenerationService {
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
-    currentY += 6;
+    currentY += 7; // Increased spacing after header
 
     const noticeText = `If you believe this warning is procedurally unfair or unjust, you have recourse through your company's internal appeal process or the Commission for Conciliation, Mediation and Arbitration (CCMA).`;
-    const noticeLines = this.wrapText(doc, noticeText, sectionWidth - 15);
+    const noticeLines = this.wrapText(doc, noticeText, sectionWidth - 20);
     noticeLines.forEach(line => {
       doc.text(line, contentMargin, currentY);
-      currentY += 4;
+      currentY += 5; // Further improved spacing for A4
     });
+    currentY += 8; // Further increased bottom padding inside box
 
-    return startY + sectionHeight + 10; // Return position after the box with some spacing
+    return startY + sectionHeight + 35; // Significantly increased spacing after box to prevent overlap (was 24)
   }
 
   /**
