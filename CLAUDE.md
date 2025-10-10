@@ -273,6 +273,36 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
     - `frontend/src/components/hr/PrintDeliveryGuide.tsx` (lines 146-177) - Added timestamp conversion for `issuedDate` and `incidentDate`
     - `frontend/src/services/PDFGenerationService.ts` (lines 933-1010) - Updated signature dates to use `issuedDate` parameter
   - **Impact**: Historical warnings now display their correct original dates, ensuring legal compliance and accurate record-keeping
+- **Unified PDF Data Transformer**: Created centralized data transformation utility for consistent PDF generation across all components
+  - **Created**: `frontend/src/utils/pdfDataTransformer.ts` - Single source of truth for transforming warning data to PDF format
+  - **Security-critical**: Ensures consistent data structure across all PDF generation methods (prevents data leakage or inconsistencies)
+  - **Updated components**:
+    - `PrintDeliveryGuide.tsx` - Uses unified transformer for on-demand PDF generation
+    - `PDFPreviewModal.tsx` - Uses unified transformer for preview generation
+    - `SimplePDFDownloadModal.tsx` - Uses unified transformer for simple downloads
+  - **Benefits**: Eliminates duplicate transformation logic, ensures all PDFs have identical data structure, easier to maintain and debug
+- **PDFPreviewModal Data Structure Fix**: Fixed console errors when viewing PDFs in Review Warnings modal
+  - **Error**: `Uncaught TypeError: Cannot read properties of undefined (reading 'replace')` at PDFPreviewModal.tsx:177
+  - **Root Cause**: After unified transformer migration, `extractedData.category` changed from object `{name: string}` to plain string
+  - **Fixed locations**:
+    - Line 177: Changed `extractedData.category.name.replace()` → `(extractedData.category || 'Warning').replace()`
+    - Lines 194-196: Changed `extractedData.incident.description` → `extractedData.description`
+    - Lines 459, 572: Changed `extractedData.category.name` → `extractedData.category`
+    - Lines 430, 626: Changed `extractedData.incident.description` → `extractedData.description`
+  - **Result**: PDF preview modal now works correctly with unified transformer data structure
+- **PDF Signature Aspect Ratio Preservation**: Fixed signature distortion in generated PDFs
+  - **Problem**: Signatures appeared stretched/distorted - dimensions didn't match original captured signatures
+  - **Root Cause**: Both manager and employee signatures used hardcoded height (15mm) regardless of original proportions
+  - **Solution**: Implemented proper aspect ratio preservation algorithm
+    - Load original image dimensions from base64 signature data using `Image()` object
+    - Calculate aspect ratio: `width / height`
+    - Scale to fit max width, check if height exceeds max height
+    - If height exceeds max, scale based on height instead
+    - Center signature horizontally within box for better presentation
+  - **Files Modified**:
+    - `PDFGenerationService.ts` (lines 966-997): Manager signature aspect ratio preservation
+    - `PDFGenerationService.ts` (lines 1011-1042): Employee signature aspect ratio preservation
+  - **Result**: Signatures now maintain original proportions and are professionally centered in PDFs
 
 ### Session 20 Changes (2025-10-08)
 - **Modal Accessibility Completion**: Fixed 2 remaining modals missing accessibility features from Week 2-3 implementation
@@ -331,4 +361,4 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, and **WCAG AA accessibility compliance**.*
 
-*Last Updated: 2025-10-10 - Session 21: PDF A4 Formatting Fixes*
+*Last Updated: 2025-10-10 - Session 21: PDF Data Consistency & Signature Fixes*
