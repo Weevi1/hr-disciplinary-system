@@ -143,16 +143,32 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
 
       Logger.debug('👤 Flattened employee for PDF:', flattenedEmployee);
 
+      // Helper function to convert Firestore Timestamp to Date
+      const convertTimestampToDate = (timestamp: any): Date => {
+        if (!timestamp) return new Date();
+        // Check if it's a Firestore Timestamp with seconds property
+        if (timestamp.seconds) {
+          return new Date(timestamp.seconds * 1000);
+        }
+        // Check if it's already a Date object
+        if (timestamp instanceof Date) {
+          return timestamp;
+        }
+        // Try to parse as date string
+        const parsed = new Date(timestamp);
+        return isNaN(parsed.getTime()) ? new Date() : parsed;
+      };
+
       // Map warning data fields to match PDFGenerationService interface
       const pdfData = {
         warningId: warningData.id || notification.warningId,
         warningLevel: warningData.level || 'counselling',
         category: warningData.category || 'General',
         description: warningData.description || '',
-        incidentDate: warningData.incidentDate || warningData.issueDate || new Date(),
+        incidentDate: convertTimestampToDate(warningData.incidentDate || warningData.issueDate),
         incidentTime: warningData.incidentTime || '',
         incidentLocation: warningData.incidentLocation || '',
-        issuedDate: warningData.issueDate || warningData.createdAt || new Date(),
+        issuedDate: convertTimestampToDate(warningData.issueDate || warningData.createdAt),
         validityPeriod: warningData.validityPeriod || 6,
         employee: flattenedEmployee,
         organization: organization,

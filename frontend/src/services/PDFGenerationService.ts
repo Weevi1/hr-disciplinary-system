@@ -233,7 +233,7 @@ export class PDFGenerationService {
 
       // 9. Signatures Section - Always add, even if no digital signatures
       Logger.debug('✍️ Adding signatures section...')
-      currentY = this.addSignaturesSection(doc, data.signatures, data.employee, currentY, pageWidth, margin, pageHeight, bottomMargin);
+      currentY = this.addSignaturesSection(doc, data.signatures, data.employee, currentY, pageWidth, margin, pageHeight, bottomMargin, data.issuedDate);
       Logger.success(7166)
       
       // 10. Delivery Information (if available)
@@ -931,14 +931,15 @@ export class PDFGenerationService {
    * Signatures Section
    */
   private static addSignaturesSection(
-    doc: any, 
-    signatures: WarningPDFData['signatures'], 
-    employee: WarningPDFData['employee'], 
-    startY: number, 
-    pageWidth: number, 
+    doc: any,
+    signatures: WarningPDFData['signatures'],
+    employee: WarningPDFData['employee'],
+    startY: number,
+    pageWidth: number,
     margin: number,
     pageHeight: number,
-    bottomMargin: number
+    bottomMargin: number,
+    issuedDate?: Date
   ): number {
     // Always ensure signatures section fits (need about 50mm)
     startY = this.checkPageOverflow(doc, startY, 50, pageHeight, bottomMargin);
@@ -967,25 +968,25 @@ export class PDFGenerationService {
         const imgHeight = 15;
         doc.addImage(signatures.manager, 'PNG', margin + 2, startY + 15, imgWidth, imgHeight);
         doc.setFontSize(8);
-        doc.text(`Date: ${this.formatDate(new Date())}`, margin + 2, startY + 32);
+        doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + 32);
       } catch (error) {
         Logger.warn('Failed to embed manager signature image:', error)
         // Fallback to text
         doc.setFontSize(8);
         doc.text('✓ Digitally Signed', margin + 2, startY + 20);
-        doc.text(`Date: ${this.formatDate(new Date())}`, margin + 2, startY + 25);
+        doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + 25);
       }
     } else {
       doc.text('_________________________', margin + 2, startY + 25);
       doc.text('Date: ___________', margin + 2, startY + 30);
     }
-    
+
     // Employee signature box
     doc.rect(margin + signatureBoxWidth + 10, startY + 5, signatureBoxWidth, signatureBoxHeight);
-    
+
     doc.text('Employee Signature:', margin + signatureBoxWidth + 12, startY + 12);
     doc.text(`${employee.firstName} ${employee.lastName}`, margin + signatureBoxWidth + 12, startY + 16);
-    
+
     if (signatures?.employee) {
       try {
         // Add the signature image
@@ -993,13 +994,13 @@ export class PDFGenerationService {
         const imgHeight = 15;
         doc.addImage(signatures.employee, 'PNG', margin + signatureBoxWidth + 12, startY + 15, imgWidth, imgHeight);
         doc.setFontSize(8);
-        doc.text(`Date: ${this.formatDate(new Date())}`, margin + signatureBoxWidth + 12, startY + 32);
+        doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + signatureBoxWidth + 12, startY + 32);
       } catch (error) {
         Logger.warn('Failed to embed employee signature image:', error)
         // Fallback to text
         doc.setFontSize(8);
         doc.text('✓ Digitally Signed', margin + signatureBoxWidth + 12, startY + 20);
-        doc.text(`Date: ${this.formatDate(new Date())}`, margin + signatureBoxWidth + 12, startY + 25);
+        doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + signatureBoxWidth + 12, startY + 25);
       }
     } else {
       doc.text('_________________________', margin + signatureBoxWidth + 12, startY + 25);
