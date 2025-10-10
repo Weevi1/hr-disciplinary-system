@@ -963,10 +963,29 @@ export class PDFGenerationService {
     
     if (signatures?.manager) {
       try {
-        // Add the signature image
-        const imgWidth = signatureBoxWidth - 4;
-        const imgHeight = 15;
-        doc.addImage(signatures.manager, 'PNG', margin + 2, startY + 15, imgWidth, imgHeight);
+        // 🎨 PRESERVE ASPECT RATIO: Calculate proper dimensions for signature
+        const maxWidth = signatureBoxWidth - 4;
+        const maxHeight = 15;
+
+        // Get image dimensions from base64 data
+        const img = new Image();
+        img.src = signatures.manager;
+
+        // Calculate aspect-ratio-preserved dimensions
+        const aspectRatio = img.width / img.height;
+        let imgWidth = maxWidth;
+        let imgHeight = maxWidth / aspectRatio;
+
+        // If height exceeds max, scale down based on height instead
+        if (imgHeight > maxHeight) {
+          imgHeight = maxHeight;
+          imgWidth = maxHeight * aspectRatio;
+        }
+
+        // Center signature horizontally within the box
+        const xOffset = (maxWidth - imgWidth) / 2;
+
+        doc.addImage(signatures.manager, 'PNG', margin + 2 + xOffset, startY + 15, imgWidth, imgHeight);
         doc.setFontSize(8);
         doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + 32);
       } catch (error) {
@@ -989,10 +1008,29 @@ export class PDFGenerationService {
 
     if (signatures?.employee) {
       try {
-        // Add the signature image
-        const imgWidth = signatureBoxWidth - 4;
-        const imgHeight = 15;
-        doc.addImage(signatures.employee, 'PNG', margin + signatureBoxWidth + 12, startY + 15, imgWidth, imgHeight);
+        // 🎨 PRESERVE ASPECT RATIO: Calculate proper dimensions for signature
+        const maxWidth = signatureBoxWidth - 4;
+        const maxHeight = 15;
+
+        // Get image dimensions from base64 data
+        const img = new Image();
+        img.src = signatures.employee;
+
+        // Calculate aspect-ratio-preserved dimensions
+        const aspectRatio = img.width / img.height;
+        let imgWidth = maxWidth;
+        let imgHeight = maxWidth / aspectRatio;
+
+        // If height exceeds max, scale down based on height instead
+        if (imgHeight > maxHeight) {
+          imgHeight = maxHeight;
+          imgWidth = maxHeight * aspectRatio;
+        }
+
+        // Center signature horizontally within the box
+        const xOffset = (maxWidth - imgWidth) / 2;
+
+        doc.addImage(signatures.employee, 'PNG', margin + signatureBoxWidth + 12 + xOffset, startY + 15, imgWidth, imgHeight);
         doc.setFontSize(8);
         doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + signatureBoxWidth + 12, startY + 32);
       } catch (error) {
