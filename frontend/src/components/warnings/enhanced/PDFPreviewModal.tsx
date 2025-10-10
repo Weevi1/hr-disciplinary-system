@@ -174,7 +174,8 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
 
     const employeeName = `${extractedData.employee.firstName}_${extractedData.employee.lastName}`;
     const date = new Date().toISOString().split('T')[0];
-    const categoryShort = extractedData.category.name.replace(/\s+/g, '_').substring(0, 20);
+    // category is now a string, not an object
+    const categoryShort = (extractedData.category || 'Warning').replace(/\s+/g, '_').substring(0, 20);
 
     return `Warning_${categoryShort}_${employeeName}_${date}.pdf`;
   }, [extractedData]);
@@ -189,8 +190,9 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
       return;
     }
 
-    const hasMinimumData = extractedData.incident.description ||
-                          extractedData.incident.location ||
+    // After unified transformer, fields are flattened
+    const hasMinimumData = extractedData.description ||
+                          extractedData.incidentLocation ||
                           extractedData.additionalNotes;
 
     if (!hasMinimumData) {
@@ -425,7 +427,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
                       <div className="text-sm text-amber-700 space-y-1">
                         {!extractedData.hasEmployee && <p>• Employee not selected</p>}
                         {!extractedData.hasCategory && <p>• Category not selected</p>}
-                        {!extractedData.incident.description && <p>• Incident description missing</p>}
+                        {!extractedData.description && <p>• Incident description missing</p>}
                       </div>
                       <p className="text-sm text-amber-800 mt-3 font-medium">
                         Please complete the warning wizard before generating the PDF.
@@ -455,7 +457,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
                           {extractedData.employee.firstName} {extractedData.employee.lastName}
                         </h3>
                         <p className="text-sm text-gray-600 mb-2">
-                          {extractedData.category.name}
+                          {extractedData.category}
                         </p>
                         <div className="flex items-center gap-2 text-xs text-gray-500">
                           <FileText className="w-3 h-3" />
@@ -568,7 +570,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
                   <p className="font-medium text-gray-900 text-base">
                     {extractedData.employee.firstName} {extractedData.employee.lastName}
                   </p>
-                  <p className="text-sm text-gray-600">{extractedData.category.name}</p>
+                  <p className="text-sm text-gray-600">{extractedData.category}</p>
                 </div>
               )}
             </div>
@@ -621,7 +623,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
                       <div className="text-xs text-amber-700 space-y-1">
                         {!extractedData.hasEmployee && <p>• No employee selected</p>}
                         {!extractedData.hasCategory && <p>• No category selected</p>}
-                        {!extractedData.incident.description && <p>• No incident description</p>}
+                        {!extractedData.description && <p>• No incident description</p>}
                       </div>
                       <p className="text-xs text-amber-800 mt-2 font-medium">
                         Complete the wizard first.
