@@ -243,21 +243,47 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 ---
 
 ### **🎯 Current System State**
-- ✅ All code changes committed (Session 21)
+- ✅ All code changes committed (Session 22)
 - ✅ Frontend deployed and live
 - ✅ Development server running at http://localhost:3003/
 - ✅ All new features ready for production testing
 - ✅ **PDF A4 Formatting** - Professional A4 documents with optimized spacing and typography
 - ✅ **Warning scripts rewritten** - All 11 SA languages updated to formal recap format
 - ✅ **Witness signature system** - Prominent watermarking with explicit save buttons
+- ✅ **Manager Name in PDFs** - All new warnings now store and display manager name in signature section
 
 ---
 
-## 🔧 Latest Updates (Session 21)
+## 🔧 Latest Updates (Session 22)
 
 **See `RECENT_UPDATES.md` and `SESSION_HISTORY.md` for complete change history**
 
-### Most Recent Changes (Session 21 - 2025-10-10)
+### Most Recent Changes (Session 22 - 2025-10-13)
+- **CRITICAL: Manager Name in PDF Signatures** - Fixed missing manager name in PDF signature section
+  - **Problem**: Manager signature section showed blank line `Manager Name: _____________________` instead of actual manager name
+  - **Root Cause**: Enhanced Warning Wizard was NOT saving `issuedBy` and `issuedByName` fields to Firestore when creating warnings
+  - **Solution**: Added manager information to warning creation in wizard
+    - `EnhancedWarningWizard.tsx` (lines 779-781): Added `issuedBy: user?.uid` and `issuedByName: currentManagerName`
+    - `pdfDataTransformer.ts` (line 148): Already configured to extract `issuedByName` from warning data
+    - `PDFGenerationService.ts`: Already configured to display manager name in signatures
+  - **Impact**:
+    - ✅ NEW warnings (created after fix) will display manager name correctly
+    - ❌ EXISTING warnings (created before fix) do NOT have this field in Firestore and will continue showing blank
+  - **Files Modified**:
+    - `frontend/src/components/warnings/enhanced/EnhancedWarningWizard.tsx` (lines 779-781)
+    - `frontend/src/utils/pdfDataTransformer.ts` (line 148)
+- **PDF Signature Layout Fixes** - Improved signature positioning and spacing in PDFs
+  - **Problem**: Signatures were rendering on the bottom line of boxes instead of being properly centered
+  - **Solution**:
+    - Changed from centering vertically to positioning from top (5mm from top)
+    - Reduced max signature height from 37mm to 35mm for better spacing
+    - Increased padding from 8mm total to 16mm total (8mm each side)
+    - Moved manager name and date below signature boxes with better spacing (+7mm and +11mm)
+  - **Result**: Signatures now render properly centered with professional spacing throughout
+  - **Files Modified**:
+    - `frontend/src/services/PDFGenerationService.ts` (lines 970-1093)
+
+### Previous Changes (Session 21 - 2025-10-10)
 - **PDF A4 Formatting Fixes**: Comprehensive formatting improvements for professional A4 warning documents
   - **Previous Disciplinary Action Section**: Reduced font from 14pt to 12pt, increased padding and line spacing
   - **Consequences Section**: Removed emoji (⚠️), split heading across 2 lines to prevent cut-off, increased box height and padding
