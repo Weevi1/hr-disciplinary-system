@@ -22,7 +22,8 @@ interface WarningPDFData {
   issuedDate: Date;
   organizationId?: string;
   status?: string; // Warning status (e.g., 'issued', 'overturned', 'expired')
-  
+  issuedByName?: string; // Manager name who issued the warning
+
   // Employee information (from selectedEmployee)
   employee: {
     firstName: string;
@@ -33,11 +34,11 @@ interface WarningPDFData {
     email?: string;
     phone?: string;
   };
-  
+
   // Warning classification
   warningLevel: string;
   category: string;
-  
+
   // Incident details (from your formData)
   incidentDate: Date;
   incidentTime: string;
@@ -233,7 +234,7 @@ export class PDFGenerationService {
 
       // 9. Signatures Section - Always add, even if no digital signatures
       Logger.debug('✍️ Adding signatures section...')
-      currentY = this.addSignaturesSection(doc, data.signatures, data.employee, currentY, pageWidth, margin, pageHeight, bottomMargin, data.issuedDate);
+      currentY = this.addSignaturesSection(doc, data.signatures, data.employee, currentY, pageWidth, margin, pageHeight, bottomMargin, data.issuedDate, data.issuedByName);
       Logger.success(7166)
       
       // 10. Delivery Information (if available)
@@ -928,7 +929,7 @@ export class PDFGenerationService {
   }
 
   /**
-   * Signatures Section
+   * Signatures Section - OPTIMIZED LAYOUT WITH LABELS OUTSIDE BOXES
    */
   private static addSignaturesSection(
     doc: any,
@@ -939,113 +940,157 @@ export class PDFGenerationService {
     margin: number,
     pageHeight: number,
     bottomMargin: number,
-    issuedDate?: Date
+    issuedDate?: Date,
+    managerName?: string
   ): number {
-    // Always ensure signatures section fits (need about 50mm)
-    startY = this.checkPageOverflow(doc, startY, 50, pageHeight, bottomMargin);
-    
+    // Increased space requirement (was 50mm, now 65mm total)
+    startY = this.checkPageOverflow(doc, startY, 65, pageHeight, bottomMargin);
+
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(51, 51, 51);
     doc.text('SIGNATURES', margin, startY);
-    
+    startY += 7;
+
     const signatureBoxWidth = (pageWidth - margin * 3) / 2;
-    const signatureBoxHeight = 30;
-    
-    // Manager signature box
+    const signatureBoxHeight = 45; // Box height for signature area only
+
+    // === MANAGER SIGNATURE COLUMN ===
+    // Label above box (not inside)
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(80, 80, 80);
+    doc.text('Manager Signature:', margin, startY);
+
+    // Draw signature box
     doc.setDrawColor(150, 150, 150);
     doc.setLineWidth(0.3);
-    doc.rect(margin, startY + 5, signatureBoxWidth, signatureBoxHeight);
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Manager Signature:', margin + 2, startY + 12);
-    
+    doc.setTextColor(0, 0, 0);
+    doc.rect(margin, startY + 3, signatureBoxWidth, signatureBoxHeight);
+
     if (signatures?.manager) {
       try {
-        // 🎨 PRESERVE ASPECT RATIO: Calculate proper dimensions for signature
-        const maxWidth = signatureBoxWidth - 4;
-        const maxHeight = 15;
+        // 🎨 ASPECT RATIO PRESERVED: Get actual image properties from jsPDF
+        const maxWidth = signatureBoxWidth - 16; // 8mm padding on each side
+        const maxHeight = 35; // Maximum height for signature PNG
 
-        // Get image dimensions from base64 data
-        const img = new Image();
-        img.src = signatures.manager;
+        // Get image properties from jsPDF (which can read the base64 data)
+        const imgProps = doc.getImageProperties(signatures.manager);
+        const imgWidth = imgProps.width;
+        const imgHeight = imgProps.height;
+        const aspectRatio = imgWidth / imgHeight;
 
-        // Calculate aspect-ratio-preserved dimensions
-        const aspectRatio = img.width / img.height;
-        let imgWidth = maxWidth;
-        let imgHeight = maxWidth / aspectRatio;
+        // Scale to fit within max dimensions while preserving aspect ratio
+        let finalWidth = maxWidth;
+        let finalHeight = maxWidth / aspectRatio;
 
-        // If height exceeds max, scale down based on height instead
-        if (imgHeight > maxHeight) {
-          imgHeight = maxHeight;
-          imgWidth = maxHeight * aspectRatio;
+        // If height exceeds maximum, scale based on height instead
+        if (finalHeight > maxHeight) {
+          finalHeight = maxHeight;
+          finalWidth = maxHeight * aspectRatio;
         }
 
-        // Center signature horizontally within the box
-        const xOffset = (maxWidth - imgWidth) / 2;
+        // Center signature horizontally within the box, position vertically from top
+        const xOffset = (signatureBoxWidth - finalWidth) / 2;
+        const yOffset = 5; // 5mm from top of box
 
-        doc.addImage(signatures.manager, 'PNG', margin + 2 + xOffset, startY + 15, imgWidth, imgHeight);
-        doc.setFontSize(8);
-        doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + 32);
+        // Add image with calculated dimensions that preserve aspect ratio
+        doc.addImage(signatures.manager, 'PNG', margin + xOffset, startY + 3 + yOffset, finalWidth, finalHeight);
+
+        // Manager name and date BELOW the box
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        const managerNameText = managerName ? managerName : '_____________________';
+        doc.text(`Manager Name: ${managerNameText}`, margin + 2, startY + signatureBoxHeight + 7);
+        doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + signatureBoxHeight + 11);
       } catch (error) {
         Logger.warn('Failed to embed manager signature image:', error)
         // Fallback to text
         doc.setFontSize(8);
-        doc.text('✓ Digitally Signed', margin + 2, startY + 20);
-        doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + 25);
+        doc.setFont('helvetica', 'normal');
+        doc.text('✓ Digitally Signed', margin + 5, startY + 25);
+        const managerNameText = managerName ? managerName : '_____________________';
+        doc.text(`Manager Name: ${managerNameText}`, margin + 2, startY + signatureBoxHeight + 7);
+        doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + signatureBoxHeight + 11);
       }
     } else {
-      doc.text('_________________________', margin + 2, startY + 25);
-      doc.text('Date: ___________', margin + 2, startY + 30);
+      // Empty signature line
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text('_____________________', margin + 5, startY + 30);
+      const managerNameText = managerName ? managerName : '_____________________';
+      doc.text(`Manager Name: ${managerNameText}`, margin + 2, startY + signatureBoxHeight + 7);
+      doc.text('Date: ___________', margin + 2, startY + signatureBoxHeight + 11);
     }
 
-    // Employee signature box
-    doc.rect(margin + signatureBoxWidth + 10, startY + 5, signatureBoxWidth, signatureBoxHeight);
+    // === EMPLOYEE SIGNATURE COLUMN ===
+    const employeeBoxX = margin + signatureBoxWidth + 10;
 
-    doc.text('Employee Signature:', margin + signatureBoxWidth + 12, startY + 12);
-    doc.text(`${employee.firstName} ${employee.lastName}`, margin + signatureBoxWidth + 12, startY + 16);
+    // Label above box (not inside) - with employee name on second line
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(80, 80, 80);
+    doc.text('Employee Signature:', employeeBoxX, startY);
+
+    // Draw signature box
+    doc.setDrawColor(150, 150, 150);
+    doc.setLineWidth(0.3);
+    doc.setTextColor(0, 0, 0);
+    doc.rect(employeeBoxX, startY + 3, signatureBoxWidth, signatureBoxHeight);
 
     if (signatures?.employee) {
       try {
-        // 🎨 PRESERVE ASPECT RATIO: Calculate proper dimensions for signature
-        const maxWidth = signatureBoxWidth - 4;
-        const maxHeight = 15;
+        // 🎨 ASPECT RATIO PRESERVED: Get actual image properties from jsPDF
+        const maxWidth = signatureBoxWidth - 16; // 8mm padding on each side
+        const maxHeight = 35; // Maximum height for signature PNG
 
-        // Get image dimensions from base64 data
-        const img = new Image();
-        img.src = signatures.employee;
+        // Get image properties from jsPDF (which can read the base64 data)
+        const imgProps = doc.getImageProperties(signatures.employee);
+        const imgWidth = imgProps.width;
+        const imgHeight = imgProps.height;
+        const aspectRatio = imgWidth / imgHeight;
 
-        // Calculate aspect-ratio-preserved dimensions
-        const aspectRatio = img.width / img.height;
-        let imgWidth = maxWidth;
-        let imgHeight = maxWidth / aspectRatio;
+        // Scale to fit within max dimensions while preserving aspect ratio
+        let finalWidth = maxWidth;
+        let finalHeight = maxWidth / aspectRatio;
 
-        // If height exceeds max, scale down based on height instead
-        if (imgHeight > maxHeight) {
-          imgHeight = maxHeight;
-          imgWidth = maxHeight * aspectRatio;
+        // If height exceeds maximum, scale based on height instead
+        if (finalHeight > maxHeight) {
+          finalHeight = maxHeight;
+          finalWidth = maxHeight * aspectRatio;
         }
 
-        // Center signature horizontally within the box
-        const xOffset = (maxWidth - imgWidth) / 2;
+        // Center signature horizontally within the box, position vertically from top
+        const xOffset = (signatureBoxWidth - finalWidth) / 2;
+        const yOffset = 5; // 5mm from top of box
 
-        doc.addImage(signatures.employee, 'PNG', margin + signatureBoxWidth + 12 + xOffset, startY + 15, imgWidth, imgHeight);
-        doc.setFontSize(8);
-        doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + signatureBoxWidth + 12, startY + 32);
+        // Add image with calculated dimensions that preserve aspect ratio
+        doc.addImage(signatures.employee, 'PNG', employeeBoxX + xOffset, startY + 3 + yOffset, finalWidth, finalHeight);
+
+        // Employee name and date BELOW the box
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${employee.firstName} ${employee.lastName}`, employeeBoxX + 2, startY + signatureBoxHeight + 7);
+        doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, employeeBoxX + 2, startY + signatureBoxHeight + 11);
       } catch (error) {
         Logger.warn('Failed to embed employee signature image:', error)
         // Fallback to text
         doc.setFontSize(8);
-        doc.text('✓ Digitally Signed', margin + signatureBoxWidth + 12, startY + 20);
-        doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + signatureBoxWidth + 12, startY + 25);
+        doc.setFont('helvetica', 'normal');
+        doc.text('✓ Digitally Signed', employeeBoxX + 5, startY + 25);
+        doc.text(`${employee.firstName} ${employee.lastName}`, employeeBoxX + 2, startY + signatureBoxHeight + 7);
+        doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, employeeBoxX + 2, startY + signatureBoxHeight + 11);
       }
     } else {
-      doc.text('_________________________', margin + signatureBoxWidth + 12, startY + 25);
-      doc.text('Date: ___________', margin + signatureBoxWidth + 12, startY + 30);
+      // Empty signature line
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text('_____________________', employeeBoxX + 5, startY + 30);
+      doc.text(`${employee.firstName} ${employee.lastName}`, employeeBoxX + 2, startY + signatureBoxHeight + 7);
+      doc.text('Date: ___________', employeeBoxX + 2, startY + signatureBoxHeight + 11);
     }
-    
-    return startY + signatureBoxHeight + 15;
+
+    return startY + signatureBoxHeight + 12;
   }
   
   /**

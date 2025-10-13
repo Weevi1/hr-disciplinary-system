@@ -775,14 +775,18 @@ useEffect(() => {
           employeeId: selectedEmployee.id,
           categoryId: selectedCategory.id,
           organizationId: organization.id,
-          
+
+          // Issued by information
+          issuedBy: user?.uid || '',
+          issuedByName: currentManagerName || 'Manager',
+
           // Employee data for denormalization
           employeeName: selectedEmployee.profile?.firstName || 'Unknown',
           employeeLastName: selectedEmployee.profile?.lastName || 'Employee',
           employeeNumber: selectedEmployee.profile?.employeeNumber || 'Unknown',
           employeeDepartment: selectedEmployee.profile?.department || 'Unknown',
           employeePosition: selectedEmployee.profile?.position || 'Unknown',
-          
+
           // Category data
           categoryName: selectedCategory.name || 'Unknown',
 
@@ -798,7 +802,7 @@ useEffect(() => {
           additionalNotes: formData.additionalNotes,
           issueDate: formData.issueDate,
           validityPeriod: formData.validityPeriod,
-          
+
           // Signature data
           signatures: newSignatures
         };
