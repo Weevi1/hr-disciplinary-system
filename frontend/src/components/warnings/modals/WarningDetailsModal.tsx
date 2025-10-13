@@ -1071,66 +1071,8 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
         </div>
       )}
 
-      {/* PDF Preview Modal - Keep existing functionality */}
-      {showPDFPreview && (
-        <PDFPreviewModal
-          isOpen={showPDFPreview}
-          onClose={() => setShowPDFPreview(false)}
-          warningData={{
-            selectedEmployee: {
-              id: warning.employeeId || '',
-              firstName: warning.employeeName || 'Unknown',
-              lastName: warning.employeeLastName || 'Employee', 
-              employeeId: warning.employeeNumber || '',
-              employeeNumber: warning.employeeNumber || '',
-              department: warning.employeeDepartment || warning.department || '',
-              position: warning.employeePosition || warning.position || '',
-              email: warning.employeeEmail || ''
-            },
-            selectedCategory: {
-              id: warning.categoryId || '',
-              name: warning.categoryName || warning.category || 'General',
-              severity: 'medium',
-              description: warning.categoryName || warning.category || 'General'
-            },
-            formData: {
-              incidentDate: toISODateString(warning.incidentDate),
-              incidentTime: warning.incidentTime || '12:00',
-              incidentLocation: warning.incidentLocation || '',
-              incidentDescription: warning.incidentDescription || warning.description || '',
-              additionalNotes: warning.additionalNotes || '',
-              validityPeriod: warning.validityPeriod || 6,
-              issueDate: toISODateString(warning.issueDate),
-              status: warning.status // Pass warning status for PDF watermarking
-            },
-            signatures: warning.signatures || { manager: null, employee: null },
-            lraRecommendation: {
-              category: warning.categoryName || warning.category || 'General',
-              recommendedLevel: warning.level || 'Counselling Session',
-              suggestedLevel: warning.level || 'counselling',
-              reason: 'Based on incident severity and employee history',
-              warningCount: 1,
-              previousWarnings: [],
-              legalRequirements: ['Employee consultation', 'Written documentation', 'Appeal process notification']
-            },
-            organizationId: warning.organizationId || ''
-          }}
-          onPDFGenerated={(blob, filename) => {
-            Logger.debug('PDF generated:', filename)
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-          }}
-        />
-      )}
-
       {/* 🎯 WORKING MODALS */}
-      
+
       {/* PDF Preview Modal */}
       {showPDFPreview && (
         <PDFPreviewModal
@@ -1177,21 +1119,13 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
             organizationId: warning.organizationId || ''
           }}
           onPDFGenerated={(blob, filename) => {
-            Logger.debug('PDF generated:', filename)
+            Logger.debug('PDF generated for preview:', filename)
             Logger.debug('Warning data for PDF:', {
               categoryName: warning.categoryName,
               category: warning.category,
               signatures: warning.signatures
             });
-            // Optionally download the PDF automatically
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            // PDF is displayed in the preview modal - no automatic download
           }}
         />
       )}

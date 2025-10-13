@@ -145,6 +145,7 @@ export const transformWarningDataForPDF = (
     warningId: warningData.id || warningData.warningId || `WRN_${Date.now()}`,
     organizationId: warningData.organizationId || organizationData.id,
     status: warningData.status || 'issued',
+    issuedByName: warningData.issuedByName || '', // Manager name who issued the warning
 
     // Dates (CRITICAL: Must use historical dates, NOT current date)
     issuedDate: issueDate,
@@ -198,6 +199,7 @@ export const transformWarningDataForPDF = (
   Logger.debug('✅ PDF data transformation complete:', {
     warningId: pdfData.warningId,
     employee: `${pdfData.employee.firstName} ${pdfData.employee.lastName}`,
+    issuedBy: pdfData.issuedByName || 'Not specified',
     issueDate: pdfData.issuedDate.toISOString(),
     incidentDate: pdfData.incidentDate.toISOString(),
     warningLevel: pdfData.warningLevel
