@@ -166,8 +166,18 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
 
       // Role-specific data requests - load independently
       if (requirements.includes('employees')) {
-        // HR and Business Owner see ALL employees, HOD sees only their team
-        const isHROrOwner = userRole === 'hr' || userRole === 'business_owner';
+        // HR and Business Owner see ALL employees ALWAYS (even when viewing HOD dashboard)
+        // Check ACTUAL user role, not requested dashboard role
+        // Note: user.role can be an object {id: 'hr-manager', name: 'HR Manager'} or a string
+        const actualUserRoleId = typeof user.role === 'object' && user.role?.id
+          ? user.role.id
+          : (user.role || userRole);
+
+        const isHROrOwner = actualUserRoleId === 'hr' ||
+                           actualUserRoleId === 'business_owner' ||
+                           actualUserRoleId === 'hr-manager' ||
+                           actualUserRoleId === 'business-owner';
+
         const cacheKey = isHROrOwner
           ? CacheService.generateOrgKey(organization.id, 'employees:all')
           : CacheService.generateOrgKey(organization.id, `employees:manager:${user.id}`);
@@ -175,12 +185,12 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
         CacheService.getOrFetch(
           cacheKey,
           async () => {
-            // HR/Business Owner get all employees, HOD gets their team
+            // HR/Business Owner get all employees (even in HOD view), HOD gets their team only
             const employeesData = isHROrOwner
               ? await API.employees.getAll(organization.id)
               : await API.employees.getByManager(user.id, organization.id);
 
-            Logger.debug(`👥 Loading ${employeesData.length} employees for ${userRole}`);
+            Logger.debug(`👥 Loading ${employeesData.length} employees for ${actualUserRoleId} (viewing ${userRole} dashboard)`);
 
             // Return employees with full structure (ManualWarningEntry needs profile property)
             return employeesData;

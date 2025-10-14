@@ -541,7 +541,9 @@ service cloud.firestore {
       allow write: if isAuthenticated() && (
         isSuperUser() ||
         request.auth.uid == userId ||
-        (belongsToOrganization(organizationId) && isBusinessOwner())
+        (belongsToOrganization(organizationId) && isBusinessOwner()) ||
+        // Allow HR managers to update user department assignments and manager-related fields
+        (belongsToOrganization(organizationId) && isHRManager())
       );
     }
 
