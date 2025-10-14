@@ -194,12 +194,24 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   const [formData, setFormData] = useState<FormData>({
     employeeId: preSelectedEmployeeId || null,
     categoryId: preSelectedCategoryId || null,
-    incidentDate: new Date().toISOString().split('T')[0],
+    incidentDate: (() => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })(),
     incidentTime: new Date().toTimeString().split(' ')[0].substring(0, 5),
     incidentLocation: '',
     incidentDescription: '',
     additionalNotes: '',
-    issueDate: new Date().toISOString().split('T')[0],
+    issueDate: (() => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })(),
     validityPeriod: 6
   });
   const [isLoadingWarningHistory, setIsLoadingWarningHistory] = useState(false);
@@ -820,6 +832,14 @@ useEffect(() => {
           currentManagerNameProp: currentManagerName
         });
 
+        // 🔍 DEBUG: Log lraRecommendation state before creating warning
+        Logger.debug('🔍 LRA Recommendation state before warning creation:', {
+          hasLraRecommendation: !!lraRecommendation,
+          lraRecommendationValue: lraRecommendation,
+          activeWarningsCount: lraRecommendation?.activeWarnings?.length || 0,
+          suggestedLevel: lraRecommendation?.suggestedLevel
+        });
+
         // Create warning data (avoiding undefined values)
         const warningData: any = {
           // Core IDs
@@ -884,8 +904,21 @@ useEffect(() => {
           // 5. Update routing in generateWarningPDF() to include new version
           //
           // This system is SECURITY-CRITICAL and affects legal compliance.
-          pdfGeneratorVersion: PDF_GENERATOR_VERSION
+          pdfGeneratorVersion: PDF_GENERATOR_VERSION,
+
+          // 🔥 CRITICAL: Store disciplineRecommendation for PDF generation
+          // This includes activeWarnings array needed for "Previous Disciplinary Action" section
+          // Without this, PDFs will show "No previous disciplinary action on file" even when warnings exist
+          disciplineRecommendation: lraRecommendation || undefined
         };
+
+        // 🔍 DEBUG: Log the full warningData object before creating
+        Logger.debug('🔍 Full warning data object before API.warnings.create():', {
+          warningDataKeys: Object.keys(warningData),
+          hasDisciplineRecommendation: 'disciplineRecommendation' in warningData,
+          disciplineRecommendationValue: warningData.disciplineRecommendation,
+          disciplineRecommendationIsUndefined: warningData.disciplineRecommendation === undefined
+        });
 
         // MANDATORY: Audio recording is required for every warning
         if (audioUrl) {

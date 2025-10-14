@@ -98,7 +98,11 @@ export interface Warning {
   employeeSignature?: string;
   witnessSignatures?: string[];
   signatureDate?: Date;
-  
+
+  // 🔒 Progressive Discipline Context (for PDF generation and legal audit trail)
+  disciplineRecommendation?: EscalationRecommendation;
+  pdfGeneratorVersion?: string;
+
   // Metadata
   createdAt: Date;
   updatedAt: Date;
@@ -167,36 +171,52 @@ export interface EnhancedWarningFormData {
   audioRecording?: AudioRecordingData;
 }
 
+/**
+ * 🔥 CRITICAL: Simplified warning summary for PDF generation
+ * Stores only essential fields to avoid Firestore document size limits
+ * Full Warning objects with nested audio/signatures can exceed 1MB limit
+ */
+export interface SimplifiedWarningSummary {
+  id: string;
+  level: WarningLevel;
+  category: string;
+  description: string;
+  issueDate: Date | string; // Support both Date and ISO string
+  incidentDate: Date | string;
+  employeeName?: string;
+  employeeNumber?: string;
+}
+
 export interface EscalationRecommendation {
   // Core recommendation
   suggestedLevel: WarningLevel;
   recommendedLevel: string;
   reason: string;
-  
+
   // HR Intervention System
   requiresHRIntervention: boolean;
   interventionReason?: string;
   interventionLevel?: 'urgent' | 'standard';
-  
-  // Context
-  activeWarnings: Warning[];
+
+  // Context - 🔥 FIXED: Use simplified summaries instead of full Warning objects
+  activeWarnings: SimplifiedWarningSummary[];
   escalationPath: WarningLevel[];
   isEscalation: boolean;
-  
+
   // LRA Compliance
   category: string;
   categoryId: string;
   legalBasis: string;
   legalRequirements: string[];
-  
+
   // Progressive discipline context
   warningCount: number; // Total active warnings across all categories
   categoryWarningCount?: number; // Warnings in this specific category
   nextExpiryDate: Date;
   examples: string[];
   explanation: string;
-  previousWarnings: Warning[];
-  
+  previousWarnings: SimplifiedWarningSummary[]; // 🔥 FIXED: Simplified summaries
+
 }
 
 // ============================================
@@ -204,7 +224,45 @@ export interface EscalationRecommendation {
 // ============================================
 
 export class WarningService {
-  
+
+  // ============================================
+  // HELPER METHODS - SIMPLIFIED WARNING SUMMARIES
+  // ============================================
+
+  /**
+   * 🔥 CRITICAL: Convert full Warning object to simplified summary
+   * This prevents Firestore document size limit issues when storing recommendations
+   * Full warnings with audio recordings and signatures can exceed 1MB
+   */
+  private static simplifyWarning(warning: Warning): SimplifiedWarningSummary {
+    // 🔥 CRITICAL FIX: Keep dates as Date objects - Firestore handles them correctly
+    // The issue was trying to convert to ISO strings which caused timezone shifts
+    // Firestore Timestamps preserve the exact date/time when stored and retrieved
+    Logger.debug('🔍 [SIMPLIFY] Storing warning dates as Date objects:', {
+      warningId: warning.id,
+      issueDate: warning.issueDate,
+      incidentDate: warning.incidentDate
+    });
+
+    return {
+      id: warning.id || '',
+      level: warning.level,
+      category: warning.category || 'Unknown Category',
+      description: warning.description || warning.title || 'No description',
+      issueDate: warning.issueDate, // Keep as Date object - Firestore converts to Timestamp correctly
+      incidentDate: warning.incidentDate, // Keep as Date object - Firestore converts to Timestamp correctly
+      employeeName: warning.employeeName,
+      employeeNumber: warning.employeeNumber
+    };
+  }
+
+  /**
+   * Convert array of full Warning objects to simplified summaries
+   */
+  private static simplifyWarnings(warnings: Warning[]): SimplifiedWarningSummary[] {
+    return warnings.map(w => this.simplifyWarning(w));
+  }
+
   // ============================================
   // ESCALATION RECOMMENDATION ENGINE
   // ============================================
@@ -212,6 +270,7 @@ export class WarningService {
   /**
    * Generate escalation recommendation based on employee history
    * Now uses UniversalCategories as single source of truth
+   * 🔥 FIXED: Returns simplified warning summaries to avoid Firestore size limits
    */
   static async getEscalationRecommendation(
     employeeId: string,
@@ -300,11 +359,11 @@ export class WarningService {
           : undefined,
         interventionLevel: requiresHRIntervention ? 'urgent' : undefined,
         
-        // Context - 🔥 FIXED: Now shows category-specific warnings only
-        activeWarnings: categorySpecificWarnings,
+        // Context - 🔥 FIXED: Use simplified summaries to avoid Firestore size limits
+        activeWarnings: this.simplifyWarnings(categorySpecificWarnings),
         escalationPath,
         isEscalation: categorySpecificWarnings.length > 0,
-        
+
         // LRA Compliance
         category: categoryForRecommendation?.name || 'Unknown Category',
         categoryId: categoryForRecommendation?.id || categoryId,
@@ -317,7 +376,7 @@ export class WarningService {
         nextExpiryDate: this.calculateNextExpiryDate(suggestedLevel, categoryForRecommendation?.defaultValidityPeriod || 6),
         examples: categoryForRecommendation?.commonExamples || [],
         explanation: categoryForRecommendation?.escalationRationale || 'Progressive discipline according to LRA Schedule 8',
-        previousWarnings: categorySpecificWarnings,
+        previousWarnings: this.simplifyWarnings(categorySpecificWarnings), // 🔥 FIXED: Simplified summaries
         
       };
       

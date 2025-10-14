@@ -428,7 +428,7 @@ export class PDFGenerationService {
       Logger.debug('📋 Adding incident details section...')
       currentY = this.addIncidentDetailsSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
       Logger.success(5387)
-      
+
       // 6. Previous Disciplinary Action + Consequences (if available)
       if (data.disciplineRecommendation) {
         Logger.debug('📋 Adding previous disciplinary action section...')
@@ -848,11 +848,18 @@ export class PDFGenerationService {
     pageHeight: number,
     bottomMargin: number
   ): number {
-    if (!recommendation) return startY;
+    if (!recommendation) {
+      Logger.warn('⚠️ No recommendation data provided to addPreviousDisciplinaryActionSection');
+      return startY;
+    }
+
+    // 🔥 CRITICAL FIX: Support both field names (activeWarnings and previousWarnings)
+    // Firestore may store the data as either field name depending on when the warning was created
+    const warnings = recommendation.activeWarnings || recommendation.previousWarnings || [];
 
     // Calculate height dynamically based on number of warnings
     const baseHeight = 28;
-    const warningCount = recommendation.activeWarnings?.length || 0;
+    const warningCount = warnings.length;
     const warningHeight = warningCount > 0 ? warningCount * 6 + 20 : 20;
     const totalHeight = baseHeight + warningHeight;
 
@@ -877,8 +884,8 @@ export class PDFGenerationService {
     let listY = startY + 12;
 
     // Display warnings in numbered format - INCREASED LINE SPACING
-    if (recommendation.activeWarnings && recommendation.activeWarnings.length > 0) {
-      recommendation.activeWarnings.forEach((warning: any, index: number) => {
+    if (warnings && warnings.length > 0) {
+      warnings.forEach((warning: any, index: number) => {
         const warningDate = this.formatDate(warning.issuedDate || warning.issueDate || new Date());
         const description = warning.description || warning.incidentDescription || 'No description available';
         const level = this.getWarningLevelDisplay(warning.level || warning.warningLevel || 'verbal');

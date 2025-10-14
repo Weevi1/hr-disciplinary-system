@@ -411,11 +411,58 @@ This versioning system is **CRITICAL** for:
 
 ---
 
-## 🔧 Latest Updates (Session 25)
+## 🔧 Latest Updates (Session 27)
 
 **See `RECENT_UPDATES.md` and `SESSION_HISTORY.md` for complete change history**
 
-### Most Recent Changes (Session 25 - 2025-10-14)
+### Most Recent Changes (Session 27 - 2025-10-14)
+- **🐛 WARNING WIZARD DATE & AUTO-SAVE FIXES** - Fixed issue date defaulting to wrong date and removed problematic auto-save feature
+  - **Problem 1**: Warning wizard Issue Date field was defaulting to October 6, 2025 instead of today's date (October 14)
+  - **Root Cause**: Browser localStorage auto-save was restoring old cached form data with stale dates
+  - **Solution**:
+    - Fixed timezone-safe date initialization in `EnhancedWarningWizard.tsx` (lines 197-214)
+    - Changed from `new Date().toISOString().split('T')[0]` (UTC-based) to local date calculation
+    - **Removed auto-save feature** entirely from `IncidentDetailsForm.tsx` to prevent future data persistence issues
+  - **Problem 2**: Warnings showing October 6 dates in PDFs and list views
+  - **Root Cause**: `simplifyWarning()` method was temporarily converting dates to ISO strings, causing timezone shifts
+  - **Solution**: Reverted to keeping dates as Date objects - Firestore handles conversion correctly
+  - **Problem 3**: `disciplineRecommendation` field not saving to Firestore
+  - **Root Cause**: `Warning` interface in `WarningService.ts` was missing the field definition
+  - **Solution**: Added `disciplineRecommendation?: EscalationRecommendation` to Warning interface
+  - **Files Modified**:
+    - `frontend/src/components/warnings/enhanced/EnhancedWarningWizard.tsx` (lines 197-214): Timezone-safe date initialization
+    - `frontend/src/components/warnings/enhanced/steps/components/IncidentDetailsForm.tsx`: Removed auto-save feature completely
+    - `frontend/src/services/WarningService.ts` (lines 102-104): Added missing interface fields
+  - **Debug Logging Cleanup**: Removed temporary troubleshooting logs from:
+    - `PDFGenerationService.ts` (removed lines 433-441, 860-871)
+    - `pdfDataTransformer.ts` (removed lines 231-255, 280-287)
+    - `api/index.ts` (removed lines 172-178, 235-240)
+  - **Impact**:
+    - ✅ Issue Date now correctly defaults to current date
+    - ✅ No more localStorage interference with form data
+    - ✅ PDFs show correct historical dates
+    - ✅ Progressive discipline history properly tracked
+  - **User Action Required**: Clear browser localStorage: `localStorage.removeItem('warningWizard_incidentDetails')`
+  - **Status**: ✅ Complete - Clean codebase ready for production
+
+### Previous Changes (Session 26 - 2025-10-14)
+- **🐛 MOBILE VIEWPORT OVERFLOW FIX** - Fixed horizontal scrolling issue on all mobile dashboards
+  - **Problem**: Background could scroll horizontally on mobile devices, revealing a few pixels off-screen to the right
+  - **Root Cause**: Container elements using `max-w-7xl mx-auto` combined with padding classes in the same element
+    - The `mx-auto` (margin-left/right auto) combined with padding pushed content beyond viewport width
+    - Pattern occurred in DashboardRouter.tsx and BusinessDashboard.tsx
+  - **Solution**: Separated padding and max-width into nested containers
+    - **Pattern**: Outer container handles padding (`w-full px-4 sm:px-6`), inner container handles centering (`max-w-7xl mx-auto`)
+    - Added CSS safeguards: `overflow-x: hidden` and `max-width: 100%` to html, body, and #root elements
+  - **Files Modified**:
+    - `frontend/src/components/dashboard/DashboardRouter.tsx` (lines 85-94): Split super user dashboard containers
+    - `frontend/src/pages/business/BusinessDashboard.tsx` (lines 151-167, 225): Split welcome and content containers
+    - `frontend/src/index.css` (lines 157-186): Added overflow-x and max-width safeguards to html, body, #root
+  - **Impact**: All mobile dashboards now render perfectly within viewport with no horizontal scrolling
+  - **Bundle Impact**: No change (CSS-only fix)
+  - **Status**: ✅ Complete - Production build successful (18.21s), verified no TypeScript errors
+
+### Previous Changes (Session 25 - 2025-10-14)
 - **✨ FORGOT PASSWORD FUNCTIONALITY** - Complete password reset system implementation
   - **Purpose**: Allow users to reset forgotten passwords via email without admin intervention
   - **Implementation**:
@@ -579,4 +626,4 @@ This versioning system is **CRITICAL** for:
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, **WCAG AA accessibility compliance**, and **versioned PDF generation for legal compliance**.*
 
-*Last Updated: 2025-10-14 - Session 25: Forgot Password Functionality*
+*Last Updated: 2025-10-14 - Session 27: Warning Wizard Date & Auto-Save Fixes*

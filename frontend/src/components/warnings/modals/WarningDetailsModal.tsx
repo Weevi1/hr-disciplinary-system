@@ -1107,13 +1107,14 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
               status: warning.status // Pass warning status for PDF watermarking
             },
             signatures: warning.signatures || { manager: null, employee: null },
-            lraRecommendation: {
+            lraRecommendation: warning.disciplineRecommendation || {
               category: warning.categoryName || warning.category || 'General',
               recommendedLevel: warning.level || 'Counselling Session',
               suggestedLevel: warning.level || 'counselling',
               reason: 'Based on incident severity and employee history',
               warningCount: 1,
               previousWarnings: [],
+              activeWarnings: [],
               legalRequirements: ['Employee consultation', 'Written documentation', 'Appeal process notification']
             },
             organizationId: warning.organizationId || ''

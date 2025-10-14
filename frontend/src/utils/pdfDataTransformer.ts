@@ -23,9 +23,12 @@ export const convertFirestoreTimestamp = (timestamp: any): Date => {
     return new Date();
   }
 
-  // Firestore Timestamp format: { seconds, nanoseconds }
+  // Firestore Timestamp format: { seconds, nanoseconds } OR { _seconds, _nanoseconds }
   if (timestamp.seconds !== undefined) {
     return new Date(timestamp.seconds * 1000);
+  }
+  if (timestamp._seconds !== undefined) {
+    return new Date(timestamp._seconds * 1000);
   }
 
   // Already a Date object
@@ -43,6 +46,45 @@ export const convertFirestoreTimestamp = (timestamp: any): Date => {
 
   Logger.warn('⚠️ Invalid timestamp format, using current date:', timestamp);
   return new Date();
+};
+
+/**
+ * 🔒 SECURITY-CRITICAL: Recursively convert all Firestore Timestamps in an object
+ *
+ * When reading nested data from Firestore, timestamp objects may have _seconds/_nanoseconds
+ * properties instead of being converted to Date objects. This function recursively walks
+ * the object tree and converts all timestamps to Date objects.
+ *
+ * @param obj - Object potentially containing Firestore Timestamps
+ * @returns Object with all timestamps converted to Date objects
+ */
+export const convertAllTimestamps = (obj: any): any => {
+  if (!obj) return obj;
+
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    return obj.map(item => convertAllTimestamps(item));
+  }
+
+  // Handle objects
+  if (typeof obj === 'object' && !(obj instanceof Date)) {
+    // Check if this is a Firestore Timestamp object
+    if (obj.seconds !== undefined || obj._seconds !== undefined) {
+      return convertFirestoreTimestamp(obj);
+    }
+
+    // Recursively convert all properties
+    const converted: any = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        converted[key] = convertAllTimestamps(obj[key]);
+      }
+    }
+    return converted;
+  }
+
+  // Return primitives as-is
+  return obj;
 };
 
 /**
@@ -181,7 +223,13 @@ export const transformWarningDataForPDF = (
     validityPeriod: warningData.validityPeriod || 6,
 
     // LRA recommendation (if available)
-    disciplineRecommendation: warningData.disciplineRecommendation || warningData.lraRecommendation,
+    // 🔥 CRITICAL FIX: Convert all nested Firestore Timestamps to Date objects
+    // The activeWarnings array contains nested timestamp objects with _seconds/_nanoseconds
+    // that must be converted for proper PDF generation
+    disciplineRecommendation: (() => {
+      const rawRecommendation = warningData.disciplineRecommendation || warningData.lraRecommendation;
+      return convertAllTimestamps(rawRecommendation);
+    })(),
 
     // Legal compliance
     legalCompliance: warningData.legalCompliance,
@@ -207,9 +255,6 @@ export const transformWarningDataForPDF = (
     warningId: pdfData.warningId,
     pdfGeneratorVersion: pdfData.pdfGeneratorVersion,
     employee: `${pdfData.employee.firstName} ${pdfData.employee.lastName}`,
-    issuedBy: pdfData.issuedByName || 'Not specified',
-    issueDate: pdfData.issuedDate.toISOString(),
-    incidentDate: pdfData.incidentDate.toISOString(),
     warningLevel: pdfData.warningLevel
   });
 
