@@ -4,6 +4,7 @@ import type { FormEvent } from 'react';
 import { useAuth } from './AuthContext';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
+import { ForgotPasswordModal } from './ForgotPasswordModal';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -62,6 +63,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -117,9 +119,18 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
               {/* Password Field */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
                 <div className="relative">
                   <input
                     id="password"
@@ -180,6 +191,12 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+      />
     </div>
   );
 };
