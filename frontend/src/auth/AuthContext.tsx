@@ -86,6 +86,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   switchOrganization: (orgId: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
 }
 
 // Auth state interface
@@ -474,7 +475,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
-      
+
       if (orgId === 'all' || orgId === '') {
         // View all organizations (super user global view)
         Logger.debug('🌐 Switching to global view')
@@ -482,16 +483,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         // Load specific organization
         Logger.debug('🔄 Switching to organization:', orgId)
-        
+
         const organization = await FirebaseService.getDocument<Organization>(
           COLLECTIONS.ORGANIZATIONS,
           orgId
         );
-        
+
         if (!organization) {
           throw new Error(`Organization '${orgId}' not found`);
         }
-        
+
         Logger.success(11662)
         dispatch({ type: 'SET_ORGANIZATION', payload: organization });
       }
@@ -505,6 +506,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // 🔥 Password Reset - Send reset email via Firebase
+  const resetPassword = async (email: string) => {
+    Logger.debug('🔑 Password reset requested for:', email)
+
+    try {
+      // Validate input
+      if (!email || !email.trim()) {
+        throw new Error('Email address is required');
+      }
+
+      if (!email.includes('@')) {
+        throw new Error('Please enter a valid email address');
+      }
+
+      dispatch({ type: 'SET_ERROR', payload: null });
+
+      // Send password reset email via Firebase
+      Logger.debug('📧 Sending password reset email...')
+      const { sendPasswordResetEmail } = await import('firebase/auth');
+      await sendPasswordResetEmail(auth, email.trim());
+
+      Logger.success('✅ Password reset email sent successfully')
+
+    } catch (error: unknown) {
+      let message = 'Failed to send password reset email';
+
+      if (error instanceof Error) {
+        // Handle specific Firebase error codes
+        if (error.message.includes('user-not-found')) {
+          // For security, don't reveal if email exists or not
+          // Just say the email was sent (even if it wasn't)
+          Logger.debug('⚠️ User not found, but not revealing this to user')
+        } else if (error.message.includes('invalid-email')) {
+          message = 'Invalid email address format';
+        } else if (error.message.includes('too-many-requests')) {
+          message = 'Too many reset attempts. Please try again later';
+        } else {
+          message = error.message;
+        }
+      }
+
+      // For security: If user not found, we still show success message
+      // This prevents email enumeration attacks
+      if (error instanceof Error && error.message.includes('user-not-found')) {
+        Logger.debug('⚠️ Showing success message even though user not found (security)')
+        return; // Don't throw error, pretend it worked
+      }
+
+      Logger.error('❌ Password reset failed:', message)
+      dispatch({ type: 'SET_ERROR', payload: message });
+      throw new Error(message);
+    }
+  };
+
   // Context value
   const value: AuthContextType = {
     user: state.user,
@@ -514,7 +569,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     error: state.error,
     login,
     logout,
-    switchOrganization
+    switchOrganization,
+    resetPassword
   };
 
   return (
