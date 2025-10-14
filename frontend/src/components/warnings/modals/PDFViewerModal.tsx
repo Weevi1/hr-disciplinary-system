@@ -173,14 +173,18 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
           Logger.debug('📄 Generating PDF with unified transformer data:', {
             warningId: pdfData.warningId,
             employee: `${pdfData.employee.firstName} ${pdfData.employee.lastName}`,
-            category: pdfData.category
+            category: pdfData.category,
+            pdfGeneratorVersion: pdfData.pdfGeneratorVersion
           });
 
           // Import PDFGenerationService dynamically
           const { PDFGenerationService } = await import('@/services/PDFGenerationService');
 
-          // Generate PDF blob
-          const pdfBlob = await PDFGenerationService.generateWarningPDF(pdfData);
+          // 🔒 VERSIONING: Pass stored version for consistent regeneration
+          const pdfBlob = await PDFGenerationService.generateWarningPDF(
+            pdfData,
+            pdfData.pdfGeneratorVersion
+          );
 
           // Create object URL
           pdfUrl = URL.createObjectURL(pdfBlob);

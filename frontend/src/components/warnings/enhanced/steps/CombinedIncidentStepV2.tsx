@@ -44,6 +44,8 @@ interface CombinedIncidentStepV2Props {
   loadWarningHistory?: (employeeId: string) => void;
   lraRecommendation?: EscalationRecommendation | null;
   isAnalyzing?: boolean;
+  analysisStep?: number;
+  analysisSteps?: string[];
 }
 
 // ============================================
@@ -61,7 +63,9 @@ export const CombinedIncidentStepV2: React.FC<CombinedIncidentStepV2Props> = ({
   isLoadingWarningHistory = false,
   loadWarningHistory,
   lraRecommendation,
-  isAnalyzing = false
+  isAnalyzing = false,
+  analysisStep = 0,
+  analysisSteps = []
 }) => {
 
   // Handlers for child components
@@ -143,12 +147,14 @@ export const CombinedIncidentStepV2: React.FC<CombinedIncidentStepV2Props> = ({
         disabled={isAnalyzing}
       />
 
-      {/* Analysis Status - Simplified */}
+      {/* Analysis Status - Progressive Steps */}
       {isAnalyzing && (
         <ThemedAlert variant="info">
           <div className="flex items-center gap-2">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-            <span className="text-sm">Analyzing incident...</span>
+            <span className="text-sm">
+              {analysisSteps[analysisStep] || 'Analyzing incident...'}
+            </span>
           </div>
         </ThemedAlert>
       )}

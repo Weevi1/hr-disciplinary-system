@@ -135,12 +135,21 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
       // This ensures ALL PDFs for this warning will look IDENTICAL
       const pdfData = transformWarningDataForPDF(warningData, employee, organization);
 
-      Logger.debug('📄 Transformed PDF data:', pdfData);
+      Logger.debug('📄 Transformed PDF data:', {
+        warningId: pdfData.warningId,
+        pdfGeneratorVersion: pdfData.pdfGeneratorVersion,
+        employee: `${pdfData.employee.firstName} ${pdfData.employee.lastName}`
+      });
 
       // Import PDF service and generate
       const { PDFGenerationService } = await import('../../services/PDFGenerationService');
 
-      const pdfBlob = await PDFGenerationService.generateWarningPDF(pdfData);
+      // 🔒 VERSIONING: Pass stored version to ensure consistent regeneration
+      // Historical warnings will use their original generator version (v1.0.0, v1.1.0, etc.)
+      const pdfBlob = await PDFGenerationService.generateWarningPDF(
+        pdfData,
+        pdfData.pdfGeneratorVersion
+      );
 
       Logger.success('✅ PDF generated successfully');
 

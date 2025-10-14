@@ -148,20 +148,23 @@ export const BusinessDashboard = memo(() => {
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
       {/* 🎨 COMPACT WELCOME SECTION - Desktop first */}
       <div className="pb-0" style={{ backgroundColor: 'var(--color-background)' }}>
-        <div className="max-w-7xl mx-auto p-4 pb-3 sm:p-6 sm:pb-4">
-          <ErrorBoundary FallbackComponent={ErrorFallback}>
-            <Suspense fallback={<WelcomeSkeleton />}>
-              <WelcomeSection
-                selectedRole={selectedRole}
-                onRoleChange={handleRoleChange}
-              />
-            </Suspense>
-          </ErrorBoundary>
+        <div className="w-full px-4 sm:px-6 py-4 pb-3 sm:pb-4">
+          <div className="max-w-7xl mx-auto">
+            <ErrorBoundary FallbackComponent={ErrorFallback}>
+              <Suspense fallback={<WelcomeSkeleton />}>
+                <WelcomeSection
+                  selectedRole={selectedRole}
+                  onRoleChange={handleRoleChange}
+                />
+              </Suspense>
+            </ErrorBoundary>
+          </div>
         </div>
       </div>
 
       {/* 🏢 MAIN DASHBOARD CONTENT - Desktop Layout */}
-      <div className="max-w-7xl mx-auto p-4 pt-2 sm:p-6 sm:pt-2">
+      <div className="w-full px-4 sm:px-6 py-4 pt-2 sm:pt-2">
+        <div className="max-w-7xl mx-auto">
 
         {/* 🏢 BUSINESS OWNER DASHBOARD */}
         {selectedRole === 'business-owner' && canManageOrganization() && (
@@ -218,6 +221,7 @@ export const BusinessDashboard = memo(() => {
               <QuotesSection />
             </Suspense>
           </ErrorBoundary>
+        </div>
         </div>
       </div>
     </div>

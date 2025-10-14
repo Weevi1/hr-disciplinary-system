@@ -986,6 +986,32 @@ service cloud.firestore {
     }
 
     // ===================================
+    // TEMPORARY FILES FOR QR CODE CLEANUP
+    // ===================================
+
+    // Temporary files collection - for tracking QR code PDFs that need cleanup
+    // Managers create entries when generating QR codes, system cleans up expired files
+    match /temporaryFiles/{fileId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        // Managers can read temporary file records for their organization
+        (isManager() && belongsToOrganization(resource.data.organizationId))
+      );
+
+      allow create: if isAuthenticated() && (
+        isSuperUser() ||
+        // Managers can create temporary file tracking records
+        (isManager() && belongsToOrganization(request.resource.data.organizationId))
+      );
+
+      allow update, delete: if isAuthenticated() && (
+        isSuperUser() ||
+        // System/managers can update status or delete expired entries
+        (isManager() && belongsToOrganization(resource.data.organizationId))
+      );
+    }
+
+    // ===================================
     // ENHANCED SECURITY HELPERS
     // ===================================
 

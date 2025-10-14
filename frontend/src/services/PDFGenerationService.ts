@@ -6,8 +6,61 @@ import Logger from '../utils/logger';
 // ✅ Supports signatures, recommendations, and all your form data
 // ✅ RESILIENT to incomplete data states
 // 🚨 MEMORY OPTIMIZED for 2012-era devices with <1GB RAM
+// 🔒 VERSIONED PDF GENERATION - Legal compliance through consistent regeneration
 
 import { globalDeviceCapabilities, getPerformanceLimits } from '../utils/deviceDetection';
+
+/**
+ * 🔒 PDF GENERATOR VERSION HISTORY - SECURITY CRITICAL
+ *
+ * ⚠️⚠️⚠️ CRITICAL WARNING: NEVER MODIFY EXISTING VERSION METHODS ⚠️⚠️⚠️
+ *
+ * Each version MUST remain FROZEN to ensure legal compliance.
+ * Old warnings MUST regenerate identically to their original PDF.
+ * Modifying frozen versions breaks legal document integrity and could
+ * invalidate historical warnings in court proceedings.
+ *
+ * 🚫 DO NOT:
+ * - Modify generateWarningPDF_v1_0_0() method
+ * - Modify addPreviousDisciplinaryActionSection_v1_0_0() method
+ * - Modify generateWarningPDF_v1_1_0() method (once it becomes frozen)
+ * - Change any logic in frozen version methods
+ * - "Fix bugs" in frozen versions (create new version instead)
+ *
+ * ✅ HOW TO ADD A NEW VERSION:
+ * 1. Increment PDF_GENERATOR_VERSION below (e.g., 1.1.0 → 1.2.0)
+ * 2. Create new method: generateWarningPDF_v1_2_0()
+ * 3. Create new Previous Action method if format changed: addPreviousDisciplinaryActionSection_v1_2_0()
+ * 4. Add case to switch statement in generateWarningPDF()
+ * 5. Update version history below with change details
+ * 6. Mark previous version (v1.1.0) as FROZEN in its comments
+ * 7. Update CLAUDE.md with new version information
+ * 8. Test thoroughly before deploying
+ *
+ * VERSION HISTORY:
+ * - v1.0.0 (2025-10-14): Initial versioned release [FROZEN]
+ *   - A4 formatting with professional layout
+ *   - Employee rights section
+ *   - Signature aspect ratio preservation
+ *   - Previous Action shows: Date | Offense | Level
+ *   - ⚠️ DO NOT MODIFY - Used by all warnings created before 2025-10-14
+ *
+ * - v1.1.0 (2025-10-14): Previous Action format change [CURRENT]
+ *   - Changed: Previous Action now shows: Date | Incident Description | Level
+ *   - Reason: Offense is redundant (already filtered), incident gives context
+ *   - ⚠️ WILL BE FROZEN when v1.2.0 is released
+ *
+ * VERSIONING RULES (Semantic Versioning):
+ * - MAJOR (X.0.0): Breaking changes to PDF structure (page layout, sections)
+ * - MINOR (0.X.0): Content changes (field additions, formatting tweaks, text changes)
+ * - PATCH (0.0.X): Bug fixes that don't affect visible output (code refactoring only)
+ *
+ * LEGAL COMPLIANCE:
+ * This versioning system ensures warnings can be regenerated identically years
+ * later for appeals, audits, or legal proceedings. Breaking this system could
+ * result in documents being challenged in court.
+ */
+export const PDF_GENERATOR_VERSION = '1.1.0';
 
 // Dynamic import for jsPDF - reduces main bundle by 43%
 // jsPDF will be loaded on-demand when PDF generation is needed
@@ -120,10 +173,190 @@ interface WarningPDFData {
 export class PDFGenerationService {
   
   /**
-   * 🎯 MAIN PDF GENERATION METHOD - RESILIENT VERSION
-   * Generates professional, LRA-compliant warning documents
+   * 🎯 MAIN PDF GENERATION METHOD - VERSIONED & RESILIENT
+   *
+   * This is the entry point for ALL PDF generation in the system.
+   * It routes requests to the appropriate versioned handler.
+   *
+   * HOW VERSIONING WORKS:
+   * - New warnings: Use PDF_GENERATOR_VERSION (currently 1.1.0)
+   * - Old warnings: Use stored pdfGeneratorVersion from Firestore (e.g., 1.0.0)
+   * - This ensures old warnings regenerate identically years later
+   *
+   * WHEN TO UPDATE ROUTING:
+   * When you create a new version (e.g., v1.2.0), add a new case to the
+   * switch statement below. DO NOT remove old cases - they must remain
+   * forever to support historical warnings.
+   *
+   * @param data - Warning data to generate PDF from
+   * @param requestedVersion - Specific version to use (for regenerating old warnings)
+   *                          If not provided, uses PDF_GENERATOR_VERSION (current)
+   * @returns PDF blob
    */
-  static async generateWarningPDF(data: WarningPDFData): Promise<Blob> {
+  static async generateWarningPDF(data: WarningPDFData, requestedVersion?: string): Promise<Blob> {
+    // 🔒 VERSION ROUTING: Use requested version or current version
+    const version = requestedVersion || PDF_GENERATOR_VERSION;
+
+    Logger.debug('📄 PDF Generation requested:', {
+      warningId: data.warningId,
+      requestedVersion: requestedVersion || 'current',
+      actualVersion: version
+    });
+
+    // 🔒 VERSION ROUTING SWITCH
+    // ⚠️ NEVER remove cases from this switch statement
+    // Each case must remain forever to support historical warnings
+    // When adding new versions, add new cases but KEEP all existing ones
+    switch (version) {
+      case '1.0.0':
+        // FROZEN: Used by warnings created before 2025-10-14
+        return this.generateWarningPDF_v1_0_0(data);
+
+      case '1.1.0':
+        // CURRENT: Used by all new warnings
+        return this.generateWarningPDF_v1_1_0(data);
+
+      // When adding v1.2.0, add case here:
+      // case '1.2.0':
+      //   return this.generateWarningPDF_v1_2_0(data);
+
+      default:
+        // Fallback for unknown versions - use current version
+        Logger.warn(`⚠️ Unsupported PDF generator version: ${version}, falling back to current`);
+        return this.generateWarningPDF_v1_1_0(data);
+    }
+  }
+
+  /**
+   * 🔒🔒🔒 VERSION 1.0.0 - FROZEN LEGACY VERSION 🔒🔒🔒
+   *
+   * ⚠️ CRITICAL WARNING: DO NOT MODIFY THIS METHOD ⚠️
+   *
+   * This method is FROZEN and must remain unchanged. It is used to regenerate
+   * all warnings created before 2025-10-14. Any changes to this method will
+   * cause historical warnings to regenerate differently, breaking legal compliance.
+   *
+   * Format:
+   * - Previous Action shows: Date | Offense (Category) | Level
+   *
+   * If you need to fix bugs or make changes:
+   * 1. DO NOT modify this method
+   * 2. Create a new version (e.g., v1.2.0)
+   * 3. Copy this method to the new version
+   * 4. Make changes in the new version only
+   * 5. Update PDF_GENERATOR_VERSION constant
+   *
+   * Used by: All warnings with pdfGeneratorVersion = '1.0.0'
+   * Created: 2025-10-14
+   * Status: FROZEN - DO NOT MODIFY
+   */
+  private static async generateWarningPDF_v1_0_0(data: WarningPDFData): Promise<Blob> {
+    try {
+      // Same implementation as v1.1.0, but with different Previous Action format
+      const capabilities = globalDeviceCapabilities || { isLegacyDevice: false };
+      const limits = getPerformanceLimits(capabilities);
+
+      if (capabilities.isLegacyDevice) {
+        Logger.warn('🚨 Legacy device detected - using simplified PDF generation');
+        return this.generateSimplifiedPDF(data);
+      }
+
+      const startTime = Date.now();
+      const { default: jsPDF } = await import('jspdf');
+
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+
+      doc.setFont('helvetica', 'normal');
+
+      let currentY = 15;
+      const pageWidth = doc.internal.pageSize.width;
+      const pageHeight = doc.internal.pageSize.height;
+      const margin = 20;
+      const bottomMargin = 40;
+
+      // Build PDF with all sections (same as v1.1.0)
+      currentY = this.addOrganizationHeader(doc, data.organization, currentY, pageWidth, margin);
+      currentY = this.addDocumentTitle(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+      currentY = this.addEmployeeSection(doc, data.employee, currentY, pageWidth, margin, pageHeight, bottomMargin);
+      currentY = this.addWarningDetailsSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+      currentY = this.addIncidentDetailsSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+
+      // 🔒 VERSION 1.0.0 DIFFERENCE: Use old Previous Action format
+      if (data.disciplineRecommendation) {
+        currentY = this.addPreviousDisciplinaryActionSection_v1_0_0(doc, data.disciplineRecommendation, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        currentY = this.addConsequencesSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+      }
+
+      if (data.legalCompliance) {
+        currentY = this.addLegalComplianceSection(doc, data.legalCompliance, currentY, pageWidth, margin, pageHeight, bottomMargin);
+      }
+
+      if (data.additionalNotes) {
+        currentY = this.addAdditionalNotesSection(doc, data.additionalNotes, currentY, pageWidth, margin, pageHeight, bottomMargin);
+      }
+
+      currentY = this.addEmployeeRightsSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+      currentY = this.addSignaturesSection(doc, data.signatures, data.employee, currentY, pageWidth, margin, pageHeight, bottomMargin, data.issuedDate, data.issuedByName);
+
+      if (data.deliveryChoice) {
+        currentY = this.addDeliverySection(doc, data.deliveryChoice, currentY, pageWidth, margin, pageHeight, bottomMargin);
+      }
+
+      if (data.appealDetails || data.appealOutcome) {
+        currentY = this.addAppealHistorySection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+      }
+
+      this.addDocumentFooter(doc, data, pageWidth);
+      this.addSecurityWatermark(doc, pageWidth);
+
+      if (data.status === 'overturned') {
+        this.addOverturnedWatermark(doc, pageWidth);
+      }
+
+      const pdfBlob = doc.output('blob');
+      const endTime = Date.now();
+
+      Logger.debug('✅ v1.0.0 PDF generated:', {
+        warningId: data.warningId,
+        version: '1.0.0',
+        size: `${(pdfBlob.size / 1024).toFixed(1)} KB`,
+        time: `${endTime - startTime}ms`
+      });
+
+      return pdfBlob;
+
+    } catch (error) {
+      Logger.error('❌ v1.0.0 PDF generation failed:', error)
+      throw new Error(`PDF generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * 🔒 VERSION 1.1.0 - CURRENT VERSION
+   *
+   * This is the CURRENT active version used for all new warnings.
+   *
+   * Format:
+   * - Previous Action shows: Date | Incident Description | Level
+   *
+   * ⚠️ IMPORTANT: When v1.2.0 is created, this method will become FROZEN
+   * Once frozen, this method must NEVER be modified. Any changes after that
+   * point must be made in a new version (v1.2.0, v1.3.0, etc.)
+   *
+   * For now, this is the active version and can be modified carefully.
+   * However, remember that every modification affects all future warnings,
+   * so changes should be well-considered and tested.
+   *
+   * Used by: All warnings with pdfGeneratorVersion = '1.1.0' (current default)
+   * Created: 2025-10-14
+   * Status: CURRENT (will become FROZEN when next version is released)
+   */
+  private static async generateWarningPDF_v1_1_0(data: WarningPDFData): Promise<Blob> {
     try {
       // 🚨 Memory check for legacy devices
       const capabilities = globalDeviceCapabilities || { isLegacyDevice: false };
@@ -647,7 +880,88 @@ export class PDFGenerationService {
     if (recommendation.activeWarnings && recommendation.activeWarnings.length > 0) {
       recommendation.activeWarnings.forEach((warning: any, index: number) => {
         const warningDate = this.formatDate(warning.issuedDate || warning.issueDate || new Date());
-        const category = warning.categoryName || warning.category || 'General Misconduct';
+        const description = warning.description || warning.incidentDescription || 'No description available';
+        const level = this.getWarningLevelDisplay(warning.level || warning.warningLevel || 'verbal');
+
+        // Truncate description if too long (max 60 characters)
+        const truncatedDesc = description.length > 60 ? description.substring(0, 57) + '...' : description;
+
+        const line = `${index + 1}) Date: ${warningDate} | Incident: ${truncatedDesc} | Level: ${level}`;
+        doc.text(line, margin + 5, listY);
+        listY += 6;
+      });
+    } else {
+      // No previous warnings
+      doc.text('No previous disciplinary action on file', margin + 5, listY);
+    }
+
+    return startY + warningHeight + 12;
+  }
+
+  /**
+   * 🔒🔒🔒 VERSION 1.0.0 - Previous Disciplinary Action Section (FROZEN) 🔒🔒🔒
+   *
+   * ⚠️ CRITICAL WARNING: DO NOT MODIFY THIS METHOD ⚠️
+   *
+   * This is a FROZEN legacy method used by generateWarningPDF_v1_0_0().
+   * It must remain unchanged to ensure historical warnings regenerate identically.
+   *
+   * Format: Date | Offense (Category) | Level
+   * Example: "1) Date: 2025-01-15 | Offense: Tardiness | Level: Verbal Warning"
+   *
+   * DO NOT:
+   * - Change the format string on line 865
+   * - Modify the field names (Offense, Date, Level)
+   * - Change spacing, punctuation, or separators
+   * - "Fix" any perceived issues
+   *
+   * If changes needed: Create new version (v1.2.0) with new method
+   *
+   * Status: FROZEN - DO NOT MODIFY
+   */
+  private static addPreviousDisciplinaryActionSection_v1_0_0(
+    doc: any,
+    recommendation: WarningPDFData['disciplineRecommendation'],
+    startY: number,
+    pageWidth: number,
+    margin: number,
+    pageHeight: number,
+    bottomMargin: number
+  ): number {
+    if (!recommendation) return startY;
+
+    // Calculate height dynamically based on number of warnings
+    const baseHeight = 28;
+    const warningCount = recommendation.activeWarnings?.length || 0;
+    const warningHeight = warningCount > 0 ? warningCount * 6 + 20 : 20;
+    const totalHeight = baseHeight + warningHeight;
+
+    startY = this.checkPageOverflow(doc, startY, totalHeight, pageHeight, bottomMargin);
+
+    // Section title - REDUCED FONT SIZE for A4
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(51, 51, 51);
+    doc.text('PREVIOUS DISCIPLINARY ACTION (Still Valid on File)', margin, startY);
+
+    // Gray box for section - INCREASED PADDING
+    doc.setDrawColor(200, 200, 200);
+    doc.setFillColor(248, 248, 248);
+    doc.setLineWidth(0.3);
+    doc.rect(margin, startY + 4, pageWidth - (margin * 2), warningHeight, 'FD');
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+
+    let listY = startY + 12;
+
+    // Display warnings in numbered format - INCREASED LINE SPACING
+    // 🔒 v1.0.0 FORMAT: Shows "Offense" (category) instead of incident description
+    if (recommendation.activeWarnings && recommendation.activeWarnings.length > 0) {
+      recommendation.activeWarnings.forEach((warning: any, index: number) => {
+        const warningDate = this.formatDate(warning.issuedDate || warning.issueDate || new Date());
+        const category = warning.category || warning.categoryName || 'General Misconduct';
         const level = this.getWarningLevelDisplay(warning.level || warning.warningLevel || 'verbal');
 
         const line = `${index + 1}) Date: ${warningDate} | Offense: ${category} | Level: ${level}`;

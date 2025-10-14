@@ -5,6 +5,7 @@
 // ⚠️ DO NOT modify without security review - changes affect legal compliance
 
 import Logger from './logger';
+import { PDF_GENERATOR_VERSION } from '../services/PDFGenerationService';
 
 /**
  * 🔒 SECURITY-CRITICAL: Convert Firestore Timestamp to JavaScript Date
@@ -145,7 +146,13 @@ export const transformWarningDataForPDF = (
     warningId: warningData.id || warningData.warningId || `WRN_${Date.now()}`,
     organizationId: warningData.organizationId || organizationData.id,
     status: warningData.status || 'issued',
-    issuedByName: warningData.issuedByName || '', // Manager name who issued the warning
+
+    // 🔒 PDF Generator Version (for consistent regeneration)
+    // Use stored version if available (for regenerating old warnings), otherwise use current version
+    pdfGeneratorVersion: warningData.pdfGeneratorVersion || PDF_GENERATOR_VERSION,
+
+    // 🔥 CRITICAL FIX: Manager name is stored in signatures.managerName (not top-level issuedByName)
+    issuedByName: warningData.signatures?.managerName || warningData.issuedByName || '', // Manager name who issued the warning
 
     // Dates (CRITICAL: Must use historical dates, NOT current date)
     issuedDate: issueDate,
@@ -198,6 +205,7 @@ export const transformWarningDataForPDF = (
 
   Logger.debug('✅ PDF data transformation complete:', {
     warningId: pdfData.warningId,
+    pdfGeneratorVersion: pdfData.pdfGeneratorVersion,
     employee: `${pdfData.employee.firstName} ${pdfData.employee.lastName}`,
     issuedBy: pdfData.issuedByName || 'Not specified',
     issueDate: pdfData.issuedDate.toISOString(),
@@ -261,12 +269,13 @@ export const validatePDFData = (pdfData: any): {
 /**
  * 🔒 SECURITY AUDIT LOG
  *
- * LAST MODIFIED: 2025-10-10
+ * LAST MODIFIED: 2025-10-14
  * MODIFIED BY: Claude Code
- * REASON: Initial creation - unified PDF data transformation
- * SECURITY IMPACT: HIGH - affects legal document integrity
+ * REASON: Added PDF generator version tracking for consistent regeneration
+ * SECURITY IMPACT: HIGH - ensures warnings regenerate identically regardless of when regenerated
  * REVIEWED BY: [Pending]
  *
  * CHANGE HISTORY:
+ * - 2025-10-14: Added pdfGeneratorVersion field to ensure consistent regeneration
  * - 2025-10-10: Initial creation to unify PDF generation across all components
  */
