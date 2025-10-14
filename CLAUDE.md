@@ -123,6 +123,10 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 - `config/firestore.rules` - Security rules (requires review)
 
 ### Component Systems
+- `frontend/src/auth/` - Authentication system (login, password reset)
+  - `LoginForm.tsx` - Professional login screen with progressive loading
+  - `ForgotPasswordModal.tsx` - **Password reset modal** with WCAG 2.1 AA accessibility and email enumeration prevention
+  - `AuthContext.tsx` - Auth state management with Firebase integration
 - `frontend/src/components/warnings/enhanced/` - Main warning workflow (mobile-optimized)
 - `frontend/src/components/warnings/ManualWarningEntry.tsx` - **Historical Warning Entry System** for digitizing paper records
 - `frontend/src/components/warnings/HistoricalWarningDisclaimer.tsx` - Legal compliance warnings for manual entry
@@ -407,11 +411,40 @@ This versioning system is **CRITICAL** for:
 
 ---
 
-## 🔧 Latest Updates (Session 24)
+## 🔧 Latest Updates (Session 25)
 
 **See `RECENT_UPDATES.md` and `SESSION_HISTORY.md` for complete change history**
 
-### Most Recent Changes (Session 24 - 2025-10-14)
+### Most Recent Changes (Session 25 - 2025-10-14)
+- **✨ FORGOT PASSWORD FUNCTIONALITY** - Complete password reset system implementation
+  - **Purpose**: Allow users to reset forgotten passwords via email without admin intervention
+  - **Implementation**:
+    - Added `resetPassword(email: string)` function to AuthContext
+    - Created professional ForgotPasswordModal component with WCAG 2.1 AA accessibility
+    - Integrated "Forgot Password?" link in LoginForm (next to password label)
+    - Firebase `sendPasswordResetEmail` integration for secure email delivery
+  - **Key Features**:
+    - Security-conscious design prevents email enumeration attacks (same success message regardless of email existence)
+    - Comprehensive error handling (invalid-email, too-many-requests, rate limiting)
+    - Auto-focus on email input, focus trap, keyboard navigation (Escape to close)
+    - Body scroll prevention using `usePreventBodyScroll` hook
+    - Standardized z-index from `constants/zIndex.ts`
+    - Auto-close modal after successful email send (3 seconds)
+    - Two-state UI: Form state → Success state with checkmark
+  - **Security Best Practices**:
+    - Email enumeration attack prevention (don't reveal if email exists)
+    - Input validation (email format, required fields)
+    - Rate limiting error handling
+    - HTTPS-only Firebase password reset emails
+  - **Files Modified**:
+    - `AuthContext.tsx` (lines 79-89, 509-561, 564-574): Added `resetPassword` function
+    - `LoginForm.tsx` (lines 1-7, 59-66, 120-152, 186-200): Added forgot password link and modal integration
+  - **Files Created**:
+    - `ForgotPasswordModal.tsx` (new component, 204 lines): Professional modal with accessibility features
+  - **Bundle Impact**: +4.58 KB (298.54 KB → 303.12 KB)
+  - **Status**: ✅ Complete - Live in production, requires Firebase email configuration for testing
+
+### Previous Changes (Session 24 - 2025-10-14)
 - **✅ CRITICAL: Employee Filtering for HR/Business Owners** - Fixed employee visibility when using HOD Dashboard tools
   - **Problem**: HR Managers and Business Owners only saw 1 employee instead of all 5 when using HOD Dashboard tools (warnings, counselling, absences)
   - **Root Cause**: Code checked `user.role` (object) instead of `user.role.id` (string), causing role comparison to fail
@@ -546,4 +579,4 @@ This versioning system is **CRITICAL** for:
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, **WCAG AA accessibility compliance**, and **versioned PDF generation for legal compliance**.*
 
-*Last Updated: 2025-10-14 - Session 24: Employee Filtering & Modal Fixes*
+*Last Updated: 2025-10-14 - Session 25: Forgot Password Functionality*
