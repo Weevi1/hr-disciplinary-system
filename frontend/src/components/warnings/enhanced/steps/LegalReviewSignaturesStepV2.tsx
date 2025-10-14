@@ -632,6 +632,7 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
                 initialSignature={signatures.manager}
                 width={300}
                 height={80}
+                signerName={currentManagerName}
               />
             </div>
 
@@ -720,6 +721,7 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
                 initialSignature={signatures.employee}
                 width={300}
                 height={80}
+                signerName={selectedEmployee ? `${(selectedEmployee as any).profile?.firstName || 'Unknown'} ${(selectedEmployee as any).profile?.lastName || 'Employee'}` : 'Unknown Employee'}
               />
             </div>
           </div>

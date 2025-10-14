@@ -106,9 +106,10 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 - `frontend/src/services/DatabaseShardingService.ts` - Core sharding engine
 - `frontend/src/services/ShardedDataService.ts` - High-level sharded data operations
 - `frontend/src/services/TimeService.ts` - Secure timestamp service preventing fraud (A+ security compliant)
-- `frontend/src/services/PDFGenerationService.ts` - PDF generation with organization branding and logos
+- `frontend/src/services/PDFGenerationService.ts` - **VERSIONED PDF GENERATION** - See detailed section below
 - `frontend/src/services/EmployeeLifecycleService.ts` - Complete employee archive/restore system
 - `frontend/src/services/DepartmentService.ts` - Department CRUD operations with real-time sync and employee count management
+- `frontend/src/utils/pdfDataTransformer.ts` - **UNIFIED PDF DATA TRANSFORMER** - Single source of truth for PDF data transformation
 
 ### Custom Hooks
 - `frontend/src/hooks/useHistoricalWarningCountdown.ts` - **60-day countdown** for historical warning entry feature with urgency indicators
@@ -162,6 +163,158 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 - **✅ Mobile Dashboard**: Samsung S8 era mobile optimizations implemented
 - **✅ Mobile Layout**: MainLayout header optimized - removed hamburger menu, consolidated navigation into profile dropdown
 - **✅ Mobile Components**: Created MobileEmployeeManagement component with dedicated mobile UX patterns
+
+---
+
+## 🔒 PDF Generator Versioning System - SECURITY CRITICAL
+
+### **Overview**
+
+The PDF generation system uses semantic versioning to ensure **legal compliance** and **document integrity**. Historical warnings must regenerate **identically** years later for appeals, audits, or legal proceedings.
+
+### **⚠️⚠️⚠️ CRITICAL: NEVER MODIFY FROZEN VERSIONS ⚠️⚠️⚠️**
+
+**Frozen versions** are PERMANENTLY LOCKED and must **NEVER** be changed. Modifying them breaks legal document integrity and could invalidate historical warnings in court.
+
+### **Current Version Status**
+
+- **v1.0.0** - [FROZEN] - Used by warnings created before 2025-10-14
+  - Previous Action shows: `Date | Offense | Level`
+  - ⚠️ **DO NOT MODIFY** `generateWarningPDF_v1_0_0()` or `addPreviousDisciplinaryActionSection_v1_0_0()`
+
+- **v1.1.0** - [CURRENT] - Used by all new warnings
+  - Previous Action shows: `Date | Incident Description | Level`
+  - ⚠️ Will become FROZEN when v1.2.0 is released
+
+### **How It Works**
+
+1. **New Warnings**: Store `pdfGeneratorVersion: '1.1.0'` in Firestore when created
+2. **Regeneration**: Read stored version from Firestore, route to correct version handler
+3. **Consistency**: Old warnings use v1.0.0 code, new warnings use v1.1.0 code
+4. **Legal Compliance**: PDFs always look identical regardless of when regenerated
+
+### **Key Files**
+
+- **`frontend/src/services/PDFGenerationService.ts`**
+  - Main entry point: `generateWarningPDF(data, requestedVersion)`
+  - Version routing switch (lines 206-228)
+  - Frozen methods: `generateWarningPDF_v1_0_0()`, `addPreviousDisciplinaryActionSection_v1_0_0()`
+  - Current method: `generateWarningPDF_v1_1_0()`
+  - **100+ lines of protective comments**
+
+- **`frontend/src/utils/pdfDataTransformer.ts`**
+  - `transformWarningDataForPDF()` - Adds `pdfGeneratorVersion` to all PDFs
+  - Single source of truth for data transformation
+
+- **`frontend/src/components/warnings/enhanced/EnhancedWarningWizard.tsx`**
+  - Stores `pdfGeneratorVersion` when creating warnings (line 887)
+  - 27 lines of comprehensive comments explaining system
+
+### **Updated Components (All pass stored version)**
+
+All 6 PDF regeneration points now pass the stored version:
+1. `SimplePDFDownloadModal.tsx` (line 212-215)
+2. `PDFPreviewModal.tsx` (line 219-222)
+3. `PrintDeliveryGuide.tsx` (line 149-152)
+4. `DeliveryCompletionStep.tsx` (line 275-278)
+5. `ProofOfDeliveryModal.tsx` (line 279-282)
+6. `PDFViewerModal.tsx` (line 184-187)
+
+### **🚫 DO NOT:**
+
+- Modify `generateWarningPDF_v1_0_0()` method
+- Modify `addPreviousDisciplinaryActionSection_v1_0_0()` method
+- Change format strings in frozen versions (e.g., line 865 in v1.0.0)
+- "Fix bugs" in frozen versions
+- Remove cases from version routing switch
+- Modify `generateWarningPDF_v1_1_0()` once it becomes frozen
+
+### **✅ HOW TO ADD A NEW VERSION (e.g., v1.2.0):**
+
+1. **Increment Version**: Update `PDF_GENERATOR_VERSION` in `PDFGenerationService.ts` (line 63)
+   ```typescript
+   export const PDF_GENERATOR_VERSION = '1.2.0'; // Changed from 1.1.0
+   ```
+
+2. **Create New Method**: Copy v1.1.0 method and create `generateWarningPDF_v1_2_0()`
+   ```typescript
+   private static async generateWarningPDF_v1_2_0(data: WarningPDFData): Promise<Blob> {
+     // Your new implementation
+   }
+   ```
+
+3. **Create New Format Method** (if format changed):
+   ```typescript
+   private static addPreviousDisciplinaryActionSection_v1_2_0(...) {
+     // Your new format
+   }
+   ```
+
+4. **Update Version Routing** (add new case, KEEP all old ones):
+   ```typescript
+   switch (version) {
+     case '1.0.0':
+       return this.generateWarningPDF_v1_0_0(data);
+     case '1.1.0':
+       return this.generateWarningPDF_v1_1_0(data);
+     case '1.2.0':  // ADD THIS
+       return this.generateWarningPDF_v1_2_0(data);
+     default:
+       return this.generateWarningPDF_v1_2_0(data); // Update fallback
+   }
+   ```
+
+5. **Mark Previous Version as FROZEN**:
+   - Update v1.1.0 method comment to say [FROZEN]
+   - Add ⚠️ DO NOT MODIFY warnings to v1.1.0
+
+6. **Update Version History** (lines 40-51):
+   ```typescript
+   * - v1.2.0 (2025-XX-XX): Description of changes [CURRENT]
+   *   - What changed and why
+   ```
+
+7. **Update CLAUDE.md**: Add v1.2.0 to version status list
+
+8. **Test Thoroughly**:
+   - Create new warning, verify it stores v1.2.0
+   - Regenerate old v1.0.0 warning, verify format unchanged
+   - Regenerate old v1.1.0 warning, verify format unchanged
+   - Download, preview, print all versions
+
+### **Semantic Versioning Rules**
+
+- **MAJOR (X.0.0)**: Breaking changes to PDF structure (page layout, sections)
+- **MINOR (0.X.0)**: Content changes (field additions, formatting tweaks, text changes)
+- **PATCH (0.0.X)**: Bug fixes that don't affect visible output (code refactoring only)
+
+### **Testing Checklist**
+
+When versioning changes are made:
+
+- [ ] New warnings store current version in Firestore
+- [ ] Old warnings regenerate with their original version
+- [ ] All 6 regeneration points pass stored version
+- [ ] Version routing works for all versions
+- [ ] No modifications to frozen version methods
+- [ ] Comments updated with [FROZEN] or [CURRENT] status
+- [ ] CLAUDE.md updated with version information
+- [ ] Build succeeds without errors
+- [ ] Production deployment successful
+
+### **Legal Compliance Impact**
+
+This versioning system is **CRITICAL** for:
+- **Court proceedings**: Historical warnings must match original documents
+- **Audits**: Consistency required for labor law compliance
+- **Appeals**: Documents must be identical across time
+- **CCMA cases**: Document tampering allegations avoided
+
+**Modifying frozen versions could result in:**
+- ❌ Documents being challenged in court
+- ❌ Losing CCMA/labor disputes
+- ❌ Legal liability for the organization
+- ❌ Loss of document integrity and trust
 
 ---
 
@@ -254,11 +407,39 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 
 ---
 
-## 🔧 Latest Updates (Session 22)
+## 🔧 Latest Updates (Session 23)
 
 **See `RECENT_UPDATES.md` and `SESSION_HISTORY.md` for complete change history**
 
-### Most Recent Changes (Session 22 - 2025-10-13)
+### Most Recent Changes (Session 23 - 2025-10-14)
+- **🔒 PDF GENERATOR VERSIONING SYSTEM** - Implemented comprehensive versioning for legal compliance
+  - **Purpose**: Ensure historical warnings regenerate identically years later for appeals, audits, and legal proceedings
+  - **Implementation**:
+    - Added semantic versioning (v1.0.0, v1.1.0) to PDFGenerationService
+    - Created frozen v1.0.0 method with "Date | Offense | Level" format (for old warnings)
+    - Created current v1.1.0 method with "Date | Incident Description | Level" format
+    - Version routing system directs to appropriate handler based on stored version
+    - All 6 PDF regeneration points now pass stored version
+  - **Key Features**:
+    - New warnings store `pdfGeneratorVersion: '1.1.0'` in Firestore
+    - Old warnings regenerate with v1.0.0 code, new warnings use v1.1.0 code
+    - Frozen versions are PERMANENTLY LOCKED and must never be modified
+    - 100+ lines of protective comments prevent accidental changes
+  - **Files Modified**:
+    - `PDFGenerationService.ts`: Added versioning, routing, frozen methods, comprehensive comments
+    - `pdfDataTransformer.ts`: Added `pdfGeneratorVersion` field to all transformations
+    - `EnhancedWarningWizard.tsx`: Stores version when creating warnings (27 lines of comments)
+    - `SimplePDFDownloadModal.tsx`: Passes stored version for regeneration
+    - `PDFPreviewModal.tsx`: Passes stored version for regeneration
+    - `PrintDeliveryGuide.tsx`: Passes stored version for regeneration
+    - `DeliveryCompletionStep.tsx`: Passes stored version for regeneration
+    - `ProofOfDeliveryModal.tsx`: Passes stored version for regeneration
+    - `PDFViewerModal.tsx`: Passes stored version for regeneration
+    - `CLAUDE.md`: Added comprehensive versioning documentation section
+  - **Legal Impact**: Prevents document tampering, ensures court admissibility, maintains audit compliance
+  - **Status**: ✅ Complete - Ready for production use
+
+### Previous Changes (Session 22 - 2025-10-13)
 - **CRITICAL: Manager Name in PDF Signatures** - Fixed missing manager name in PDF signature section
   - **Problem**: Manager signature section showed blank line `Manager Name: _____________________` instead of actual manager name
   - **Root Cause**: Enhanced Warning Wizard was NOT saving `issuedBy` and `issuedByName` fields to Firestore when creating warnings
@@ -385,6 +566,6 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 
 ---
 
-*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, and **WCAG AA accessibility compliance**.*
+*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, **WCAG AA accessibility compliance**, and **versioned PDF generation for legal compliance**.*
 
-*Last Updated: 2025-10-10 - Session 21: PDF Data Consistency & Signature Fixes*
+*Last Updated: 2025-10-14 - Session 23: PDF Generator Versioning System*

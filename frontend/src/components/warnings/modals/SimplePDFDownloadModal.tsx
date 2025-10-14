@@ -123,7 +123,9 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
       signatures: signatures,
       additionalNotes: formData.additionalNotes || '',
       status: formData.status,
-      disciplineRecommendation: lraRecommendation
+      disciplineRecommendation: lraRecommendation,
+      // 🔥 CRITICAL FIX: Extract manager name from signatures or warning data
+      issuedByName: signatures?.managerName || formData.issuedByName || warningData.issuedByName || 'Manager'
     };
 
     // Use unified transformer to ensure consistency
@@ -197,12 +199,20 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
       Logger.debug('📄 Generating PDF with unified transformer data:', {
         warningId: extractedData.warningId,
         employee: `${extractedData.employee.firstName} ${extractedData.employee.lastName}`,
-        category: extractedData.category
+        category: extractedData.category,
+        pdfGeneratorVersion: extractedData.pdfGeneratorVersion // Log version for traceability
       });
 
       // Lazy-load PDF generation service (reduces initial bundle by ~578 KB)
       const { PDFGenerationService } = await import('@/services/PDFGenerationService');
-      const blob = await PDFGenerationService.generateWarningPDF(extractedData);
+
+      // 🔒 VERSIONING: Pass stored version to ensure consistent regeneration
+      // If this warning was created with v1.0.0, it will use v1.0.0 code to regenerate
+      // If this warning was created with v1.1.0, it will use v1.1.0 code to regenerate
+      const blob = await PDFGenerationService.generateWarningPDF(
+        extractedData,
+        extractedData.pdfGeneratorVersion
+      );
 
       setPdfBlob(blob);
       setFilename(generatedFilename);

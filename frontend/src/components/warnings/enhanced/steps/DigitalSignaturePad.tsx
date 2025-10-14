@@ -17,6 +17,7 @@ interface DigitalSignaturePadProps {
   className?: string;
   width?: number;
   height?: number;
+  signerName?: string; // Full name of the person signing (for initials + surname display)
 }
 
 interface SignatureStroke {
@@ -32,7 +33,8 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
   initialSignature = null,
   className = "",
   width = 400,
-  height = 200
+  height = 200,
+  signerName
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
@@ -153,7 +155,26 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
     setHasUnsavedSignature(true);
   }, [isDrawing]);
 
-  // Save signature with timestamp
+  // Helper function to extract initials and surname from full name
+  const getInitialsAndSurname = useCallback((fullName: string): string => {
+    if (!fullName || fullName.trim() === '') return '';
+
+    const nameParts = fullName.trim().split(/\s+/);
+    if (nameParts.length === 0) return '';
+
+    // If only one name part, return it as is
+    if (nameParts.length === 1) return nameParts[0];
+
+    // Extract initials from all parts except the last (surname)
+    const initials = nameParts.slice(0, -1).map(part => part.charAt(0).toUpperCase() + '.').join(' ');
+
+    // Get the surname (last part)
+    const surname = nameParts[nameParts.length - 1];
+
+    return `${initials} ${surname}`;
+  }, []);
+
+  // Save signature with initials, surname, and timestamp
   const saveSignature = useCallback(() => {
     if (disabled) return;
 
@@ -165,10 +186,14 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
     const currentTime = new Date();
     const saTimestamp = formatSADateTime(currentTime, SA_TIMEZONE);
 
-    // Draw timestamp at bottom-right corner
+    // Get initials and surname if signerName is provided
+    const initialsAndSurname = signerName ? getInitialsAndSurname(signerName) : '';
+
+    // Draw text at bottom-right corner
     const rect = canvas.getBoundingClientRect();
     const padding = 8;
     const fontSize = 10;
+    const lineSpacing = 2; // Space between initials/surname and timestamp lines
 
     ctx.save();
     ctx.font = `${fontSize}px Arial, sans-serif`;
@@ -176,8 +201,18 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
     ctx.textAlign = 'right';
     ctx.textBaseline = 'bottom';
 
+    // Calculate positions (working upwards from bottom)
+    let yPosition = rect.height - padding;
+
     // Draw timestamp text at bottom-right (using display dimensions)
-    ctx.fillText(saTimestamp, rect.width - padding, rect.height - padding);
+    ctx.fillText(saTimestamp, rect.width - padding, yPosition);
+
+    // Draw initials and surname above timestamp (if available)
+    if (initialsAndSurname) {
+      yPosition -= (fontSize + lineSpacing); // Move up for next line
+      ctx.fillText(initialsAndSurname, rect.width - padding, yPosition);
+    }
+
     ctx.restore();
 
     // Convert canvas to PNG
@@ -185,7 +220,7 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
     setHasSignature(true);
     setHasUnsavedSignature(false);
     onSignatureComplete(dataURL);
-  }, [disabled, onSignatureComplete]);
+  }, [disabled, onSignatureComplete, signerName, getInitialsAndSurname]);
 
   // Clear signature
   const clearSignature = useCallback(() => {
@@ -314,7 +349,7 @@ export const DigitalSignaturePad: React.FC<DigitalSignaturePadProps> = ({
               type="button"
               onClick={saveSignature}
               disabled={disabled}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded disabled:opacity-50"
+              className="flex items-center gap-1 px-2 py-1 text-xs text-green-600 hover:text-green-700 disabled:opacity-50"
             >
               <Check className="w-3 h-3" />
               Save Signature

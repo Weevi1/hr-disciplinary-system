@@ -38,6 +38,9 @@ import { ThemedButton } from '../common/ThemedButton';
 import { ThemedStatusCard } from '../common/ThemedStatusCard';
 import Logger from '../../utils/logger';
 
+// Import reusable watch list
+import { FinalWarningsWatchList } from './FinalWarningsWatchList';
+
 // --- A Reusable Breakpoint Hook (for responsive rendering) ---
 const useBreakpoint = (breakpoint: number) => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth > breakpoint);
@@ -942,6 +945,9 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
         canTakeAction={true}
         userRole="hr"
       />
+
+      {/* 🚨 Final Warnings Watch List (All employees) */}
+      <FinalWarningsWatchList className="mt-6" />
     </div>
   );
 });

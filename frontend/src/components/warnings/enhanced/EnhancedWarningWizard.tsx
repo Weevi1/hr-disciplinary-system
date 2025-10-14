@@ -45,6 +45,9 @@ import type { DeviceCapabilities } from '../../../utils/deviceDetection';
 import { useOrganization } from '@/contexts/OrganizationContext';
 import { useAuth } from '@/auth/AuthContext';
 
+// 🔒 Import PDF Generator Version for versioning system
+import { PDF_GENERATOR_VERSION } from '@/services/PDFGenerationService';
+
 // ============================================
 // TYPES - USING STANDARD SERVICE INTERFACES
 // ============================================
@@ -236,7 +239,17 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   // 🔥 Navigation state to prevent race conditions
   const [isNavigating, setIsNavigating] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<WizardStep | null>(null);
-  
+
+  // 🔄 Progressive loading state for analysis
+  const [analysisStep, setAnalysisStep] = useState(0);
+  const analysisSteps = [
+    'Fetching employee warning history',
+    'Checking for active warnings',
+    'Verifying escalation safety',
+    'Calculating recommendation',
+    'Applying LRA compliance rules'
+  ];
+
   // Debug state removed for production
   
   // Signatures
@@ -626,6 +639,31 @@ useEffect(() => {
   }, [microphonePermissionGranted]); // ✅ FIXED: Only depend on permission state, not logging object
 
   // ============================================
+  // ============================================
+  // 🔄 PROGRESSIVE ANALYSIS STEPS
+  // ============================================
+
+  useEffect(() => {
+    if (isAnalyzing) {
+      setAnalysisStep(0); // Reset to first step when analysis starts
+
+      // Progress through steps every 600ms
+      const interval = setInterval(() => {
+        setAnalysisStep(prev => {
+          if (prev < analysisSteps.length - 1) {
+            return prev + 1;
+          }
+          return prev; // Stay on last step until analysis completes
+        });
+      }, 600);
+
+      return () => clearInterval(interval);
+    } else {
+      setAnalysisStep(0); // Reset when not analyzing
+    }
+  }, [isAnalyzing, analysisSteps.length]);
+
+  // ============================================
   // 🔥 PENDING NAVIGATION HANDLER
   // ============================================
 
@@ -764,10 +802,23 @@ useEffect(() => {
           }
         }
         Logger.debug(21325)
-        
+
         if (!selectedEmployee || !selectedCategory || !organization) {
           throw new Error('Missing required data for warning creation');
         }
+
+        // 🔍 Get manager name from user object directly
+        const managerFullName = user?.firstName && user?.lastName
+          ? `${user.firstName} ${user.lastName}`.trim()
+          : currentManagerName || 'Manager';
+
+        Logger.debug('📋 Creating warning - Manager info:', {
+          managerFullName,
+          userUid: user?.uid,
+          userFirstName: user?.firstName,
+          userLastName: user?.lastName,
+          currentManagerNameProp: currentManagerName
+        });
 
         // Create warning data (avoiding undefined values)
         const warningData: any = {
@@ -778,7 +829,7 @@ useEffect(() => {
 
           // Issued by information
           issuedBy: user?.uid || '',
-          issuedByName: currentManagerName || 'Manager',
+          issuedByName: managerFullName,
 
           // Employee data for denormalization
           employeeName: selectedEmployee.profile?.firstName || 'Unknown',
@@ -804,7 +855,36 @@ useEffect(() => {
           validityPeriod: formData.validityPeriod,
 
           // Signature data
-          signatures: newSignatures
+          signatures: newSignatures,
+
+          // 🔒 CRITICAL: PDF Generator Version for Legal Compliance
+          // ⚠️ DO NOT REMOVE OR MODIFY - Required for consistent document regeneration
+          //
+          // This version number ensures that if this warning PDF is regenerated in the future
+          // (e.g., for appeals, audits, or re-downloads), it will use the EXACT SAME PDF
+          // generation code that created it originally. This prevents document tampering and
+          // maintains legal integrity by ensuring warnings always look identical regardless
+          // of when they are regenerated.
+          //
+          // VERSIONING SYSTEM:
+          // - v1.0.0: Original format with "Date | Offense | Level" in Previous Warnings section
+          // - v1.1.0: Updated format with "Date | Incident Description | Level" (current)
+          // - Future versions will follow semantic versioning (MAJOR.MINOR.PATCH)
+          //
+          // When regenerating existing warnings, PDFGenerationService will:
+          // 1. Read this stored version number from Firestore
+          // 2. Route to the appropriate frozen version handler
+          // 3. Generate PDF using that exact historical code (v1.0.0, v1.1.0, etc.)
+          //
+          // ⚠️ IMPORTANT: Before making ANY changes to PDF generation:
+          // 1. Review CLAUDE.md section on PDF versioning
+          // 2. Increment version in PDFGenerationService.ts
+          // 3. Create new versioned method (e.g., generateWarningPDF_v1_2_0)
+          // 4. NEVER modify existing versioned methods - they must remain frozen
+          // 5. Update routing in generateWarningPDF() to include new version
+          //
+          // This system is SECURITY-CRITICAL and affects legal compliance.
+          pdfGeneratorVersion: PDF_GENERATOR_VERSION
         };
 
         // MANDATORY: Audio recording is required for every warning
@@ -1083,6 +1163,8 @@ useEffect(() => {
             loadWarningHistory={loadEmployeeWarningHistory}
             lraRecommendation={lraRecommendation}
             isAnalyzing={isAnalyzing}
+            analysisStep={analysisStep}
+            analysisSteps={analysisSteps}
           />
         );
 
@@ -1187,7 +1269,12 @@ useEffect(() => {
 
     if (currentStep === WizardStep.INCIDENT_DETAILS &&
         isStepValid && (isNavigating || isAnalyzing)) {
-      return { show: true, disabled: true, loading: true, text: 'Analyzing...' };
+      return {
+        show: true,
+        disabled: true,
+        loading: true,
+        text: analysisSteps[analysisStep] || 'Analyzing...'
+      };
     }
 
     return { show: true, disabled: !isStepValid, loading: false, text: 'Next' };
@@ -1414,12 +1501,8 @@ return (
                       ${nextButtonState.loading ? 'modal-footer__button--loading' : ''}
                     `}
                   >
-                    {!nextButtonState.loading && (
-                      <>
-                        {nextButtonState.text}
-                        <ChevronRight className="w-4 h-4" />
-                      </>
-                    )}
+                    {!nextButtonState.loading && nextButtonState.text}
+                    <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
               </>

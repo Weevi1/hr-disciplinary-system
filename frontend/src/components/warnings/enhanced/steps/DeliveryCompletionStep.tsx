@@ -33,7 +33,8 @@ import {
   Eye,
   Loader2,
   Check,
-  RefreshCw
+  RefreshCw,
+  QrCode
 } from 'lucide-react';
 
 // Import Firebase functions for document updates
@@ -59,6 +60,7 @@ import type {
 
 // Import PDF service and preview modal
 import { PDFPreviewModal } from '../PDFPreviewModal';
+import { QRCodeDownloadModal } from '../../modals/QRCodeDownloadModal';
 
 // Import types
 import type { UseAudioRecordingReturn } from '../../../../hooks/warnings/useAudioRecording';
@@ -157,7 +159,12 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
   
   // PDF Preview Modal State
   const [showPDFPreview, setShowPDFPreview] = useState(false);
-  
+
+  // QR Code Modal State
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [qrPdfBlob, setQrPdfBlob] = useState<Blob | null>(null);
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
+
   // Warning creation state
   const [isCreatingWarning, setIsCreatingWarning] = useState(false);
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
@@ -217,6 +224,71 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
       setAudioUploadError('Failed to generate PDF preview');
     }
   }, []);
+
+  // ============================================
+  // QR CODE GENERATION HANDLER
+  // ============================================
+
+  const handleQRDownload = useCallback(async () => {
+    if (!selectedEmployee || !selectedCategory || !organization) {
+      setAudioUploadError('Missing required data for QR code generation');
+      return;
+    }
+
+    setIsGeneratingQR(true);
+
+    try {
+      // Transform data for PDF using the unified transformer
+      const { transformWarningDataForPDF } = await import('../../../../utils/pdfDataTransformer');
+
+      const warningDataStructure = {
+        id: formData.id || formData.warningId || warningId || `WRN_${Date.now()}`,
+        organizationId: organization.id,
+        level: formData.level || lraRecommendation?.suggestedLevel || 'counselling',
+        category: selectedCategory?.name || formData.category || 'General Misconduct',
+        description: formData.incidentDescription || formData.description || '',
+        incidentDate: formData.incidentDate,
+        incidentTime: formData.incidentTime || '09:00',
+        incidentLocation: formData.incidentLocation || '',
+        issueDate: formData.issueDate || formData.issuedDate,
+        validityPeriod: formData.validityPeriod || 6,
+        signatures: signatures,
+        additionalNotes: formData.additionalNotes || '',
+        status: formData.status,
+        disciplineRecommendation: lraRecommendation,
+        legalCompliance: {
+          isCompliant: true,
+          framework: 'LRA Section 188',
+          requirements: lraRecommendation?.legalRequirements || []
+        }
+      };
+
+      const pdfData = transformWarningDataForPDF(
+        warningDataStructure,
+        selectedEmployee,
+        organization
+      );
+
+      const { PDFGenerationService } = await import('@/services/PDFGenerationService');
+
+      // 🔒 VERSIONING: Pass version for new warning QR code generation
+      const qrBlob = await PDFGenerationService.generateWarningPDF(
+        pdfData,
+        pdfData.pdfGeneratorVersion
+      );
+
+      setQrPdfBlob(qrBlob);
+      setShowQRModal(true);
+
+      Logger.success('✅ QR PDF generated successfully');
+
+    } catch (error) {
+      Logger.error('❌ QR PDF generation failed:', error)
+      setAudioUploadError(`Failed to generate QR code: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsGeneratingQR(false);
+    }
+  }, [selectedEmployee, selectedCategory, organization, formData, lraRecommendation, signatures, warningId]);
 
   // ============================================
   // 🔥 ENHANCED WARNING CREATION WITH AUDIO URL FIX
@@ -556,10 +628,39 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
               </ThemedCard>
             );
           })}
+
+          {/* QR Code Action - Styled like delivery options */}
+          <ThemedCard
+            padding="sm"
+            hover={true}
+            className="cursor-pointer transition-all border-l-4"
+            style={{
+              borderLeftColor: 'transparent'
+            }}
+            onClick={handleQRDownload}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <QrCode className="w-4 h-4" style={{ color: 'var(--color-text)' }} />
+                <div>
+                  <p className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>
+                    QR Code
+                  </p>
+                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                    Download warning with QR code
+                  </p>
+                </div>
+              </div>
+
+              {isGeneratingQR && (
+                <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--color-primary)' }} />
+              )}
+            </div>
+          </ThemedCard>
         </div>
       </div>
 
-      {/* Secondary Action - Preview (Optional) */}
+      {/* Secondary Actions - Preview (Optional) */}
       {!deliveryNotificationId && (
         <div className="space-y-3">
           <button
@@ -573,7 +674,7 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
           >
             <div className="flex items-center justify-center gap-2">
               <Eye className="w-4 h-4" />
-              <span className="text-sm">Preview Document (Optional)</span>
+              <span className="text-sm">Preview</span>
             </div>
           </button>
 
@@ -655,6 +756,29 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
             // Don't trigger HR notification on preview - user needs to explicitly click "Notify HR"
           }}
           isCompleted={false}
+        />
+      )}
+
+      {/* QR Code Modal */}
+      {qrPdfBlob && (
+        <QRCodeDownloadModal
+          isOpen={showQRModal}
+          onClose={() => {
+            setShowQRModal(false);
+            setQrPdfBlob(null);
+          }}
+          pdfBlob={qrPdfBlob}
+          filename={`Warning_QR_${selectedEmployee?.profile?.firstName}_${selectedEmployee?.profile?.lastName}_${new Date().toISOString().split('T')[0]}.pdf`}
+          employeeId={selectedEmployee?.id}
+          warningId={warningId || formData.id || formData.warningId}
+          organizationId={organization?.id}
+          employeeName={
+            selectedEmployee &&
+            `${selectedEmployee.profile?.firstName || selectedEmployee.firstName || ''} ${selectedEmployee.profile?.lastName || selectedEmployee.lastName || ''}`.trim()
+          }
+          onLinkGenerated={(linkData) => {
+            Logger.debug('🔗 QR download link generated:', linkData)
+          }}
         />
       )}
     </div>

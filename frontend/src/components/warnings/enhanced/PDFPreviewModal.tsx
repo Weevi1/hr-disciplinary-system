@@ -16,12 +16,10 @@ import {
   CheckCircle,
   AlertTriangle,
   RefreshCw,
-  QrCode,
   ExternalLink,
   FileWarning
 } from 'lucide-react';
 import { useOrganization } from '../../../contexts/OrganizationContext';
-import { QRCodeDownloadModal } from '../modals/QRCodeDownloadModal';
 import { measureAsync, TraceNames } from '../../../config/performance';
 import { transformWarningDataForPDF } from '../../../utils/pdfDataTransformer';
 
@@ -85,11 +83,6 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generationStep, setGenerationStep] = useState<string>('');
-
-  // QR Code State
-  const [showQRModal, setShowQRModal] = useState(false);
-  const [qrPdfBlob, setQrPdfBlob] = useState<Blob | null>(null);
-  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
 
   // Mobile detection
   const [isMobile, setIsMobile] = useState(false);
@@ -220,12 +213,17 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
       // No need to rebuild the structure - use it directly
       const { PDFGenerationService } = await import('@/services/PDFGenerationService');
 
+      // 🔒 VERSIONING: Pass stored version to ensure consistent regeneration
       const blob = await measureAsync(
         TraceNames.GENERATE_WARNING_PDF,
-        () => PDFGenerationService.generateWarningPDF(extractedData),
+        () => PDFGenerationService.generateWarningPDF(
+          extractedData,
+          extractedData.pdfGeneratorVersion
+        ),
         {
           employee: `${extractedData.employee.firstName} ${extractedData.employee.lastName}`,
-          category: extractedData.category
+          category: extractedData.category,
+          pdfGeneratorVersion: extractedData.pdfGeneratorVersion // Log for traceability
         }
       );
 
@@ -272,41 +270,6 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
     // Show success feedback
     Logger.success('📥 PDF downloaded successfully');
   }, [pdfBlob, filename]);
-
-  const handleQRDownload = useCallback(async () => {
-    if (!extractedData || !organization) {
-      setError('Missing required data for QR code generation');
-      return;
-    }
-
-    setIsGeneratingQR(true);
-
-    try {
-      // 🔒 SECURITY-CRITICAL: extractedData is already transformed by the unified transformer
-      // No need to rebuild the structure - use it directly to ensure consistency
-      const { PDFGenerationService } = await import('@/services/PDFGenerationService');
-
-      const qrBlob = await measureAsync(
-        TraceNames.GENERATE_WARNING_PDF,
-        () => PDFGenerationService.generateWarningPDF(extractedData),
-        {
-          employee: `${extractedData.employee.firstName} ${extractedData.employee.lastName}`,
-          category: extractedData.category
-        }
-      );
-
-      setQrPdfBlob(qrBlob);
-      setShowQRModal(true);
-
-      Logger.success('✅ QR PDF generated successfully');
-
-    } catch (error) {
-      Logger.error('❌ QR PDF generation failed:', error)
-      setError(`Failed to generate QR code: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsGeneratingQR(false);
-    }
-  }, [extractedData, organization]);
 
   const openInNewTab = useCallback(() => {
     if (!pdfUrl) return;
@@ -471,33 +434,16 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
+                  {/* Action Button - Preview */}
                   <div className="space-y-3">
-                    {/* Action Buttons - QR Code & Preview */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={handleQRDownload}
-                        disabled={isGeneratingQR}
-                        className="flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
-                        style={{ minHeight: '48px' }}
-                      >
-                        {isGeneratingQR ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <QrCode className="w-4 h-4" />
-                        )}
-                        <span className="text-sm">QR Code</span>
-                      </button>
-
-                      <button
-                        onClick={openInNewTab}
-                        className="flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                        style={{ minHeight: '48px' }}
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        <span className="text-sm">Preview</span>
-                      </button>
-                    </div>
+                    <button
+                      onClick={openInNewTab}
+                      className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                      style={{ minHeight: '48px' }}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span className="text-sm">Open in New Tab</span>
+                    </button>
                   </div>
                 </>
               )}
@@ -522,29 +468,6 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
             </div>
           </div>
         </div>
-
-        {/* QR Modal */}
-        {qrPdfBlob && (
-          <QRCodeDownloadModal
-            isOpen={showQRModal}
-            onClose={() => {
-              setShowQRModal(false);
-              setQrPdfBlob(null);
-            }}
-            pdfBlob={qrPdfBlob}
-            filename={filename}
-            employeeId={extractedData?.employee?.id}
-            warningId={extractedData?.warningId}
-            organizationId={extractedData?.organizationId || organization?.id}
-            employeeName={
-              extractedData &&
-              `${extractedData.employee.firstName} ${extractedData.employee.lastName}`.trim()
-            }
-            onLinkGenerated={(linkData) => {
-              Logger.debug('🔗 QR download link generated:', linkData)
-            }}
-          />
-        )}
       </>
     );
   }
@@ -651,37 +574,16 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
                 </div>
               )}
 
-              {/* Action Buttons */}
+              {/* Action Button */}
               {pdfBlob && !isGenerating && (
                 <div className="space-y-3 pt-2">
-                  {/* Action Buttons - QR Code & Preview */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={handleQRDownload}
-                      disabled={isGeneratingQR}
-                      className="flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
-                    >
-                      {isGeneratingQR ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Generating...</span>
-                        </>
-                      ) : (
-                        <>
-                          <QrCode className="w-4 h-4" />
-                          <span>QR Code</span>
-                        </>
-                      )}
-                    </button>
-
-                    <button
-                      onClick={openInNewTab}
-                      className="flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      <span>Open in New Tab</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={openInNewTab}
+                    className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 px-4 py-3 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Open in New Tab</span>
+                  </button>
                 </div>
               )}
 
@@ -740,29 +642,6 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
 
         </div>
       </div>
-
-      {/* QR Modal */}
-      {qrPdfBlob && (
-        <QRCodeDownloadModal
-          isOpen={showQRModal}
-          onClose={() => {
-            setShowQRModal(false);
-            setQrPdfBlob(null);
-          }}
-          pdfBlob={qrPdfBlob}
-          filename={filename}
-          employeeId={extractedData?.employee?.id}
-          warningId={extractedData?.warningId}
-          organizationId={extractedData?.organizationId || organization?.id}
-          employeeName={
-            extractedData &&
-            `${extractedData.employee.firstName} ${extractedData.employee.lastName}`.trim()
-          }
-          onLinkGenerated={(linkData) => {
-            Logger.debug('🔗 QR download link generated:', linkData)
-          }}
-        />
-      )}
     </>
   );
 };

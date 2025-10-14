@@ -268,12 +268,18 @@ ${organization?.companyName || 'HR Department'}`;
       Logger.debug('📄 Generating PDF with unified transformer data:', {
         warningId: pdfData.warningId,
         employee: `${pdfData.employee.firstName} ${pdfData.employee.lastName}`,
-        category: pdfData.category
+        category: pdfData.category,
+        pdfGeneratorVersion: pdfData.pdfGeneratorVersion
       });
 
       // Lazy-load PDF generation service
       const { PDFGenerationService } = await import('@/services/PDFGenerationService');
-      const blob = await PDFGenerationService.generateWarningPDF(pdfData);
+
+      // 🔒 VERSIONING: Pass stored version for consistent regeneration
+      const blob = await PDFGenerationService.generateWarningPDF(
+        pdfData,
+        pdfData.pdfGeneratorVersion
+      );
 
       // Generate filename
       const date = new Date().toISOString().split('T')[0];
