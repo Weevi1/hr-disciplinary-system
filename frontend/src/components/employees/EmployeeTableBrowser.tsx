@@ -748,18 +748,7 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
                             >
                               Edit Employee
                             </button>
-                            {(user?.role?.id === 'hr-manager' || user?.role?.id === 'business-owner') && onEmployeePromote && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onEmployeePromote(employee);
-                                }}
-                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                              >
-                                <UserPlus className="w-4 h-4" />
-                                Promote to Manager
-                              </button>
-                            )}
+                            {/* Promote to Manager button removed - now available in dedicated Managers tab */}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();

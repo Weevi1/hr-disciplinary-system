@@ -31,6 +31,7 @@ import { EmployeeManagement } from '../employees/EmployeeManagement';
 import { ManualWarningEntry } from '../warnings/ManualWarningEntry';
 import { DepartmentManagement } from '../admin/DepartmentManagement';
 import { EnhancedDeliveryWorkflow } from '../hr/EnhancedDeliveryWorkflow';
+import { ManagerManagement } from '../managers/ManagerManagement';
 
 // Import themed components
 import { ThemedCard, ThemedBadge, ThemedAlert } from '../common/ThemedCard';
@@ -66,7 +67,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
   const { user } = useAuth();
   const { organization, categories } = useOrganization();
   const isDesktop = useBreakpoint(768);
-  const [activeView, setActiveView] = useState<'urgent' | 'warnings' | 'employees' | 'departments' | null>(null);
+  const [activeView, setActiveView] = useState<'urgent' | 'warnings' | 'employees' | 'departments' | 'managers' | null>(null);
   const [employeeWarningFilter, setEmployeeWarningFilter] = useState<{ id: string; name: string } | null>(null);
 
   // Shared modal state for all WarningsReviewDashboard instances
@@ -345,6 +346,23 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
               <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
             </div>
           </ThemedCard>
+
+          <ThemedCard
+            padding="md"
+            shadow="sm"
+            hover
+            onClick={() => setActiveView('managers')}
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+            style={{ minHeight: '64px', willChange: 'transform' }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Users className="w-5 h-5" style={{ color: 'var(--color-success)' }} />
+                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Managers</span>
+              </div>
+              <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
+            </div>
+          </ThemedCard>
         </div>
 
         {/* Mobile Modals for each view */}
@@ -475,6 +493,20 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
             </ThemedCard>
           </div>
         )}
+
+        {activeView === 'managers' && (
+          <div className="lg:hidden fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
+            <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] flex flex-col overflow-hidden" shadow="xl">
+              <div className="flex items-center justify-between p-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
+                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Managers</h2>
+                <ThemedButton variant="ghost" size="sm" onClick={() => setActiveView(null)}>×</ThemedButton>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 min-h-0">
+                <ManagerManagement />
+              </div>
+            </ThemedCard>
+          </div>
+        )}
       </div>
     );
   }
@@ -594,7 +626,8 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
               { id: 'urgent', label: 'Urgent Tasks', icon: AlertTriangle, count: hrReportsCount.absenceReports.unread + hrReportsCount.hrMeetings.unread + warningStats.undelivered },
               { id: 'warnings', label: 'Warnings', icon: Shield },
               { id: 'employees', label: 'Employees', icon: Building2 },
-              { id: 'departments', label: 'Departments', icon: Building2 }
+              { id: 'departments', label: 'Departments', icon: Building2 },
+              { id: 'managers', label: 'Managers', icon: Users }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -891,6 +924,13 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
                 organizationId={organization.id}
                 inline={true}
               />
+            </div>
+          )}
+
+          {/* Managers Tab */}
+          {activeView === 'managers' && (
+            <div className="hidden lg:block">
+              <ManagerManagement />
             </div>
           )}
         </div>

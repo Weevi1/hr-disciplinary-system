@@ -127,9 +127,7 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
 
     try {
       await DepartmentService.deleteDepartment(orgId, department.id);
-
-      // Update local state
-      setDepartments(prev => prev.filter(d => d.id !== department.id));
+      // Real-time subscription will update state automatically
 
       Logger.success('Department deleted successfully');
     } catch (err) {
@@ -152,23 +150,14 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
           editingDepartment.id,
           formData
         );
-
-        // Update local state
-        setDepartments(prev =>
-          prev.map(d =>
-            d.id === editingDepartment.id
-              ? { ...d, ...formData, updatedAt: new Date() }
-              : d
-          )
-        );
+        // Real-time subscription will update state automatically
       } else {
         // Create new department
-        const newDepartment = await DepartmentService.createDepartment(
+        await DepartmentService.createDepartment(
           orgId,
           formData
         );
-
-        setDepartments(prev => [...prev, newDepartment]);
+        // Real-time subscription will update state automatically
       }
 
       setShowForm(false);

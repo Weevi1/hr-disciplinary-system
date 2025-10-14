@@ -200,8 +200,23 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
     }
 
     if (employees.length === 0) {
-      Logger.warn('⚠️ No team members assigned');
-      alert('You have no team members assigned to you as a manager.\n\nAs a Department Manager, you can only issue warnings to employees who report directly to you.\n\nPlease contact HR to have employees assigned to your team, or switch to the HR Dashboard view if you have HR permissions.');
+      // Check if user is actually an HOD manager (not HR/Business Owner viewing HOD dashboard)
+      // Note: user.role can be an object {id: 'hr-manager', name: 'HR Manager'} or a string
+      const actualUserRoleId = typeof user?.role === 'object' && user.role?.id
+        ? user.role.id
+        : (user?.role || '');
+
+      const isActualHOD = actualUserRoleId === 'hod' ||
+                         actualUserRoleId === 'hod-manager' ||
+                         actualUserRoleId === 'department-manager';
+
+      if (isActualHOD) {
+        Logger.warn('⚠️ No team members assigned');
+        alert('You have no team members assigned to you as a manager.\n\nAs a Department Manager, you can only issue warnings to employees who report directly to you.\n\nPlease contact HR to have employees assigned to your team, or switch to the HR Dashboard view if you have HR permissions.');
+      } else {
+        Logger.warn('⚠️ No employees in organization');
+        alert('There are no employees in your organization.\n\nPlease add employees before issuing warnings.');
+      }
       return;
     }
 
@@ -516,8 +531,8 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
       {/* Employee Management Modal */}
       {showEmployeeManagement && (
         <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
-          <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] overflow-hidden" shadow="xl">
-            <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid var(--color-border)' }}>
+          <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] flex flex-col" shadow="xl">
+            <div className="flex items-center justify-between p-6 flex-shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
               <h2 className="text-xl font-bold" style={{ color: 'var(--color-text)' }}>Team Management</h2>
               <ThemedButton
                 variant="ghost"
@@ -527,7 +542,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
                 ×
               </ThemedButton>
             </div>
-            <div className="overflow-y-auto">
+            <div className="overflow-y-auto flex-1 min-h-0">
               <EmployeeManagement />
             </div>
           </ThemedCard>

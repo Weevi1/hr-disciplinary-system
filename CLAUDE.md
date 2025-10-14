@@ -407,35 +407,53 @@ This versioning system is **CRITICAL** for:
 
 ---
 
-## 🔧 Latest Updates (Session 23)
+## 🔧 Latest Updates (Session 24)
 
 **See `RECENT_UPDATES.md` and `SESSION_HISTORY.md` for complete change history**
 
-### Most Recent Changes (Session 23 - 2025-10-14)
-- **🔒 PDF GENERATOR VERSIONING SYSTEM** - Implemented comprehensive versioning for legal compliance
-  - **Purpose**: Ensure historical warnings regenerate identically years later for appeals, audits, and legal proceedings
-  - **Implementation**:
-    - Added semantic versioning (v1.0.0, v1.1.0) to PDFGenerationService
-    - Created frozen v1.0.0 method with "Date | Offense | Level" format (for old warnings)
-    - Created current v1.1.0 method with "Date | Incident Description | Level" format
-    - Version routing system directs to appropriate handler based on stored version
-    - All 6 PDF regeneration points now pass stored version
-  - **Key Features**:
-    - New warnings store `pdfGeneratorVersion: '1.1.0'` in Firestore
-    - Old warnings regenerate with v1.0.0 code, new warnings use v1.1.0 code
-    - Frozen versions are PERMANENTLY LOCKED and must never be modified
-    - 100+ lines of protective comments prevent accidental changes
+### Most Recent Changes (Session 24 - 2025-10-14)
+- **✅ CRITICAL: Employee Filtering for HR/Business Owners** - Fixed employee visibility when using HOD Dashboard tools
+  - **Problem**: HR Managers and Business Owners only saw 1 employee instead of all 5 when using HOD Dashboard tools (warnings, counselling, absences)
+  - **Root Cause**: Code checked `user.role` (object) instead of `user.role.id` (string), causing role comparison to fail
+  - **Solution**:
+    - `useDashboardData.ts` (lines 167-203): Extract `actualUserRoleId` from role object, check against HR/Business Owner role IDs
+    - HR/Business Owners now always see ALL employees, even when viewing HOD dashboard
+    - HOD Managers still only see their assigned team members (correct behavior)
   - **Files Modified**:
-    - `PDFGenerationService.ts`: Added versioning, routing, frozen methods, comprehensive comments
-    - `pdfDataTransformer.ts`: Added `pdfGeneratorVersion` field to all transformations
-    - `EnhancedWarningWizard.tsx`: Stores version when creating warnings (27 lines of comments)
-    - `SimplePDFDownloadModal.tsx`: Passes stored version for regeneration
-    - `PDFPreviewModal.tsx`: Passes stored version for regeneration
-    - `PrintDeliveryGuide.tsx`: Passes stored version for regeneration
-    - `DeliveryCompletionStep.tsx`: Passes stored version for regeneration
-    - `ProofOfDeliveryModal.tsx`: Passes stored version for regeneration
-    - `PDFViewerModal.tsx`: Passes stored version for regeneration
-    - `CLAUDE.md`: Added comprehensive versioning documentation section
+    - `frontend/src/hooks/dashboard/useDashboardData.ts` - Fixed employee loading logic with role object handling
+    - `frontend/src/components/dashboard/HODDashboardSection.tsx` - Updated "no employees" alert logic with proper role checking
+  - **Impact**: HR and Business Owners can now use HOD tools (warnings, counselling, absences) with full employee access
+  - **Status**: ✅ Complete - Verified working with console logs showing all employees loading
+
+- **✅ Team Members Modal Scrolling Fix** - Fixed non-scrollable modal in HOD Dashboard
+  - **Problem**: Team Members modal opened but couldn't scroll through employee list
+  - **Root Cause**: Modal had `overflow-hidden` on outer container with no height constraint on inner content div
+  - **Solution**: Converted to flexbox layout with `flex flex-col`, `flex-shrink-0` header, `flex-1 min-h-0` content area
+  - **Files Modified**:
+    - `frontend/src/components/dashboard/HODDashboardSection.tsx` (lines 531-550) - Modal layout restructure
+  - **Status**: ✅ Complete - Modal now scrolls properly
+
+- **✅ Add Employee Crash Fix** - Fixed ManagerDetailsModal crash when adding employees
+  - **Problem**: Clicking "Add Employee" caused `TypeError: Cannot read properties of undefined (reading 'firstName')`
+  - **Root Cause**: Some employees have missing or undefined `profile` objects in Firestore
+  - **Solution**: Added comprehensive defensive null checks in filter function, dropdown rendering, and employee list display
+  - **Files Modified**:
+    - `frontend/src/components/managers/ManagerDetailsModal.tsx` (lines 168-185, 418, 468-497)
+  - **Status**: ✅ Complete - Add Employee feature now handles incomplete employee data gracefully
+
+- **📚 Pagination Best Practices Verification** - Confirmed current pagination implementation follows best practices
+  - **Current Implementation**:
+    - Legacy devices: Previous/Next buttons with smaller page size (performance-optimized)
+    - Modern devices: Load More button in cards view, full scrollable list in table view
+    - Context-appropriate patterns for different use cases
+  - **Verdict**: Solid best practice for HR system with 5-500 employee datasets
+  - **Recommendation**: Keep current implementation, consider virtual scrolling only if exceeding 1,000+ employees
+
+### Previous Changes (Session 23 - 2025-10-14)
+- **🔒 PDF GENERATOR VERSIONING SYSTEM** - Implemented comprehensive versioning for legal compliance
+  - Semantic versioning (v1.0.0, v1.1.0) ensures historical warnings regenerate identically years later
+  - Frozen v1.0.0 method (old format) + Current v1.1.0 method (new format) with version routing
+  - All 6 PDF regeneration points pass stored version, 100+ lines of protective comments
   - **Legal Impact**: Prevents document tampering, ensures court admissibility, maintains audit compliance
   - **Status**: ✅ Complete - Ready for production use
 
@@ -511,56 +529,16 @@ This versioning system is **CRITICAL** for:
     - `PDFGenerationService.ts` (lines 1011-1042): Employee signature aspect ratio preservation
   - **Result**: Signatures now maintain original proportions and are professionally centered in PDFs
 
-### Session 20 Changes (2025-10-08)
-- **Modal Accessibility Completion**: Fixed 2 remaining modals missing accessibility features from Week 2-3 implementation
-  - **DeliveryMethodSelectionModal**: Added focus trap, ARIA labels, keyboard navigation, `min-h-0` for proper scrolling
-  - **EmployeeFormModal**: Replaced manual body scroll with `usePreventBodyScroll()` hook, added focus trap, ARIA labels, standardized z-index
-  - All 21+ modals now have: proper viewport centering, body scroll prevention, standardized z-index, and WCAG 2.1 AA accessibility
-- **Modal System Verification**: Completed full audit of all modals to ensure consistent implementation
-  - Verified UnifiedModal-based modals (BulkAssignDepartmentModal, BulkAssignManagerModal)
-  - Verified standard pattern modals (all warning modals, employee modals)
-  - Confirmed all modals follow Week 1 + Week 2-3 patterns
+### Sessions 17-20 Summary (2025-10-07 to 2025-10-08)
+- **Session 20**: Modal accessibility completion (WCAG 2.1 AA), full audit of all 21+ modals
+- **Session 19**: Print & hand delivery workflow fixes, on-demand PDF generation, dashboard counter refresh
+- **Session 18**: LRA-compliant employee rights PDF section, email delivery enhancements, timestamp handling
+- **Session 17**: Appeal report system, signature timestamps, sequential signature capture, mobile CSS fixes
 
-### Session 19 Changes (2025-10-08)
-- **Print & Hand Delivery PDF Generation**: Fixed on-demand PDF generation for warnings without existing PDF URLs
-  - Added employee data structure transformation (nested `profile`/`employment` → flat structure)
-  - Fixed field mapping (`level` → `warningLevel`, `issueDate` → `issuedDate`, etc.)
-  - Removed "print on letterhead" instruction (PDF generates its own letterhead)
-- **Workflow Simplification**: Streamlined Print & Hand Delivery process for better UX
-  - **Step 2**: Reduced to 1 checkbox (removed witness name, additional notes, redundant checks)
-  - **Step 3**: Simplified to single "Delivery process completed" confirmation
-  - Removed verbose delivery summary and warning alerts
-- **API Method Fix**: Changed from non-existent `API.warnings.updateDeliveryStatus()` to `API.warnings.update()`
-- **Dashboard Counter Refresh**: Added callback mechanism to refresh metrics after delivery completion
-  - Fixed counter logic from `!w.delivered` to `w.status !== 'delivered'`
-  - "Undelivered Warnings" counter now updates in real-time
-
-### Session 18 Changes (2025-10-07)
-- **Employee Rights PDF Section**: Added comprehensive LRA-compliant rights section to all warning PDFs (before signatures)
-- **Email Delivery Workflow**: Complete enhancement with download, copy-to-clipboard, and mailto link features
-- **Firestore Timestamp Handling**: Enhanced date conversion in PDFGenerationService and modals
-- **Bug Fixes**: Fixed employee name display in email delivery modal, timestamp conversion errors
-
-### Session 17 Changes (2025-10-07)
-- **Appeal Report System**: Standalone PDF generator with color-coded outcomes, multi-page support
-- **Signature Timestamps**: SA timezone timestamps on all signatures (Manager, Employee, Witness)
-- **Sequential Signature Capture**: Enforced workflow (Manager → Employee/Witness)
-- **Mobile CSS Fix**: Horizontal scroll issue resolved (100vw → 100%)
-- **Warning Dates Fix**: Invalid dates resolved with proper Firestore Timestamp conversion
-
-### Previous Sessions (5-16)
-- Session 16: Warning script rewrite (11 SA languages) + witness signature watermarking
-- Session 15: Simplified loading experience with progressive status bar
-- Session 14: Warning wizard UX improvements + level override fixes
-- Session 13: Multi-language warning script + logging consistency
-- Session 12: Wizard finalization + employee data structure fixes
-- Session 11: Mobile scrolling fix + audio recording optimization + UX improvements
-- Session 10: Accessibility improvements (WCAG AA) + mobile optimization
-- Session 9: Bulk employee-manager assignment feature
-- Session 8: Console security cleanup + timestamp security (20 fixes)
-- Session 7: Multi-role dashboard selector with localStorage persistence
-- Session 6: SuperAdmin dashboard redesign + organization wizard logo upload
-- Session 5: HR dashboard rewrite + data integrity fixes
+### Previous Sessions Summary (5-16)
+- Sessions 12-16: Warning wizard finalization, mobile optimizations, multi-language scripts, witness signatures, accessibility
+- Sessions 8-11: Console security cleanup, bulk employee-manager assignment, timestamp security, mobile scrolling fixes
+- Sessions 5-7: HR dashboard rewrite, SuperAdmin redesign, multi-role dashboard selector, organization wizard
 
 **Full details**: See `SESSION_HISTORY.md`
 
@@ -568,4 +546,4 @@ This versioning system is **CRITICAL** for:
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, **WCAG AA accessibility compliance**, and **versioned PDF generation for legal compliance**.*
 
-*Last Updated: 2025-10-14 - Session 23: PDF Generator Versioning System*
+*Last Updated: 2025-10-14 - Session 24: Employee Filtering & Modal Fixes*

@@ -18,7 +18,7 @@ import { EmployeeFormModal } from './EmployeeFormModal';
 import { EmployeeImportModal } from './EmployeeImportModal';
 import { EmployeeArchiveModal } from './EmployeeArchiveModal';
 // EmployeeArchive moved to _legacy - archive list view functionality to be reimplemented if needed
-import { EmployeePromotionModal } from './EmployeePromotionModal';
+// EmployeePromotionModal removed - promotion now handled in dedicated Managers tab
 import { BulkAssignManagerModal } from './BulkAssignManagerModal';
 import { BulkAssignDepartmentModal } from './BulkAssignDepartmentModal';
 import EmployeeOrganogram from './EmployeeOrganogram';
@@ -89,7 +89,7 @@ export const EmployeeManagement: React.FC = () => {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [archivingEmployee, setArchivingEmployee] = useState<Employee | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [promotingEmployee, setPromotingEmployee] = useState<Employee | null>(null);
+  // promotingEmployee state removed - promotion now handled in dedicated Managers tab
   const [bulkAssignEmployees, setBulkAssignEmployees] = useState<Employee[]>([]);
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
   const [bulkAssignDeptEmployees, setBulkAssignDeptEmployees] = useState<Employee[]>([]);
@@ -453,7 +453,6 @@ export const EmployeeManagement: React.FC = () => {
           onEmployeeSelect={handleEmployeeSelect}
           onEmployeeEdit={handleEmployeeEdit}
           onEmployeeDelete={handleEmployeeDelete}
-          onEmployeePromote={(employee) => setPromotingEmployee(employee)}
           onBulkAction={handleBulkAction}
           selectedEmployee={selectedEmployee}
           loading={loading}
@@ -613,18 +612,7 @@ export const EmployeeManagement: React.FC = () => {
           />
         )}
 
-        {promotingEmployee && organization && (
-          <EmployeePromotionModal
-            isOpen={true}
-            onClose={() => setPromotingEmployee(null)}
-            employee={promotingEmployee}
-            organizationId={organization.id}
-            onSuccess={() => {
-              loadEmployees();
-              setPromotingEmployee(null);
-            }}
-          />
-        )}
+        {/* EmployeePromotionModal removed - promotion now handled in dedicated Managers tab */}
 
         {showBulkAssignModal && (
           <BulkAssignManagerModal
