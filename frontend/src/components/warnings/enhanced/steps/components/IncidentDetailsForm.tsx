@@ -1,10 +1,11 @@
 // frontend/src/components/warnings/enhanced/steps/components/IncidentDetailsForm.tsx
 // 🎯 FOCUSED INCIDENT DETAILS FORM - V2 TREATMENT
-// ✅ Auto-save functionality, real-time validation, writing assistance
+// ✅ Real-time validation, writing assistance
 // ✅ Mobile-first design, accessibility improvements
+// 🔧 REMOVED: Auto-save functionality (was causing date persistence issues)
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { FileText, MapPin, Calendar, Clock, PenTool, Lightbulb, CheckCircle, AlertTriangle, Save } from 'lucide-react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { FileText, MapPin, Calendar, Clock, PenTool, Lightbulb, CheckCircle, AlertTriangle } from 'lucide-react';
 import type { EnhancedWarningFormData } from '../../../../../services/WarningService';
 
 // Import unified theming components
@@ -33,36 +34,7 @@ interface ValidationErrors {
   additionalNotes?: string;
 }
 
-// Auto-save hook
-const useAutoSave = (data: any, onSave: (data: any) => void, delay: number = 2000) => {
-  const timeoutRef = useRef<NodeJS.Timeout>();
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-
-  const scheduleAutoSave = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    timeoutRef.current = setTimeout(() => {
-      setIsSaving(true);
-      onSave(data);
-      setLastSaved(new Date());
-      setIsSaving(false);
-    }, delay);
-  }, [data, onSave, delay]);
-
-  useEffect(() => {
-    scheduleAutoSave();
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [scheduleAutoSave]);
-
-  return { isSaving, lastSaved };
-};
+// 🔧 REMOVED: useAutoSave hook - caused issues with date persistence from localStorage
 
 export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
   formData,
@@ -74,31 +46,29 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  // Auto-save functionality
-  const { isSaving, lastSaved } = useAutoSave(
-    formData, 
-    (data) => {
-      // Auto-save logic - you can integrate with localStorage or API
-      localStorage.setItem('warningWizard_incidentDetails', JSON.stringify(data));
-    }
-  );
+  // 🔧 REMOVED: Auto-save functionality - caused issues with date persistence
+  // const { isSaving, lastSaved } = useAutoSave(
+  //   formData,
+  //   (data) => {
+  //     localStorage.setItem('warningWizard_incidentDetails', JSON.stringify(data));
+  //   }
+  // );
 
-  // Load saved data on mount
-  useEffect(() => {
-    const savedData = localStorage.getItem('warningWizard_incidentDetails');
-    if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData);
-        // Only load if current form is mostly empty
-        const isEmpty = !formData.incidentDescription && !formData.incidentLocation;
-        if (isEmpty) {
-          onFormDataChange(parsed);
-        }
-      } catch (error) {
-        Logger.warn('Failed to load saved incident details:', error);
-      }
-    }
-  }, []);
+  // 🔧 REMOVED: Load saved data on mount - caused October 6 date bug
+  // useEffect(() => {
+  //   const savedData = localStorage.getItem('warningWizard_incidentDetails');
+  //   if (savedData) {
+  //     try {
+  //       const parsed = JSON.parse(savedData);
+  //       const isEmpty = !formData.incidentDescription && !formData.incidentLocation;
+  //       if (isEmpty) {
+  //         onFormDataChange(parsed);
+  //       }
+  //     } catch (error) {
+  //       Logger.warn('Failed to load saved incident details:', error);
+  //     }
+  //   }
+  // }, []);
 
   // Writing assistance
   const writingAssistance = useMemo((): WritingAssistance => {
@@ -179,22 +149,6 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
         icon={FileText}
         title="Incident Details"
         subtitle="Provide comprehensive details about the incident"
-        rightContent={
-          <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-            {isSaving && (
-              <div className="flex items-center gap-1">
-                <Save className="w-4 h-4 animate-pulse" />
-                <span>Saving...</span>
-              </div>
-            )}
-            {lastSaved && !isSaving && (
-              <div className="flex items-center gap-1">
-                <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
-                <span>Saved {lastSaved.toLocaleTimeString()}</span>
-              </div>
-            )}
-          </div>
-        }
       />
 
       {/* Date and Time Row */}
