@@ -44,6 +44,114 @@ export const useEmployeeImport = () => {
     return cleaned;
   };
 
+  // Helper function to parse South African date formats to YYYY-MM-DD
+  // Handles multiple formats for maximum user convenience:
+  // - dd/mm/yyyy, dd-mm-yyyy (PREFERRED) → 2024-01-15
+  // - dd/mm/yy, dd-mm-yy (2-digit year) → 2024-01-15
+  // - ddmmyyyy, ddmmyy (no separators) → 2024-01-15
+  // - yyyy-mm-dd, yyyy/mm/dd (ISO 8601) → 2024-01-15
+  const parseDate = (dateString: string): string | null => {
+    if (!dateString) return null;
+
+    // Remove extra whitespace
+    const cleaned = dateString.trim();
+
+    // Helper to convert 2-digit year to 4-digit year
+    // Years 00-29 → 2000-2029, Years 30-99 → 1930-1999
+    const expandYear = (yy: string): string => {
+      const yearNum = parseInt(yy);
+      return yearNum <= 29 ? `20${yy.padStart(2, '0')}` : `19${yy.padStart(2, '0')}`;
+    };
+
+    // Try dd/mm/yyyy or dd-mm-yyyy (4-digit year with separators)
+    const ddmmyyyyMatch = cleaned.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (ddmmyyyyMatch) {
+      const day = ddmmyyyyMatch[1].padStart(2, '0');
+      const month = ddmmyyyyMatch[2].padStart(2, '0');
+      const year = ddmmyyyyMatch[3];
+
+      // Validate date ranges
+      const dayNum = parseInt(day);
+      const monthNum = parseInt(month);
+      if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) {
+        return null; // Invalid date
+      }
+
+      return `${year}-${month}-${day}`;
+    }
+
+    // Try dd/mm/yy or dd-mm-yy (2-digit year with separators)
+    const ddmmyyMatch = cleaned.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})$/);
+    if (ddmmyyMatch) {
+      const day = ddmmyyMatch[1].padStart(2, '0');
+      const month = ddmmyyMatch[2].padStart(2, '0');
+      const year = expandYear(ddmmyyMatch[3]);
+
+      // Validate date ranges
+      const dayNum = parseInt(day);
+      const monthNum = parseInt(month);
+      if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) {
+        return null; // Invalid date
+      }
+
+      return `${year}-${month}-${day}`;
+    }
+
+    // Try ddmmyyyy (8 digits, no separators)
+    const ddmmyyyyNoSepMatch = cleaned.match(/^(\d{2})(\d{2})(\d{4})$/);
+    if (ddmmyyyyNoSepMatch) {
+      const day = ddmmyyyyNoSepMatch[1];
+      const month = ddmmyyyyNoSepMatch[2];
+      const year = ddmmyyyyNoSepMatch[3];
+
+      // Validate date ranges
+      const dayNum = parseInt(day);
+      const monthNum = parseInt(month);
+      if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) {
+        return null; // Invalid date
+      }
+
+      return `${year}-${month}-${day}`;
+    }
+
+    // Try ddmmyy (6 digits, no separators, 2-digit year)
+    const ddmmyyNoSepMatch = cleaned.match(/^(\d{2})(\d{2})(\d{2})$/);
+    if (ddmmyyNoSepMatch) {
+      const day = ddmmyyNoSepMatch[1];
+      const month = ddmmyyNoSepMatch[2];
+      const year = expandYear(ddmmyyNoSepMatch[3]);
+
+      // Validate date ranges
+      const dayNum = parseInt(day);
+      const monthNum = parseInt(month);
+      if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) {
+        return null; // Invalid date
+      }
+
+      return `${year}-${month}-${day}`;
+    }
+
+    // Try yyyy-mm-dd or yyyy/mm/dd (ISO 8601 format, for backwards compatibility)
+    const yyyymmddMatch = cleaned.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    if (yyyymmddMatch) {
+      const year = yyyymmddMatch[1];
+      const month = yyyymmddMatch[2].padStart(2, '0');
+      const day = yyyymmddMatch[3].padStart(2, '0');
+
+      // Validate date ranges
+      const dayNum = parseInt(day);
+      const monthNum = parseInt(month);
+      if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12) {
+        return null; // Invalid date
+      }
+
+      return `${year}-${month}-${day}`;
+    }
+
+    // If no pattern matches, return null to trigger validation error
+    return null;
+  };
+
   const parseCSVLine = (line: string): string[] => {
     const result: string[] = [];
     let current = '';
@@ -118,6 +226,13 @@ export const useEmployeeImport = () => {
               continue;
             }
 
+            // Parse and validate date format
+            const parsedDate = parseDate(row.startDate);
+            if (!parsedDate) {
+              errors.push(`Row ${lineNumber}: Invalid date format for startDate "${row.startDate}". Please use dd/mm/yyyy (e.g., 15/01/2024)`);
+              continue;
+            }
+
             const sanitizedRow: CSVImportRow = {
               employeeNumber: row.employeeNumber || '',
               firstName: row.firstName,
@@ -126,7 +241,7 @@ export const useEmployeeImport = () => {
               phoneNumber: formatPhoneNumber(row.phoneNumber), // Required - auto-format to international
               whatsappNumber: row.whatsappNumber ? formatPhoneNumber(row.whatsappNumber) : '', // Optional - auto-format if provided
               position: row.position,
-              startDate: row.startDate,
+              startDate: parsedDate, // Parsed to YYYY-MM-DD format
               // contractType is NOT imported from CSV - always defaults to 'permanent' in createEmployeeFromForm
             };
 

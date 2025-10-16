@@ -158,6 +158,7 @@ export const EmployeeImportModal: React.FC<EmployeeImportModalProps> = ({
                   <strong>💡 Tips:</strong>
                   <ul className="list-disc list-inside mt-1 space-y-0.5">
                     <li><strong>Required fields:</strong> Employee Number, First Name, Last Name, Phone Number, Position, Start Date</li>
+                    <li><strong>Date format:</strong> Use dd/mm/yyyy (e.g., 15/01/2024) - South African standard format</li>
                     <li>Employee number must be unique - duplicates will be skipped</li>
                     <li>Email and WhatsApp number are optional (can be blank)</li>
                     <li>Phone numbers accepts 0825254011, 825254011 (missing leading zero), or +27825254011 (auto-converts to +27)</li>
@@ -166,13 +167,14 @@ export const EmployeeImportModal: React.FC<EmployeeImportModalProps> = ({
                 </div>
                 <pre className="text-[10px] bg-white p-2 rounded border overflow-x-auto leading-relaxed">
 {`employeeNumber,firstName,lastName,email,phoneNumber,whatsappNumber,position,startDate
-EMP001,John,Doe,john.doe@company.com,0123456789,0123456789,Software Developer,2024-01-15
-EMP002,Sarah,Johnson,,+27987654321,+27987654321,HR Manager,2023-06-01
-EMP003,Michael,Smith,michael.smith@company.com,0825254011,,Operations Coordinator,2024-11-01`}
+EMP001,John,Doe,john.doe@company.com,0123456789,0123456789,Software Developer,15/01/2024
+EMP002,Sarah,Johnson,,+27987654321,+27987654321,HR Manager,01/06/2023
+EMP003,Michael,Smith,michael.smith@company.com,0825254011,,Operations Coordinator,01/11/2024`}
                 </pre>
-                <p className="text-[10px] text-gray-600 mt-1.5">
-                  Notice: All phone formats accepted - 0825254011 (local), 825254011 (missing leading 0), +27825254011 (international) - all auto-convert to +27
-                </p>
+                <div className="text-[10px] text-gray-600 mt-1.5 space-y-0.5">
+                  <p><strong>Dates:</strong> Accepts dd/mm/yyyy, dd/mm/yy, dd-mm-yyyy, dd-mm-yy, ddmmyyyy, ddmmyy, or yyyy-mm-dd formats</p>
+                  <p><strong>Phones:</strong> All formats accepted - 0825254011 (local), 825254011 (missing leading 0), +27825254011 (international) - all auto-convert to +27</p>
+                </div>
               </div>
             </div>
           )}

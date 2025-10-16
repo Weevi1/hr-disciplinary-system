@@ -823,20 +823,36 @@ All three systems work together:
       - Spreadsheet applications often strip leading zeros from phone numbers
       - This case is explicitly handled to prevent data loss during CSV import
       - No prefix and doesn't start with '27' → Assume local, add `+27`
+  - **Date Parsing Logic** (`useEmployeeImport.ts` lines 47-153):
+    - **PREFERRED FORMAT**: `dd/mm/yyyy` (South African standard, e.g., `15/01/2024`)
+    - **Maximum flexibility** - Accepts all common South African date formats:
+      - `dd/mm/yyyy`, `dd-mm-yyyy` (4-digit year with separators)
+      - `dd/mm/yy`, `dd-mm-yy` (2-digit year with separators)
+      - `ddmmyyyy` (8 digits, no separators, e.g., `15012024`)
+      - `ddmmyy` (6 digits, no separators, e.g., `150124`)
+      - `yyyy-mm-dd`, `yyyy/mm/dd` (ISO 8601 for backwards compatibility)
+    - **2-digit year expansion**: Years 00-29 → 2000-2029, Years 30-99 → 1930-1999
+    - Validates date ranges: day 1-31, month 1-12
+    - Returns YYYY-MM-DD format for database storage
+    - Invalid dates trigger clear error: `"Invalid date format for startDate. Please use dd/mm/yyyy (e.g., 15/01/2024)"`
+    - **User-friendly**: South African users can enter dates in any familiar format without conversion hassles
   - **CSV Sample Format**:
     ```csv
     employeeNumber,firstName,lastName,email,phoneNumber,whatsappNumber,position,startDate
-    EMP001,John,Doe,john.doe@company.com,0123456789,0123456789,Software Developer,2024-01-15
-    EMP002,Sarah,Johnson,,+27987654321,+27987654321,HR Manager,2023-06-01
-    EMP003,Michael,Smith,michael.smith@company.com,0825254011,,Operations Coordinator,2024-11-01
+    EMP001,John,Doe,john.doe@company.com,0123456789,0123456789,Software Developer,15/01/2024
+    EMP002,Sarah,Johnson,,+27987654321,+27987654321,HR Manager,01/06/2023
+    EMP003,Michael,Smith,michael.smith@company.com,0825254011,,Operations Coordinator,01/11/2024
     ```
+    Note: Dates now use dd/mm/yyyy format (South African standard) instead of yyyy-mm-dd
   - **Key Features**:
     - **Simplified Format**: Only 8 essential fields in CSV
+    - **SA-Friendly Date Format**: Accepts dd/mm/yyyy (South African standard) with validation
     - **Flexible Phone Numbers**: Accepts local or international format
-    - **Auto-Conversion**: All phone numbers standardized to +27 format
-    - **Clear Error Messages**: Duplicate employees explicitly identified
+    - **Auto-Conversion**: All phone numbers standardized to +27 format, dates to YYYY-MM-DD
+    - **Clear Error Messages**: Duplicate employees and invalid dates explicitly identified
     - **Optional Fields**: Email and WhatsApp can be left blank
     - **Smart Defaults**: Contract type NOT imported from CSV - always set to "permanent"
+    - **Backwards Compatible**: Also accepts yyyy-mm-dd date format for old CSVs
   - **Files Modified** (5 files):
     - `frontend/src/types/employee.ts` - Updated CSV generation, interfaces, validation
     - `frontend/src/components/employees/EmployeeFormModal.tsx` - Changed field requirements (email optional, phone required, department optional)
