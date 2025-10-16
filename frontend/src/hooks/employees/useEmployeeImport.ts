@@ -16,6 +16,11 @@ export const useEmployeeImport = () => {
   const [currentImportStep, setCurrentImportStep] = useState('');
 
   // Helper function to format South African phone numbers to international format
+  // Handles multiple formats:
+  // - 0825254011 (local format with leading 0) → +27825254011
+  // - 825254011 (missing leading 0 - common when Excel/Sheets strips leading zeros) → +27825254011
+  // - 27825254011 (country code without +) → +27825254011
+  // - +27825254011 (already formatted) → +27825254011
   const formatPhoneNumber = (phone: string): string => {
     if (!phone) return '';
 
@@ -31,6 +36,7 @@ export const useEmployeeImport = () => {
       cleaned = '+' + cleaned;
     }
     // If it doesn't start with + or 27, assume it's local and add +27
+    // This handles the Excel/Google Sheets edge case where leading zeros are stripped (825254011 → +27825254011)
     else if (!cleaned.startsWith('+') && !cleaned.startsWith('27')) {
       cleaned = '+27' + cleaned;
     }
@@ -121,7 +127,7 @@ export const useEmployeeImport = () => {
               whatsappNumber: row.whatsappNumber ? formatPhoneNumber(row.whatsappNumber) : '', // Optional - auto-format if provided
               position: row.position,
               startDate: row.startDate,
-              contractType: (row.contractType?.toLowerCase() || 'permanent') as any,
+              // contractType is NOT imported from CSV - always defaults to 'permanent' in createEmployeeFromForm
             };
 
 
@@ -200,7 +206,7 @@ export const useEmployeeImport = () => {
             department: '', // Optional - can be assigned later
             position: row.position,
             startDate: row.startDate,
-            contractType: (row.contractType || 'permanent') as any, // Defaults to 'permanent'
+            contractType: 'permanent', // Always defaults to 'permanent' for CSV imports
             isActive: true
           };
 
