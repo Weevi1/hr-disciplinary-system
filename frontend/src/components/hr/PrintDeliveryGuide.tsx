@@ -146,9 +146,11 @@ export const PrintDeliveryGuide: React.FC<PrintDeliveryGuideProps> = ({
 
       // 🔒 VERSIONING: Pass stored version to ensure consistent regeneration
       // Historical warnings will use their original generator version (v1.0.0, v1.1.0, etc.)
+      // 🎨 TEMPLATE SETTINGS: Pass stored template settings for consistent styling
       const pdfBlob = await PDFGenerationService.generateWarningPDF(
         pdfData,
-        pdfData.pdfGeneratorVersion
+        pdfData.pdfGeneratorVersion,
+        pdfData.pdfSettings
       );
 
       Logger.success('✅ PDF generated successfully');

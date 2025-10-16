@@ -543,7 +543,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
               </ThemedButton>
             </div>
             <div className="overflow-y-auto flex-1 min-h-0">
-              <EmployeeManagement />
+              <EmployeeManagement onDataChange={refreshData} />
             </div>
           </ThemedCard>
         </div>

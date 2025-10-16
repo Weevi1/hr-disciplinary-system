@@ -15,6 +15,29 @@ export const useEmployeeImport = () => {
   const [importProgress, setImportProgress] = useState(0);
   const [currentImportStep, setCurrentImportStep] = useState('');
 
+  // Helper function to format South African phone numbers to international format
+  const formatPhoneNumber = (phone: string): string => {
+    if (!phone) return '';
+
+    // Remove all spaces, dashes, and parentheses
+    let cleaned = phone.replace(/[\s\-\(\)]/g, '');
+
+    // If it starts with 0, replace with +27
+    if (cleaned.startsWith('0')) {
+      cleaned = '+27' + cleaned.substring(1);
+    }
+    // If it starts with 27 (but not +27), add the +
+    else if (cleaned.startsWith('27') && !cleaned.startsWith('+27')) {
+      cleaned = '+' + cleaned;
+    }
+    // If it doesn't start with + or 27, assume it's local and add +27
+    else if (!cleaned.startsWith('+') && !cleaned.startsWith('27')) {
+      cleaned = '+27' + cleaned;
+    }
+
+    return cleaned;
+  };
+
   const parseCSVLine = (line: string): string[] => {
     const result: string[] = [];
     let current = '';
@@ -83,8 +106,9 @@ export const useEmployeeImport = () => {
             });
 
             // Basic validation - employeeNumber can be empty (will be auto-generated)
-            if (!row.firstName || !row.lastName || !row.email) {
-              errors.push(`Row ${lineNumber}: Missing required fields (firstName, lastName, email)`);
+            // Email and WhatsApp are optional, phone number is required
+            if (!row.firstName || !row.lastName || !row.phoneNumber || !row.position || !row.startDate) {
+              errors.push(`Row ${lineNumber}: Missing required fields (firstName, lastName, phoneNumber, position, startDate)`);
               continue;
             }
 
@@ -92,11 +116,11 @@ export const useEmployeeImport = () => {
               employeeNumber: row.employeeNumber || '',
               firstName: row.firstName,
               lastName: row.lastName,
-              email: row.email.toLowerCase(),
-              phoneNumber: row.phoneNumber || '',
-              whatsappNumber: row.whatsappNumber || '',
-              position: row.position || '',
-              startDate: row.startDate || '',
+              email: row.email ? row.email.toLowerCase() : '', // Optional
+              phoneNumber: formatPhoneNumber(row.phoneNumber), // Required - auto-format to international
+              whatsappNumber: row.whatsappNumber ? formatPhoneNumber(row.whatsappNumber) : '', // Optional - auto-format if provided
+              position: row.position,
+              startDate: row.startDate,
               contractType: (row.contractType?.toLowerCase() || 'permanent') as any,
             };
 
@@ -158,15 +182,15 @@ export const useEmployeeImport = () => {
           
           // Validate employee number for duplicates
           const validation = await API.employees.validateEmployeeNumber(
-            organizationId, 
+            organizationId,
             employeeNumber
           );
-          
+
           if (!validation.isAvailable) {
             errors.push({
               row: rowNumber,
               field: 'employeeNumber',
-              message: `Employee number "${employeeNumber}" is already in use${validation.suggestions ? `. Suggestions: ${validation.suggestions.slice(0, 3).join(', ')}` : ''}`
+              message: `Employee "${employeeNumber}" already exists - not imported (duplicate found)`
             });
             continue;
           }
@@ -175,13 +199,13 @@ export const useEmployeeImport = () => {
             employeeNumber: employeeNumber,
             firstName: row.firstName,
             lastName: row.lastName,
-            email: row.email,
-            phoneNumber: row.phoneNumber || '',
-            whatsappNumber: row.whatsappNumber || '',
-            department: '', // Department will be assigned later via bulk action
+            email: row.email || undefined, // Optional - can be empty
+            phoneNumber: row.phoneNumber, // Required
+            whatsappNumber: row.whatsappNumber || undefined, // Optional
+            department: '', // Optional - can be assigned later
             position: row.position,
             startDate: row.startDate,
-            contractType: row.contractType as any || 'permanent',
+            contractType: (row.contractType || 'permanent') as any, // Defaults to 'permanent'
             isActive: true
           };
 

@@ -8,10 +8,11 @@ import { Manager } from '../../services/ManagerService';
 import ManagerService from '../../services/ManagerService';
 import DepartmentService from '../../services/DepartmentService';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
-import { Mail, Building2, Users, Calendar, UserCheck, Edit, Save, X, UserPlus, Search } from 'lucide-react';
+import { Mail, Building2, Users, Calendar, UserCheck, Edit, Save, X, UserPlus, Search, UserMinus } from 'lucide-react';
 import Logger from '../../utils/logger';
 import type { Employee } from '../../types';
 import type { Department } from '../../types/department';
+import { getManagerIds } from '../../types/employee';
 
 interface ManagerDetailsModalProps {
   isOpen: boolean;
@@ -117,11 +118,11 @@ export const ManagerDetailsModal: React.FC<ManagerDetailsModalProps> = ({
 
       // Filter to employees that are:
       // 1. Active
-      // 2. Not already assigned to this manager
-      const available = result.documents.filter((emp: Employee) =>
-        emp.isActive !== false &&
-        emp.employment?.managerId !== manager.id
-      );
+      // 2. Not already assigned to this manager (check managerIds array)
+      const available = result.documents.filter((emp: Employee) => {
+        const employeeManagerIds = getManagerIds(emp.employment);
+        return emp.isActive !== false && !employeeManagerIds.includes(manager.id);
+      });
 
       setAvailableEmployees(available as Employee[]);
     } catch (error) {
@@ -129,7 +130,7 @@ export const ManagerDetailsModal: React.FC<ManagerDetailsModalProps> = ({
     }
   };
 
-  // Handle assigning employee to this manager
+  // 🔧 UPDATED: Handle assigning employee to this manager (add to managerIds array)
   const handleAssignEmployee = async () => {
     if (!selectedEmployeeId || !manager) return;
 
@@ -137,12 +138,25 @@ export const ManagerDetailsModal: React.FC<ManagerDetailsModalProps> = ({
     setError(null);
 
     try {
-      await DatabaseShardingService.updateDocument(
+      // Get current employee to access their existing managers
+      const employee = await DatabaseShardingService.getDocument(
         manager.organizationId,
         'employees',
-        selectedEmployeeId,
-        { 'employment.managerId': manager.id }
+        selectedEmployeeId
       );
+
+      if (employee) {
+        // Get current manager IDs and add this manager
+        const currentManagerIds = getManagerIds(employee.employment);
+        const updatedManagerIds = [...new Set([...currentManagerIds, manager.id])]; // Add + deduplicate
+
+        await DatabaseShardingService.updateDocument(
+          manager.organizationId,
+          'employees',
+          selectedEmployeeId,
+          { 'employment.managerIds': updatedManagerIds }
+        );
+      }
 
       // Reload employees
       const emps = await ManagerService.getManagerEmployees(manager.organizationId, manager.id);
@@ -162,6 +176,42 @@ export const ManagerDetailsModal: React.FC<ManagerDetailsModalProps> = ({
       setError(error.message || 'Failed to assign employee. Please try again.');
     } finally {
       setAssigningEmployee(false);
+    }
+  };
+
+  // 🔧 NEW: Handle removing employee from this manager
+  const handleRemoveEmployee = async (employeeId: string) => {
+    if (!manager) return;
+
+    try {
+      // Get current employee
+      const employee = await DatabaseShardingService.getDocument(
+        manager.organizationId,
+        'employees',
+        employeeId
+      );
+
+      if (employee) {
+        // Remove this manager from the employee's managerIds array
+        const currentManagerIds = getManagerIds(employee.employment);
+        const updatedManagerIds = currentManagerIds.filter(id => id !== manager.id);
+
+        await DatabaseShardingService.updateDocument(
+          manager.organizationId,
+          'employees',
+          employeeId,
+          { 'employment.managerIds': updatedManagerIds }
+        );
+
+        // Reload employees
+        const emps = await ManagerService.getManagerEmployees(manager.organizationId, manager.id);
+        setEmployees(emps);
+
+        Logger.success('Manager removed from employee');
+      }
+    } catch (error: any) {
+      Logger.error('Failed to remove manager:', error);
+      setError(error.message || 'Failed to remove manager. Please try again.');
     }
   };
 
@@ -488,8 +538,17 @@ export const ManagerDetailsModal: React.FC<ManagerDetailsModalProps> = ({
                                 </div>
                               </div>
                             </div>
-                            <div className="text-xs text-gray-500">
-                              {employeeNumber}
+                            <div className="flex items-center gap-2">
+                              <div className="text-xs text-gray-500">
+                                {employeeNumber}
+                              </div>
+                              <button
+                                onClick={() => handleRemoveEmployee(emp.id)}
+                                className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                title="Remove manager from employee"
+                              >
+                                <UserMinus className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
                         </div>

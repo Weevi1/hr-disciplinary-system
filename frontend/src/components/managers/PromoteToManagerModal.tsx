@@ -55,9 +55,20 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
           .filter((u: any) => u.role?.id === 'hr-manager' || u.role?.id === 'hod-manager')
           .map((u: any) => u.id);
 
-        const eligibleEmployees = employeesResult.documents.filter(
-          (emp: any) => emp.isActive !== false && !managerUserIds.includes(emp.id)
-        );
+        const eligibleEmployees = employeesResult.documents.filter((emp: any) => {
+          // Must be active and not already a manager
+          if (emp.isActive === false || managerUserIds.includes(emp.id)) {
+            return false;
+          }
+
+          // Must have valid profile data with required fields
+          if (!emp.profile || !emp.profile.email || !emp.profile.firstName || !emp.profile.lastName) {
+            Logger.warn(`Skipping employee ${emp.id} - missing required profile data`);
+            return false;
+          }
+
+          return true;
+        });
 
         setEmployees(eligibleEmployees as Employee[]);
 
@@ -116,11 +127,15 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
     );
   };
 
-  const filteredEmployees = employees.filter(emp =>
-    `${emp.profile.firstName} ${emp.profile.lastName} ${emp.profile.email} ${emp.profile.employeeNumber}`
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
+  const filteredEmployees = employees.filter(emp => {
+    // Skip employees with missing profile data
+    if (!emp.profile) return false;
+
+    const searchString = `${emp.profile.firstName || ''} ${emp.profile.lastName || ''} ${emp.profile.email || ''} ${emp.profile.employeeNumber || ''}`
+      .toLowerCase();
+
+    return searchString.includes(searchTerm.toLowerCase());
+  });
 
   const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
 
@@ -163,7 +178,7 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
                 <option value="">-- Select an employee --</option>
                 {filteredEmployees.map(emp => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.profile.firstName} {emp.profile.lastName} ({emp.profile.employeeNumber}) - {emp.profile.department}
+                    {emp.profile?.firstName || 'Unknown'} {emp.profile?.lastName || 'Employee'} ({emp.profile?.employeeNumber || 'N/A'}) - {emp.profile?.department || 'No Department'}
                   </option>
                 ))}
               </select>
@@ -176,7 +191,7 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
             </div>
 
             {/* Selected Employee Info */}
-            {selectedEmployee && (
+            {selectedEmployee && selectedEmployee.profile && (
               <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-start gap-3">
                   <UserPlus className="w-5 h-5 text-blue-600 mt-0.5" />
@@ -185,10 +200,10 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
                       Selected Employee
                     </p>
                     <p className="text-sm text-blue-700 mt-1">
-                      {selectedEmployee.profile.firstName} {selectedEmployee.profile.lastName}
+                      {selectedEmployee.profile.firstName || 'Unknown'} {selectedEmployee.profile.lastName || 'Employee'}
                     </p>
                     <p className="text-xs text-blue-600 mt-0.5">
-                      {selectedEmployee.profile.email} • {selectedEmployee.profile.department}
+                      {selectedEmployee.profile.email || 'No Email'} • {selectedEmployee.profile.department || 'No Department'}
                     </p>
                   </div>
                 </div>
@@ -262,7 +277,7 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
             </div>
 
             {/* Confirmation Message */}
-            {selectedEmployee && (
+            {selectedEmployee && selectedEmployee.profile && (
               <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                 <div className="flex items-start gap-3">
                   <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
@@ -271,7 +286,7 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
                       Ready to Promote
                     </p>
                     <p className="text-sm text-green-700 mt-1">
-                      <strong>{selectedEmployee.profile.firstName} {selectedEmployee.profile.lastName}</strong>{' '}
+                      <strong>{selectedEmployee.profile.firstName || 'Unknown'} {selectedEmployee.profile.lastName || 'Employee'}</strong>{' '}
                       will be promoted to <strong>{selectedRole === 'hr-manager' ? 'HR Manager' : 'HOD Manager'}</strong>
                       {selectedDepartmentIds.length > 0 && (
                         <> with access to{' '}

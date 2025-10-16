@@ -276,9 +276,11 @@ ${organization?.companyName || 'HR Department'}`;
       const { PDFGenerationService } = await import('@/services/PDFGenerationService');
 
       // 🔒 VERSIONING: Pass stored version for consistent regeneration
+      // 🎨 TEMPLATE SETTINGS: Pass stored template settings for consistent styling
       const blob = await PDFGenerationService.generateWarningPDF(
         pdfData,
-        pdfData.pdfGeneratorVersion
+        pdfData.pdfGeneratorVersion,
+        pdfData.pdfSettings
       );
 
       // Generate filename

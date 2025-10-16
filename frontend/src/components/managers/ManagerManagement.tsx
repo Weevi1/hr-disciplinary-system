@@ -90,7 +90,7 @@ export const ManagerManagement: React.FC = () => {
   ) => {
     try {
       await promoteEmployee(employeeId, role, departmentIds);
-      Logger.success('Employee promoted to manager successfully');
+      Logger.success('✅ Employee promoted to manager successfully! They can now log in using their email and the "Forgot Password" link to set up their password.');
     } catch (error) {
       Logger.error('Failed to promote employee:', error);
       throw error;

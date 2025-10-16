@@ -1104,7 +1104,10 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
               additionalNotes: warning.additionalNotes || '',
               validityPeriod: warning.validityPeriod || 6,
               issueDate: toISODateString(warning.issueDate),
-              status: warning.status // Pass warning status for PDF watermarking
+              status: warning.status, // Pass warning status for PDF watermarking
+              pdfGeneratorVersion: warning.pdfGeneratorVersion, // Pass stored PDF code version
+              pdfTemplateVersion: warning.pdfTemplateVersion, // Pass stored template version for fetching from versions collection
+              pdfSettings: warning.pdfSettings // Pass stored PDF template settings (backward compatibility for old warnings)
             },
             signatures: warning.signatures || { manager: null, employee: null },
             lraRecommendation: warning.disciplineRecommendation || {

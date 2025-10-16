@@ -4,6 +4,7 @@ import { DataService } from './DataService';
 import type { Employee } from '../types';
 import { WarningService } from './WarningService';
 import DepartmentService from './DepartmentService';
+import { getManagerIds } from '../types/employee';
 
 
 // Define the EmployeeWithContext interface
@@ -176,14 +177,15 @@ static async getEmployeesByManager(managerId: string): Promise<Employee[]> {
     const allEmployees = await this.getAll();
     Logger.debug('[EmployeeService] Total employees loaded:', allEmployees.length)
     
-    // 🔧 FIXED: Check employment.managerId which is where the form saves it
+    // 🔧 UPDATED: Multi-manager support - check if managerId is in managerIds array
     const managedEmployees = allEmployees.filter(employee => {
-      const isDirectlyManaged = employee.employment?.managerId === managerId;
-      
+      const employeeManagerIds = getManagerIds(employee.employment);
+      const isDirectlyManaged = employeeManagerIds.includes(managerId);
+
       if (isDirectlyManaged) {
         Logger.debug('[EmployeeService] Found directly managed employee:', employee.profile.firstName, employee.profile.lastName)
       }
-      
+
       return isDirectlyManaged && employee.isActive;
     });
     

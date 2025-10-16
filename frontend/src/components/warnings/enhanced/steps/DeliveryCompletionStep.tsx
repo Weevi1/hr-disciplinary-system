@@ -272,9 +272,11 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
       const { PDFGenerationService } = await import('@/services/PDFGenerationService');
 
       // 🔒 VERSIONING: Pass version for new warning QR code generation
+      // 🎨 TEMPLATE SETTINGS: Pass stored template settings for consistent styling
       const qrBlob = await PDFGenerationService.generateWarningPDF(
         pdfData,
-        pdfData.pdfGeneratorVersion
+        pdfData.pdfGeneratorVersion,
+        pdfData.pdfSettings
       );
 
       setQrPdfBlob(qrBlob);

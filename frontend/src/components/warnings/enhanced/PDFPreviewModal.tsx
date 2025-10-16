@@ -108,54 +108,25 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
     const signatures = wizardState.signatures || warningData.signatures || {};
     const lraRecommendation = wizardState.lraRecommendation || warningData.lraRecommendation;
 
-    // 🔒 SECURITY-CRITICAL: Map wizard data to warning data structure
-    // This must match the structure expected by transformWarningDataForPDF
-    const warningDataStructure = {
-      id: formData.id || formData.warningId || `WRN_${Date.now()}`,
-      organizationId: wizardState.organizationId || warningData.organizationId,
-      level: formData.level || lraRecommendation?.suggestedLevel || 'counselling',
+    // Build data structure for UI display (not transformed yet - that happens in generatePDF)
+    // This is synchronous and just for displaying employee name, category, etc.
+    return {
+      wizardState,
+      selectedEmployee,
+      selectedCategory,
+      formData,
+      signatures,
+      lraRecommendation,
+      employee: {
+        firstName: selectedEmployee?.profile?.firstName || selectedEmployee?.firstName || 'Unknown',
+        lastName: selectedEmployee?.profile?.lastName || selectedEmployee?.lastName || 'Employee'
+      },
       category: selectedCategory?.name || formData.category || 'General Misconduct',
       description: formData.incidentDescription || formData.description || '',
-      incidentDate: formData.incidentDate,
-      incidentTime: formData.incidentTime || '09:00',
       incidentLocation: formData.incidentLocation || '',
-      issueDate: formData.issueDate || formData.issuedDate,
-      validityPeriod: formData.validityPeriod || 6,
-      signatures: signatures,
       additionalNotes: formData.additionalNotes || '',
-      status: formData.status,
-      disciplineRecommendation: lraRecommendation,
-      legalCompliance: {
-        isCompliant: true,
-        framework: 'LRA Section 188',
-        requirements: lraRecommendation?.legalRequirements || []
-      },
-      deliveryChoice: deliveryChoice ? {
-        method: deliveryChoice.method,
-        timestamp: new Date(),
-        chosenBy: 'Manager',
-        contactDetails: deliveryChoice.contactDetails
-      } : undefined
+      isComplete: !!(selectedEmployee && selectedCategory && (formData.incidentDescription || formData.description))
     };
-
-    // 🔒 SECURITY-CRITICAL: Use unified PDF data transformer
-    // This ensures ALL PDFs look IDENTICAL regardless of generation method
-    try {
-      const pdfData = transformWarningDataForPDF(
-        warningDataStructure,
-        selectedEmployee,
-        organization
-      );
-
-      // Return extracted data with isComplete flag for UI
-      return {
-        ...pdfData,
-        isComplete: !!(selectedEmployee && selectedCategory && formData.incidentDescription)
-      };
-    } catch (error) {
-      Logger.error('❌ Failed to transform wizard data for PDF:', error);
-      return null;
-    }
   }, [warningData, deliveryChoice, organization]);
 
   // ============================================
@@ -183,7 +154,6 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
       return;
     }
 
-    // After unified transformer, fields are flattened
     const hasMinimumData = extractedData.description ||
                           extractedData.incidentLocation ||
                           extractedData.additionalNotes;
@@ -209,21 +179,61 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
         await new Promise(resolve => setTimeout(resolve, 400));
       }
 
-      // 🔒 SECURITY-CRITICAL: extractedData is already transformed by the unified transformer
-      // No need to rebuild the structure - use it directly
+      // 🔒 SECURITY-CRITICAL: Build warning data structure for transformation
+      const warningDataStructure = {
+        id: extractedData.formData.id || extractedData.formData.warningId || `WRN_${Date.now()}`,
+        organizationId: extractedData.wizardState.organizationId || warningData.organizationId,
+        level: extractedData.formData.level || extractedData.lraRecommendation?.suggestedLevel || 'counselling',
+        category: extractedData.selectedCategory?.name || extractedData.formData.category || 'General Misconduct',
+        description: extractedData.formData.incidentDescription || extractedData.formData.description || '',
+        incidentDate: extractedData.formData.incidentDate,
+        incidentTime: extractedData.formData.incidentTime || '09:00',
+        incidentLocation: extractedData.formData.incidentLocation || '',
+        issueDate: extractedData.formData.issueDate || extractedData.formData.issuedDate,
+        validityPeriod: extractedData.formData.validityPeriod || 6,
+        signatures: extractedData.signatures,
+        additionalNotes: extractedData.formData.additionalNotes || '',
+        status: extractedData.formData.status,
+        disciplineRecommendation: extractedData.lraRecommendation,
+        // 🎨 CRITICAL: Pass through pdfTemplateVersion from original warning (for fetching from versions collection)
+        pdfTemplateVersion: extractedData.formData.pdfTemplateVersion || warningData.pdfTemplateVersion,
+        // 🔒 CRITICAL: Pass through pdfGeneratorVersion from original warning (for version routing)
+        pdfGeneratorVersion: extractedData.formData.pdfGeneratorVersion || warningData.pdfGeneratorVersion,
+        legalCompliance: {
+          isCompliant: true,
+          framework: 'LRA Section 188',
+          requirements: extractedData.lraRecommendation?.legalRequirements || []
+        },
+        deliveryChoice: deliveryChoice ? {
+          method: deliveryChoice.method,
+          timestamp: new Date(),
+          chosenBy: 'Manager',
+          contactDetails: deliveryChoice.contactDetails
+        } : undefined
+      };
+
+      // 🔒 ASYNC TRANSFORMATION: Transform warning data for PDF (fetches template if needed)
+      const transformedData = await transformWarningDataForPDF(
+        warningDataStructure,
+        extractedData.selectedEmployee,
+        organization
+      );
+
       const { PDFGenerationService } = await import('@/services/PDFGenerationService');
 
       // 🔒 VERSIONING: Pass stored version to ensure consistent regeneration
+      // 🎨 TEMPLATE SETTINGS: Pass stored template settings for consistent styling
       const blob = await measureAsync(
         TraceNames.GENERATE_WARNING_PDF,
         () => PDFGenerationService.generateWarningPDF(
-          extractedData,
-          extractedData.pdfGeneratorVersion
+          transformedData,
+          transformedData.pdfGeneratorVersion,
+          transformedData.pdfSettings
         ),
         {
-          employee: `${extractedData.employee.firstName} ${extractedData.employee.lastName}`,
-          category: extractedData.category,
-          pdfGeneratorVersion: extractedData.pdfGeneratorVersion // Log for traceability
+          employee: `${transformedData.employee.firstName} ${transformedData.employee.lastName}`,
+          category: transformedData.category,
+          pdfGeneratorVersion: transformedData.pdfGeneratorVersion // Log for traceability
         }
       );
 
@@ -234,7 +244,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
       setPdfUrl(url);
 
       Logger.success('✅ PDF generated:', {
-        employee: `${extractedData.employee.firstName} ${extractedData.employee.lastName}`,
+        employee: `${transformedData.employee.firstName} ${transformedData.employee.lastName}`,
         size: `${(blob.size / 1024).toFixed(1)} KB`
       });
 
@@ -249,7 +259,7 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
       setIsGenerating(false);
       setGenerationStep('');
     }
-  }, [extractedData, organization, generatedFilename, deliveryChoice, onPDFGenerated]);
+  }, [extractedData, organization, generatedFilename, deliveryChoice, onPDFGenerated, warningData]);
 
   // ============================================
   // DOWNLOAD HANDLERS

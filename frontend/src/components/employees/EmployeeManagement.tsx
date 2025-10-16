@@ -34,7 +34,11 @@ import { LegacySkeletonDashboard, LegacyLoadingMessage } from '../common/LegacyS
 import { LoadingState } from '../common/LoadingState';
 import Logger from '../../utils/logger';
 
-export const EmployeeManagement: React.FC = () => {
+interface EmployeeManagementProps {
+  onDataChange?: () => void; // Callback to notify parent when employee data changes
+}
+
+export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataChange }) => {
   const { user, organization } = useAuth();
 
   // Check if user is an HOD manager - if so, only load their team members
@@ -102,11 +106,24 @@ export const EmployeeManagement: React.FC = () => {
     await loadEmployees();
     setShowAddModal(false);
     setEditingEmployee(null);
+
+    // Notify parent dashboard to refresh metrics
+    onDataChange?.();
   };
 
   const handleEmployeeArchived = async (employee: Employee) => {
     await archiveEmployee(employee);
     setArchivingEmployee(null);
+
+    // Notify parent dashboard to refresh metrics
+    onDataChange?.();
+  };
+
+  const handleImportComplete = async () => {
+    await loadEmployees();
+
+    // Notify parent dashboard to refresh metrics
+    onDataChange?.();
   };
 
   // Enhanced handlers for new components
@@ -147,19 +164,28 @@ export const EmployeeManagement: React.FC = () => {
     }
   }, []);
 
-  const handleBulkAssignManager = useCallback(async (managerId: string) => {
+  const handleBulkAssignManager = useCallback(async (managerId: string, mode: 'add' | 'replace') => {
     if (!organizationId) return;
 
-    // Update all selected employees with the new manager
-    const updatePromises = bulkAssignEmployees.map(employee =>
-      updateEmployee({
+    // 🔧 UPDATED: Multi-manager support with ADD/REPLACE modes
+    const updatePromises = bulkAssignEmployees.map(employee => {
+      // Get current manager IDs (handles backward compatibility)
+      const currentManagerIds = employee.employment?.managerIds ||
+                               (employee.employment?.managerId ? [employee.employment.managerId] : []);
+
+      // Calculate new manager IDs based on mode
+      const newManagerIds = mode === 'add'
+        ? [...new Set([...currentManagerIds, managerId])] // Add + deduplicate
+        : [managerId]; // Replace all
+
+      return updateEmployee({
         ...employee,
         employment: {
           ...employee.employment,
-          managerId
+          managerIds: newManagerIds
         }
-      })
-    );
+      });
+    });
 
     await Promise.all(updatePromises);
     await loadEmployees();
@@ -600,7 +626,7 @@ export const EmployeeManagement: React.FC = () => {
         {showImportModal && (
           <EmployeeImportModal
             onClose={() => setShowImportModal(false)}
-            onImportComplete={loadEmployees}
+            onImportComplete={handleImportComplete}
           />
         )}
 

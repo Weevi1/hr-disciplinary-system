@@ -9,6 +9,8 @@ import Logger from '../utils/logger';
 // 🔒 VERSIONED PDF GENERATION - Legal compliance through consistent regeneration
 
 import { globalDeviceCapabilities, getPerformanceLimits } from '../utils/deviceDetection';
+import { PDFPlaceholderService } from './PDFPlaceholderService';
+import type { PDFSectionConfig } from '../types/core';
 
 /**
  * 🔒 PDF GENERATOR VERSION HISTORY - SECURITY CRITICAL
@@ -45,10 +47,18 @@ import { globalDeviceCapabilities, getPerformanceLimits } from '../utils/deviceD
  *   - Previous Action shows: Date | Offense | Level
  *   - ⚠️ DO NOT MODIFY - Used by all warnings created before 2025-10-14
  *
- * - v1.1.0 (2025-10-14): Previous Action format change [CURRENT]
+ * - v1.1.0 (2025-10-14): Previous Action format change [FROZEN]
  *   - Changed: Previous Action now shows: Date | Incident Description | Level
  *   - Reason: Offense is redundant (already filtered), incident gives context
- *   - ⚠️ WILL BE FROZEN when v1.2.0 is released
+ *   - ⚠️ DO NOT MODIFY - Used by warnings created 2025-10-14 to 2025-10-15
+ *
+ * - v1.2.0 (2025-10-15): Dynamic Section Rendering [CURRENT]
+ *   - NEW: Reads section configurations from customSettings.sections[]
+ *   - NEW: Dynamic section rendering with drag-and-drop reordering
+ *   - NEW: {{placeholder}} replacement for custom fields
+ *   - NEW: Per-section styling overrides
+ *   - NEW: Support for bullet points, tables, and rich content
+ *   - Used by: All warnings created from 2025-10-15 onwards
  *
  * VERSIONING RULES (Semantic Versioning):
  * - MAJOR (X.0.0): Breaking changes to PDF structure (page layout, sections)
@@ -60,7 +70,7 @@ import { globalDeviceCapabilities, getPerformanceLimits } from '../utils/deviceD
  * later for appeals, audits, or legal proceedings. Breaking this system could
  * result in documents being challenged in court.
  */
-export const PDF_GENERATOR_VERSION = '1.1.0';
+export const PDF_GENERATOR_VERSION = '1.2.0';
 
 // Dynamic import for jsPDF - reduces main bundle by 43%
 // jsPDF will be loaded on-demand when PDF generation is needed
@@ -69,7 +79,7 @@ export const PDF_GENERATOR_VERSION = '1.1.0';
 // INTERFACES MATCHING YOUR WARNING WIZARD DATA
 // ============================================
 
-interface WarningPDFData {
+export interface WarningPDFData {
   // Core identifiers
   warningId: string;
   issuedDate: Date;
@@ -191,9 +201,15 @@ export class PDFGenerationService {
    * @param data - Warning data to generate PDF from
    * @param requestedVersion - Specific version to use (for regenerating old warnings)
    *                          If not provided, uses PDF_GENERATOR_VERSION (current)
+   * @param customSettings - Optional per-organization PDF template settings (Phase 6)
+   *                        If not provided, uses default styling
    * @returns PDF blob
    */
-  static async generateWarningPDF(data: WarningPDFData, requestedVersion?: string): Promise<Blob> {
+  static async generateWarningPDF(
+    data: WarningPDFData,
+    requestedVersion?: string,
+    customSettings?: any
+  ): Promise<Blob> {
     // 🔒 VERSION ROUTING: Use requested version or current version
     const version = requestedVersion || PDF_GENERATOR_VERSION;
 
@@ -210,20 +226,23 @@ export class PDFGenerationService {
     switch (version) {
       case '1.0.0':
         // FROZEN: Used by warnings created before 2025-10-14
+        // Note: Frozen versions ignore customSettings to maintain consistency
         return this.generateWarningPDF_v1_0_0(data);
 
       case '1.1.0':
-        // CURRENT: Used by all new warnings
-        return this.generateWarningPDF_v1_1_0(data);
+        // FROZEN: Used by warnings created 2025-10-14 to 2025-10-15
+        // Pass customSettings for per-organization PDF customization
+        return this.generateWarningPDF_v1_1_0(data, customSettings);
 
-      // When adding v1.2.0, add case here:
-      // case '1.2.0':
-      //   return this.generateWarningPDF_v1_2_0(data);
+      case '1.2.0':
+        // CURRENT: Used by all new warnings (2025-10-15 onwards)
+        // Dynamic section rendering with {{placeholder}} support
+        return this.generateWarningPDF_v1_2_0(data, customSettings);
 
       default:
         // Fallback for unknown versions - use current version
         Logger.warn(`⚠️ Unsupported PDF generator version: ${version}, falling back to current`);
-        return this.generateWarningPDF_v1_1_0(data);
+        return this.generateWarningPDF_v1_2_0(data, customSettings);
     }
   }
 
@@ -337,26 +356,27 @@ export class PDFGenerationService {
   }
 
   /**
-   * 🔒 VERSION 1.1.0 - CURRENT VERSION
+   * 🔒🔒🔒 VERSION 1.1.0 - FROZEN VERSION 🔒🔒🔒
    *
-   * This is the CURRENT active version used for all new warnings.
+   * ⚠️ CRITICAL WARNING: DO NOT MODIFY THIS METHOD ⚠️
+   *
+   * This method is FROZEN and must remain unchanged. It is used to regenerate
+   * all warnings created between 2025-10-14 and 2025-10-15. Any changes to this
+   * method will cause historical warnings to regenerate differently, breaking
+   * legal compliance.
    *
    * Format:
    * - Previous Action shows: Date | Incident Description | Level
+   * - Supports customSettings for per-organization styling
    *
-   * ⚠️ IMPORTANT: When v1.2.0 is created, this method will become FROZEN
-   * Once frozen, this method must NEVER be modified. Any changes after that
-   * point must be made in a new version (v1.2.0, v1.3.0, etc.)
-   *
-   * For now, this is the active version and can be modified carefully.
-   * However, remember that every modification affects all future warnings,
-   * so changes should be well-considered and tested.
-   *
-   * Used by: All warnings with pdfGeneratorVersion = '1.1.0' (current default)
+   * Used by: All warnings with pdfGeneratorVersion = '1.1.0'
    * Created: 2025-10-14
-   * Status: CURRENT (will become FROZEN when next version is released)
+   * Frozen: 2025-10-15
+   * Status: FROZEN
+   *
+   * @param customSettings - Optional per-organization PDF template settings (Phase 6)
    */
-  private static async generateWarningPDF_v1_1_0(data: WarningPDFData): Promise<Blob> {
+  private static async generateWarningPDF_v1_1_0(data: WarningPDFData, customSettings?: any): Promise<Blob> {
     try {
       // 🚨 Memory check for legacy devices
       const capabilities = globalDeviceCapabilities || { isLegacyDevice: false };
@@ -365,6 +385,43 @@ export class PDFGenerationService {
       if (capabilities.isLegacyDevice) {
         Logger.warn('🚨 Legacy device detected - using simplified PDF generation');
         return this.generateSimplifiedPDF(data);
+      }
+
+      // 🎨 PHASE 6: Merge custom settings with defaults
+      const defaultSettings = {
+        styling: {
+          headerBackground: '#3B82F6',
+          sectionHeaderColor: '#333333',
+          bodyTextColor: '#000000',
+          borderColor: '#C8C8C8',
+          fontSize: 11,
+          fontFamily: 'helvetica',
+          lineHeight: 1.4,
+          pageSize: 'A4',
+          margins: { top: 20, bottom: 20, left: 20, right: 20 }
+        },
+        content: {
+          showWatermark: true,
+          watermarkText: 'CONFIDENTIAL',
+          watermarkOpacity: 0.1,
+          footerText: 'Confidential & Privileged',
+          showPageNumbers: true
+        }
+      };
+
+      // Merge custom settings with defaults (custom settings take precedence)
+      const settings = customSettings ? {
+        styling: { ...defaultSettings.styling, ...(customSettings.styling || {}) },
+        content: { ...defaultSettings.content, ...(customSettings.content || {}) }
+      } : defaultSettings;
+
+      if (customSettings) {
+        Logger.debug('🎨 Using custom PDF template settings:', {
+          organization: data.organization?.name,
+          headerColor: settings.styling.headerBackground,
+          fontSize: settings.styling.fontSize,
+          watermark: settings.content.watermarkText
+        });
       }
 
       Logger.debug(2688)
@@ -385,22 +442,24 @@ export class PDFGenerationService {
       const { default: jsPDF } = await import('jspdf');
 
       Logger.debug(3436)
+      // 🎨 Use custom page size from settings
       const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
-        format: 'a4',
+        format: settings.styling.pageSize.toLowerCase(), // 'a4' or 'letter'
         compress: true
       });
-      
+
       Logger.success(3579)
-      // Set default font
-      doc.setFont('helvetica', 'normal');
-      
-      let currentY = 15;
+      // 🎨 Use custom font from settings
+      doc.setFont(settings.styling.fontFamily, 'normal');
+
+      // 🎨 Use custom margins from settings
+      let currentY = settings.styling.margins.top;
       const pageWidth = doc.internal.pageSize.width;
       const pageHeight = doc.internal.pageSize.height;
-      const margin = 20;
-      const bottomMargin = 40; // Space for footer
+      const margin = settings.styling.margins.left;
+      const bottomMargin = settings.styling.margins.bottom + 20; // Space for footer
       
       Logger.debug(3950)
       
@@ -518,17 +577,346 @@ export class PDFGenerationService {
       });
       
       return pdfBlob;
-      
+
     } catch (error) {
       Logger.error('❌ PDF generation failed:', error)
       throw new Error(`PDF generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
-  
+
+  /**
+   * Replace placeholders in text with actual data
+   * Supports: {{validityPeriod}}, {{employee.firstName}}, {{employee.lastName}}, {{issuedDate}}
+   *
+   * @param text - Text containing placeholders
+   * @param data - Warning data
+   * @returns Processed text with placeholders replaced
+   */
+  private static replacePlaceholders(text: string, data: WarningPDFData): string {
+    let result = text;
+
+    // Replace validity period
+    if (data.validityPeriod) {
+      result = result.replace(/\{\{validityPeriod\}\}/g, data.validityPeriod.toString());
+    }
+
+    // Replace employee fields
+    if (data.employee) {
+      result = result.replace(/\{\{employee\.firstName\}\}/g, data.employee.firstName || '');
+      result = result.replace(/\{\{employee\.lastName\}\}/g, data.employee.lastName || '');
+    }
+
+    // Replace issue date
+    if (data.issuedDate) {
+      result = result.replace(/\{\{issuedDate\}\}/g, this.formatDate(data.issuedDate));
+    }
+
+    return result;
+  }
+
+  /**
+   * 🆕🆕🆕 VERSION 1.2.0 - DYNAMIC SECTION RENDERING 🆕🆕🆕
+   *
+   * ✨ NEW FEATURES:
+   * - Reads section configurations from customSettings.sections[]
+   * - Renders sections dynamically in specified order
+   * - Replaces {{placeholders}} with actual warning data
+   * - Supports custom fields, bullet points, and tables
+   * - Per-section styling overrides
+   *
+   * ⚠️ WHEN THIS VERSION IS FROZEN:
+   * Once v1.3.0 is released, this method must NOT be modified.
+   * Create v1.3.0 instead with your changes.
+   *
+   * Format:
+   * - Dynamic sections based on customSettings.sections[] configuration
+   * - Keeps core sections: org header, title, employee info, incident details, signatures
+   * - Custom sections rendered between incident details and signatures
+   *
+   * Used by: All warnings created with pdfGeneratorVersion = '1.2.0' onwards
+   * Created: 2025-10-15
+   * Status: CURRENT
+   *
+   * @param data - Warning data
+   * @param customSettings - Organization's PDF template settings with sections[] array
+   */
+  private static async generateWarningPDF_v1_2_0(data: WarningPDFData, customSettings?: any): Promise<Blob> {
+    try {
+      // 🚨 Memory check for legacy devices
+      const capabilities = globalDeviceCapabilities || { isLegacyDevice: false };
+      if (capabilities.isLegacyDevice) {
+        Logger.warn('🚨 Legacy device detected - using simplified PDF generation');
+        return this.generateSimplifiedPDF(data);
+      }
+
+      // 🎨 Merge custom settings with defaults
+      const defaultSettings = {
+        styling: {
+          headerBackground: '#3B82F6',
+          sectionHeaderColor: '#333333',
+          bodyTextColor: '#000000',
+          borderColor: '#C8C8C8',
+          fontSize: 11,
+          fontFamily: 'helvetica',
+          lineHeight: 1.4,
+          pageSize: 'A4',
+          margins: { top: 20, bottom: 20, left: 20, right: 20 }
+        },
+        content: {
+          showWatermark: true,
+          watermarkText: 'CONFIDENTIAL',
+          watermarkOpacity: 0.1,
+          footerText: 'Confidential & Privileged',
+          showPageNumbers: true
+        },
+        sections: [] // Will be populated from customSettings or defaults
+      };
+
+      const settings = customSettings ? {
+        styling: { ...defaultSettings.styling, ...(customSettings.styling || {}) },
+        content: { ...defaultSettings.content, ...(customSettings.content || {}) },
+        sections: customSettings.sections || defaultSettings.sections
+      } : defaultSettings;
+
+      Logger.debug('🎨 v1.2.0: Using dynamic section rendering with', {
+        sectionCount: settings.sections?.length || 0,
+        organization: data.organization?.name
+      });
+
+      const startTime = Date.now();
+
+      // 🚀 Dynamic import jsPDF
+      const { default: jsPDF } = await import('jspdf');
+
+      // Create PDF document
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: settings.styling.pageSize.toLowerCase(),
+        compress: true
+      });
+
+      doc.setFont(settings.styling.fontFamily, 'normal');
+
+      // Setup layout parameters
+      let currentY = settings.styling.margins.top;
+      const pageWidth = doc.internal.pageSize.width;
+      const pageHeight = doc.internal.pageSize.height;
+      const margin = settings.styling.margins.left;
+      const bottomMargin = settings.styling.margins.bottom + 20;
+
+      // === CORE SECTIONS (Always rendered) ===
+
+      // 1. Organization Header
+      Logger.debug('🏢 Adding organization header...');
+      currentY = this.addOrganizationHeader(doc, data.organization, currentY, pageWidth, margin);
+
+      // 2. Document Title
+      Logger.debug('📝 Adding document title...');
+      currentY = this.addDocumentTitle(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+
+      // 3. Employee Information
+      Logger.debug('👤 Adding employee section...');
+      currentY = this.addEmployeeSection(doc, data.employee, currentY, pageWidth, margin, pageHeight, bottomMargin);
+
+      // 4. Warning Details
+      Logger.debug('⚠️ Adding warning details section...');
+      currentY = this.addWarningDetailsSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+
+      // 5. Incident Details
+      Logger.debug('📋 Adding incident details section...');
+      currentY = this.addIncidentDetailsSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+
+      // === DYNAMIC SECTIONS (From configuration) ===
+      // 🎨 INTELLIGENT SECTION ROUTING: Uses v1.1.0 methods for standard sections,
+      // dynamic renderer only for custom sections. This preserves the beautiful
+      // professional appearance of v1.1.0 while enabling full customization.
+
+      if (settings.sections && settings.sections.length > 0) {
+        Logger.debug(`🎨 Rendering ${settings.sections.length} sections with intelligent routing...`);
+
+        // Sort sections by order
+        const sortedSections = [...settings.sections].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        // Render each enabled section
+        for (const section of sortedSections) {
+          if (!section.enabled) {
+            Logger.debug(`  - Skipping (disabled): ${section.name}`);
+            continue;
+          }
+
+          // ⏭️ SKIP SIGNATURES SECTION - it's rendered separately as a core section
+          if (section.id === 'signatures') {
+            Logger.debug(`  - Skipping signatures section (rendered separately as core section)`);
+            continue;
+          }
+
+          // 🎨 ROUTE STANDARD SECTIONS TO v1.1.0 METHODS (beautiful appearance)
+          // These are the professionally formatted sections from v1.1.0
+          if (section.type === 'standard') {
+            Logger.debug(`  - Rendering standard section: ${section.name} (using v1.1.0 method)`);
+
+            switch (section.id) {
+              case 'previous-disciplinary-actions':
+                if (data.disciplineRecommendation) {
+                  currentY = this.addPreviousDisciplinaryActionSection(
+                    doc,
+                    data.disciplineRecommendation,
+                    currentY,
+                    pageWidth,
+                    margin,
+                    pageHeight,
+                    bottomMargin,
+                    section  // 🆕 PASS SECTION CONFIG: Enables custom heading/body
+                  );
+                }
+                break;
+
+              case 'consequences-section':
+                currentY = this.addConsequencesSection(
+                  doc,
+                  data,
+                  currentY,
+                  pageWidth,
+                  margin,
+                  pageHeight,
+                  bottomMargin,
+                  section  // 🆕 PASS SECTION CONFIG: Enables custom content (body/bulletPoints)
+                );
+                break;
+
+              case 'employee-rights-lra':
+                currentY = this.addEmployeeRightsSection(
+                  doc,
+                  data,
+                  currentY,
+                  pageWidth,
+                  margin,
+                  pageHeight,
+                  bottomMargin,
+                  section  // 🆕 PASS SECTION CONFIG: Enables custom subsections (Your Rights, What Happens Next, etc.)
+                );
+                break;
+
+              case 'appeal-history':
+                if (data.appealDetails || data.appealOutcome) {
+                  currentY = this.addAppealHistorySection(
+                    doc,
+                    data,
+                    currentY,
+                    pageWidth,
+                    margin,
+                    pageHeight,
+                    bottomMargin
+                  );
+                }
+                break;
+
+              default:
+                Logger.warn(`Unknown standard section: ${section.id}, using dynamic renderer`);
+                currentY = this.renderDynamicSection(
+                  doc,
+                  section,
+                  data,
+                  currentY,
+                  pageWidth,
+                  margin,
+                  pageHeight,
+                  bottomMargin,
+                  settings
+                );
+                break;
+            }
+          } else {
+            // 🆕 CUSTOM SECTIONS: Use dynamic renderer
+            Logger.debug(`  - Rendering custom section: ${section.name} (using dynamic renderer)`);
+            currentY = this.renderDynamicSection(
+              doc,
+              section,
+              data,
+              currentY,
+              pageWidth,
+              margin,
+              pageHeight,
+              bottomMargin,
+              settings
+            );
+          }
+        }
+
+        Logger.success(`✅ All sections rendered successfully`);
+      } else {
+        Logger.warn('⚠️ No sections configured, using fallback rendering');
+
+        // Fallback: Render standard sections if no configuration provided
+        if (data.disciplineRecommendation) {
+          currentY = this.addPreviousDisciplinaryActionSection(doc, data.disciplineRecommendation, currentY, pageWidth, margin, pageHeight, bottomMargin);
+          currentY = this.addConsequencesSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        }
+
+        if (data.legalCompliance) {
+          currentY = this.addLegalComplianceSection(doc, data.legalCompliance, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        }
+
+        if (data.additionalNotes) {
+          currentY = this.addAdditionalNotesSection(doc, data.additionalNotes, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        }
+
+        currentY = this.addEmployeeRightsSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+      }
+
+      // === CORE SECTIONS (Always rendered) ===
+
+      // 9. Signatures Section
+      Logger.debug('✍️ Adding signatures section...');
+      currentY = this.addSignaturesSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+
+      // 10. Appeal Report (if applicable)
+      if (data.appealDetails) {
+        Logger.debug('📋 Adding appeal report...');
+        await this.addAppealReportSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+      }
+
+      // 11. Footer
+      Logger.debug('🦶 Adding document footer...');
+      this.addDocumentFooter(doc, data, pageWidth);
+
+      // 12. Security watermark
+      if (settings.content.showWatermark) {
+        Logger.debug('🛡️ Adding security watermark...');
+        this.addSecurityWatermark(doc, pageWidth);
+      }
+
+      // 13. "OVERTURNED" watermark if applicable
+      if (data.status === 'overturned') {
+        Logger.debug('🚫 Adding OVERTURNED watermark...');
+        this.addOverturnedWatermark(doc, pageWidth);
+      }
+
+      // Generate and return blob
+      const pdfBlob = doc.output('blob');
+      const endTime = Date.now();
+
+      Logger.success('✅ v1.2.0 PDF generated successfully:', {
+        warningId: data.warningId,
+        employee: `${data.employee.firstName} ${data.employee.lastName}`,
+        sectionsRendered: settings.sections?.filter((s: any) => s.enabled).length || 0,
+        size: `${(pdfBlob.size / 1024).toFixed(1)} KB`,
+        time: `${endTime - startTime}ms`
+      });
+
+      return pdfBlob;
+
+    } catch (error) {
+      Logger.error('❌ v1.2.0 PDF generation failed:', error);
+      throw new Error(`PDF generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   // ============================================
   // SECTION BUILDERS - RESILIENT VERSIONS
   // ============================================
-  
+
   /**
    * Organization Header with Branding
    */
@@ -838,6 +1226,16 @@ export class PDFGenerationService {
   /**
    * Previous Disciplinary Action Section - NUMBERED LIST FORMAT (Template Style)
    * Shows clear numbered list of previous warnings with dates and offenses
+   *
+   * 🎨 EDITABLE CONTENT SYSTEM (v1.2.0+):
+   * - Accepts optional sectionConfig parameter with custom heading/body
+   * - Warning list format is FIXED (cannot be customized for consistency)
+   * - If custom heading provided: Uses custom heading text
+   * - If custom body provided: Shows body text above warning list
+   * - If no custom content: Falls back to hardcoded v1.1.0 text
+   * - Maintains ALL v1.1.0 styling: gray box, fonts, spacing
+   *
+   * @param sectionConfig - Optional PDFSectionConfig with custom heading/body
    */
   private static addPreviousDisciplinaryActionSection(
     doc: any,
@@ -846,7 +1244,8 @@ export class PDFGenerationService {
     pageWidth: number,
     margin: number,
     pageHeight: number,
-    bottomMargin: number
+    bottomMargin: number,
+    sectionConfig?: PDFSectionConfig  // 🆕 OPTIONAL: Custom content from PDF template settings
   ): number {
     if (!recommendation) {
       Logger.warn('⚠️ No recommendation data provided to addPreviousDisciplinaryActionSection');
@@ -865,11 +1264,12 @@ export class PDFGenerationService {
 
     startY = this.checkPageOverflow(doc, startY, totalHeight, pageHeight, bottomMargin);
 
-    // Section title - REDUCED FONT SIZE for A4
+    // 📋 SECTION HEADER - Use custom heading if provided, otherwise use v1.1.0 default
+    const sectionHeading = sectionConfig?.content?.heading || 'PREVIOUS DISCIPLINARY ACTION (Still Valid on File)';
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(51, 51, 51);
-    doc.text('PREVIOUS DISCIPLINARY ACTION (Still Valid on File)', margin, startY);
+    doc.text(sectionHeading, margin, startY);
 
     // Gray box for section - INCREASED PADDING
     doc.setDrawColor(200, 200, 200);
@@ -986,6 +1386,15 @@ export class PDFGenerationService {
   /**
    * Consequences Section - STANDALONE WARNING BOX (Template Style)
    * Clear prominent section about consequences of continued behavior
+   *
+   * 🎨 EDITABLE CONTENT SYSTEM (v1.2.0+):
+   * - REQUIRES sectionConfig parameter with custom content
+   * - Renders body and/or bulletPoints from sectionConfig.content
+   * - Maintains ALL v1.1.0 styling: red warning box, fonts, spacing
+   * - Supports {{placeholder}} replacement in custom text
+   * - NO HARDCODED FALLBACK - section config is mandatory
+   *
+   * @param sectionConfig - PDFSectionConfig with custom content (REQUIRED)
    */
   private static addConsequencesSection(
     doc: any,
@@ -994,40 +1403,80 @@ export class PDFGenerationService {
     pageWidth: number,
     margin: number,
     pageHeight: number,
-    bottomMargin: number
+    bottomMargin: number,
+    sectionConfig?: PDFSectionConfig  // Optional parameter for backward compatibility
   ): number {
+    // ⚠️ REQUIRE section config - no hardcoded fallback
+    if (!sectionConfig?.content) {
+      Logger.warn('⚠️ No section config provided for Consequences section, skipping');
+      return startY;
+    }
+
+    // Validate content exists
+    const hasContent = sectionConfig.content.body ||
+                       (sectionConfig.content.bulletPoints && sectionConfig.content.bulletPoints.length > 0);
+
+    if (!hasContent) {
+      Logger.warn('⚠️ Consequences section config has no body or bulletPoints, skipping');
+      return startY;
+    }
+
     // Check if we have enough space (need about 40mm)
     startY = this.checkPageOverflow(doc, startY, 40, pageHeight, bottomMargin);
 
-    // Section title - REDUCED FONT SIZE and SPLIT HEADING for A4
+    // 📋 SECTION HEADER - Use custom heading from config
+    const sectionHeading = sectionConfig.content.heading || 'WARNING: CONSEQUENCES IF EMPLOYEE\nDOES NOT CHANGE BEHAVIOUR';
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(51, 51, 51);
-    doc.text('WARNING: CONSEQUENCES IF EMPLOYEE', margin, startY);
-    doc.text('DOES NOT CHANGE BEHAVIOUR', margin, startY + 5);
 
-    // Red/Orange warning box - INCREASED PADDING and HEIGHT
+    // Handle multi-line headings (split on \n)
+    const headingLines = sectionHeading.split('\n');
+    headingLines.forEach((line, index) => {
+      doc.text(line, margin, startY + (index * 5));
+    });
+
+    const headerHeight = headingLines.length * 5;
+
+    // 🎨 RED WARNING BOX - PRESERVED v1.1.0 STYLING
     const sectionHeight = 30;
     doc.setFillColor(254, 226, 226); // Light red #FEE2E2
     doc.setDrawColor(239, 68, 68); // Red border #EF4444
     doc.setLineWidth(0.5);
-    doc.rect(margin, startY + 8, pageWidth - (margin * 2), sectionHeight, 'FD');
+    doc.rect(margin, startY + headerHeight + 3, pageWidth - (margin * 2), sectionHeight, 'FD');
 
-    // Warning text
+    // Warning text styling
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(127, 29, 29); // Dark red text for readability
 
-    const consequencesText = `Any further transgressions related or unrelated to the offences shall result in further disciplinary action which can lead to a disciplinary hearing and it can result in dismissal. Refer to counselling dated ${this.formatDate(data.issuedDate)}.`;
+    let textY = startY + headerHeight + 11; // Top padding inside box
 
-    const lines = this.wrapText(doc, consequencesText, pageWidth - (margin * 2) - 15);
-    let textY = startY + 16; // Increased top padding
-    lines.forEach(line => {
-      doc.text(line, margin + 5, textY);
-      textY += 5; // Improved line spacing
-    });
+    Logger.debug('📝 Rendering Consequences with custom content from sectionConfig');
 
-    return startY + sectionHeight + 12;
+    // Render body paragraph if provided
+    if (sectionConfig.content.body) {
+      const processedBody = this.replacePlaceholders(sectionConfig.content.body, data);
+      const bodyLines = this.wrapText(doc, processedBody, pageWidth - (margin * 2) - 15);
+      bodyLines.forEach(line => {
+        doc.text(line, margin + 5, textY);
+        textY += 5;
+      });
+    }
+
+    // Render bullet points if provided
+    if (sectionConfig.content.bulletPoints && sectionConfig.content.bulletPoints.length > 0) {
+      sectionConfig.content.bulletPoints.forEach((bullet) => {
+        const processedBullet = this.replacePlaceholders(bullet, data);
+        const bulletLines = this.wrapText(doc, processedBullet, pageWidth - (margin * 2) - 15);
+        bulletLines.forEach(line => {
+          doc.text(line, margin + 5, textY);
+          textY += 5;
+        });
+      });
+    }
+
+    return startY + headerHeight + sectionHeight + 15;
   }
   
   /**
@@ -1115,6 +1564,15 @@ export class PDFGenerationService {
   /**
    * Employee Rights and Next Steps Section
    * LRA-compliant information about employee rights, appeal process, and next steps
+   *
+   * 🎨 EDITABLE CONTENT SYSTEM (v1.2.0+):
+   * - REQUIRES sectionConfig parameter with custom subsections
+   * - Renders subsections from sectionConfig.content.subsections
+   * - Maintains ALL v1.1.0 styling: colors, fonts, spacing, backgrounds, borders
+   * - Supports {{placeholder}} replacement in custom text (e.g., {{validityPeriod}})
+   * - NO HARDCODED FALLBACK - section config is mandatory
+   *
+   * @param sectionConfig - PDFSectionConfig with custom subsections (REQUIRED)
    */
   private static addEmployeeRightsSection(
     doc: any,
@@ -1123,17 +1581,26 @@ export class PDFGenerationService {
     pageWidth: number,
     margin: number,
     pageHeight: number,
-    bottomMargin: number
+    bottomMargin: number,
+    sectionConfig?: PDFSectionConfig  // Optional parameter for backward compatibility
   ): number {
+    // ⚠️ REQUIRE section config - no hardcoded fallback
+    if (!sectionConfig?.content?.subsections || sectionConfig.content.subsections.length === 0) {
+      Logger.warn('⚠️ No subsections in Employee Rights config, skipping');
+      return startY;
+    }
+
     // Ensure section fits on page (need about 110mm for full section)
     startY = this.checkPageOverflow(doc, startY, 110, pageHeight, bottomMargin);
 
-    // Section header - REDUCED FONT SIZE and NO EMOJI for A4
+    // 📋 SECTION HEADER - Use custom heading from config
+    const sectionHeading = sectionConfig.content.heading || 'EMPLOYEE RIGHTS AND NEXT STEPS';
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(51, 51, 51);
-    doc.text('EMPLOYEE RIGHTS AND NEXT STEPS', margin, startY);
+    doc.text(sectionHeading, margin, startY);
 
+    // 🎨 BACKGROUND BOX - PRESERVED v1.1.0 STYLING
     // Light blue background box for entire section - INCREASED HEIGHT and PADDING for A4
     const sectionWidth = pageWidth - margin * 2;
     const sectionHeight = 102; // Further increased height for proper A4 spacing
@@ -1145,108 +1612,55 @@ export class PDFGenerationService {
     let currentY = startY + 14; // Further increased top padding
     const contentMargin = margin + 8; // Further increased indent for content inside box
 
-    // === YOUR RIGHTS SUBSECTION ===
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(37, 99, 235); // Darker blue for subsection headers
-    doc.text('Your Rights:', contentMargin, currentY);
+    Logger.debug('📝 Rendering Employee Rights with custom content from sectionConfig');
 
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    currentY += 7; // Increased spacing after header
+    // Iterate through custom subsections
+    sectionConfig.content.subsections.forEach((subsection, index) => {
+      // Subsection Title - PRESERVED v1.1.0 STYLING
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(37, 99, 235); // Darker blue for subsection headers
+      doc.text(subsection.title, contentMargin, currentY);
 
-    // Right to Appeal - OPTIMIZED LINE SPACING for A4
-    const appealText = `• Right to Appeal: You may appeal this warning within 48 hours by submitting a written appeal to HR. If your internal appeal is unsuccessful, you may refer the matter to the CCMA within 30 days.`;
-    const appealLines = this.wrapText(doc, appealText, sectionWidth - 20);
-    appealLines.forEach(line => {
-      doc.text(line, contentMargin, currentY);
-      currentY += 5; // Further improved spacing for A4
+      // Reset to body text styling
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
+      currentY += 7; // Spacing after subsection title
+
+      // Subsection Content - Support both string and string[] (bullet points)
+      if (Array.isArray(subsection.content)) {
+        // BULLET POINTS: Render each item as a bullet
+        subsection.content.forEach((item) => {
+          const processedItem = this.replacePlaceholders(item, data);
+
+          // Wrap text and render
+          const itemLines = this.wrapText(doc, processedItem, sectionWidth - 20);
+          itemLines.forEach(line => {
+            doc.text(line, contentMargin, currentY);
+            currentY += 5; // Line spacing
+          });
+          currentY += 2.5; // Spacing between bullet points
+        });
+      } else {
+        // PARAGRAPH: Render as single paragraph
+        const processedContent = this.replacePlaceholders(subsection.content, data);
+
+        const contentLines = this.wrapText(doc, processedContent, sectionWidth - 20);
+        contentLines.forEach(line => {
+          doc.text(line, contentMargin, currentY);
+          currentY += 5;
+        });
+      }
+
+      // Spacing after subsection (except last one)
+      if (index < sectionConfig.content.subsections.length - 1) {
+        currentY += 3.5;
+      }
     });
-    currentY += 2.5;
 
-    // Right to Representation - OPTIMIZED LINE SPACING for A4
-    const repText = `• Right to Representation: You have the right to be represented by a fellow employee or shop steward during disciplinary proceedings.`;
-    const repLines = this.wrapText(doc, repText, sectionWidth - 20);
-    repLines.forEach(line => {
-      doc.text(line, contentMargin, currentY);
-      currentY += 5; // Further improved spacing for A4
-    });
-    currentY += 2.5;
-
-    // Signing Rights - OPTIMIZED LINE SPACING for A4
-    const signText = `• Signing This Document: Your signature acknowledges that this warning has been explained to you. It does NOT mean you agree with the warning.`;
-    const signLines = this.wrapText(doc, signText, sectionWidth - 20);
-    signLines.forEach(line => {
-      doc.text(line, contentMargin, currentY);
-      currentY += 5; // Further improved spacing for A4
-    });
-    currentY += 2.5;
-
-    // Confidentiality - OPTIMIZED LINE SPACING for A4
-    const confText = `• Confidentiality: All information will be kept confidential and shared only with relevant management and HR personnel.`;
-    const confLines = this.wrapText(doc, confText, sectionWidth - 20);
-    confLines.forEach(line => {
-      doc.text(line, contentMargin, currentY);
-      currentY += 5; // Further improved spacing for A4
-    });
-    currentY += 3.5;
-
-    // === WHAT HAPPENS NEXT SUBSECTION ===
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(37, 99, 235);
-    doc.text('What Happens Next:', contentMargin, currentY);
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    currentY += 7; // Increased spacing after header
-
-    // Validity period - OPTIMIZED SPACING for A4
-    const validityPeriod = data.validityPeriod || 6;
-    const validityText = `• This warning remains valid for ${validityPeriod} months from the date of issue.`;
-    doc.text(validityText, contentMargin, currentY);
-    currentY += 5;
-
-    // Progressive discipline - OPTIMIZED LINE SPACING for A4
-    const progressiveText = `• During this period, similar conduct may result in further disciplinary action, up to and including dismissal.`;
-    const progressiveLines = this.wrapText(doc, progressiveText, sectionWidth - 20);
-    progressiveLines.forEach(line => {
-      doc.text(line, contentMargin, currentY);
-      currentY += 5; // Further improved spacing for A4
-    });
-    currentY += 2.5;
-
-    // Improvement expectation - OPTIMIZED LINE SPACING for A4
-    const improvementText = `• You are expected to demonstrate immediate and sustained improvement in your conduct.`;
-    const improvementLines = this.wrapText(doc, improvementText, sectionWidth - 20);
-    improvementLines.forEach(line => {
-      doc.text(line, contentMargin, currentY);
-      currentY += 5; // Further improved spacing for A4
-    });
-    currentY += 3.5;
-
-    // === IMPORTANT NOTICE SUBSECTION ===
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(37, 99, 235);
-    doc.text('Important Notice:', contentMargin, currentY);
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    currentY += 7; // Increased spacing after header
-
-    const noticeText = `If you believe this warning is procedurally unfair or unjust, you have recourse through your company's internal appeal process or the Commission for Conciliation, Mediation and Arbitration (CCMA).`;
-    const noticeLines = this.wrapText(doc, noticeText, sectionWidth - 20);
-    noticeLines.forEach(line => {
-      doc.text(line, contentMargin, currentY);
-      currentY += 5; // Further improved spacing for A4
-    });
-    currentY += 8; // Further increased bottom padding inside box
-
-    return startY + sectionHeight + 35; // Significantly increased spacing after box to prevent overlap (was 24)
+    currentY += 8; // Bottom padding inside box
+    return startY + sectionHeight + 35; // Return with proper spacing after section
   }
 
   /**
@@ -2066,9 +2480,223 @@ export class PDFGenerationService {
   }
 
   // ============================================
+  // 🆕 DYNAMIC SECTION RENDERER - v1.2.0+
+  // ============================================
+
+  /**
+   * 🆕 DYNAMIC SECTION RENDERER
+   *
+   * Renders a PDFSectionConfig dynamically with placeholder replacement.
+   * This is the core renderer for v1.2.0+ that enables full section customization.
+   *
+   * @param doc - jsPDF document instance
+   * @param section - Section configuration with content and styling
+   * @param data - Warning data for placeholder replacement
+   * @param startY - Current Y position
+   * @param pageWidth - Page width in mm
+   * @param margin - Left margin in mm
+   * @param pageHeight - Page height in mm
+   * @param bottomMargin - Bottom margin in mm
+   * @param defaultSettings - Default styling settings
+   * @returns New Y position after rendering
+   */
+  private static renderDynamicSection(
+    doc: any,
+    section: any, // PDFSectionConfig type
+    data: WarningPDFData,
+    startY: number,
+    pageWidth: number,
+    margin: number,
+    pageHeight: number,
+    bottomMargin: number,
+    defaultSettings: any
+  ): number {
+    // Skip disabled sections
+    if (!section.enabled) {
+      return startY;
+    }
+
+    // Estimate section height (rough calculation)
+    const estimatedHeight = 30 + (section.content.bulletPoints?.length || 0) * 7;
+    startY = this.checkPageOverflow(doc, startY, estimatedHeight, pageHeight, bottomMargin);
+
+    // === SECTION HEADING ===
+    const headingFontSize = section.styling?.headingFontSize || defaultSettings.styling.fontSize + 1 || 12;
+    const headingColor = section.styling?.headingColor || defaultSettings.styling.sectionHeaderColor || '#333333';
+
+    doc.setFontSize(headingFontSize);
+    doc.setFont('helvetica', 'bold');
+
+    // Parse hex color to RGB
+    const headingRGB = this.hexToRGB(headingColor);
+    doc.setTextColor(headingRGB.r, headingRGB.g, headingRGB.b);
+
+    // Replace placeholders in heading
+    const heading = PDFPlaceholderService.replacePlaceholders(section.content.heading, data);
+    doc.text(heading, margin, startY);
+
+    let currentY = startY + (section.styling?.spacingBefore || 8);
+
+    // === SECTION BODY TEXT ===
+    if (section.content.body) {
+      const bodyFontSize = section.styling?.bodyFontSize || defaultSettings.styling.fontSize || 11;
+      const bodyColor = section.styling?.bodyColor || defaultSettings.styling.bodyTextColor || '#000000';
+
+      doc.setFontSize(bodyFontSize);
+      doc.setFont('helvetica', 'normal');
+
+      const bodyRGB = this.hexToRGB(bodyColor);
+      doc.setTextColor(bodyRGB.r, bodyRGB.g, bodyRGB.b);
+
+      // Replace placeholders in body
+      const body = PDFPlaceholderService.replacePlaceholders(section.content.body, data);
+
+      // Wrap text to fit page width
+      const sectionWidth = pageWidth - margin * 2 - (section.styling?.indent || 0);
+      const bodyLines = this.wrapText(doc, body, sectionWidth);
+
+      bodyLines.forEach(line => {
+        // Check for page overflow on each line
+        currentY = this.checkPageOverflow(doc, currentY, 6, pageHeight, bottomMargin);
+        doc.text(line, margin + (section.styling?.indent || 0), currentY);
+        currentY += 5;
+      });
+
+      currentY += 3; // Extra spacing after body
+    }
+
+    // === BULLET POINTS ===
+    if (section.content.bulletPoints && section.content.bulletPoints.length > 0) {
+      const bodyFontSize = section.styling?.bodyFontSize || defaultSettings.styling.fontSize || 11;
+      doc.setFontSize(bodyFontSize);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
+
+      const bulletPoints = PDFPlaceholderService.replacePlaceholdersInArray(
+        section.content.bulletPoints,
+        data
+      );
+
+      bulletPoints.forEach(point => {
+        // Check for page overflow
+        currentY = this.checkPageOverflow(doc, currentY, 10, pageHeight, bottomMargin);
+
+        // Wrap bullet point text
+        const bulletText = `• ${point}`;
+        const sectionWidth = pageWidth - margin * 2 - (section.styling?.indent || 0) - 5;
+        const lines = this.wrapText(doc, bulletText, sectionWidth);
+
+        lines.forEach((line, index) => {
+          currentY = this.checkPageOverflow(doc, currentY, 5, pageHeight, bottomMargin);
+          const indent = index === 0 ? 0 : 5; // Indent continuation lines
+          doc.text(line, margin + (section.styling?.indent || 0) + indent, currentY);
+          currentY += 5;
+        });
+
+        currentY += 1; // Small gap between bullets
+      });
+
+      currentY += 2; // Extra spacing after bullets
+    }
+
+    // === TABLE DATA ===
+    if (section.content.tableData) {
+      currentY = this.renderTableSection(
+        doc,
+        section.content.tableData,
+        data,
+        currentY,
+        pageWidth,
+        margin,
+        pageHeight,
+        bottomMargin,
+        section.styling
+      );
+    }
+
+    // Add spacing after section
+    currentY += (section.styling?.spacingAfter || 5);
+
+    return currentY;
+  }
+
+  /**
+   * 🆕 RENDER TABLE SECTION
+   *
+   * Helper method to render table data from section configs
+   */
+  private static renderTableSection(
+    doc: any,
+    tableData: { headers: string[]; rows: string[][] },
+    data: WarningPDFData,
+    startY: number,
+    pageWidth: number,
+    margin: number,
+    pageHeight: number,
+    bottomMargin: number,
+    styling: any
+  ): number {
+    let currentY = startY;
+    const colWidth = (pageWidth - margin * 2) / tableData.headers.length;
+
+    // Table headers
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+
+    tableData.headers.forEach((header, index) => {
+      const x = margin + (index * colWidth);
+      doc.text(header, x, currentY);
+    });
+
+    currentY += 6;
+
+    // Draw header line
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(margin, currentY, pageWidth - margin, currentY);
+    currentY += 4;
+
+    // Table rows
+    doc.setFont('helvetica', 'normal');
+
+    tableData.rows.forEach(row => {
+      currentY = this.checkPageOverflow(doc, currentY, 8, pageHeight, bottomMargin);
+
+      row.forEach((cell, index) => {
+        const x = margin + (index * colWidth);
+        // Replace placeholders in cell content
+        const cellText = PDFPlaceholderService.replacePlaceholders(cell, data);
+        doc.text(cellText, x, currentY);
+      });
+
+      currentY += 6;
+    });
+
+    return currentY + 3;
+  }
+
+  /**
+   * 🆕 HEX TO RGB CONVERTER
+   *
+   * Convert hex color to RGB values for jsPDF
+   */
+  private static hexToRGB(hex: string): { r: number; g: number; b: number } {
+    // Remove # if present
+    hex = hex.replace('#', '');
+
+    // Parse hex values
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+
+    return { r, g, b };
+  }
+
+  // ============================================
   // UTILITY METHODS
   // ============================================
-  
+
   /**
    * Get warning level display name
    */

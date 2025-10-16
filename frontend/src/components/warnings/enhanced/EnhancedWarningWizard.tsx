@@ -48,6 +48,9 @@ import { useAuth } from '@/auth/AuthContext';
 // 🔒 Import PDF Generator Version for versioning system
 import { PDF_GENERATOR_VERSION } from '@/services/PDFGenerationService';
 
+// 🎨 Import PDF Template Version Service for efficient template storage
+import { PDFTemplateVersionService } from '@/services/PDFTemplateVersionService';
+
 // ============================================
 // TYPES - USING STANDARD SERVICE INTERFACES
 // ============================================
@@ -832,6 +835,15 @@ useEffect(() => {
           currentManagerNameProp: currentManagerName
         });
 
+        // 🔍 DEBUG: Log organization pdfSettings state before creating warning
+        Logger.debug('🎨 Organization pdfSettings check:', {
+          hasOrganization: !!organization,
+          hasPdfSettings: !!organization?.pdfSettings,
+          pdfSettingsKeys: organization?.pdfSettings ? Object.keys(organization.pdfSettings) : 'none',
+          generatorVersion: organization?.pdfSettings?.generatorVersion,
+          organizationId: organization?.id
+        });
+
         // 🔍 DEBUG: Log lraRecommendation state before creating warning
         Logger.debug('🔍 LRA Recommendation state before warning creation:', {
           hasLraRecommendation: !!lraRecommendation,
@@ -839,6 +851,22 @@ useEffect(() => {
           activeWarningsCount: lraRecommendation?.activeWarnings?.length || 0,
           suggestedLevel: lraRecommendation?.suggestedLevel
         });
+
+        // 🎨 STEP 1: Save template version to collection (if org has pdfSettings)
+        let pdfTemplateVersion: string | undefined;
+        if (organization?.pdfSettings && user?.uid) {
+          try {
+            pdfTemplateVersion = await PDFTemplateVersionService.ensureTemplateVersionExists(
+              organization.id,
+              organization.pdfSettings,
+              user.uid
+            );
+            Logger.success(`✅ PDF template version ${pdfTemplateVersion} saved/verified`);
+          } catch (error) {
+            Logger.error('❌ Failed to save PDF template version:', error);
+            // Don't block warning creation - just log the error
+          }
+        }
 
         // Create warning data (avoiding undefined values)
         const warningData: any = {
@@ -906,6 +934,19 @@ useEffect(() => {
           // This system is SECURITY-CRITICAL and affects legal compliance.
           pdfGeneratorVersion: PDF_GENERATOR_VERSION,
 
+          // 🎨 ARCHITECTURE OPTIMIZATION: Store only template version string (not full settings)
+          // Instead of storing 5-10KB of template settings with every warning, we:
+          // 1. Save template version once to: organizations/{orgId}/pdfTemplateVersions/{version}
+          // 2. Store only version reference: "1.9.0" (5 bytes instead of 5KB!)
+          // 3. When regenerating PDF, fetch template from versions collection
+          //
+          // BENEFITS:
+          // - 1000x storage reduction per warning (5KB → 5 bytes)
+          // - Centralized template management
+          // - Significantly lower Firestore costs
+          // - Faster warning creation
+          ...(pdfTemplateVersion ? { pdfTemplateVersion } : {}),
+
           // 🔥 CRITICAL: Store disciplineRecommendation for PDF generation
           // This includes activeWarnings array needed for "Previous Disciplinary Action" section
           // Without this, PDFs will show "No previous disciplinary action on file" even when warnings exist
@@ -917,7 +958,10 @@ useEffect(() => {
           warningDataKeys: Object.keys(warningData),
           hasDisciplineRecommendation: 'disciplineRecommendation' in warningData,
           disciplineRecommendationValue: warningData.disciplineRecommendation,
-          disciplineRecommendationIsUndefined: warningData.disciplineRecommendation === undefined
+          disciplineRecommendationIsUndefined: warningData.disciplineRecommendation === undefined,
+          hasPdfSettings: 'pdfSettings' in warningData,
+          pdfSettingsValue: warningData.pdfSettings,
+          pdfSettingsKeys: warningData.pdfSettings ? Object.keys(warningData.pdfSettings) : 'none'
         });
 
         // MANDATORY: Audio recording is required for every warning

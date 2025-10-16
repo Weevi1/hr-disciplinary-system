@@ -210,6 +210,7 @@ export const warnings = {
         ...(warningData.signatures && { signatures: warningData.signatures }),
         ...(warningData.disciplineRecommendation && { disciplineRecommendation: removeUndefinedValues(warningData.disciplineRecommendation) }),
         ...(warningData.pdfGeneratorVersion && { pdfGeneratorVersion: warningData.pdfGeneratorVersion }),
+        ...(warningData.pdfTemplateVersion && { pdfTemplateVersion: warningData.pdfTemplateVersion }),
 
         // MANDATORY: Audio recording is required for every warning
         audioRecording: warningData.audioRecording || {
