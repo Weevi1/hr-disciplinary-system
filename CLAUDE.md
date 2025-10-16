@@ -815,11 +815,14 @@ All three systems work together:
        - Explained duplicate handling behavior
        - Documented phone number format flexibility
        - Sample CSV shows both local (0825254011) and international (+27825254011) formats
-  - **Phone Number Formatting Logic**:
+  - **Phone Number Formatting Logic** (`useEmployeeImport.ts` lines 18-45):
     - Removes all spaces, dashes, parentheses
     - Starts with `0` → Replace with `+27` (e.g., `0825254011` → `+27825254011`)
     - Starts with `27` → Add `+` prefix (e.g., `27825254011` → `+27825254011`)
-    - No prefix → Assume local, add `+27` (e.g., `825254011` → `+27825254011`)
+    - **Excel/Sheets edge case**: Missing leading 0 → Add `+27` (e.g., `825254011` → `+27825254011`)
+      - Spreadsheet applications often strip leading zeros from phone numbers
+      - This case is explicitly handled to prevent data loss during CSV import
+      - No prefix and doesn't start with '27' → Assume local, add `+27`
   - **CSV Sample Format**:
     ```csv
     employeeNumber,firstName,lastName,email,phoneNumber,whatsappNumber,position,startDate
@@ -833,7 +836,7 @@ All three systems work together:
     - **Auto-Conversion**: All phone numbers standardized to +27 format
     - **Clear Error Messages**: Duplicate employees explicitly identified
     - **Optional Fields**: Email and WhatsApp can be left blank
-    - **Smart Defaults**: Contract type automatically set to "permanent"
+    - **Smart Defaults**: Contract type NOT imported from CSV - always set to "permanent"
   - **Files Modified** (5 files):
     - `frontend/src/types/employee.ts` - Updated CSV generation, interfaces, validation
     - `frontend/src/components/employees/EmployeeFormModal.tsx` - Changed field requirements (email optional, phone required, department optional)

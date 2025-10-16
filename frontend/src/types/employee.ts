@@ -127,7 +127,7 @@ export interface CSVImportRow {
   whatsappNumber?: string; // Optional - can be left blank in CSV
   position: string;
   startDate: string;
-  contractType?: string; // Optional - defaults to 'permanent' if not provided
+  // Note: contractType is NOT imported from CSV - always defaults to 'permanent'
   probationEndDate?: string;
   department?: string; // Optional
   [key: string]: string | undefined;

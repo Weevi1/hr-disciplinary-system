@@ -160,8 +160,8 @@ export const EmployeeImportModal: React.FC<EmployeeImportModalProps> = ({
                     <li><strong>Required fields:</strong> Employee Number, First Name, Last Name, Phone Number, Position, Start Date</li>
                     <li>Employee number must be unique - duplicates will be skipped</li>
                     <li>Email and WhatsApp number are optional (can be blank)</li>
-                    <li>Phone numbers accepts 0825254011 or +27825254011 (auto-converts to +27)</li>
-                    <li>Contract type defaults to "permanent" if not specified</li>
+                    <li>Phone numbers accepts 0825254011, 825254011 (missing leading zero), or +27825254011 (auto-converts to +27)</li>
+                    <li>All employees are automatically set to permanent contracts</li>
                   </ul>
                 </div>
                 <pre className="text-[10px] bg-white p-2 rounded border overflow-x-auto leading-relaxed">
@@ -171,7 +171,7 @@ EMP002,Sarah,Johnson,,+27987654321,+27987654321,HR Manager,2023-06-01
 EMP003,Michael,Smith,michael.smith@company.com,0825254011,,Operations Coordinator,2024-11-01`}
                 </pre>
                 <p className="text-[10px] text-gray-600 mt-1.5">
-                  Notice: Local format (0825254011) and international (+27825254011) both accepted - auto-converts to +27
+                  Notice: All phone formats accepted - 0825254011 (local), 825254011 (missing leading 0), +27825254011 (international) - all auto-convert to +27
                 </p>
               </div>
             </div>
