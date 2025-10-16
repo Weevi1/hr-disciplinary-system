@@ -105,10 +105,10 @@ export const useEmployeeImport = () => {
               row[header] = values[index]?.trim().replace(/"/g, '') || '';
             });
 
-            // Basic validation - employeeNumber can be empty (will be auto-generated)
+            // Basic validation - all required fields including employeeNumber
             // Email and WhatsApp are optional, phone number is required
-            if (!row.firstName || !row.lastName || !row.phoneNumber || !row.position || !row.startDate) {
-              errors.push(`Row ${lineNumber}: Missing required fields (firstName, lastName, phoneNumber, position, startDate)`);
+            if (!row.employeeNumber || !row.firstName || !row.lastName || !row.phoneNumber || !row.position || !row.startDate) {
+              errors.push(`Row ${lineNumber}: Missing required fields (employeeNumber, firstName, lastName, phoneNumber, position, startDate)`);
               continue;
             }
 
@@ -173,13 +173,8 @@ export const useEmployeeImport = () => {
         setCurrentImportStep(`Validating employee ${i + 1} of ${csvData.length}: ${row.firstName} ${row.lastName}...`);
         
         try {
-          let employeeNumber = row.employeeNumber;
-          
-          // Auto-generate employee number if empty
-          if (!employeeNumber || employeeNumber.trim() === '') {
-            employeeNumber = await API.employees.generateNextEmployeeNumber(organizationId);
-          }
-          
+          const employeeNumber = row.employeeNumber;
+
           // Validate employee number for duplicates
           const validation = await API.employees.validateEmployeeNumber(
             organizationId,
