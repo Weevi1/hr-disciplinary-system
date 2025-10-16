@@ -624,7 +624,7 @@ export const generateSampleCSV = (): string => {
       '0123456789', // Local format - will auto-convert to +27123456789
       '0123456789',
       'Software Developer',
-      '2024-01-15'
+      '15/01/2024' // South African date format: dd/mm/yyyy
     ],
     [
       'EMP002',
@@ -634,7 +634,7 @@ export const generateSampleCSV = (): string => {
       '+27987654321', // International format also accepted
       '+27987654321',
       'HR Manager',
-      '2023-06-01'
+      '01/06/2023' // South African date format: dd/mm/yyyy
     ],
     [
       'EMP003',
@@ -644,7 +644,7 @@ export const generateSampleCSV = (): string => {
       '0825254011', // Local format example
       '', // No WhatsApp number - optional field
       'Operations Coordinator',
-      '2024-11-01'
+      '01/11/2024' // South African date format: dd/mm/yyyy
     ]
   ];
 
