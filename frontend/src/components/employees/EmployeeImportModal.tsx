@@ -157,17 +157,17 @@ export const EmployeeImportModal: React.FC<EmployeeImportModalProps> = ({
                 <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
                   <strong>💡 Tips:</strong>
                   <ul className="list-disc list-inside mt-1 space-y-0.5">
-                    <li>Leave employeeNumber empty to auto-generate</li>
-                    <li>Employee number is the unique identifier - duplicates will be skipped</li>
+                    <li><strong>Required fields:</strong> Employee Number, First Name, Last Name, Phone Number, Position, Start Date</li>
+                    <li>Employee number must be unique - duplicates will be skipped</li>
                     <li>Email and WhatsApp number are optional (can be blank)</li>
-                    <li>Phone numbers required - accepts 0825254011 or +27825254011 (auto-converts to +27)</li>
+                    <li>Phone numbers accepts 0825254011 or +27825254011 (auto-converts to +27)</li>
                     <li>Contract type defaults to "permanent" if not specified</li>
                   </ul>
                 </div>
                 <pre className="text-[10px] bg-white p-2 rounded border overflow-x-auto leading-relaxed">
 {`employeeNumber,firstName,lastName,email,phoneNumber,whatsappNumber,position,startDate
 EMP001,John,Doe,john.doe@company.com,0123456789,0123456789,Software Developer,2024-01-15
-,Sarah,Johnson,,+27987654321,+27987654321,HR Manager,2023-06-01
+EMP002,Sarah,Johnson,,+27987654321,+27987654321,HR Manager,2023-06-01
 EMP003,Michael,Smith,michael.smith@company.com,0825254011,,Operations Coordinator,2024-11-01`}
                 </pre>
                 <p className="text-[10px] text-gray-600 mt-1.5">

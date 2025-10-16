@@ -805,9 +805,9 @@ All three systems work together:
        - Employee number is the unique identifier
        - Duplicate error message: `"Employee "EMP001" already exists - not imported (duplicate found)"`
        - Clear indication that row was skipped, not failed
-    5. **Updated Import Validation** (`useEmployeeImport.ts` lines 85-90):
-       - Required fields: firstName, lastName, phoneNumber, position, startDate
-       - Email and whatsappNumber are optional (can be blank in CSV)
+    5. **Updated Import Validation** (`useEmployeeImport.ts` lines 110-112):
+       - **Required fields**: employeeNumber, firstName, lastName, phoneNumber, position, startDate
+       - **Optional fields**: email, whatsappNumber (can be blank in CSV)
        - Contract type defaults to "permanent" if not provided
     6. **Enhanced UI Instructions** (`EmployeeImportModal.tsx` lines 157-176):
        - Added helpful tips about field requirements
@@ -824,7 +824,7 @@ All three systems work together:
     ```csv
     employeeNumber,firstName,lastName,email,phoneNumber,whatsappNumber,position,startDate
     EMP001,John,Doe,john.doe@company.com,0123456789,0123456789,Software Developer,2024-01-15
-    ,Sarah,Johnson,,+27987654321,+27987654321,HR Manager,2023-06-01
+    EMP002,Sarah,Johnson,,+27987654321,+27987654321,HR Manager,2023-06-01
     EMP003,Michael,Smith,michael.smith@company.com,0825254011,,Operations Coordinator,2024-11-01
     ```
   - **Key Features**:
