@@ -474,7 +474,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
                 <ThemedButton variant="ghost" size="sm" onClick={() => setActiveView(null)}>×</ThemedButton>
               </div>
               <div className="flex-1 overflow-y-auto min-h-0">
-                <EmployeeManagement />
+                <EmployeeManagement onDataChange={refreshData} />
               </div>
             </ThemedCard>
           </div>
@@ -640,7 +640,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
               >
                 <tab.icon className="w-4 h-4" />
                 {tab.label}
-                {tab.count && tab.count > 0 && (
+                {(tab.count ?? 0) > 0 && (
                   <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center ml-1">
                     {tab.count}
                   </span>
@@ -911,7 +911,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
           {/* Employees Tab */}
           {activeView === 'employees' && (
             <div className="hidden lg:block space-y-4">
-              <EmployeeManagement />
+              <EmployeeManagement onDataChange={refreshData} />
             </div>
           )}
 

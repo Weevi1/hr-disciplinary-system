@@ -17,7 +17,8 @@ import {
   ChevronRight,
   X,
   Settings,
-  HardDrive
+  HardDrive,
+  FileText
 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { DataService } from '../../services/DataService';
@@ -26,6 +27,7 @@ import { ResellerManagement } from './ResellerManagement';
 import { AudioCleanupDashboard } from './AudioCleanupDashboard';
 import { OrganizationCategoriesViewer } from '../organization/OrganizationCategoriesViewer';
 import { EnhancedOrganizationWizard } from './EnhancedOrganizationWizard';
+import { PDFTemplateManager } from './PDFTemplateManager';
 import Logger from '../../utils/logger';
 import { auth } from '../../config/firebase';
 import type { Organization } from '../../types/core';
@@ -118,7 +120,7 @@ export const SuperAdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   // Modal states
-  const [activeView, setActiveView] = useState<'organizations' | 'resellers' | 'audio' | 'financial' | null>(null);
+  const [activeView, setActiveView] = useState<'organizations' | 'resellers' | 'audio' | 'financial' | 'pdf-templates' | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [categoryManagement, setCategoryManagement] = useState({
     isOpen: false,
@@ -417,6 +419,22 @@ export const SuperAdminDashboard = () => {
             padding="md"
             shadow="sm"
             hover
+            onClick={() => setActiveView('pdf-templates')}
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
+                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>PDF Templates</span>
+              </div>
+              <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
+            </div>
+          </ThemedCard>
+
+          <ThemedCard
+            padding="md"
+            shadow="sm"
+            hover
             onClick={() => setActiveView('financial')}
             className="cursor-pointer transition-all duration-200 active:scale-95"
           >
@@ -527,6 +545,7 @@ export const SuperAdminDashboard = () => {
           {[
             { id: 'organizations', label: 'Organizations', count: stats.totalOrganizations },
             { id: 'resellers', label: 'Resellers', count: stats.totalResellers },
+            { id: 'pdf-templates', label: 'PDF Templates', count: null },
             { id: 'audio', label: 'Audio Cleanup', count: null },
             { id: 'financial', label: 'Financial', count: null }
           ].map((tab) => (
@@ -693,6 +712,9 @@ export const SuperAdminDashboard = () => {
       case 'resellers':
         return <ResellerManagement />;
 
+      case 'pdf-templates':
+        return <PDFTemplateManager organizations={organizations} onTemplateUpdate={loadDashboardData} />;
+
       case 'audio':
         return <AudioCleanupDashboard />;
 
@@ -723,6 +745,7 @@ export const SuperAdminDashboard = () => {
         {/* Organization Wizard */}
         {showWizard && (
           <EnhancedOrganizationWizard
+            isOpen={showWizard}
             onClose={() => setShowWizard(false)}
             onComplete={handleWizardSuccess}
           />

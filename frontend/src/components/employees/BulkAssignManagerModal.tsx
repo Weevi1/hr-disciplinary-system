@@ -2,13 +2,14 @@
 // 🎯 BULK MANAGER ASSIGNMENT MODAL
 // ✅ Select manager from available managers
 // ✅ Assign multiple employees at once
+// ✅ ADD or REPLACE mode for multi-manager support
 // ✅ Shows confirmation before assignment
 
 import React, { useState, useEffect } from 'react';
 import { UnifiedModal } from '../common/UnifiedModal';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
-import { Users, AlertCircle } from 'lucide-react';
+import { Users, AlertCircle, Plus, Replace } from 'lucide-react';
 import Logger from '../../utils/logger';
 import type { Employee } from '../../types';
 
@@ -23,11 +24,13 @@ interface Manager {
   departmentIds?: string[];
 }
 
+type AssignmentMode = 'add' | 'replace';
+
 interface BulkAssignManagerModalProps {
   isOpen: boolean;
   onClose: () => void;
   employees: Employee[];
-  onAssign: (managerId: string) => Promise<void>;
+  onAssign: (managerId: string, mode: AssignmentMode) => Promise<void>;
 }
 
 export const BulkAssignManagerModal: React.FC<BulkAssignManagerModalProps> = ({
@@ -39,6 +42,7 @@ export const BulkAssignManagerModal: React.FC<BulkAssignManagerModalProps> = ({
   const { organization } = useOrganization();
   const [managers, setManagers] = useState<Manager[]>([]);
   const [selectedManagerId, setSelectedManagerId] = useState<string>('');
+  const [assignmentMode, setAssignmentMode] = useState<AssignmentMode>('add'); // 🔧 ADD: Mode selector
   const [loading, setLoading] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +92,7 @@ export const BulkAssignManagerModal: React.FC<BulkAssignManagerModalProps> = ({
     setError(null);
 
     try {
-      await onAssign(selectedManagerId);
+      await onAssign(selectedManagerId, assignmentMode); // 🔧 UPDATED: Pass assignment mode
       onClose();
     } catch (error: any) {
       Logger.error('Failed to assign manager:', error);
@@ -120,6 +124,43 @@ export const BulkAssignManagerModal: React.FC<BulkAssignManagerModalProps> = ({
                 {employees.map(e => `${e.profile.firstName} ${e.profile.lastName}`).join(', ')}
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* Assignment Mode Selector */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-3" style={{ color: 'var(--color-text)' }}>
+            Assignment Mode
+          </label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="assignmentMode"
+                value="add"
+                checked={assignmentMode === 'add'}
+                onChange={(e) => setAssignmentMode(e.target.value as AssignmentMode)}
+                className="w-4 h-4 text-blue-600"
+              />
+              <Plus className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+              <span className="text-sm" style={{ color: 'var(--color-text)' }}>
+                <strong>Add Manager</strong> - Keep existing managers
+              </span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="assignmentMode"
+                value="replace"
+                checked={assignmentMode === 'replace'}
+                onChange={(e) => setAssignmentMode(e.target.value as AssignmentMode)}
+                className="w-4 h-4 text-blue-600"
+              />
+              <Replace className="w-4 h-4" style={{ color: 'var(--color-alert-warning-text)' }} />
+              <span className="text-sm" style={{ color: 'var(--color-text)' }}>
+                <strong>Replace All</strong> - Remove existing managers
+              </span>
+            </label>
           </div>
         </div>
 
@@ -162,16 +203,42 @@ export const BulkAssignManagerModal: React.FC<BulkAssignManagerModalProps> = ({
 
         {/* Confirmation Message */}
         {selectedManager && (
-          <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-alert-info-bg)' }}>
+          <div className="mb-6 p-4 rounded-lg" style={{
+            backgroundColor: assignmentMode === 'replace'
+              ? 'var(--color-alert-warning-bg)'
+              : 'var(--color-alert-info-bg)'
+          }}>
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 mt-0.5" style={{ color: 'var(--color-alert-info-text)' }} />
+              {assignmentMode === 'add' ? (
+                <Plus className="w-5 h-5 mt-0.5" style={{ color: 'var(--color-alert-info-text)' }} />
+              ) : (
+                <Replace className="w-5 h-5 mt-0.5" style={{ color: 'var(--color-alert-warning-text)' }} />
+              )}
               <div>
-                <p className="text-sm font-medium mb-1" style={{ color: 'var(--color-alert-info-text)' }}>
-                  Confirm Assignment
+                <p className="text-sm font-medium mb-1" style={{
+                  color: assignmentMode === 'replace'
+                    ? 'var(--color-alert-warning-text)'
+                    : 'var(--color-alert-info-text)'
+                }}>
+                  Confirm {assignmentMode === 'add' ? 'Add' : 'Replace'} Assignment
                 </p>
-                <p className="text-sm" style={{ color: 'var(--color-alert-info-text)' }}>
-                  {employees.length} employee{employees.length !== 1 ? 's' : ''} will be assigned to{' '}
-                  <strong>{selectedManager.firstName} {selectedManager.lastName}</strong>.
+                <p className="text-sm" style={{
+                  color: assignmentMode === 'replace'
+                    ? 'var(--color-alert-warning-text)'
+                    : 'var(--color-alert-info-text)'
+                }}>
+                  {assignmentMode === 'add' ? (
+                    <>
+                      <strong>{selectedManager.firstName} {selectedManager.lastName}</strong> will be{' '}
+                      <strong>added</strong> as a manager for {employees.length} employee{employees.length !== 1 ? 's' : ''}.
+                      Existing managers will be kept.
+                    </>
+                  ) : (
+                    <>
+                      <strong>{selectedManager.firstName} {selectedManager.lastName}</strong> will{' '}
+                      <strong>replace all existing managers</strong> for {employees.length} employee{employees.length !== 1 ? 's' : ''}.
+                    </>
+                  )}
                 </p>
               </div>
             </div>

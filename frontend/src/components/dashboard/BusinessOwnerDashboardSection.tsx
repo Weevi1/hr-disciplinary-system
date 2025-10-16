@@ -319,7 +319,7 @@ export const BusinessOwnerDashboardSection = memo<BusinessOwnerDashboardSectionP
                 <ThemedButton variant="ghost" size="sm" onClick={() => setActiveView(null)}>×</ThemedButton>
               </div>
               <div className="overflow-y-auto">
-                <EmployeeManagement />
+                <EmployeeManagement onDataChange={refreshData} />
               </div>
             </ThemedCard>
           </div>
@@ -504,7 +504,7 @@ export const BusinessOwnerDashboardSection = memo<BusinessOwnerDashboardSectionP
           {/* Employees Tab */}
           {activeView === 'employees' && (
             <div className="space-y-4">
-              <EmployeeManagement />
+              <EmployeeManagement onDataChange={refreshData} />
             </div>
           )}
 

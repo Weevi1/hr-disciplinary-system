@@ -34,6 +34,7 @@ import { useOrganization } from '../../contexts/OrganizationContext';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
 import Logger from '../../utils/logger';
 import type { Employee } from '../../types';
+import { getManagerIds } from '../../types/employee';
 
 interface EmployeeTableBrowserProps {
   employees: Employee[];
@@ -90,30 +91,30 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
     loadUsers();
   }, [organization?.id]);
 
-  // Helper function to resolve manager ID to name
-  const getManagerName = useCallback((managerId: string | null) => {
-    if (!managerId) return 'HR Manager';
+  // 🔧 UPDATED: Helper function to resolve manager IDs to names (multi-manager support)
+  const getManagerNames = useCallback((employment: any): string[] => {
+    const managerIds = getManagerIds(employment);
 
-    // First try to find manager in employees list
-    const managerEmployee = employees.find(emp => emp.id === managerId);
-    if (managerEmployee) {
-      return `${managerEmployee.profile.firstName} ${managerEmployee.profile.lastName}`;
-    }
+    if (managerIds.length === 0) return ['No Manager'];
 
-    // If not found in employees, look in users list
-    const managerUser = users.find(u => u.id === managerId);
-    if (managerUser) {
-      const firstName = managerUser.firstName || managerUser.profile?.firstName;
-      const lastName = managerUser.lastName || managerUser.profile?.lastName;
-      const role = managerUser.role?.name || managerUser.role?.id;
-
-      if (firstName && lastName) {
-        return role ? `${firstName} ${lastName} (${role})` : `${firstName} ${lastName}`;
+    return managerIds.map(managerId => {
+      // First try to find manager in employees list
+      const managerEmployee = employees.find(emp => emp.id === managerId);
+      if (managerEmployee) {
+        return `${managerEmployee.profile.firstName} ${managerEmployee.profile.lastName}`;
       }
-    }
 
-    // Fallback to generic name
-    return 'HR Manager';
+      // If not found in employees, look in users list
+      const managerUser = users.find(u => u.id === managerId);
+      if (managerUser) {
+        const firstName = managerUser.firstName || managerUser.profile?.firstName;
+        const lastName = managerUser.lastName || managerUser.profile?.lastName;
+        return firstName && lastName ? `${firstName} ${lastName}` : 'Manager';
+      }
+
+      // Fallback
+      return 'Unknown Manager';
+    });
   }, [employees, users]);
 
   // Table state
@@ -186,8 +187,11 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
           bValue = b.employment.position || '';
           break;
         case 'manager':
-          aValue = getManagerName(a.employment.managerId);
-          bValue = getManagerName(b.employment.managerId);
+          // 🔧 UPDATED: Sort by first manager name
+          const aManagers = getManagerNames(a.employment);
+          const bManagers = getManagerNames(b.employment);
+          aValue = aManagers[0] || '';
+          bValue = bManagers[0] || '';
           break;
         case 'startDate':
           // Handle various date formats for sorting
@@ -278,13 +282,13 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
   }, [employees, selectedRows, onBulkAction]);
 
   const exportToCSV = useCallback(() => {
-    const headers = ['Name', 'Employee ID', 'Department', 'Position', 'Manager', 'Email', 'Phone', 'Start Date', 'Status'];
+    const headers = ['Name', 'Employee ID', 'Department', 'Position', 'Managers', 'Email', 'Phone', 'Start Date', 'Status'];
     const csvData = filteredAndSortedEmployees.map(emp => [
       `${emp.profile.firstName} ${emp.profile.lastName}`,
       emp.profile.employeeNumber,
       emp.profile.department,
       emp.employment.position,
-      getManagerName(emp.employment.managerId),
+      getManagerNames(emp.employment).join('; '), // 🔧 UPDATED: Export all managers
       emp.profile.email || '',
       emp.profile.phoneNumber || '',
       (() => {
@@ -587,8 +591,18 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
                       {employee.employment.position}
                     </td>
 
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {getManagerName(employee.employment.managerId)}
+                    <td className="px-4 py-3">
+                      {/* 🔧 UPDATED: Display multiple managers as badges */}
+                      <div className="flex flex-wrap gap-1">
+                        {getManagerNames(employee.employment).map((name, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800"
+                          >
+                            {name}
+                          </span>
+                        ))}
+                      </div>
                     </td>
 
                     <td className="px-4 py-3">
@@ -709,7 +723,13 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
                               <div className="space-y-2 text-sm">
                                 <p><span className="font-medium">Department:</span> {employee.profile.department}</p>
                                 <p><span className="font-medium">Position:</span> {employee.employment.position}</p>
-                                <p><span className="font-medium">Manager:</span> {getManagerName(employee.employment.managerId)}</p>
+                                <p>
+                                  <span className="font-medium">Managers:</span>
+                                  {/* 🔧 UPDATED: Display multiple managers */}
+                                  <span className="ml-2">
+                                    {getManagerNames(employee.employment).join(', ')}
+                                  </span>
+                                </p>
                                 <p><span className="font-medium">Start Date:</span> {(() => {
                                   const startDate = employee.employment?.startDate || employee.profile?.startDate;
                                   if (!startDate) return 'Not set';

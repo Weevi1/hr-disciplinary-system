@@ -9,6 +9,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Timestamp } from 'firebase/firestore';
 import Logger from '../utils/logger';
 import type { Employee } from '../types';
+import { getManagerIds } from '../types/employee';
 
 export interface Manager {
   id: string;
@@ -126,10 +127,21 @@ class ManagerServiceClass {
 
       const result = await DatabaseShardingService.queryDocuments(organizationId, 'employees');
 
-      // Filter employees who have this manager assigned
-      const managerEmployees = result.documents.filter(
-        (emp: any) => emp.employment?.managerId === managerId && emp.isActive !== false
-      );
+      // 🔧 UPDATED: Multi-manager support - filter employees who have this manager in their managerIds array
+      const managerEmployees = result.documents.filter((emp: any) => {
+        const employeeManagerIds = getManagerIds(emp.employment);
+        const isMatch = employeeManagerIds.includes(managerId) && emp.isActive !== false;
+
+        // Debug logging
+        Logger.debug(`👤 Employee ${emp.id} (${emp.profile?.firstName} ${emp.profile?.lastName}):`, {
+          managerIds: employeeManagerIds,
+          hasThisManager: employeeManagerIds.includes(managerId),
+          isActive: emp.isActive !== false,
+          included: isMatch
+        });
+
+        return isMatch;
+      });
 
       Logger.success(`✅ Found ${managerEmployees.length} employees for manager ${managerId}`);
       return managerEmployees as Employee[];
@@ -152,12 +164,14 @@ class ManagerServiceClass {
       // Initialize all managers with 0
       managers.forEach(manager => counts.set(manager.id, 0));
 
-      // Count employees for each manager
+      // 🔧 UPDATED: Multi-manager support - count employees for each manager
       employees.forEach((emp: any) => {
-        const managerId = emp.employment?.managerId;
-        if (managerId && counts.has(managerId)) {
-          counts.set(managerId, (counts.get(managerId) || 0) + 1);
-        }
+        const employeeManagerIds = getManagerIds(emp.employment);
+        employeeManagerIds.forEach(managerId => {
+          if (counts.has(managerId)) {
+            counts.set(managerId, (counts.get(managerId) || 0) + 1);
+          }
+        });
       });
 
       return counts;
@@ -238,21 +252,37 @@ class ManagerServiceClass {
         throw new Error('Employee not found');
       }
 
-      // Call cloud function to create/update user with manager role
-      // This will handle both Firebase Auth custom claims and Firestore user document
+      // Validate required employee fields
+      if (!employee.profile || !employee.profile.email) {
+        throw new Error('Employee must have a valid email address');
+      }
+
+      if (!employee.profile.firstName || !employee.profile.lastName) {
+        throw new Error('Employee must have first name and last name');
+      }
+
+      // Temporary password for new manager account
+      // User should change this on first login
+      const tempPassword = 'temp123';
+
+      // Call cloud function to create user account and link to existing employee
+      // This will handle both Firebase Auth account creation and Firestore user document
       await createOrganizationUser({
         organizationId,
-        email: employee.profile?.email,
+        email: employee.profile.email,
+        password: tempPassword,
         role,
-        firstName: employee.profile?.firstName,
-        lastName: employee.profile?.lastName,
-        departmentIds: departmentIds || []
+        firstName: employee.profile.firstName,
+        lastName: employee.profile.lastName,
+        departmentIds: departmentIds || [],
+        employeeId: employeeId, // Link to existing employee record
+        updateEmployeeEmail: true // Ensure employee record has correct email
       });
 
       // If department assignments provided, update the department documents
       if (departmentIds && departmentIds.length > 0) {
-        const managerName = `${employee.profile?.firstName || ''} ${employee.profile?.lastName || ''}`.trim();
-        const managerEmail = employee.profile?.email;
+        const managerName = `${employee.profile.firstName} ${employee.profile.lastName}`.trim();
+        const managerEmail = employee.profile.email;
 
         // Wait a moment for the cloud function to complete
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -320,13 +350,18 @@ class ManagerServiceClass {
       if (replacementManagerId) {
         const employees = await this.getManagerEmployees(organizationId, managerId);
 
-        // Reassign all employees to replacement manager
+        // 🔧 UPDATED: Multi-manager support - replace old manager with new manager in managerIds array
         for (const employee of employees) {
+          const currentManagerIds = getManagerIds(employee.employment);
+          const updatedManagerIds = currentManagerIds
+            .filter(id => id !== managerId) // Remove old manager
+            .concat(replacementManagerId); // Add replacement manager
+
           await DatabaseShardingService.updateDocument(
             organizationId,
             'employees',
             employee.id,
-            { 'employment.managerId': replacementManagerId }
+            { 'employment.managerIds': updatedManagerIds }
           );
         }
 
@@ -495,12 +530,18 @@ class ManagerServiceClass {
       if (replacementManagerId) {
         const employees = await this.getManagerEmployees(organizationId, managerId);
 
+        // 🔧 UPDATED: Multi-manager support - replace archived manager with replacement
         for (const employee of employees) {
+          const currentManagerIds = getManagerIds(employee.employment);
+          const updatedManagerIds = currentManagerIds
+            .filter(id => id !== managerId) // Remove archived manager
+            .concat(replacementManagerId); // Add replacement manager
+
           await DatabaseShardingService.updateDocument(
             organizationId,
             'employees',
             employee.id,
-            { 'employment.managerId': replacementManagerId }
+            { 'employment.managerIds': updatedManagerIds }
           );
         }
       }

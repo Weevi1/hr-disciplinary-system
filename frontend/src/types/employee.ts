@@ -37,15 +37,16 @@ export interface EmployeeFormData {
   employeeNumber: string;
   firstName: string;
   lastName: string;
-  email: string;
-  phoneNumber?: string;
+  email?: string; // 🔧 UPDATED: Made optional
+  phoneNumber: string; // 🔧 UPDATED: Now required
   whatsappNumber?: string;
-  department: string;
+  department?: string; // 🔧 UPDATED: Made optional
   position: string;
   startDate: string;
   contractType: ContractType;
   probationEndDate?: string;
-  managerId?: string; // 🔧 ADD THIS LINE
+  managerIds?: string[]; // 🔧 UPDATED: Multi-manager support (was managerId?: string)
+  managerId?: string; // ⚠️ DEPRECATED: Keep for backward compatibility
   isActive: boolean;
 }
 
@@ -121,13 +122,14 @@ export interface CSVImportRow {
   employeeNumber: string;
   firstName: string;
   lastName: string;
-  email: string;
-  phoneNumber?: string;
-  whatsappNumber?: string;
+  email?: string; // Optional - can be left blank in CSV
+  phoneNumber: string; // Required - must be provided in CSV
+  whatsappNumber?: string; // Optional - can be left blank in CSV
   position: string;
   startDate: string;
-  contractType?: string;
+  contractType?: string; // Optional - defaults to 'permanent' if not provided
   probationEndDate?: string;
+  department?: string; // Optional
   [key: string]: string | undefined;
 }
 
@@ -205,6 +207,52 @@ export const generateEmployeeNumber = (organizationId: string): string => {
   return `${orgCode}${timestamp}${random}`;
 };
 
+// ============================================
+// MANAGER HELPERS - Multi-Manager Support
+// ============================================
+
+/**
+ * 🔧 BACKWARD COMPATIBILITY: Get manager IDs from employment details
+ * Handles both old (managerId) and new (managerIds) data formats
+ *
+ * This helper ensures seamless migration from single manager to multi-manager system:
+ * - Old data: `managerId: "123"` → returns `["123"]`
+ * - New data: `managerIds: ["123", "456"]` → returns `["123", "456"]`
+ * - No managers: returns `[]`
+ */
+export const getManagerIds = (employment?: EmploymentDetails): string[] => {
+  if (!employment) return [];
+
+  // New format: managerIds array
+  if (employment.managerIds && employment.managerIds.length > 0) {
+    return employment.managerIds;
+  }
+
+  // Old format: single managerId (backward compatibility)
+  if (employment.managerId) {
+    return [employment.managerId];
+  }
+
+  return [];
+};
+
+/**
+ * 🔧 MIGRATION HELPER: Convert old single-manager data to new multi-manager format
+ * Can be used to batch migrate existing employee records in database
+ */
+export const migrateEmployeeManagerData = (employee: Employee): boolean => {
+  // Check if migration is needed
+  if (!employee.employment?.managerId || employee.employment?.managerIds) {
+    return false; // No migration needed
+  }
+
+  // This would be used in a migration script:
+  // employee.employment.managerIds = [employee.employment.managerId];
+  // Then save to database
+
+  return true; // Migration needed
+};
+
 // REPLACE the existing createEmployeeFromForm function in types/employee.ts with this:
 
 export const createEmployeeFromForm = (
@@ -225,10 +273,10 @@ export const createEmployeeFromForm = (
       employeeNumber: formData.employeeNumber,
       firstName: formData.firstName,
       lastName: formData.lastName,
-      email: formData.email.toLowerCase(),
+      email: formData.email ? formData.email.toLowerCase() : '', // 🔧 FIXED: Handle optional email
       phoneNumber: formData.phoneNumber || null, // 🔧 FIXED: null instead of undefined
       whatsappNumber: formData.whatsappNumber || null, // 🔧 FIXED: null instead of undefined
-      department: formData.department,
+      department: formData.department || '', // 🔧 FIXED: Handle optional department
       position: formData.position,
       startDate: new Date(formData.startDate),
     },
@@ -236,10 +284,11 @@ export const createEmployeeFromForm = (
     employment: {
       startDate: new Date(formData.startDate),
       contractType: formData.contractType,
-      probationEndDate: formData.probationEndDate ? new Date(formData.probationEndDate) : null, // 🔧 FIXED: null instead of undefined
-      department: formData.department,
+      probationEndDate: formData.probationEndDate ? new Date(formData.probationEndDate) : null,
+      department: formData.department || '', // 🔧 FIXED: Handle optional department
       position: formData.position,
-      managerId: formData.managerId || null // 🔧 FIXED: null instead of undefined
+      managerIds: formData.managerIds || [], // 🔧 UPDATED: Multi-manager support
+      managerId: formData.managerId || null // ⚠️ DEPRECATED: Keep for backward compatibility
     },
     
     disciplinaryRecord: {
@@ -302,6 +351,9 @@ const safeDateToString = (date: any): string => {
 };
 
 export const createFormFromEmployee = (employee: Employee): EmployeeFormData => {
+  // 🔧 BACKWARD COMPATIBILITY: Handle both old and new formats
+  const managerIds = getManagerIds(employee.employment);
+
   return {
     employeeNumber: employee.profile?.employeeNumber || '',
     firstName: employee.profile?.firstName || '',
@@ -314,7 +366,8 @@ export const createFormFromEmployee = (employee: Employee): EmployeeFormData => 
     startDate: safeDateToString(employee.profile?.startDate),
     contractType: employee.employment?.contractType || 'permanent',
     probationEndDate: safeDateToString(employee.employment?.probationEndDate),
-    managerId: employee.employment?.managerId || '',
+    managerIds: managerIds, // 🔧 UPDATED: Multi-manager support
+    managerId: managerIds[0] || '', // ⚠️ DEPRECATED: For backward compatibility, use first manager
     isActive: employee.isActive ?? true
   };
 };
@@ -437,11 +490,12 @@ export const filterEmployees = (
 
     // For HOD users, filter by manager relationship only
     if (!permissions.canViewAll && (userRole === 'hod' || userRole === 'hod-manager')) {
-      const employeeManagerId = employee.employment?.managerId;
+      // 🔧 UPDATED: Multi-manager support - check if current user is in managerIds array
+      const employeeManagerIds = getManagerIds(employee.employment);
 
-      if (employeeManagerId) {
-        // Employee has a manager assigned - check if it's this user
-        if (employeeManagerId !== currentUserId) {
+      if (employeeManagerIds.length > 0) {
+        // Employee has managers assigned - check if current user is one of them
+        if (!employeeManagerIds.includes(currentUserId || '')) {
           return false;
         }
       }
@@ -558,9 +612,7 @@ export const generateSampleCSV = (): string => {
     'phoneNumber',
     'whatsappNumber',
     'position',
-    'startDate',
-    'contractType',
-    'probationEndDate'
+    'startDate'
   ];
 
   const sampleRows = [
@@ -569,79 +621,77 @@ export const generateSampleCSV = (): string => {
       'John',
       'Doe',
       'john.doe@company.com',
-      '+27123456789',
-      '+27123456789',
+      '0123456789', // Local format - will auto-convert to +27123456789
+      '0123456789',
       'Software Developer',
-      '2024-01-15',
-      'permanent',
-      '' // No probation for permanent employee
+      '2024-01-15'
     ],
     [
       'EMP002',
       'Sarah',
       'Johnson',
-      'sarah.johnson@company.com',
-      '+27987654321',
+      '', // No email - optional field
+      '+27987654321', // International format also accepted
       '+27987654321',
       'HR Manager',
-      '2023-06-01',
-      'permanent',
-      '' // No probation for permanent employee
+      '2023-06-01'
     ],
     [
       'EMP003',
       'Michael',
       'Smith',
       'michael.smith@company.com',
-      '+27555123456',
-      '', // No WhatsApp number
+      '0825254011', // Local format example
+      '', // No WhatsApp number - optional field
       'Operations Coordinator',
-      '2024-11-01',
-      'contract',
-      '2025-02-01' // 3-month probation period
+      '2024-11-01'
     ]
   ];
-  
+
   const csvContent = [
     headers.join(','),
     ...sampleRows.map(row => row.join(','))
   ].join('\n');
-  
+
   return csvContent;
 };
 
 export const validateEmployee = (employee: Partial<Employee>): string[] => {
   const errors: string[] = [];
-  
+
+  // Required fields
   if (!employee.profile?.employeeNumber) {
     errors.push('Employee number is required');
   }
-  
+
   if (!employee.profile?.firstName) {
     errors.push('First name is required');
   }
-  
+
   if (!employee.profile?.lastName) {
     errors.push('Last name is required');
   }
-  
-  if (!employee.profile?.email) {
-    errors.push('Email is required');
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(employee.profile.email)) {
-    errors.push('Invalid email format');
+
+  if (!employee.profile?.phoneNumber) {
+    errors.push('Phone number is required');
   }
-  
-  if (!employee.profile?.department) {
-    errors.push('Department is required');
-  }
-  
+
   if (!employee.profile?.position) {
     errors.push('Position is required');
   }
-  
+
   if (!employee.profile?.startDate) {
     errors.push('Start date is required');
   }
-  
+
+  if (!employee.employment?.contractType) {
+    errors.push('Contract type is required');
+  }
+
+  // Optional fields - only validate format if provided
+  if (employee.profile?.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(employee.profile.email)) {
+    errors.push('Invalid email format');
+  }
+
   return errors;
 };

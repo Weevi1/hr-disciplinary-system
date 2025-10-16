@@ -6,6 +6,7 @@
 
 import Logger from './logger';
 import { PDF_GENERATOR_VERSION } from '../services/PDFGenerationService';
+import { PDFTemplateVersionService } from '../services/PDFTemplateVersionService';
 
 /**
  * 🔒 SECURITY-CRITICAL: Convert Firestore Timestamp to JavaScript Date
@@ -149,16 +150,21 @@ export const flattenEmployeeData = (employee: any): {
  *
  * Changes to this function affect legal document integrity - require security review.
  *
+ * **ARCHITECTURE CHANGE (2025-10-16):**
+ * - Now async to fetch template versions from Firestore
+ * - Fetches template from versions collection using stored pdfTemplateVersion
+ * - Falls back to org's current settings for old warnings
+ *
  * @param warningData - Raw warning data from Firestore or wizard
  * @param employeeData - Employee object (nested or flat structure)
  * @param organizationData - Organization object with branding
  * @returns Standardized data structure for PDFGenerationService
  */
-export const transformWarningDataForPDF = (
+export const transformWarningDataForPDF = async (
   warningData: any,
   employeeData: any,
   organizationData: any
-): any => {
+): Promise<any> => {
   Logger.debug('🔒 Transforming warning data for PDF generation...');
 
   if (!warningData) {
@@ -182,6 +188,37 @@ export const transformWarningDataForPDF = (
     warningData.incidentDate || warningData.issueDate || warningData.createdAt
   );
 
+  // 🎨 ARCHITECTURE OPTIMIZATION: Fetch template version if stored (1000x more efficient)
+  // Instead of duplicating 5-10KB of template settings with every warning, we:
+  // 1. Check if warning has pdfTemplateVersion string (e.g., "1.9.0")
+  // 2. Fetch template from: organizations/{orgId}/pdfTemplateVersions/{version}
+  // 3. Fall back to org's current settings for old warnings (backward compatibility)
+  let pdfSettings = undefined;
+  if (warningData.pdfTemplateVersion && organizationData.id) {
+    try {
+      const templateVersion = await PDFTemplateVersionService.getTemplateVersion(
+        organizationData.id,
+        warningData.pdfTemplateVersion
+      );
+      if (templateVersion) {
+        pdfSettings = templateVersion.settings;
+        Logger.debug(`✅ Fetched template version ${warningData.pdfTemplateVersion} from collection`);
+      } else {
+        Logger.warn(`⚠️ Template version ${warningData.pdfTemplateVersion} not found, using current org settings`);
+        pdfSettings = organizationData.pdfSettings;
+      }
+    } catch (error) {
+      Logger.error('❌ Failed to fetch template version:', error);
+      pdfSettings = organizationData.pdfSettings; // Fallback
+    }
+  } else {
+    // Old warnings without template version OR legacy pdfSettings field
+    pdfSettings = warningData.pdfSettings || organizationData.pdfSettings || undefined;
+    if (warningData.pdfSettings) {
+      Logger.debug('📋 Using legacy pdfSettings from warning document (old format)');
+    }
+  }
+
   // Build standardized PDF data structure
   const pdfData = {
     // Warning identification
@@ -192,6 +229,9 @@ export const transformWarningDataForPDF = (
     // 🔒 PDF Generator Version (for consistent regeneration)
     // Use stored version if available (for regenerating old warnings), otherwise use current version
     pdfGeneratorVersion: warningData.pdfGeneratorVersion || PDF_GENERATOR_VERSION,
+
+    // 🎨 PDF Template Settings (fetched from versions collection or fallback)
+    pdfSettings: pdfSettings,
 
     // 🔥 CRITICAL FIX: Manager name is stored in signatures.managerName (not top-level issuedByName)
     issuedByName: warningData.signatures?.managerName || warningData.issuedByName || '', // Manager name who issued the warning

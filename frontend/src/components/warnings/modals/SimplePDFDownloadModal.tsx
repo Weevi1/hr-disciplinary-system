@@ -125,7 +125,11 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
       status: formData.status,
       disciplineRecommendation: lraRecommendation,
       // 🔥 CRITICAL FIX: Extract manager name from signatures or warning data
-      issuedByName: signatures?.managerName || formData.issuedByName || warningData.issuedByName || 'Manager'
+      issuedByName: signatures?.managerName || formData.issuedByName || warningData.issuedByName || 'Manager',
+      // 🔒 VERSIONING: Pass stored PDF code version to ensure consistent regeneration
+      pdfGeneratorVersion: formData.pdfGeneratorVersion || warningData.pdfGeneratorVersion,
+      // 🎨 TEMPLATE SETTINGS: Pass stored template settings for consistent styling
+      pdfSettings: formData.pdfSettings || warningData.pdfSettings
     };
 
     // Use unified transformer to ensure consistency
@@ -209,9 +213,11 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
       // 🔒 VERSIONING: Pass stored version to ensure consistent regeneration
       // If this warning was created with v1.0.0, it will use v1.0.0 code to regenerate
       // If this warning was created with v1.1.0, it will use v1.1.0 code to regenerate
+      // 🎨 TEMPLATE SETTINGS: Pass stored template settings for consistent styling
       const blob = await PDFGenerationService.generateWarningPDF(
         extractedData,
-        extractedData.pdfGeneratorVersion
+        extractedData.pdfGeneratorVersion,
+        extractedData.pdfSettings
       );
 
       setPdfBlob(blob);

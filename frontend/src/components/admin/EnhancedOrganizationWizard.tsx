@@ -38,6 +38,7 @@ import { SUBSCRIPTION_PLANS, SA_PROVINCES } from '../../types/billing';
 import type { WarningLevel, SeverityLevel } from '../../types/core';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../config/firebase';
+import { Z_INDEX } from '../../constants/zIndex';
 
 interface OrganizationCategory {
   id: string;
@@ -821,13 +822,22 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
       Logger.success(`📧 Admin email: ${formData.adminEmail}`);
       Logger.success(`🔑 Admin password: ${devPassword}`);
 
+      // ⚠️ NOTE: createUserWithEmailAndPassword() auto-signs in the new admin user
+      // This means the super-user is no longer authenticated, which may cause
+      // permission errors for subsequent operations. The organization IS created successfully.
+      //
+      // TODO: Move department creation to a cloud function trigger (onCreate organization)
+      // to avoid this auth state issue entirely.
+
       // Create default departments for the new organization
+      // Expected to fail due to auth state change (new admin user is now signed in)
       try {
         await DepartmentService.createDefaultDepartments(organizationId);
         Logger.success('✅ Default departments created successfully');
       } catch (deptError) {
-        Logger.warn('Failed to create default departments:', deptError);
-        // Don't fail the whole deployment for department creation issues
+        Logger.warn('⚠️ Could not create default departments (expected due to auth state)');
+        Logger.info('💡 Business owner will be prompted to create departments on first login');
+        // Don't fail the whole deployment - organization was created successfully
       }
 
       // For resellers, log the deployment for audit trail and rate limiting
@@ -849,13 +859,14 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
         }
       }
 
-      // Show success message instead of redirecting to Stripe
+      // Show success message
       alert(`🎉 Organization '${formData.companyName}' created successfully!\n\n` +
             `📧 Admin Login: ${formData.adminEmail}\n` +
             `🔑 Password: ${devPassword}\n\n` +
-            `The organization is now active and ready to use!`);
-            
-      // Close wizard and refresh dashboard
+            `⚠️ NOTE: You have been automatically signed in as the new admin.\n` +
+            `Please sign out and sign back in as super-user to continue managing organizations.`);
+
+      // Close wizard (user is now signed in as the new admin)
       onClose();
 
     } catch (error) {
@@ -877,7 +888,7 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.modal }}>
       <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-auto">
         
         {/* Header */}

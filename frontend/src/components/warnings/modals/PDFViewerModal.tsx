@@ -181,9 +181,11 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
           const { PDFGenerationService } = await import('@/services/PDFGenerationService');
 
           // 🔒 VERSIONING: Pass stored version for consistent regeneration
+          // 🎨 TEMPLATE SETTINGS: Pass stored template settings for consistent styling
           const pdfBlob = await PDFGenerationService.generateWarningPDF(
             pdfData,
-            pdfData.pdfGeneratorVersion
+            pdfData.pdfGeneratorVersion,
+            pdfData.pdfSettings
           );
 
           // Create object URL

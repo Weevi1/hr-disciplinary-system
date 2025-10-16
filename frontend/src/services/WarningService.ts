@@ -102,6 +102,7 @@ export interface Warning {
   // 🔒 Progressive Discipline Context (for PDF generation and legal audit trail)
   disciplineRecommendation?: EscalationRecommendation;
   pdfGeneratorVersion?: string;
+  pdfTemplateVersion?: string; // Reference to template version in versions collection (e.g., "1.9.0") - 1000x more efficient than storing full settings
 
   // Metadata
   createdAt: Date;

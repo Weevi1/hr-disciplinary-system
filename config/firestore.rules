@@ -601,6 +601,21 @@ service cloud.firestore {
       );
     }
 
+    // PDF Template Versions collection - for efficient template storage
+    // Stores template versions separately to avoid duplicating 5-10KB of data with every warning
+    match /organizations/{organizationId}/pdfTemplateVersions/{version} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        belongsToOrganization(organizationId) ||
+        resellerManagesOrganization(organizationId)
+      );
+
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (belongsToOrganization(organizationId) && isManager())
+      );
+    }
+
     // Sharded delivery notifications collection
     match /organizations/{organizationId}/deliveryNotifications/{notificationId} {
       allow read, write: if isAuthenticated() && (

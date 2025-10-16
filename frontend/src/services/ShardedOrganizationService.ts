@@ -9,6 +9,7 @@ import { ShardedDataService } from './ShardedDataService'
 import { UserOrgIndexService } from './UserOrgIndexService'
 import { TimeService } from './TimeService'
 import { UNIVERSAL_SA_CATEGORIES } from './UniversalCategories'
+import { PDFTemplateService } from './PDFTemplateService'
 import Logger from '../utils/logger'
 import { userCreationManager } from '../utils/userCreationContext'
 import type { Organization, User } from '../types'
@@ -67,7 +68,12 @@ export class ShardedOrganizationService {
       // Step 1: Create organization document in main collection
       Logger.debug(`🗂️ [SHARDED ORG] Creating organization document at: organizations/${organizationId}`)
       const orgRef = doc(db, 'organizations', organizationId)
-      
+
+      // Initialize default PDF template settings for new organization
+      // This ensures every org has explicit PDF configuration from creation
+      const defaultPdfSettings = PDFTemplateService.getDefaultSettings(auth.currentUser?.uid || 'system');
+      Logger.debug(`📄 [SHARDED ORG] Initializing PDF template with version ${defaultPdfSettings.generatorVersion}`);
+
       const organizationDoc = {
         id: organizationId,
         name: organizationData.name,
@@ -77,21 +83,24 @@ export class ShardedOrganizationService {
         contactEmail: organizationData.contactEmail,
         contactPhone: organizationData.contactPhone || '',
         employeeCount: organizationData.employeeCount || 0,
-        
+
         subscriptionTier: organizationData.subscriptionTier,
         subscriptionStatus: organizationData.subscriptionStatus,
-        
+
         resellerId: organizationData.resellerId || null,
-        
+
         branding: organizationData.branding || {
           logoUrl: '',
           primaryColor: '#2563eb'
         },
-        
+
+        // PDF template settings (initialized with defaults)
+        pdfSettings: defaultPdfSettings,
+
         createdAt: TimeService.getServerTimestamp(),
         updatedAt: TimeService.getServerTimestamp(),
         isActive: organizationData.subscriptionStatus === 'active',
-        
+
         // Sharded database metadata
         databaseVersion: '2.0',
         shardingEnabled: true,
@@ -109,6 +118,7 @@ export class ShardedOrganizationService {
       // Step 4: Commit organization and sharded structure
       await batch.commit()
       Logger.success(`✅ [SHARDED ORG] Organization ${organizationId} created with sharded structure`)
+      Logger.success(`✅ [SHARDED ORG] PDF template v${defaultPdfSettings.generatorVersion} initialized for ${organizationId}`)
 
       // Step 5: Create admin user account (separate from batch due to Firebase Auth)
       const adminUserId = await this.createAdminUser(organizationId, organizationData.adminUser)
