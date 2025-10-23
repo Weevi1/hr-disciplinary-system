@@ -110,6 +110,7 @@ export class EncryptionService {
 
   /**
    * Encrypt banking details object
+   * Banking details are optional - empty fields will remain empty (not encrypted)
    */
   static encryptBankingDetails(bankDetails: {
     accountHolder: string;
@@ -120,24 +121,27 @@ export class EncryptionService {
     return {
       accountHolder: bankDetails.accountHolder, // Name can remain unencrypted
       bank: bankDetails.bank, // Bank name can remain unencrypted
-      accountNumber: this.encrypt(bankDetails.accountNumber),
-      branchCode: this.encrypt(bankDetails.branchCode)
+      // Only encrypt if value is provided (not empty)
+      accountNumber: bankDetails.accountNumber ? this.encrypt(bankDetails.accountNumber) : '',
+      branchCode: bankDetails.branchCode ? this.encrypt(bankDetails.branchCode) : ''
     };
   }
 
   /**
    * Decrypt banking details object
+   * Handles optional fields - empty fields remain empty
    */
   static decryptBankingDetails(encryptedBankDetails: any) {
     return {
-      accountHolder: encryptedBankDetails.accountHolder,
-      bank: encryptedBankDetails.bank,
-      accountNumber: this.isEncrypted(encryptedBankDetails.accountNumber)
+      accountHolder: encryptedBankDetails.accountHolder || '',
+      bank: encryptedBankDetails.bank || '',
+      // Only decrypt if value exists and is encrypted
+      accountNumber: encryptedBankDetails.accountNumber && this.isEncrypted(encryptedBankDetails.accountNumber)
         ? this.decrypt(encryptedBankDetails.accountNumber)
-        : encryptedBankDetails.accountNumber, // Backward compatibility
-      branchCode: this.isEncrypted(encryptedBankDetails.branchCode)
+        : encryptedBankDetails.accountNumber || '', // Empty string or plain text (backward compatibility)
+      branchCode: encryptedBankDetails.branchCode && this.isEncrypted(encryptedBankDetails.branchCode)
         ? this.decrypt(encryptedBankDetails.branchCode)
-        : encryptedBankDetails.branchCode // Backward compatibility
+        : encryptedBankDetails.branchCode || '' // Empty string or plain text (backward compatibility)
     };
   }
 

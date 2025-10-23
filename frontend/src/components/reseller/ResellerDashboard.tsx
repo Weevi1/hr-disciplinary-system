@@ -23,7 +23,6 @@ import Logger from '../../utils/logger';
 import { DataService } from '../../services/DataService';
 import CommissionService from '../../services/CommissionService';
 import type { Reseller, CommissionStatement, Organization } from '../../types/billing';
-import { auth } from '../../config/firebase';
 
 interface ResellerMetrics {
   totalClients: number;
@@ -64,30 +63,8 @@ export const ResellerDashboard: React.FC = () => {
       setLoading(true);
       Logger.debug('Loading reseller dashboard data...', { resellerId: user.resellerId });
 
-      // 🔍 DEBUG: Check user's auth token claims
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        const idTokenResult = await currentUser.getIdTokenResult();
-        Logger.debug('🔍 [RESELLER DEBUG] User custom claims:', idTokenResult.claims);
-        Logger.debug('🔍 [RESELLER DEBUG] User role:', idTokenResult.claims.role);
-
-        // Auto-refresh claims if role is missing or incorrectly formatted (object instead of string)
-        const roleIsInvalid = !idTokenResult.claims.role || typeof idTokenResult.claims.role === 'object';
-        if (roleIsInvalid) {
-          Logger.warn('⚠️ Role missing or incorrectly formatted! Calling refreshUserClaims...');
-          try {
-            const { getFunctions, httpsCallable } = await import('firebase/functions');
-            const functions = getFunctions(undefined, 'us-central1');
-            const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
-            const result = await refreshClaims({});
-            Logger.debug('✅ Claims refreshed! Please sign out and back in:', result.data);
-            alert('Your user role has been refreshed! Please SIGN OUT and SIGN BACK IN for changes to take effect.');
-            return; // Stop loading dashboard until user refreshes
-          } catch (err) {
-            Logger.error('❌ Failed to refresh claims:', err);
-          }
-        }
-      }
+      // Claims refresh is handled automatically by AuthContext
+      // No need for duplicate checks here
 
       // Load reseller profile and metrics
       const [reseller, metrics, clients, commissions, trends] = await Promise.all([

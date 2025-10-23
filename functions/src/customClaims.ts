@@ -19,13 +19,6 @@ try {
 const auth = getAuth();
 const db = getFirestore();
 
-interface UserClaims {
-  role: string;
-  organizationId: string;
-  permissions?: string[];
-  lastUpdated: number;
-}
-
 /**
  * Manually refresh custom claims for a user
  * Can be called from the frontend after user data changes
@@ -77,18 +70,41 @@ export const refreshUserClaims = onCall(async (request) => {
       organizationId = userDoc.organizationId;
     }
 
-    // Prepare custom claims
-    const customClaims: UserClaims = {
-      role: userData.role?.id || userData.role, // Extract ID if role is an object
-      organizationId: organizationId,
-      permissions: userData.permissions ? Object.keys(userData.permissions) : [],
-      lastUpdated: Date.now()
-    };
+    // Prepare MINIMAL custom claims (defense against 1000 byte limit)
+    // Full permissions are in Firestore - backend functions MUST check there
+    const roleId = userData.role?.id || userData.role;
+    const claimsVersion = userData.claimsVersion || 1;
+
+    // Build minimal claims based on user type
+    let customClaims: any;
+
+    if (roleId === 'reseller') {
+      // Resellers don't have organizationId, they have resellerId
+      customClaims = {
+        r: roleId,
+        res: userData.resellerId || organizationId,
+        v: claimsVersion
+      };
+    } else if (roleId === 'super-user') {
+      // Super users have special org value
+      customClaims = {
+        org: 'SYSTEM',
+        r: roleId,
+        v: claimsVersion
+      };
+    } else {
+      // Normal organization users
+      customClaims = {
+        org: organizationId,
+        r: roleId,
+        v: claimsVersion
+      };
+    }
 
     // Set custom claims in Firebase Auth
     await auth.setCustomUserClaims(userIdToRefresh, customClaims);
-    
-    logger.info(`✅ [CUSTOM CLAIMS] Claims refreshed successfully for ${userIdToRefresh}:`, customClaims);
+
+    logger.info(`✅ [CUSTOM CLAIMS] Minimal claims refreshed for ${userIdToRefresh}:`, customClaims);
 
     return {
       success: true,
@@ -240,16 +256,19 @@ export const refreshOrganizationUserClaims = onCall(async (request) => {
       const userData = userDoc.data();
 
       try {
-        const customClaims: UserClaims = {
-          role: userData.role?.id || userData.role, // Extract ID if role is an object
-          organizationId: organizationId,
-          permissions: userData.permissions ? Object.keys(userData.permissions) : [],
-          lastUpdated: Date.now()
+        const roleId = userData.role?.id || userData.role;
+        const claimsVersion = userData.claimsVersion || 1;
+
+        // Build minimal claims
+        const customClaims = {
+          org: organizationId,
+          r: roleId,
+          v: claimsVersion
         };
 
         await auth.setCustomUserClaims(userId, customClaims);
         results.push({ userId, success: true, role: userData.role });
-        
+
       } catch (error) {
         logger.error(`❌ [BULK CLAIMS] Failed to set claims for ${userId}:`, error);
         results.push({ userId, success: false, error: (error as Error).message });

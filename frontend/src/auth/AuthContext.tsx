@@ -230,24 +230,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           });
 
           if (result) {
-            // 🔍 Check if custom claims need to be refreshed
+            // 🔍 ENHANCED: Check if custom claims are valid and up-to-date
             const idTokenResult = await firebaseUser.getIdTokenResult();
-            const roleIsInvalid = !idTokenResult.claims.role || typeof idTokenResult.claims.role === 'object';
+            const claims = idTokenResult.claims as any;
 
-            if (roleIsInvalid) {
-              Logger.warn('⚠️ [AUTH] Role missing or incorrectly formatted! Calling refreshUserClaims...');
+            // Check if user is active (critical security check)
+            if (result.user.isActive === false) {
+              Logger.warn('⚠️ [AUTH] User account is inactive');
+              await auth.signOut();
+              dispatch({ type: 'SET_ERROR', payload: 'Your account has been deactivated. Please contact support.' });
+              return;
+            }
+
+            // BEST PRACTICE: Check for missing/invalid claims and staleness
+            const hasClaims = claims.r || claims.role; // Support both minimal (r) and legacy (role) format
+            const claimsVersion = claims.v || 0; // Claims version from token
+            const firestoreVersion = result.user.claimsVersion || 1; // Version from Firestore
+            const isStale = claimsVersion < firestoreVersion;
+
+            if (!hasClaims) {
+              // Missing claims - auto-refresh without logout
+              Logger.warn('⚠️ [AUTH] Missing custom claims, auto-refreshing...');
               try {
                 const { getFunctions, httpsCallable } = await import('firebase/functions');
                 const functions = getFunctions(undefined, 'us-central1');
                 const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
                 await refreshClaims({});
-                Logger.debug('✅ [AUTH] Claims refreshed! Signing out...');
-                // Sign out to force token refresh on next login
-                await auth.signOut();
-                alert('Your user role has been refreshed! Please SIGN IN AGAIN.');
+                // Force token refresh
+                await firebaseUser.getIdToken(true);
+                Logger.success('✅ [AUTH] Claims refreshed and token updated');
+                // Re-trigger auth state change with new token
                 return;
               } catch (err) {
-                Logger.error('❌ [AUTH] Failed to refresh claims:', err);
+                Logger.error('❌ [AUTH] Failed to auto-refresh claims:', err);
+                // Continue anyway - Firestore is source of truth
+              }
+            } else if (isStale) {
+              // Stale token detected - permissions may have changed
+              Logger.warn(`⚠️ [AUTH] Stale token detected (v${claimsVersion} vs v${firestoreVersion}), refreshing...`);
+
+              try {
+                // Force token refresh to get latest claims
+                await firebaseUser.getIdToken(true);
+                Logger.success(`✅ [AUTH] Token refreshed from v${claimsVersion} to v${firestoreVersion}`);
+                // Re-trigger auth state change with new token
+                return;
+              } catch (err) {
+                Logger.error('❌ [AUTH] Failed to refresh stale token:', err);
+                // Continue with Firestore data - it's more current
               }
             }
 

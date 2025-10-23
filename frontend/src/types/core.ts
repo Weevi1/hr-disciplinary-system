@@ -46,6 +46,8 @@ export interface User {
   createdAt: string;
   lastLogin?: string;
   permissions: Permission[];
+  claimsVersion?: number; // For detecting stale JWT tokens (increments on role/permission changes)
+  updatedAt?: string;     // Track last permission/role change timestamp
 }
 
 export interface UserRole {
@@ -66,6 +68,17 @@ export interface PermissionCondition {
   field: string;
   operator: string;
   value: any;
+}
+
+// Minimal Custom Claims for JWT Token (Firebase has 1000 byte limit)
+// This is what's stored in the Firebase Auth token for fast offline validation
+// Full permissions are stored in Firestore and checked server-side
+export interface MinimalCustomClaims {
+  org: string;      // Organization ID (shortened key to save bytes)
+  r: UserRoleId;    // Role ID (shortened key)
+  v: number;        // Claims version (for staleness detection)
+  iat: number;      // Issued at timestamp
+  res?: string;     // Reseller ID (only for reseller users)
 }
 
 // ============================================

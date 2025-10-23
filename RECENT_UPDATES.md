@@ -2,149 +2,402 @@
 
 Latest session updates and recent changes to the HR Disciplinary System.
 
-**For detailed session history (Sessions 5-18)**: See `SESSION_HISTORY.md`
+**For detailed session history (Sessions 5-19)**: See `SESSION_HISTORY.md`
 
 ---
 
-## 🎯 LATEST SESSION (2025-10-08 - Session 19)
+## 🎯 LATEST SESSION (2025-10-23 - Session 36)
 
-### **✅ COMPLETED: Documentation Refactoring**
+### **✅ COMPLETED: User Creation & Role Assignment Fix**
 
-**Purpose**: CLAUDE.md was 1030 lines and becoming difficult to maintain. Refactored for better organization.
+**Purpose**: Fix the issue where newly created users had to sign out and back in to get their roles working. Roles are now created gracefully when users are created.
+
+**Problem Identified**:
+- Backend cloud functions created Firebase Auth users and Firestore documents
+- **Missing**: Custom claims were NOT set in Firebase Auth tokens
+- Result: New users appeared "unauthorized" on first login, requiring sign-out/sign-in cycle
+
+**Solution Implemented**:
+- Added `auth.setCustomUserClaims()` to all user creation functions
+- Custom claims now include: `role`, `organizationId`, `lastUpdated`
+- Set immediately after Firestore document creation
+
+**Functions Fixed** (4 backend functions):
+1. ✅ `createOrganizationUser` - HR/Business Owner creating managers (sharded architecture)
+2. ✅ `createOrganizationAdmin` - Super user creating org admins (legacy architecture)
+3. ✅ `createOrganizationUsers` - Bulk user creation
+4. ✅ `createResellerUser` - Reseller user creation
+
+**Files Modified**:
+- `functions/src/createOrganizationUser.ts` (lines 132-142)
+- `functions/src/Auth/userCreationService.ts` (3 functions updated)
+
+**Deployment**:
+- ✅ TypeScript build successful (no errors)
+- ✅ All 28 Firebase Functions deployed successfully
+- ✅ Live in production (us-central1 and us-east1 regions)
+
+**Testing Guide**: See `USER_CREATION_ROLE_FIX.md` for comprehensive testing checklist
+
+**Impact**:
+- ✅ New users can login immediately without sign-out/sign-in cycle
+- ✅ Roles work on first login
+- ✅ Smooth onboarding experience
+- ✅ Reduced support burden
+
+**Documentation Created**:
+- `USER_CREATION_ROLE_FIX.md` - Complete fix documentation with testing guide
+- `AUTHENTICATION_FLOW.md` - Full authentication system documentation
+- `AUTHENTICATION_QUICK_REFERENCE.md` - Quick reference for auth components
+- `AUTHENTICATION_CODE_SNIPPETS.md` - Copy-paste code examples
+
+---
+
+## 🎯 SESSION 35 (2025-10-23) - DOCUMENTATION POLICY
+
+### **✅ COMPLETED: Documentation Policy & Maintenance System**
+
+**Purpose**: Prevent CLAUDE.md from growing uncontrollably again. Established sustainable documentation system with automatic size limits and rotation rules.
+
+**Policy Created**: `DOCUMENTATION_POLICY.md`
+- **Size Limits**: CLAUDE.md max 500 lines (target: 400-470)
+- **Rotation System**: Move sessions to RECENT_UPDATES.md when size > 450 lines
+- **Refactor Triggers**: Automatic checks before adding new sessions
+- **Content Consolidation**: Rules for keeping content concise
+- **File Hierarchy**: 4-tier system (Primary → Specialized → Design → Archives)
+
+**Implementation Complete**:
+- ✅ CLAUDE.md reduced to 270 lines (79% reduction from original 1,299)
+- ✅ Documentation policy references added to CLAUDE.md
+- ✅ Size check command integrated: `wc -l CLAUDE.md`
+- ✅ Session rotation template defined (100 lines max)
+- ✅ Quarterly review process established
+
+**Result**: CLAUDE.md will never exceed 500 lines again. All future sessions automatically follow the rotation system.
+
+---
+
+## 🎯 SESSION 34 (2025-10-23) - DOCUMENTATION REFACTORING
+
+### **✅ COMPLETED: Documentation Refactoring & Optimization**
+
+**Purpose**: CLAUDE.md was 1,299 lines and becoming difficult to maintain. Major refactoring for better organization and navigation.
 
 **Changes Made**:
-- ✅ **CLAUDE.md**: Reduced from 1030 lines → 277 lines (73% reduction)
-  - Kept: Quick Start, Architecture, Critical Guidelines, Current Tasks, Latest Updates Summary
-  - Removed: All detailed session history (Sessions 5-18)
-  - Added: Clear references to SESSION_HISTORY.md for detailed change logs
-- ✅ **SESSION_HISTORY.md**: Created new file with complete session history from Sessions 5-18
-  - Organized by session with clear headers
-  - Detailed technical changes for each session
-  - Easy to reference for specific implementation details
-- ✅ **RECENT_UPDATES.md**: Updated to focus on latest sessions only
-  - Points to SESSION_HISTORY.md for historical details
-  - Keeps only most recent session work
+- ✅ **PDF_SYSTEM_ARCHITECTURE.md**: Created new dedicated file (710 lines) for all 3 PDF systems
+  - PDF Generator Versioning System (legal compliance)
+  - PDF Template Customization System (per-org styling)
+  - PDF Template Version Storage Optimization (1000x database reduction)
+- ✅ **QUICK_REFERENCE.md**: Created comprehensive file locations catalog (400+ lines)
+  - Core Architecture (types, utilities, constants)
+  - Design System & Theming (contexts, components, themes)
+  - Progressive Enhancement System
+  - Services (core, PDF, employee, manager, warning)
+  - Custom Hooks (dashboard, employee, permission, accessibility)
+  - Complete file paths with descriptions and cross-references
+- ✅ **CLAUDE.md**: Reduced from 1,299 lines → 259 lines (80% reduction)
+  - Extracted file catalog to QUICK_REFERENCE.md (68 files documented)
+  - Extracted PDF systems to PDF_SYSTEM_ARCHITECTURE.md (514 lines)
+  - Extracted Sessions 20-33 detailed updates to RECENT_UPDATES.md (512 lines)
+  - Keeps only: Quick Start, Architecture, Critical Guidelines, PDF Overview, Latest Session summary
+- ✅ **RECENT_UPDATES.md**: Updated with Sessions 20-34 for complete change history
+  - Added comprehensive session summaries
+  - Updated System Status section
+  - Updated Documentation section with new files
 
-**Result**: Documentation is now more scannable, maintainable, and easier to navigate.
-
----
-
-## 🎯 SESSION 18 (2025-10-07) - EMPLOYEE RIGHTS PDF & EMAIL DELIVERY
-
-### **Employee Rights and Next Steps Section - LRA Compliant ⚖️**
-- ✅ Added comprehensive employee rights section to all warning PDFs
-- ✅ Appears BEFORE signatures section (employees see rights before signing)
-- ✅ Content: Appeal rights (48h internal, 30 days CCMA), Representation, Confidentiality
-- ✅ Legal compliance: Aligns with LRA Section 188 (Code of Good Practice: Dismissal)
-
-### **Email Delivery Workflow - Complete Enhancement 📧**
-- ✅ Download PDF button with organization branding
-- ✅ Pre-written email template with subject and body
-- ✅ Copy to clipboard button for email message
-- ✅ Mailto link that launches email client with pre-filled message
-- ✅ Clear 6-step instructions (Download → Copy → Email → Attach → Screenshot → Upload)
-
-### **Bug Fixes 🐛**
-- ✅ Fixed employee name display ("Unknown" → actual name)
-- ✅ Enhanced `formatDate()` to handle Firestore timestamps
-- ✅ Fixed `TypeError: date.toLocaleDateString is not a function`
+**Result**: Documentation is now more scannable, maintainable, and easier to navigate. Each document has a clear, focused purpose. Total reduction: 1,040 lines removed from CLAUDE.md, redistributed into specialized files.
 
 ---
 
-## 🎯 SESSION 17 (2025-10-07) - SIGNATURES, DATES & APPEALS
+## 🎯 SESSION 34 (2025-10-16) - CSV IMPORT ENHANCEMENTS
 
-### **Signature Timestamps - SA Timezone 📅**
-- ✅ Timestamp applied when "Save Signature" button clicked
-- ✅ Uses South African timezone (Africa/Johannesburg)
-- ✅ Format: "Oct 7, 2025, 12:04 PM" in SA locale
-- ✅ Coverage: Manager, Employee, Witness signatures
+### **📊 EMPLOYEE CSV IMPORT ENHANCEMENTS**
+Simplified CSV format with automatic phone number formatting for South African phone numbers and dates. See CLAUDE.md Session 34 section for complete details.
 
-### **Sequential Signature Capture - Enforced Workflow 🔒**
-- ✅ Employee/Witness section locked until manager saves signature
-- ✅ Clear visual feedback (dimmed 60% opacity + warning message)
-- ✅ Forces proper workflow: Manager → Employee/Witness
-
-### **Warning Dates - Invalid Date Fix 📆**
-- ✅ Converted strings ("2025-10-07") to Firestore Timestamps
-- ✅ Added automatic expiry date calculation (issueDate + validity period)
-- ✅ Fields fixed: `issueDate`, `expiryDate`, `incidentDate`
-
-### **Standalone Appeal Report PDF Generator 📋**
-- ✅ Generates standalone appeal decision report (separate from warning PDF)
-- ✅ Color-coded outcomes (Green = Approved, Red = Denied, Orange = Partial)
-- ✅ Multi-page support with proper page numbering
-- ✅ Professional layout with HR authorization signature lines
-
-### **Mobile CSS Fix 📱**
-- ✅ Changed `width: 100vw` → `width: 100%` in 3 CSS files
-- ✅ Fixed horizontal scroll issue on mobile devices
-- ✅ Proper modal containment on all screen sizes
+**Key Features**:
+- Simplified CSV format (8 fields vs 12 previously)
+- SA-friendly date format: `dd/mm/yyyy` (accepts all common SA formats)
+- Automatic phone number formatting: `0825254011` → `+27825254011`
+- Clear duplicate detection and error messages
+- Optional email and department fields
 
 ---
 
-## 🎯 SESSION 16 (2025-10-07) - WARNING SCRIPTS & WITNESS SIGNATURES
+## 🎯 SESSION 33 (2025-10-15) - PDF TEXT CONTENT SYSTEM
 
-### **Warning Script Rewrite - All 11 SA Languages 📝**
-- ✅ Changed from "initial notification" to "formal recap" format
-- ✅ Scripts now reflect that Step 1 discussion already happened
-- ✅ Added validity period parameter (3/6/12 months) to all languages
-- ✅ Languages: English, Afrikaans, Zulu, Xhosa, Sotho, Tsonga, Venda, Swati, Tswana, Ndebele, Northern Sotho
+### **🎨 EDITABLE PDF TEXT CONTENT SYSTEM**
+Complete zero-hardcoded text implementation with subsections editor. SuperAdmin can edit ALL PDF text content while maintaining v1.1.0 styling.
 
-### **Witness Signature System - Enhanced Watermarking ✍️**
-- ✅ Radio buttons to select Employee vs Witness signature
-- ✅ Explicit "Save Signature" button (no auto-save)
-- ✅ Prominent diagonal "WITNESS" watermark (48px+ font)
-- ✅ Scalable design - font scales proportionally with canvas size
+**Key Features**:
+- Zero hardcoded text fallbacks - all content in Firestore
+- Subsections editor for structured multi-part sections
+- Placeholder system: `{{validityPeriod}}`, `{{employee.firstName}}`, etc.
+- v1.1.0 baseline with LRA-compliant defaults
+- Complete version tracking and audit trail
+
+**Files Modified**: 5 files (PDFTemplateManager, types/core, PDFTemplateService, PDFGenerationService, SectionEditorModal)
 
 ---
 
-## 🎯 PREVIOUS SESSIONS (5-15)
+## 🎯 SESSION 32 (2025-10-15) - MULTI-MANAGER SYSTEM FIXES
 
-**For complete details on Sessions 5-15**: See `SESSION_HISTORY.md`
+### **🐛 MULTI-MANAGER SYSTEM FIXES & DEBUGGING**
+Fixed employee promotion crashes and added diagnostic logging for multi-manager system.
+
+**Problems Fixed**:
+1. PromoteToManagerModal crashes with missing profile data
+2. Backend "Missing required fields" error during promotion
+3. Employees not showing in manager's dashboard
+
+**Solutions**: Defensive null checks, password field added (`temp123`), comprehensive debug logging
+
+---
+
+## 🎯 SESSION 31 (2025-10-15) - PDF TEMPLATE CUSTOMIZATION
+
+### **🎨 PDF TEMPLATE CUSTOMIZATION SYSTEM**
+Per-organization PDF styling with legal compliance maintained through code versioning.
+
+**Architecture**: Two-layer system
+- PDF Generator Version (global code) → Legal consistency
+- PDF Template Settings (per-org) → Visual customization
+
+**Key Features**:
+- Each organization can have unique PDF branding
+- Warnings store both code version AND template settings snapshot
+- SuperAdmin components for managing templates (Manager, Editor, Preview)
+- Live preview with 500ms debounce
+- 3-parameter system: `generateWarningPDF(data, version, settings)`
+
+**Files Created**: 4 files (PDFTemplateManager, PDFTemplateEditor, PDFTemplatePreview, PDFTemplateService)
+
+---
+
+## 🎯 SESSION 30 (2025-10-15) - PDF TEMPLATE VERSION STORAGE
+
+### **💾 PDF TEMPLATE VERSION STORAGE OPTIMIZATION**
+Database efficiency through centralized template storage - **1000x storage reduction** per warning.
+
+**Before**: Each warning stored complete 5-10KB `pdfSettings` object
+**After**: Warnings store 5-byte version string reference
+
+**Architecture**: Centralized `organizations/{orgId}/pdfTemplateVersions/{version}` collection
+
+**Benefits**:
+- 99.9% reduction in storage and bandwidth costs
+- Centralized management
+- Backward compatible with old warnings
+- Complete audit trail
+
+---
+
+## 🎯 SESSION 29 (2025-10-15) - MULTI-MANAGER EMPLOYEE ASSIGNMENT
+
+### **✨ MULTI-MANAGER EMPLOYEE ASSIGNMENT SYSTEM**
+Complete migration from single-manager to multi-manager architecture for matrix management structures.
+
+**Migration**: `managerId?: string` → `managerIds?: string[]`
+
+**7-Phase Implementation**:
+1. Core Types with `getManagerIds()` helper
+2. Service Layer array-based filtering
+3. Bulk Assignment Modal (ADD/REPLACE modes)
+4. Employee Form checkbox multi-select
+5. Table Display with manager badge chips
+6. Manager Details Modal (add/remove employees)
+7. Migration helpers with backward compatibility
+
+**Files Modified**: 9 files across types, services, and components
+
+---
+
+## 🎯 SESSION 28 (2025-10-14) - WARNING WIZARD DATE FIXES
+
+### **🐛 WARNING WIZARD DATE & AUTO-SAVE FIXES**
+Fixed issue date defaulting to wrong date and removed problematic auto-save feature.
+
+**Problems Fixed**:
+1. Issue Date defaulting to old cached date instead of today
+2. Warnings showing incorrect dates in PDFs
+3. `disciplineRecommendation` field not saving
+
+**Solutions**:
+- Timezone-safe date initialization (local vs UTC)
+- Removed auto-save feature from IncidentDetailsForm
+- Added missing interface fields
+
+---
+
+## 🎯 SESSION 27 (2025-10-14) - MOBILE VIEWPORT OVERFLOW FIX
+
+### **🐛 MOBILE VIEWPORT OVERFLOW FIX**
+Fixed horizontal scrolling issue on all mobile dashboards.
+
+**Problem**: Container elements using `max-w-7xl mx-auto` with padding in same element pushed content beyond viewport.
+
+**Solution**: Separated padding and max-width into nested containers + CSS safeguards (`overflow-x: hidden`).
+
+---
+
+## 🎯 SESSION 26 (2025-10-14) - FORGOT PASSWORD FUNCTIONALITY
+
+### **✨ FORGOT PASSWORD FUNCTIONALITY**
+Complete password reset system with WCAG 2.1 AA accessibility.
+
+**Features**:
+- Email enumeration attack prevention
+- Firebase `sendPasswordResetEmail` integration
+- Auto-focus, focus trap, keyboard navigation
+- Body scroll prevention
+- Two-state UI (form → success with checkmark)
+
+**Files Created**: `ForgotPasswordModal.tsx` (204 lines)
+
+---
+
+## 🎯 SESSION 25 (2025-10-14) - EMPLOYEE FILTERING & UI FIXES
+
+### **✅ CRITICAL: Employee Filtering for HR/Business Owners**
+Fixed employee visibility when using HOD Dashboard tools.
+
+**Problems Fixed**:
+1. HR/Business Owners only saw 1 employee instead of all employees
+2. Team Members modal couldn't scroll
+3. Add Employee modal crashed with undefined profile data
+
+**Impact**: HR and Business Owners can now use HOD tools with full employee access.
+
+---
+
+## 🎯 SESSION 24 (2025-10-14) - PAGINATION & MODAL FIXES
+
+### **📚 Pagination Best Practices Verification**
+Confirmed current pagination implementation follows best practices for HR systems with 5-500 employee datasets.
+
+**Recommendation**: Keep current implementation (Previous/Next for legacy devices, Load More for modern devices).
+
+---
+
+## 🎯 SESSION 23 (2025-10-14) - PDF GENERATOR VERSIONING
+
+### **🔒 PDF GENERATOR VERSIONING SYSTEM**
+Implemented comprehensive versioning for legal compliance.
+
+**Features**:
+- Semantic versioning (v1.0.0 [FROZEN], v1.1.0 [CURRENT])
+- Historical warnings regenerate identically years later
+- Version routing switch with frozen methods
+- 100+ lines of protective comments
+
+**Legal Impact**: Prevents document tampering, ensures court admissibility, maintains audit compliance.
+
+---
+
+## 🎯 SESSION 22 (2025-10-13) - MANAGER NAME IN PDF SIGNATURES
+
+### **CRITICAL: Manager Name in PDF Signatures**
+Fixed missing manager name in PDF signature section.
+
+**Problem**: Manager signature section showed blank line instead of actual manager name.
+
+**Solution**: Enhanced Warning Wizard now saves `issuedBy` and `issuedByName` fields to Firestore.
+
+**Impact**: NEW warnings display manager name correctly (EXISTING warnings remain blank).
+
+---
+
+## 🎯 SESSION 21 (2025-10-10) - PDF A4 FORMATTING FIXES
+
+### **PDF A4 Formatting Fixes**
+Comprehensive formatting improvements for professional A4 warning documents.
+
+**Key Changes**:
+- Reduced heading fonts from 14pt to 12pt
+- Removed emoji (⚠️, ⚖️) rendering issues
+- Increased Employee Rights box height (85mm → 102mm)
+- Fixed signature aspect ratio preservation
+- Added Firestore Timestamp date conversion
+
+**Result**: Clean, professional PDFs with no text cut-off, proper spacing throughout.
+
+---
+
+## 🎯 SESSION 20 (2025-10-08) - MODAL ACCESSIBILITY COMPLETION
+
+### **Modal Accessibility Completion (WCAG 2.1 AA)**
+Full audit and fixes for all 21+ modals in the system.
+
+**Key Features**:
+- Focus trap and keyboard navigation
+- ARIA labels and roles
+- Body scroll prevention hook
+- Standardized z-index (9000-9999)
+
+---
+
+## 🎯 SESSIONS 17-19 (2025-10-07 to 2025-10-08)
+
+**For complete details**: See `SESSION_HISTORY.md`
 
 ### Quick Summary:
-- **Session 15**: Simplified loading experience with progressive status bar
-- **Session 14**: Warning wizard UX improvements + level override fixes
-- **Session 13**: Multi-language warning script + logging consistency
-- **Session 12**: Wizard finalization + employee data structure fixes
-- **Session 11**: Mobile scrolling fix + audio recording optimization + UX improvements
-- **Session 10**: Accessibility improvements (WCAG AA) + mobile optimization
-- **Session 9**: Bulk employee-manager assignment feature
-- **Session 8**: Console security cleanup + timestamp security (20 fixes)
-- **Session 7**: Multi-role dashboard selector with localStorage persistence
-- **Session 6**: SuperAdmin dashboard redesign + organization wizard logo upload
-- **Session 5**: HR dashboard rewrite + data integrity fixes
+- **Session 19**: Print & hand delivery workflow fixes, on-demand PDF generation, dashboard counter refresh
+- **Session 18**: LRA-compliant employee rights PDF section, email delivery enhancements, timestamp handling
+- **Session 17**: Appeal report system, signature timestamps, sequential signature capture, mobile CSS fixes
 
 ---
 
-## 📋 SYSTEM STATUS (2025-10-08)
+## 🎯 SESSIONS 5-16 (Historical)
+
+**For complete details**: See `SESSION_HISTORY.md`
+
+### Quick Summary:
+- **Session 16**: Warning scripts rewritten (11 SA languages), witness signature system
+- **Session 15**: Simplified loading experience with progressive status bar
+- **Session 14**: Warning wizard UX improvements, level override fixes
+- **Session 13**: Multi-language warning script, logging consistency
+- **Session 12**: Wizard finalization, employee data structure fixes
+- **Session 11**: Mobile scrolling fix, audio recording optimization
+- **Session 10**: Accessibility improvements (WCAG AA), mobile optimization
+- **Session 9**: Bulk employee-manager assignment feature
+- **Session 8**: Console security cleanup, timestamp security (20 fixes)
+- **Session 7**: Multi-role dashboard selector with localStorage persistence
+- **Session 6**: SuperAdmin dashboard redesign, organization wizard logo upload
+- **Session 5**: HR dashboard rewrite, data integrity fixes
+
+---
+
+## 📋 SYSTEM STATUS (2025-10-23)
 
 ### **✅ Production Readiness**
-- ✅ All code changes committed (commit `b095e135`)
+- ✅ All code changes committed
 - ✅ Frontend deployed and live at https://hr-disciplinary-system.web.app
 - ✅ Development server running at http://localhost:3003/
-- ✅ All new features ready for production testing
 - ✅ Enterprise-ready: A-grade security, 2,700+ org scalability
 - ✅ WCAG AA accessibility compliance
+- ✅ Complete progressive enhancement (2012-2025 device compatibility)
 
-### **✅ Recent Feature Completions**
+### **✅ Major Feature Completions**
+- ✅ CSV Import with SA phone/date formatting (Session 34)
+- ✅ Editable PDF text content system (Session 33)
+- ✅ Multi-manager employee assignment (Session 29)
+- ✅ PDF template customization per-org (Session 31)
+- ✅ PDF template version storage optimization (Session 30)
+- ✅ PDF generator versioning for legal compliance (Session 23)
 - ✅ Warning scripts rewritten (11 SA languages)
 - ✅ Witness signature system with watermarking
-- ✅ Signature timestamps (SA timezone)
-- ✅ Appeal report system
-- ✅ Employee rights PDF section
-- ✅ Enhanced email delivery workflow
-- ✅ Bulk employee-manager assignment
-- ✅ Multi-role dashboard selector
-- ✅ Mobile scrolling fixes
-- ✅ Audio recording optimization
-- ✅ Console security cleanup
+- ✅ Modal accessibility (WCAG 2.1 AA)
+- ✅ Forgot password functionality
+- ✅ Mobile viewport optimizations
+- ✅ Progressive enhancement (2012-2025 devices)
 
-### **🔜 Pending Testing Tasks**
-- Priority 3: Test Historical Warning Entry (60-day countdown, urgency indicators)
-- Priority 4: Test Employee Management Fixes (HOD view, optional chaining)
-- Priority 5: Test Department System (real-time employee counts, default departments)
+### **📚 Documentation**
+- **`DOCUMENTATION_POLICY.md`** - Size limits & rotation rules (prevents CLAUDE.md bloat, 500-line max)
+- **`CLAUDE.md`** - Essential guidance (streamlined from 1,299 → 270 lines, 79% reduction)
+- **`QUICK_REFERENCE.md`** - File locations catalog (comprehensive file paths and descriptions)
+- **`PDF_SYSTEM_ARCHITECTURE.md`** - Complete PDF systems reference (all 3 layers: versioning, customization, storage)
+- **`RECENT_UPDATES.md`** - Latest session updates (Sessions 20-35, this file)
+- **`SESSION_HISTORY.md`** - Archived session history (Sessions 5-19)
 
 ---
 
-*Last Updated: 2025-10-08 - Documentation refactored for better maintainability*
+*Last Updated: 2025-10-23 - Session 35: Documentation Policy & Maintenance System established*

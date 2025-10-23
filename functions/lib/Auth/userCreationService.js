@@ -83,10 +83,11 @@ exports.createOrganizationAdmin = (0, https_2.onCall)({
         const userData = callerDoc.data();
         const userRole = extractUserRole(userData);
         console.log(`🔍 User role detected: "${userRole}" (type: ${typeof (userData === null || userData === void 0 ? void 0 : userData.role)})`);
-        // ENHANCED: Allow both super-users AND business owners
-        if (userRole !== 'super-user' && userRole !== 'business-owner') {
-            console.error(`❌ Permission denied. Required: super-user or business-owner, Found: ${userRole}`);
-            throw new https_1.HttpsError('permission-denied', 'Only super-users and business owners can create organization users');
+        // ENHANCED: Allow super-users, business owners, AND resellers
+        const isReseller = userRole === 'reseller';
+        if (userRole !== 'super-user' && userRole !== 'business-owner' && !isReseller) {
+            console.error(`❌ Permission denied. Required: super-user, business-owner, or reseller, Found: ${userRole}`);
+            throw new https_1.HttpsError('permission-denied', 'Only super-users, business owners, and resellers can create organization users');
         }
         // Additional security: Business owners can only create users in their own organization
         if (userRole === 'business-owner') {
@@ -96,6 +97,25 @@ exports.createOrganizationAdmin = (0, https_2.onCall)({
                 throw new https_1.HttpsError('permission-denied', 'Business owners can only create users in their own organization');
             }
             console.log(`✅ Business owner permission check passed for organization: ${request.data.organizationId}`);
+        }
+        // Additional security: Resellers can only create users in organizations they manage
+        if (isReseller) {
+            const resellerId = userData === null || userData === void 0 ? void 0 : userData.resellerId;
+            // Check if the target organization belongs to this reseller
+            const orgDoc = await admin.firestore()
+                .collection('organizations')
+                .doc(request.data.organizationId)
+                .get();
+            if (!orgDoc.exists) {
+                console.error(`❌ Organization not found: ${request.data.organizationId}`);
+                throw new https_1.HttpsError('not-found', 'Organization not found');
+            }
+            const orgData = orgDoc.data();
+            if ((orgData === null || orgData === void 0 ? void 0 : orgData.resellerId) !== resellerId) {
+                console.error(`❌ Reseller can only create users in organizations they manage. Reseller: ${resellerId}, Org reseller: ${orgData === null || orgData === void 0 ? void 0 : orgData.resellerId}`);
+                throw new https_1.HttpsError('permission-denied', 'Resellers can only create users in organizations they manage');
+            }
+            console.log(`✅ Reseller permission check passed for organization: ${request.data.organizationId}`);
         }
         console.log(`✅ Permission check passed for super-user: ${request.auth.uid}`);
         const { email, password, firstName, lastName, role, organizationId, sendWelcomeEmail = true, requirePasswordChange = false } = request.data;
@@ -114,6 +134,7 @@ exports.createOrganizationAdmin = (0, https_2.onCall)({
         });
         console.log(`✅ Firebase Auth user created: ${userRecord.uid} (${email})`);
         // 🗃️ Create Firestore user profile with simple role format
+        const initialClaimsVersion = 1;
         const userProfile = {
             email: email,
             firstName: firstName,
@@ -125,13 +146,37 @@ exports.createOrganizationAdmin = (0, https_2.onCall)({
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             createdBy: request.auth.uid,
             lastLogin: null,
-            emailVerified: false
+            emailVerified: false,
+            claimsVersion: initialClaimsVersion,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
         };
-        await admin.firestore()
-            .collection('users')
-            .doc(userRecord.uid)
-            .set(userProfile);
-        console.log(`✅ Firestore user profile created for ${email}`);
+        try {
+            await admin.firestore()
+                .collection('users')
+                .doc(userRecord.uid)
+                .set(userProfile);
+            console.log(`✅ Firestore user profile created for ${email}`);
+        }
+        catch (firestoreError) {
+            // Rollback: Delete Firebase Auth user if Firestore fails
+            console.error(`❌ Failed to create Firestore document, rolling back Auth user:`, firestoreError);
+            await admin.auth().deleteUser(userRecord.uid);
+            throw new Error('Failed to create user profile. Auth user rolled back.');
+        }
+        // Set MINIMAL custom claims in Firebase Auth token
+        const customClaims = {
+            org: organizationId,
+            r: role,
+            v: initialClaimsVersion
+        };
+        try {
+            await admin.auth().setCustomUserClaims(userRecord.uid, customClaims);
+            console.log(`✅ Set minimal custom claims for ${userRecord.uid}:`, customClaims);
+        }
+        catch (claimsError) {
+            console.error(`⚠️ Failed to set custom claims for ${userRecord.uid}:`, claimsError);
+            console.log(`User ${userRecord.uid} created but requires manual claims refresh`);
+        }
         // Development mode - log credentials for testing
         if (sendWelcomeEmail) {
             console.log(`📧 [DEVELOPMENT] Welcome email would be sent to: ${email}`);
@@ -224,7 +269,8 @@ exports.createOrganizationUsers = (0, https_2.onCall)({
                     emailVerified: false,
                     disabled: false
                 });
-                // Create Firestore user profile
+                // Create Firestore user profile with claims version
+                const initialClaimsVersion = 1;
                 const userProfile = {
                     email: userToCreate.email,
                     firstName: userToCreate.firstName,
@@ -237,12 +283,35 @@ exports.createOrganizationUsers = (0, https_2.onCall)({
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
                     createdBy: request.auth.uid,
                     lastLogin: null,
-                    emailVerified: false
+                    emailVerified: false,
+                    claimsVersion: initialClaimsVersion,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
                 };
-                await admin.firestore()
-                    .collection('users')
-                    .doc(userRecord.uid)
-                    .set(userProfile);
+                try {
+                    await admin.firestore()
+                        .collection('users')
+                        .doc(userRecord.uid)
+                        .set(userProfile);
+                }
+                catch (firestoreError) {
+                    // Rollback: Delete Auth user if Firestore fails
+                    await admin.auth().deleteUser(userRecord.uid);
+                    throw new Error(`Failed to create Firestore profile: ${firestoreError.message}`);
+                }
+                // Set MINIMAL custom claims
+                const customClaims = {
+                    org: organizationId,
+                    r: userToCreate.role,
+                    v: initialClaimsVersion
+                    // iat removed - Firebase sets this automatically
+                };
+                try {
+                    await admin.auth().setCustomUserClaims(userRecord.uid, customClaims);
+                }
+                catch (claimsError) {
+                    console.error(`⚠️ Failed to set claims for ${userRecord.uid}:`, claimsError);
+                    // Don't fail entire operation - can be fixed with refreshUserClaims
+                }
                 // Log audit event
                 await admin.firestore().collection('auditLogs').add({
                     action: 'USER_CREATED',
@@ -365,6 +434,7 @@ exports.createResellerUser = (0, https_2.onCall)({
         });
         console.log(`✅ Firebase Auth user created: ${userRecord.uid}`);
         // Create user document in Firestore
+        const initialClaimsVersion = 1;
         const userDocument = {
             id: userRecord.uid,
             email: email,
@@ -375,6 +445,7 @@ exports.createResellerUser = (0, https_2.onCall)({
             isActive: true,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            claimsVersion: initialClaimsVersion,
             permissions: {
                 canManageEmployees: false,
                 canCreateWarnings: false,
@@ -383,11 +454,34 @@ exports.createResellerUser = (0, https_2.onCall)({
                 canManageSettings: false
             }
         };
-        await admin.firestore()
-            .collection('users')
-            .doc(userRecord.uid)
-            .set(userDocument);
-        console.log(`✅ Firestore user document created for: ${email}`);
+        try {
+            await admin.firestore()
+                .collection('users')
+                .doc(userRecord.uid)
+                .set(userDocument);
+            console.log(`✅ Firestore user document created for: ${email}`);
+        }
+        catch (firestoreError) {
+            // Rollback: Delete Firebase Auth user if Firestore fails
+            console.error(`❌ Failed to create Firestore document, rolling back Auth user:`, firestoreError);
+            await admin.auth().deleteUser(userRecord.uid);
+            throw new Error('Failed to create reseller profile. Auth user rolled back.');
+        }
+        // Set MINIMAL custom claims for reseller (no org field, has res field)
+        const customClaims = {
+            r: 'reseller',
+            res: resellerId,
+            v: initialClaimsVersion
+            // iat removed - Firebase sets this automatically
+        };
+        try {
+            await admin.auth().setCustomUserClaims(userRecord.uid, customClaims);
+            console.log(`✅ Set minimal custom claims for ${userRecord.uid}:`, customClaims);
+        }
+        catch (claimsError) {
+            console.error(`⚠️ Failed to set custom claims for ${userRecord.uid}:`, claimsError);
+            console.log(`Reseller ${userRecord.uid} created but requires manual claims refresh`);
+        }
         // Log audit event
         await admin.firestore().collection('auditLog').add({
             action: 'RESELLER_USER_CREATED',

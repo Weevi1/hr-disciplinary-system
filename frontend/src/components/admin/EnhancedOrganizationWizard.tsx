@@ -594,10 +594,10 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
 
   useEffect(() => {
     if (isOpen) {
-      if (isSuperUser) {
-        // Load resellers for SuperUsers only (resellers don't have permission to list all resellers)
-        loadAvailableResellers();
+      // Load resellers for both SuperUsers and Resellers
+      loadAvailableResellers();
 
+      if (isSuperUser) {
         // Auto-select plan based on employee count
         const recommendedPlan = StripeService.getRecommendedTier(formData.employeeCount);
         setFormData(prev => ({ ...prev, selectedPlan: recommendedPlan }));
@@ -862,12 +862,11 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
       // Show success message
       alert(`🎉 Organization '${formData.companyName}' created successfully!\n\n` +
             `📧 Admin Login: ${formData.adminEmail}\n` +
-            `🔑 Password: ${devPassword}\n\n` +
-            `⚠️ NOTE: You have been automatically signed in as the new admin.\n` +
-            `Please sign out and sign back in as super-user to continue managing organizations.`);
+            `🔑 Password: ${devPassword}`);
 
-      // Close wizard (user is now signed in as the new admin)
+      // Close wizard and refresh (reseller/super-user stays signed in)
       onClose();
+      onComplete();
 
     } catch (error) {
       Logger.error('❌ Deployment failed:', error);

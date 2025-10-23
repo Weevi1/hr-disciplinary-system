@@ -44,6 +44,9 @@ import {
 // 👥 ADD ORGANIZATION USER CREATION
 import { createOrganizationUser } from './createOrganizationUser';
 
+// 🔐 ADD PERMISSION MANAGEMENT
+import { updateUserPermissions } from './updateUserPermissions';
+
 // 📡 ADD API VERSIONING
 import { getApiVersionInfo } from './api/versionInfo';
 
@@ -76,6 +79,9 @@ export {
   refreshUserClaims,
   getUserClaims,
   refreshOrganizationUserClaims,
+
+  // Permission management functions
+  updateUserPermissions,
 
   // Super-user management functions
   manageSuperUser,

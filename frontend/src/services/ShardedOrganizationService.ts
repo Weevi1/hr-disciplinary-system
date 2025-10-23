@@ -2,8 +2,8 @@
 // Organization creation service compatible with sharded database architecture
 
 import { doc, setDoc, collection, writeBatch, serverTimestamp } from 'firebase/firestore'
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
-import { db, auth } from '../config/firebase'
+import { httpsCallable } from 'firebase/functions'
+import { db, auth, functions } from '../config/firebase'
 import { DatabaseShardingService } from './DatabaseShardingService'
 import { ShardedDataService } from './ShardedDataService'
 import { UserOrgIndexService } from './UserOrgIndexService'
@@ -11,7 +11,6 @@ import { TimeService } from './TimeService'
 import { UNIVERSAL_SA_CATEGORIES } from './UniversalCategories'
 import { PDFTemplateService } from './PDFTemplateService'
 import Logger from '../utils/logger'
-import { userCreationManager } from '../utils/userCreationContext'
 import type { Organization, User } from '../types'
 
 interface ShardedOrganizationData extends Partial<Organization> {
@@ -266,30 +265,36 @@ export class ShardedOrganizationService {
   }
 
   /**
-   * Create admin user account
+   * Create admin user account using Cloud Function (preserves current session)
    */
   private static async createAdminUser(organizationId: string, adminData: ShardedOrganizationData['adminUser']): Promise<string> {
-    let userId: string | undefined
-
     try {
-      Logger.debug(`👤 [SHARDED ORG] Creating admin user for ${organizationId}`)
+      Logger.debug(`👤 [SHARDED ORG] Creating admin user for ${organizationId} via Cloud Function`)
 
-      // Create Firebase Auth account
-      const userCredential = await createUserWithEmailAndPassword(auth, adminData.email, adminData.password)
-      const firebaseUser = userCredential.user
-      userId = firebaseUser.uid
+      // Call Cloud Function to create user via Admin SDK (won't sign out current user)
+      const createOrganizationAdmin = httpsCallable(functions, 'createOrganizationAdmin')
 
-      // Mark this user as being created to prevent AuthContext errors
-      userCreationManager.startUserCreation(userId)
-
-      // Update Firebase Auth profile
-      await updateProfile(firebaseUser, {
-        displayName: `${adminData.firstName} ${adminData.lastName}`
+      const result = await createOrganizationAdmin({
+        email: adminData.email,
+        password: adminData.password,
+        firstName: adminData.firstName,
+        lastName: adminData.lastName,
+        role: adminData.role,
+        organizationId: organizationId,
+        sendWelcomeEmail: false,
+        requirePasswordChange: false
       })
 
+      const response = result.data as { uid: string; email: string; success: boolean; message: string }
+
+      if (!response.success) {
+        throw new Error(`Failed to create admin user: ${response.message}`)
+      }
+
+      const userId = response.uid
+      Logger.debug(`📝 [SHARDED ORG] Admin user created via Cloud Function: ${userId}`)
+
       // Create user document in sharded structure
-      Logger.debug(`📝 [SHARDED ORG] Creating user document with ID: ${userId}`)
-      
       const userData = {
         id: userId,
         email: adminData.email,
@@ -299,7 +304,7 @@ export class ShardedOrganizationService {
         organizationId,
         isActive: true,
         createdAt: TimeService.getServerTimestamp(),
-        lastLogin: TimeService.getServerTimestamp(),
+        lastLogin: null, // Haven't logged in yet
         permissions: {
           canManageEmployees: true,
           canCreateWarnings: true,
@@ -326,20 +331,12 @@ export class ShardedOrganizationService {
         // Don't fail the entire organization creation for index issues
       }
 
-      // Mark user creation as complete
-      userCreationManager.finishUserCreation(userId)
-
       Logger.success(`✅ [SHARDED ORG] Admin user created: ${userId}`)
       return userId
 
     } catch (error: any) {
-      // Clean up user creation state if we have a userId
-      if (userId) {
-        userCreationManager.finishUserCreation(userId)
-      }
-
-      // Handle specific Firebase Auth errors
-      if (error?.code === 'auth/email-already-in-use') {
+      // Handle specific Firebase errors
+      if (error?.message?.includes('email-already-exists') || error?.message?.includes('already in use')) {
         const errorMsg = `Email ${adminData.email} is already in use. Please use a different email address or contact support if this is your email.`
         Logger.error(`❌ [SHARDED ORG] ${errorMsg}`)
         throw new Error(errorMsg)
