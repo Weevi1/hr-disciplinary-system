@@ -123,11 +123,45 @@ export const createOrganizationUser = onCall<CreateUserRequest>(
         createdByEmail: callerRecord.email
       };
 
-      // Save to sharded collection
-      const userDocRef = db.doc(`organizations/${organizationId}/users/${userRecord.uid}`);
-      await userDocRef.set(userData);
+      // Initialize claims version (starts at 1)
+      const initialClaimsVersion = 1;
+      const extendedUserData = {
+        ...userData,
+        claimsVersion: initialClaimsVersion,
+        updatedAt: new Date().toISOString()
+      };
 
-      logger.info(`Created Firestore user document: ${userRecord.uid}`);
+      // Save to sharded collection with claims version
+      const userDocRef = db.doc(`organizations/${organizationId}/users/${userRecord.uid}`);
+
+      try {
+        await userDocRef.set(extendedUserData);
+        logger.info(`Created Firestore user document: ${userRecord.uid}`);
+      } catch (firestoreError) {
+        // Rollback: Delete the Firebase Auth user if Firestore fails
+        logger.error(`Failed to create Firestore document, rolling back Auth user:`, firestoreError);
+        await auth.deleteUser(userRecord.uid);
+        throw new HttpsError('internal', 'Failed to create user profile. Auth user rolled back.');
+      }
+
+      // Set MINIMAL custom claims in Firebase Auth token (defense against 1000 byte limit)
+      // Full permissions are in Firestore - backend MUST validate there
+      const customClaims = {
+        org: organizationId,        // Shortened key to save bytes
+        r: role,                    // Role: 'hr-manager' or 'hod-manager'
+        v: initialClaimsVersion     // Version for staleness detection
+      };
+
+      try {
+        await auth.setCustomUserClaims(userRecord.uid, customClaims);
+        logger.info(`✅ Set minimal custom claims for ${userRecord.uid}:`, customClaims);
+      } catch (claimsError) {
+        // Claims failed - user exists but has no claims
+        // Log error but don't rollback (can be fixed with refreshUserClaims)
+        logger.error(`⚠️ Failed to set custom claims for ${userRecord.uid}:`, claimsError);
+        logger.warn(`User ${userRecord.uid} created but requires manual claims refresh`);
+        // Don't throw - user can still login and AuthContext will handle it
+      }
 
       // Handle employee creation/linking
       if (createEmployee) {

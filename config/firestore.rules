@@ -12,17 +12,19 @@ service cloud.firestore {
 
    function getUserRole() {
   // Get user role from Firebase Auth custom claims
-  // Custom claims are set by Cloud Functions during login from sharded user data
-  return request.auth != null && request.auth.token.role != null
-    ? request.auth.token.role
+  // Supports both minimal format (r) and legacy format (role) for backward compatibility
+  return request.auth != null
+    ? (request.auth.token.r != null ? request.auth.token.r :
+       (request.auth.token.role != null ? request.auth.token.role : 'guest'))
     : 'guest';
 }
 
     function getUserOrgId() {
       // Get user organization ID from Firebase Auth custom claims
-      // Custom claims are set by Cloud Functions during login from sharded user data
-      return request.auth != null && request.auth.token.organizationId != null
-        ? request.auth.token.organizationId
+      // Supports both minimal format (org) and legacy format (organizationId) for backward compatibility
+      return request.auth != null
+        ? (request.auth.token.org != null ? request.auth.token.org :
+           (request.auth.token.organizationId != null ? request.auth.token.organizationId : null))
         : null;
     }
 
@@ -106,7 +108,8 @@ service cloud.firestore {
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (isBusinessOwner() && belongsToOrganization(organizationId))
+        (isBusinessOwner() && belongsToOrganization(organizationId)) ||
+        isReseller()  // Resellers can create and manage organizations
       );
     }
 
@@ -529,13 +532,15 @@ service cloud.firestore {
       // Allow list/query for managers to see user listings in their org
       allow list: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager())
+        (belongsToOrganization(organizationId) && isManager()) ||
+        resellerManagesOrganization(organizationId)
       );
 
       allow read: if isAuthenticated() && (
         isSuperUser() ||
         request.auth.uid == userId ||
-        (belongsToOrganization(organizationId) && isManager())
+        (belongsToOrganization(organizationId) && isManager()) ||
+        resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
@@ -543,7 +548,9 @@ service cloud.firestore {
         request.auth.uid == userId ||
         (belongsToOrganization(organizationId) && isBusinessOwner()) ||
         // Allow HR managers to update user department assignments and manager-related fields
-        (belongsToOrganization(organizationId) && isHRManager())
+        (belongsToOrganization(organizationId) && isHRManager()) ||
+        resellerManagesOrganization(organizationId) ||
+        (isReseller() && resource == null)  // Allow resellers to create during deployment
       );
     }
 
@@ -565,12 +572,15 @@ service cloud.firestore {
     match /organizations/{organizationId}/categories/{categoryId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId)
+        belongsToOrganization(organizationId) ||
+        resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isHRManager())
+        (belongsToOrganization(organizationId) && isHRManager()) ||
+        resellerManagesOrganization(organizationId) ||
+        (isReseller() && resource == null)  // Allow resellers to create during deployment
       );
     }
 
@@ -578,12 +588,15 @@ service cloud.firestore {
     match /organizations/{organizationId}/sectors/{sectorId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId)
+        belongsToOrganization(organizationId) ||
+        resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isHRManager())
+        (belongsToOrganization(organizationId) && isHRManager()) ||
+        resellerManagesOrganization(organizationId) ||
+        (isReseller() && resource == null)  // Allow resellers to create during deployment
       );
     }
 
@@ -630,12 +643,15 @@ service cloud.firestore {
     match /organizations/{organizationId}/escalationRules/{ruleId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId)
+        belongsToOrganization(organizationId) ||
+        resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isHRManager())
+        (belongsToOrganization(organizationId) && isHRManager()) ||
+        resellerManagesOrganization(organizationId) ||
+        (isReseller() && resource == null)  // Allow resellers to create during deployment
       );
     }
 
@@ -643,12 +659,15 @@ service cloud.firestore {
     match /organizations/{organizationId}/settings/{settingId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId)
+        belongsToOrganization(organizationId) ||
+        resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isBusinessOwner())
+        (belongsToOrganization(organizationId) && isBusinessOwner()) ||
+        resellerManagesOrganization(organizationId) ||
+        (isReseller() && resource == null)  // Allow resellers to create during deployment
       );
     }
 
@@ -669,12 +688,15 @@ service cloud.firestore {
     match /organizations/{organizationId}/departments/{departmentId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId)
+        belongsToOrganization(organizationId) ||
+        resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isHRManager())
+        (belongsToOrganization(organizationId) && isHRManager()) ||
+        resellerManagesOrganization(organizationId) ||
+        (isReseller() && resource == null)  // Allow resellers to create during deployment
       );
     }
 
@@ -695,12 +717,15 @@ service cloud.firestore {
     match /organizations/{organizationId}/{collection}/_metadata {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId)
+        belongsToOrganization(organizationId) ||
+        resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isBusinessOwner())
+        (belongsToOrganization(organizationId) && isBusinessOwner()) ||
+        resellerManagesOrganization(organizationId) ||
+        (isReseller() && resource == null)  // Allow resellers to create during deployment
       );
     }
 
@@ -708,14 +733,15 @@ service cloud.firestore {
     // BILLING AND COMMISSION SYSTEM
     // ===================================
 
-    // Resellers collection - super user and reseller self-access
+    // Resellers collection - allow reading/listing for super users and resellers
+    match /resellers {
+      allow read: if isAuthenticated() && (isSuperUser() || isReseller());
+    }
+
+    // Resellers collection - super user and reseller read access
     match /resellers/{resellerId} {
-      allow read: if isAuthenticated() && (
-        isSuperUser() ||
-        // Resellers can read their own profile based on user document mapping
-        (isReseller() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.resellerId == resellerId)
-      );
+      // Resellers can read all reseller profiles (needed for client deployment wizard)
+      allow read: if isAuthenticated() && (isSuperUser() || isReseller());
       allow write: if isAuthenticated() && isSuperUser();
     }
 
@@ -973,17 +999,6 @@ service cloud.firestore {
     // System configuration (only super-users can modify)
     match /systemConfig/{configId} {
       allow read: if isAuthenticated() && isSuperUser();
-      allow write: if isAuthenticated() && isSuperUser();
-    }
-
-    // Reseller management (super-user and reseller self-access) - DUPLICATE RULE, see line 676
-    match /resellers/{resellerId} {
-      allow read: if isAuthenticated() && (
-        isSuperUser() ||
-        // Resellers can read their own profile based on user document mapping
-        (isReseller() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.resellerId == resellerId)
-      );
       allow write: if isAuthenticated() && isSuperUser();
     }
 

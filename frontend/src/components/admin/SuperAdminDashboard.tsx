@@ -29,7 +29,6 @@ import { OrganizationCategoriesViewer } from '../organization/OrganizationCatego
 import { EnhancedOrganizationWizard } from './EnhancedOrganizationWizard';
 import { PDFTemplateManager } from './PDFTemplateManager';
 import Logger from '../../utils/logger';
-import { auth } from '../../config/firebase';
 import type { Organization } from '../../types/core';
 import { ThemeSelector } from '../common/ThemeSelector';
 import { QuotesSection } from '../dashboard/QuotesSection';
@@ -138,38 +137,18 @@ export const SuperAdminDashboard = () => {
       setLoading(true);
       Logger.debug('Loading SuperAdmin dashboard data...');
 
-      // 🔍 DEBUG: Check user's auth token claims
-      const user = auth.currentUser;
-      if (user) {
-        const idTokenResult = await user.getIdTokenResult();
-        Logger.debug('🔍 [DEBUG] User custom claims:', idTokenResult.claims);
-        Logger.debug('🔍 [DEBUG] User role:', idTokenResult.claims.role);
-        Logger.debug('🔍 [DEBUG] Is super-user?', idTokenResult.claims.role === 'super-user');
+      // Claims refresh is handled automatically by AuthContext
+      // No need for duplicate checks here
 
-        // Auto-refresh claims if role is missing or incorrectly formatted (object instead of string)
-        const roleIsInvalid = !idTokenResult.claims.role || typeof idTokenResult.claims.role === 'object';
-        if (roleIsInvalid) {
-          Logger.warn('⚠️ Role missing or incorrectly formatted! Calling refreshUserClaims...');
-          try {
-            const { getFunctions, httpsCallable } = await import('firebase/functions');
-            const functions = getFunctions(undefined, 'us-central1');
-            const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
-            const result = await refreshClaims({});
-            Logger.debug('✅ Claims refreshed! Please sign out and back in:', result.data);
-            alert('Your user role has been refreshed! Please SIGN OUT and SIGN BACK IN for changes to take effect.');
-            return; // Stop loading dashboard until user refreshes
-          } catch (err) {
-            Logger.error('❌ Failed to refresh claims:', err);
-          }
-        }
-      }
-
-      // Load organizations
-      const orgs = await DataService.loadOrganizations();
+      // Load organizations and resellers in parallel
+      const [orgs, allResellers] = await Promise.all([
+        DataService.loadOrganizations(),
+        DataService.getAllResellers()
+      ]);
 
       // Calculate stats
       let totalEmployees = 0;
-      let totalResellers = 0;
+      const totalResellers = allResellers.length; // Count actual resellers in collection
 
       // Get real warning counts and storage usage for each org
       const orgsWithRealCounts = await Promise.all(
@@ -202,10 +181,9 @@ export const SuperAdminDashboard = () => {
 
       setOrganizations(orgsWithRealCounts);
 
-      // Calculate totals
+      // Calculate total employees across all organizations
       orgsWithRealCounts.forEach(org => {
         totalEmployees += org.employeeCount || 0;
-        if (org.resellerId) totalResellers++;
       });
 
       // Calculate monthly growth
@@ -251,7 +229,7 @@ export const SuperAdminDashboard = () => {
       setStats({
         totalOrganizations: orgsWithRealCounts.length,
         totalEmployees,
-        totalResellers: Math.max(totalResellers, 1), // At least 1 (you)
+        totalResellers, // Count from resellers collection
         monthlyGrowth
       });
 

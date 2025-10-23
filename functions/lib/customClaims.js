@@ -61,16 +61,39 @@ exports.refreshUserClaims = (0, https_1.onCall)(async (request) => {
             userData = userDoc.userData;
             organizationId = userDoc.organizationId;
         }
-        // Prepare custom claims
-        const customClaims = {
-            role: ((_a = userData.role) === null || _a === void 0 ? void 0 : _a.id) || userData.role, // Extract ID if role is an object
-            organizationId: organizationId,
-            permissions: userData.permissions ? Object.keys(userData.permissions) : [],
-            lastUpdated: Date.now()
-        };
+        // Prepare MINIMAL custom claims (defense against 1000 byte limit)
+        // Full permissions are in Firestore - backend functions MUST check there
+        const roleId = ((_a = userData.role) === null || _a === void 0 ? void 0 : _a.id) || userData.role;
+        const claimsVersion = userData.claimsVersion || 1;
+        // Build minimal claims based on user type
+        let customClaims;
+        if (roleId === 'reseller') {
+            // Resellers don't have organizationId, they have resellerId
+            customClaims = {
+                r: roleId,
+                res: userData.resellerId || organizationId,
+                v: claimsVersion
+            };
+        }
+        else if (roleId === 'super-user') {
+            // Super users have special org value
+            customClaims = {
+                org: 'SYSTEM',
+                r: roleId,
+                v: claimsVersion
+            };
+        }
+        else {
+            // Normal organization users
+            customClaims = {
+                org: organizationId,
+                r: roleId,
+                v: claimsVersion
+            };
+        }
         // Set custom claims in Firebase Auth
         await auth.setCustomUserClaims(userIdToRefresh, customClaims);
-        firebase_functions_1.logger.info(`✅ [CUSTOM CLAIMS] Claims refreshed successfully for ${userIdToRefresh}:`, customClaims);
+        firebase_functions_1.logger.info(`✅ [CUSTOM CLAIMS] Minimal claims refreshed for ${userIdToRefresh}:`, customClaims);
         return {
             success: true,
             claims: customClaims,
@@ -201,11 +224,13 @@ exports.refreshOrganizationUserClaims = (0, https_1.onCall)(async (request) => {
             const userId = userDoc.id;
             const userData = userDoc.data();
             try {
+                const roleId = ((_a = userData.role) === null || _a === void 0 ? void 0 : _a.id) || userData.role;
+                const claimsVersion = userData.claimsVersion || 1;
+                // Build minimal claims
                 const customClaims = {
-                    role: ((_a = userData.role) === null || _a === void 0 ? void 0 : _a.id) || userData.role, // Extract ID if role is an object
-                    organizationId: organizationId,
-                    permissions: userData.permissions ? Object.keys(userData.permissions) : [],
-                    lastUpdated: Date.now()
+                    org: organizationId,
+                    r: roleId,
+                    v: claimsVersion
                 };
                 await auth.setCustomUserClaims(userId, customClaims);
                 results.push({ userId, success: true, role: userData.role });
