@@ -10,6 +10,7 @@ import { ManagerTable } from './ManagerTable';
 import { ManagerDetailsModal } from './ManagerDetailsModal';
 import { PromoteToManagerModal } from './PromoteToManagerModal';
 import { DemoteManagerModal } from './DemoteManagerModal';
+import { HODPermissionsModal } from '../admin/HODPermissionsModal';
 import { UserPlus, Search, AlertTriangle } from 'lucide-react';
 import ManagerService, { Manager } from '../../services/ManagerService';
 import DepartmentService from '../../services/DepartmentService';
@@ -33,6 +34,7 @@ export const ManagerManagement: React.FC = () => {
   const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showDemoteModal, setShowDemoteModal] = useState(false);
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [selectedManager, setSelectedManager] = useState<Manager | null>(null);
 
   // Search and filter
@@ -64,6 +66,16 @@ export const ManagerManagement: React.FC = () => {
   const handleDemote = (manager: Manager) => {
     setSelectedManager(manager);
     setShowDemoteModal(true);
+  };
+
+  const handleConfigurePermissions = (manager: Manager) => {
+    // Only allow HOD permissions configuration for hod-manager role
+    if (manager.role.id !== 'hod-manager') {
+      Logger.warn('Permissions can only be configured for Department Managers');
+      return;
+    }
+    setSelectedManager(manager);
+    setShowPermissionsModal(true);
   };
 
   const handleArchive = async (manager: Manager) => {
@@ -223,6 +235,7 @@ export const ManagerManagement: React.FC = () => {
         onEdit={handleEdit}
         onDemote={handleDemote}
         onArchive={handleArchive}
+        onConfigurePermissions={handleConfigurePermissions}
       />
 
       {/* Promote Employee Modal */}
@@ -258,6 +271,21 @@ export const ManagerManagement: React.FC = () => {
           manager={selectedManager}
           onDemote={handleDemoteManager}
           availableManagers={managers.filter(m => m.id !== selectedManager.id)}
+        />
+      )}
+
+      {/* HOD Permissions Modal */}
+      {showPermissionsModal && selectedManager && (
+        <HODPermissionsModal
+          isOpen={showPermissionsModal}
+          onClose={() => {
+            setShowPermissionsModal(false);
+            setSelectedManager(null);
+          }}
+          manager={selectedManager}
+          onSuccess={() => {
+            refreshManagers();
+          }}
         />
       )}
     </div>

@@ -60,7 +60,7 @@ ErrorFallback.displayName = 'ErrorFallback';
 
 // 🎨 LOADING SKELETONS
 const WelcomeSkeleton = memo(() => (
-  <div className="animate-pulse max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div className="animate-pulse py-4">
     <div
       className="h-8 rounded w-1/3 mb-2"
       style={{ backgroundColor: 'var(--color-muted)' }}
@@ -145,26 +145,19 @@ export const BusinessDashboard = memo(() => {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-background)' }}>
-      {/* 🎨 COMPACT WELCOME SECTION - Desktop first */}
-      <div className="pb-0" style={{ backgroundColor: 'var(--color-background)' }}>
-        <div className="w-full px-4 sm:px-6 py-4 pb-3 sm:pb-4">
-          <div className="max-w-7xl mx-auto">
-            <ErrorBoundary FallbackComponent={ErrorFallback}>
-              <Suspense fallback={<WelcomeSkeleton />}>
-                <WelcomeSection
-                  selectedRole={selectedRole}
-                  onRoleChange={handleRoleChange}
-                />
-              </Suspense>
-            </ErrorBoundary>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-6">
+      {/* 🎨 COMPACT WELCOME SECTION */}
+      <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <Suspense fallback={<WelcomeSkeleton />}>
+          <WelcomeSection
+            selectedRole={selectedRole}
+            onRoleChange={handleRoleChange}
+          />
+        </Suspense>
+      </ErrorBoundary>
 
-      {/* 🏢 MAIN DASHBOARD CONTENT - Desktop Layout */}
-      <div className="w-full px-4 sm:px-6 py-4 pt-2 sm:pt-2">
-        <div className="max-w-7xl mx-auto">
+      {/* 🏢 MAIN DASHBOARD CONTENT */}
+      <div>
 
         {/* 🏢 BUSINESS OWNER DASHBOARD */}
         {selectedRole === 'business-owner' && canManageOrganization() && (
@@ -221,7 +214,6 @@ export const BusinessDashboard = memo(() => {
               <QuotesSection />
             </Suspense>
           </ErrorBoundary>
-        </div>
         </div>
       </div>
     </div>

@@ -131,6 +131,9 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
     // Skip employees with missing profile data
     if (!emp.profile) return false;
 
+    // If no search term, show all employees
+    if (!searchTerm.trim()) return true;
+
     const searchString = `${emp.profile.firstName || ''} ${emp.profile.lastName || ''} ${emp.profile.email || ''} ${emp.profile.employeeNumber || ''}`
       .toLowerCase();
 
@@ -158,6 +161,11 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select Employee *
+                {searchTerm && (
+                  <span className="ml-2 text-xs text-gray-500">
+                    ({filteredEmployees.length} match{filteredEmployees.length !== 1 ? 'es' : ''})
+                  </span>
+                )}
               </label>
 
               {/* Search Input */}
@@ -167,6 +175,7 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                autoComplete="off"
               />
 
               {/* Employee Dropdown */}
@@ -174,6 +183,7 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
                 value={selectedEmployeeId}
                 onChange={(e) => setSelectedEmployeeId(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                size={Math.min(filteredEmployees.length + 1, 8)}
               >
                 <option value="">-- Select an employee --</option>
                 {filteredEmployees.map(emp => (
@@ -184,8 +194,14 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
               </select>
 
               {filteredEmployees.length === 0 && searchTerm && (
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-sm text-red-500 mt-2">
                   No employees found matching "{searchTerm}"
+                </p>
+              )}
+
+              {employees.length === 0 && !loadingData && (
+                <p className="text-sm text-gray-500 mt-2">
+                  No eligible employees available to promote
                 </p>
               )}
             </div>

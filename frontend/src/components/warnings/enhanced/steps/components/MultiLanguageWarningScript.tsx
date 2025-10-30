@@ -612,66 +612,53 @@ export const MultiLanguageWarningScript: React.FC<MultiLanguageWarningScriptProp
         borderColor: 'var(--color-alert-warning-border)'
       }}>
         {!showFullScript ? (
-          <div className="space-y-2">
-            {/* Clear Header Row */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Volume2 className="w-4 h-4" style={{ color: 'var(--color-warning)' }} />
-                <div>
-                  <h4 className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>Employee Warning Script</h4>
-                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Complete script covering all employee rights</p>
-                </div>
-              </div>
-
-              {/* Language Selector */}
-              <div className="flex items-center gap-1.5">
-                <Globe className="w-3 h-3" style={{ color: 'var(--color-warning)' }} />
-                <select
-                  value={selectedLanguage}
-                  onChange={(e) => setSelectedLanguage(e.target.value as keyof typeof WARNING_SCRIPTS)}
-                  disabled={scriptRead || disabled}
-                  className="px-2 py-1 border rounded text-xs focus:ring-1"
-                  style={{
-                    borderColor: 'var(--color-input-border)',
-                    backgroundColor: 'var(--color-input-background)',
-                    color: 'var(--color-text)'
-                  }}
-                >
-                  {SA_LANGUAGES.map(lang => (
-                    <option key={lang.code} value={lang.code}>
-                      {lang.nativeName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Action Row */}
-            <div className="flex items-center justify-between pt-1 border-t" style={{ borderColor: 'var(--color-alert-warning-border)' }}>
-              <div className="text-xs" style={{ color: 'var(--color-alert-warning-text)' }}>
-                Script available in <strong>{currentLanguageInfo.nativeName}</strong> • Ready to read aloud
-              </div>
-              <button
-                onClick={() => setShowFullScript(true)}
-                disabled={disabled}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-xs font-medium"
+          /* Clean Two-Button Layout - Ultra Compact */
+          <div className="flex items-stretch justify-center gap-1.5 p-1.5 rounded" style={{
+            backgroundColor: 'rgba(251, 191, 36, 0.12)',
+            border: '1px solid rgba(251, 191, 36, 0.25)'
+          }}>
+            {/* Language Selector Button */}
+            <div className="relative flex-1 max-w-[100px]">
+              <select
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value as keyof typeof WARNING_SCRIPTS)}
+                disabled={scriptRead || disabled}
+                className="appearance-none w-full h-full pl-2 pr-6 py-1 border rounded text-xs font-medium focus:ring-1 focus:ring-amber-400 transition-all cursor-pointer"
                 style={{
-                  backgroundColor: 'var(--color-warning)',
-                  color: 'var(--color-text-inverse)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-warning)';
-                  e.currentTarget.style.opacity = '0.9';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--color-warning)';
-                  e.currentTarget.style.opacity = '1';
+                  borderColor: 'rgba(251, 191, 36, 0.35)',
+                  backgroundColor: 'white',
+                  color: 'var(--color-text)',
+                  outline: 'none'
                 }}
               >
-                <FileText className="w-3 h-3" />
-                View Full Script
-              </button>
+                {SA_LANGUAGES.map(lang => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.nativeName}
+                  </option>
+                ))}
+              </select>
+              <Globe className="w-3 h-3 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'rgb(251, 191, 36)' }} />
             </div>
+
+            {/* View Script Button */}
+            <button
+              onClick={() => setShowFullScript(true)}
+              disabled={disabled}
+              className="flex items-center justify-center gap-1 px-2.5 py-1 rounded transition-all text-xs font-semibold hover:shadow-sm active:scale-[0.98] flex-1 max-w-[100px]"
+              style={{
+                backgroundColor: 'rgb(251, 191, 36)',
+                color: 'white'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgb(245, 158, 11)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgb(251, 191, 36)';
+              }}
+            >
+              <FileText className="w-3 h-3" />
+              View
+            </button>
           </div>
         ) : (
           <div className="space-y-4">

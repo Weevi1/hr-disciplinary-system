@@ -368,15 +368,19 @@ export const warnings = {
 
   /**
    * Get escalation recommendation for employee
+   * 🚀 PERFORMANCE: Accepts optional pre-loaded category to skip Firestore query
+   * 🚀 ANTICIPATORY: Accepts optional pre-loaded warnings for instant response
    */
   async getEscalationRecommendation(
     employeeId: string,
     categoryId: string,
-    organizationId?: string
+    organizationId?: string,
+    providedCategory?: any, // 🚀 Pass category if already loaded
+    preloadedWarnings?: any[] // 🚀 Pass warnings if preloaded
   ): Promise<EscalationRecommendation> {
     try {
       // Use WarningService for escalation recommendations with organizationId
-      return await WarningService.getEscalationRecommendation(employeeId, categoryId, organizationId);
+      return await WarningService.getEscalationRecommendation(employeeId, categoryId, organizationId, providedCategory, preloadedWarnings);
     } catch (error) {
       handleError('warnings.getEscalationRecommendation', error);
     }
@@ -641,11 +645,12 @@ export const employees = {
         cacheKey,
         async () => {
           // Use direct database query instead of loading all employees and filtering
+          // 🔧 FIXED: Query managerIds array (multi-manager support) instead of legacy managerId
           const queryResult = await DatabaseShardingService.queryDocuments<Employee>(
             organizationId,
             'employees',
             [
-              where('employment.managerId', '==', managerId),
+              where('employment.managerIds', 'array-contains', managerId),
               where('isActive', '==', true)
             ],
             {

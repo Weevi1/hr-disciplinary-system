@@ -164,7 +164,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
             contractType: formData.contractType,
             department: formData.department || '', // 🔧 FIXED: Handle optional department
             managerIds: formData.managerIds || [], // 🔧 UPDATED: Multi-manager support
-            managerId: formData.managerIds?.[0] || undefined, // ⚠️ DEPRECATED: Keep first manager for backward compatibility
+            ...(formData.managerIds?.[0] && { managerId: formData.managerIds[0] }), // ⚠️ DEPRECATED: Only include if exists
             ...(formData.probationEndDate && { probationEndDate: new Date(formData.probationEndDate) })
           },
           isActive: employee.isActive, // Preserve current active status - use archive functionality to change status
@@ -304,32 +304,36 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Email Address (Optional)
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
-                    placeholder="john.doe@company.com"
-                  />
-                </div>
+                {!basicMode && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Email Address (Optional)
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                        placeholder="john.doe@company.com"
+                      />
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Phone Number *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.phoneNumber}
-                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
-                    placeholder="+27 123 456 789"
-                  />
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Phone Number *
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        value={formData.phoneNumber}
+                        onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                        placeholder="+27 123 456 789"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -341,31 +345,33 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Department (Optional)
-                  </label>
-                  <select
-                    value={formData.department}
-                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
-                    disabled={loadingDepartments}
-                  >
-                    <option value="">Select Department</option>
-                    {departments.map(dept => (
-                      <option key={dept.id} value={dept.name}>
-                        {dept.name}
-                      </option>
-                    ))}
-                  </select>
-                  {loadingDepartments && (
-                    <div className="text-sm text-gray-500 mt-1">Loading departments...</div>
-                  )}
-                </div>
+                {!basicMode && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Department (Optional)
+                    </label>
+                    <select
+                      value={formData.department}
+                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                      disabled={loadingDepartments}
+                    >
+                      <option value="">Select Department</option>
+                      {departments.map(dept => (
+                        <option key={dept.id} value={dept.name}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
+                    {loadingDepartments && (
+                      <div className="text-sm text-gray-500 mt-1">Loading departments...</div>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Position *
+                    Position / Job Title *
                   </label>
                   <input
                     type="text"
@@ -377,27 +383,29 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Contract Type *
-                  </label>
-                  <select
-                    required
-                    value={formData.contractType}
-                    onChange={(e) => setFormData({ ...formData, contractType: e.target.value as 'permanent' | 'contract' | 'temporary' | 'intern' })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="permanent">Permanent</option>
-                    <option value="contract">Contract</option>
-                    <option value="temporary">Temporary</option>
-                    <option value="intern">Intern</option>
-                  </select>
-                </div>
-
                 {!basicMode && (
-                <div className="md:col-span-2">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Contract Type *
+                    </label>
+                    <select
+                      required
+                      value={formData.contractType}
+                      onChange={(e) => setFormData({ ...formData, contractType: e.target.value as 'permanent' | 'contract' | 'temporary' | 'intern' })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                    >
+                      <option value="permanent">Permanent</option>
+                      <option value="contract">Contract</option>
+                      <option value="temporary">Temporary</option>
+                      <option value="intern">Intern</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Managers field - always shown */}
+                <div className={basicMode ? "md:col-span-1" : "md:col-span-2"}>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Managers (Select one or more)
+                    Reporting Manager{basicMode ? ' *' : 's (Select one or more)'}
                   </label>
                   {loadingManagers ? (
                     <div className="text-sm text-gray-500 p-3 border border-slate-200 rounded-lg">
@@ -448,26 +456,27 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
                   <p className="text-xs text-slate-500 mt-2">
                     {formData.managerIds && formData.managerIds.length > 0
                       ? `${formData.managerIds.length} manager${formData.managerIds.length !== 1 ? 's' : ''} selected`
-                      : 'No managers selected - employee will report to HR'}
+                      : basicMode ? 'Required - select the reporting manager' : 'No managers selected - employee will report to HR'}
                   </p>
                 </div>
-                )}
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Probation End Date (Optional)
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.probationEndDate}
-                    onChange={(e) => setFormData({ ...formData, probationEndDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
-                    placeholder="Leave empty if no probation period"
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Typical probation periods are 3-6 months for new hires
-                  </p>
-                </div>
+                {!basicMode && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Probation End Date (Optional)
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.probationEndDate}
+                      onChange={(e) => setFormData({ ...formData, probationEndDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                      placeholder="Leave empty if no probation period"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Typical probation periods are 3-6 months for new hires
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

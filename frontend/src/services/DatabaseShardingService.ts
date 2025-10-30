@@ -328,8 +328,13 @@ export class DatabaseShardingService {
           queryTime
         }
       }
-    } catch (error) {
-      Logger.error(`❌ [SHARD] Query failed for ${organizationId}/${collectionName}:`, error)
+    } catch (error: any) {
+      // Permission errors are expected for resellers accessing client data
+      if (error?.code === 'permission-denied' || error?.message?.includes('Missing or insufficient permissions')) {
+        Logger.debug(`[SHARD] Permission denied for ${organizationId}/${collectionName} (expected for resellers)`, error)
+      } else {
+        Logger.error(`❌ [SHARD] Query failed for ${organizationId}/${collectionName}:`, error)
+      }
       throw error
     }
   }

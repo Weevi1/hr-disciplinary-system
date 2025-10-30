@@ -223,6 +223,17 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   const [lraRecommendation, setLraRecommendation] = useState<EscalationRecommendation | null>(null);
   const [finalWarningId, setFinalWarningId] = useState<string | null>(null);
 
+  // 🚀 ANTICIPATORY LOADING: Cache for preloaded active warnings
+  const [preloadedWarnings, setPreloadedWarnings] = useState<{
+    employeeId: string | null;
+    warnings: any[] | null;
+    timestamp: number | null;
+  }>({
+    employeeId: null,
+    warnings: null,
+    timestamp: null
+  });
+
   // 🆕 Override level from Step 2 (user can override system recommendation)
   const [overrideLevel, setOverrideLevel] = useState<string | null>(null);
 
@@ -310,6 +321,43 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
 
   // 🔥 OPTIMIZED: Stable organization ID reference
   const organizationId = useMemo(() => organization?.id, [organization?.id]);
+
+  // ============================================
+  // 🚀 ANTICIPATORY LOADING: Preload warnings when employee selected
+  // ============================================
+
+  useEffect(() => {
+    const employeeId = formData.employeeId;
+
+    // Only preload if:
+    // 1. Employee is selected
+    // 2. Organization ID exists
+    // 3. Not already cached for this employee
+    // 4. Not currently on step 2+ (already generated)
+    if (
+      employeeId &&
+      organizationId &&
+      preloadedWarnings.employeeId !== employeeId &&
+      currentStep === WizardStep.INCIDENT_DETAILS
+    ) {
+      Logger.debug('🚀 [ANTICIPATORY] Preloading active warnings for employee:', employeeId);
+
+      // Fetch warnings in background (non-blocking)
+      API.warnings.getActiveWarnings(employeeId, organizationId)
+        .then(warnings => {
+          Logger.success(`⚡ [ANTICIPATORY] Preloaded ${warnings.length} active warnings (ready for instant LRA generation)`);
+          setPreloadedWarnings({
+            employeeId,
+            warnings,
+            timestamp: Date.now()
+          });
+        })
+        .catch(error => {
+          Logger.warn('⚠️ [ANTICIPATORY] Failed to preload warnings (will fetch on-demand):', error);
+          // Don't block user - just won't have cache benefit
+        });
+    }
+  }, [formData.employeeId, organizationId, preloadedWarnings.employeeId, currentStep]);
 
   // ============================================
   // 🔧 CRITICAL FIX: DEFINE NAVIGATION HANDLERS EARLY
@@ -511,10 +559,22 @@ useEffect(() => {
     // 🚨 STEP 3: Generate LRA recommendation (only if no final warnings)
     Logger.debug('✅ No final warnings found - proceeding with LRA generation');
     try {
+      // 🚀 ANTICIPATORY LOADING: Check if we have preloaded warnings for this employee
+      const cachedWarnings = preloadedWarnings.employeeId === employeeId
+        ? preloadedWarnings.warnings
+        : null;
+
+      if (cachedWarnings) {
+        Logger.success(`⚡ [ANTICIPATORY] Using ${cachedWarnings.length} preloaded warnings - near-instant LRA generation!`);
+      }
+
+      // 🚀 PERFORMANCE: Pass selectedCategory AND preloaded warnings to skip queries
       const recommendation = await API.warnings.getEscalationRecommendation(
         employeeId,
         categoryId,
-        organization?.id || 'default'
+        organization?.id || 'default',
+        selectedCategory, // ⚡ Category already loaded in wizard context
+        cachedWarnings || undefined // ⚡⚡ Preloaded warnings if available
       );
 
       setLraRecommendation(recommendation);

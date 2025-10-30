@@ -9,7 +9,8 @@
 // ============================================
 
 export type UserRoleId = 'super-user' | 'business-owner' | 'hr-manager' | 'hod-manager';
-export type IndustryType = 'manufacturing' | 'retail' | 'healthcare' | 'security' | 'mining';
+// Industry type - accepts any string to support 90+ industry categories
+export type IndustryType = string;
 export type DeliveryMethod = 'email' | 'whatsapp' | 'printed';
 export type DeliveryStatus = 'pending' | 'delivered' | 'failed';
 
@@ -33,6 +34,15 @@ export type SALegalType = 'minor_misconduct' | 'serious_misconduct' | 'gross_mis
 // USER & AUTHENTICATION - PRESERVED
 // ============================================
 
+// HOD Dashboard Feature Permissions
+// Allows HR to control which features each HOD manager can access
+export interface HODPermissions {
+  canIssueWarnings: boolean;        // Access to Issue Warning button
+  canBookHRMeetings: boolean;       // Access to Book HR Meeting button
+  canReportAbsences: boolean;       // Access to Report Absence button
+  canRecordCounselling: boolean;    // Access to Counselling button
+}
+
 export interface User {
   uid: string;
   id: string;
@@ -48,6 +58,10 @@ export interface User {
   permissions: Permission[];
   claimsVersion?: number; // For detecting stale JWT tokens (increments on role/permission changes)
   updatedAt?: string;     // Track last permission/role change timestamp
+  mustChangePassword?: boolean; // Flag for users with temp123 password who must change it on first login
+  passwordChangedAt?: string;   // Timestamp of last password change
+  hasSeenWelcome?: boolean; // Flag for first-time login welcome message
+  hodPermissions?: HODPermissions; // Feature toggles for HOD managers (controlled by HR)
 }
 
 export interface UserRole {

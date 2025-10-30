@@ -619,15 +619,32 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
       const resellers = await DataService.getAllResellers();
       const activeResellers = resellers.filter(r => r.isActive);
 
-      setAvailableResellers(activeResellers);
-      // Logger.debug('Loaded resellers:', { total: resellers.length, active: activeResellers.length, resellers: activeResellers });
-      
+      // Load real client counts for each reseller
+      const resellersWithCounts = await Promise.all(
+        activeResellers.map(async (reseller) => {
+          try {
+            const clients = await DataService.getResellerClients(reseller.id);
+            // Update the reseller object with actual client count
+            return {
+              ...reseller,
+              clientIds: clients.map(c => c.id) // Update clientIds with real data
+            };
+          } catch (error) {
+            Logger.error(`Failed to load clients for reseller ${reseller.id}:`, error);
+            return reseller; // Return original if loading fails
+          }
+        })
+      );
+
+      setAvailableResellers(resellersWithCounts);
+      // Logger.debug('Loaded resellers:', { total: resellers.length, active: resellersWithCounts.length, resellers: resellersWithCounts });
+
       // Auto-select reseller if only one available in selected province
-      const provinceResellers = activeResellers.filter(r => r.province === formData.province);
+      const provinceResellers = resellersWithCounts.filter(r => r.province === formData.province);
       if (provinceResellers.length === 1) {
         setFormData(prev => ({ ...prev, resellerId: provinceResellers[0].id }));
       }
-      
+
     } catch (error) {
       Logger.error('Failed to load resellers:', error);
     }
@@ -712,8 +729,7 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
         if (!formData.adminFirstName.trim()) return { isValid: false, message: 'Admin first name is required' };
         if (!formData.adminLastName.trim()) return { isValid: false, message: 'Admin last name is required' };
         if (!formData.adminEmail.trim()) return { isValid: false, message: 'Admin email is required' };
-        if (formData.adminPassword.length < 6) return { isValid: false, message: 'Password must be at least 6 characters' };
-        if (formData.adminPassword !== formData.adminPasswordConfirm) return { isValid: false, message: 'Passwords do not match' };
+        // Password validation removed - temp123 is set automatically
         return { isValid: true };
 
       case 'customize': // Customization
@@ -1055,12 +1071,143 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Select industry</option>
-                    <option value="manufacturing">Manufacturing</option>
-                    <option value="retail">Retail & Commerce</option>
-                    <option value="healthcare">Healthcare</option>
-                    <option value="security">Security Services</option>
-                    <option value="mining">Mining</option>
-                    <option value="other">Other</option>
+
+                    {/* Primary Industries */}
+                    <optgroup label="Primary Industries">
+                      <option value="agriculture">Agriculture & Farming</option>
+                      <option value="mining">Mining & Quarrying</option>
+                      <option value="forestry">Forestry & Logging</option>
+                      <option value="fishing">Fishing & Aquaculture</option>
+                    </optgroup>
+
+                    {/* Manufacturing & Production */}
+                    <optgroup label="Manufacturing & Production">
+                      <option value="manufacturing">Manufacturing (General)</option>
+                      <option value="food-processing">Food & Beverage Processing</option>
+                      <option value="textiles">Textiles & Clothing</option>
+                      <option value="automotive">Automotive Manufacturing</option>
+                      <option value="pharmaceuticals">Pharmaceuticals & Medical Devices</option>
+                      <option value="chemicals">Chemicals & Plastics</option>
+                      <option value="electronics">Electronics & Technology Manufacturing</option>
+                      <option value="construction-materials">Construction Materials</option>
+                    </optgroup>
+
+                    {/* Construction & Engineering */}
+                    <optgroup label="Construction & Engineering">
+                      <option value="construction">Construction & Building</option>
+                      <option value="civil-engineering">Civil Engineering</option>
+                      <option value="electrical-engineering">Electrical Engineering</option>
+                      <option value="mechanical-engineering">Mechanical Engineering</option>
+                      <option value="architecture">Architecture & Design</option>
+                    </optgroup>
+
+                    {/* Retail & Wholesale */}
+                    <optgroup label="Retail & Wholesale">
+                      <option value="retail">Retail & Commerce (General)</option>
+                      <option value="wholesale">Wholesale & Distribution</option>
+                      <option value="supermarkets">Supermarkets & Grocery</option>
+                      <option value="fashion-retail">Fashion & Apparel Retail</option>
+                      <option value="automotive-retail">Automotive Sales & Service</option>
+                      <option value="furniture-retail">Furniture & Home Goods</option>
+                      <option value="electronics-retail">Electronics & Appliances Retail</option>
+                    </optgroup>
+
+                    {/* Hospitality & Tourism */}
+                    <optgroup label="Hospitality & Tourism">
+                      <option value="hospitality">Hospitality & Tourism</option>
+                      <option value="hotels">Hotels & Accommodation</option>
+                      <option value="restaurants">Restaurants & Food Service</option>
+                      <option value="travel-agencies">Travel Agencies & Tour Operators</option>
+                      <option value="entertainment">Entertainment & Recreation</option>
+                    </optgroup>
+
+                    {/* Healthcare & Social Services */}
+                    <optgroup label="Healthcare & Social Services">
+                      <option value="healthcare">Healthcare (General)</option>
+                      <option value="hospitals">Hospitals & Clinics</option>
+                      <option value="nursing-homes">Nursing Homes & Elderly Care</option>
+                      <option value="medical-practices">Medical Practices & Specialists</option>
+                      <option value="veterinary">Veterinary Services</option>
+                      <option value="social-services">Social Services & NGOs</option>
+                    </optgroup>
+
+                    {/* Education & Training */}
+                    <optgroup label="Education & Training">
+                      <option value="education">Education & Training</option>
+                      <option value="schools">Schools & Colleges</option>
+                      <option value="universities">Universities & Higher Education</option>
+                      <option value="vocational-training">Vocational & Skills Training</option>
+                      <option value="childcare">Childcare & Early Learning</option>
+                    </optgroup>
+
+                    {/* Financial Services */}
+                    <optgroup label="Financial Services">
+                      <option value="banking">Banking & Financial Services</option>
+                      <option value="insurance">Insurance</option>
+                      <option value="investment">Investment & Asset Management</option>
+                      <option value="accounting">Accounting & Auditing</option>
+                      <option value="real-estate">Real Estate & Property Management</option>
+                    </optgroup>
+
+                    {/* Professional Services */}
+                    <optgroup label="Professional Services">
+                      <option value="legal">Legal Services</option>
+                      <option value="consulting">Consulting & Advisory</option>
+                      <option value="marketing">Marketing & Advertising</option>
+                      <option value="hr-recruitment">HR & Recruitment</option>
+                      <option value="business-services">Business Support Services</option>
+                    </optgroup>
+
+                    {/* Technology & Communications */}
+                    <optgroup label="Technology & Communications">
+                      <option value="it-services">IT Services & Software</option>
+                      <option value="telecommunications">Telecommunications</option>
+                      <option value="media">Media & Broadcasting</option>
+                      <option value="publishing">Publishing & Printing</option>
+                      <option value="data-centers">Data Centers & Cloud Services</option>
+                    </optgroup>
+
+                    {/* Transportation & Logistics */}
+                    <optgroup label="Transportation & Logistics">
+                      <option value="logistics">Logistics & Supply Chain</option>
+                      <option value="transportation">Transportation & Freight</option>
+                      <option value="warehousing">Warehousing & Storage</option>
+                      <option value="courier">Courier & Postal Services</option>
+                      <option value="aviation">Aviation & Airports</option>
+                      <option value="maritime">Maritime & Shipping</option>
+                    </optgroup>
+
+                    {/* Energy & Utilities */}
+                    <optgroup label="Energy & Utilities">
+                      <option value="energy">Energy & Power Generation</option>
+                      <option value="renewable-energy">Renewable Energy</option>
+                      <option value="water-utilities">Water & Sanitation</option>
+                      <option value="waste-management">Waste Management & Recycling</option>
+                    </optgroup>
+
+                    {/* Security & Emergency Services */}
+                    <optgroup label="Security & Emergency Services">
+                      <option value="security">Security Services</option>
+                      <option value="private-security">Private Security & Guarding</option>
+                      <option value="emergency-services">Emergency Services</option>
+                      <option value="fire-safety">Fire Safety & Protection</option>
+                    </optgroup>
+
+                    {/* Government & Public Sector */}
+                    <optgroup label="Government & Public Sector">
+                      <option value="government">Government & Public Administration</option>
+                      <option value="municipal">Municipal Services</option>
+                      <option value="public-utilities">Public Utilities</option>
+                    </optgroup>
+
+                    {/* Other */}
+                    <optgroup label="Other">
+                      <option value="sports">Sports & Fitness</option>
+                      <option value="beauty-wellness">Beauty & Wellness</option>
+                      <option value="cleaning">Cleaning & Facilities Management</option>
+                      <option value="maintenance">Maintenance & Repair Services</option>
+                      <option value="other">Other Industry</option>
+                    </optgroup>
                   </select>
                 </div>
 
@@ -1217,29 +1364,25 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
                       autoComplete="off"
                     />
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
-                    <input
-                      type="password"
-                      value={formData.adminPassword}
-                      onChange={e => updateFormData({ adminPassword: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Minimum 6 characters"
-                      autoComplete="off"
-                    />
+                {/* Password Notice */}
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">
+                      i
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-blue-900 mb-1">Default Password</h4>
+                      <p className="text-sm text-blue-800">
+                        A temporary password <span className="font-mono font-semibold">temp123</span> will be set for this administrator.
+                        They will be prompted to change it on first login.
+                      </p>
+                    </div>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password *</label>
-                    <input
-                      type="password"
-                      value={formData.adminPasswordConfirm}
-                      onChange={e => updateFormData({ adminPasswordConfirm: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      autoComplete="off"
-                    />
-                  </div>
+                <div className="hidden">
                 </div>
               </form>
             </div>

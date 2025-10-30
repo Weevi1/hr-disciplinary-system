@@ -67,41 +67,6 @@ service cloud.firestore {
     }
 
     // ===================================
-    // CONSOLIDATED PERMISSION HELPERS
-    // ===================================
-
-    // Common read permission pattern for organization-scoped data
-    function canReadOrgData(orgId) {
-      return isAuthenticated() && (
-        isSuperUser() ||
-        belongsToOrganization(orgId) ||
-        resellerManagesOrganization(orgId)
-      );
-    }
-
-    // Common write permission pattern for HR-managed data
-    function canManageOrgData(orgId) {
-      return isAuthenticated() && (
-        isSuperUser() ||
-        (belongsToOrganization(orgId) && isHRManager()) ||
-        resellerManagesOrganization(orgId)
-      );
-    }
-
-    // Permission for manager-level operations
-    function canManagerAccess(orgId) {
-      return isAuthenticated() && (
-        isSuperUser() ||
-        (belongsToOrganization(orgId) && isManager())
-      );
-    }
-
-    // Permission for reseller creation during deployment
-    function canResellerCreate(orgId) {
-      return isReseller() && resource == null;
-    }
-
-    // ===================================
     // CORE COLLECTIONS
     // ===================================
 
@@ -175,23 +140,16 @@ service cloud.firestore {
       );
     }
 
-    // ===================================
-    // DEPRECATED GLOBAL COLLECTIONS
-    // ===================================
-    // NOTE: These collections are deprecated in favor of sharded versions under organizations/{orgId}/
-    // Kept for backward compatibility with read-only access for super-users during migration
-    // Migration target: organizations/{orgId}/warnings/{warningId}
-
-    // Warnings collection - DEPRECATED (use organizations/{orgId}/warnings instead)
+    // Warnings collection - DEPRECATED: Only super user and reseller access
     match /warnings {
       allow list: if isAuthenticated() && isSuperUser();
     }
 
     match /warnings/{warningId} {
-      // Read-only for super-users during migration period
-      allow read: if isAuthenticated() && isSuperUser();
-      // Write restricted to super-users only for data migration
-      allow write: if isAuthenticated() && isSuperUser();
+      allow read, write: if isAuthenticated() && (
+        isSuperUser() ||
+        resellerManagesOrganization(resource.data.organizationId)
+      );
     }
 
     // ===================================
@@ -306,21 +264,21 @@ service cloud.firestore {
     // WARNING CATEGORIES & ESCALATION
     // ===================================
 
-    // Warning categories - DEPRECATED (use organizations/{orgId}/categories instead)
-    // Migration target: organizations/{orgId}/categories/{categoryId}
+    // Warning categories - organization specific
     match /warningCategories {
       allow list: if isAuthenticated() && isSuperUser();
     }
 
     match /warningCategories/{categoryId} {
-      // Read-only for existing users during migration
       allow read: if isAuthenticated() && (
         isSuperUser() ||
         (belongsToOrganization(resource.data.organizationId) && isManager())
       );
 
-      // Write restricted to super-users only for data migration
-      allow write: if isAuthenticated() && isSuperUser();
+      allow write: if isAuthenticated() && (
+        isSuperUser() ||
+        (isHRManager() && belongsToOrganization(resource.data.organizationId))
+      );
     }
 
     // Escalation rules - organization specific
@@ -992,12 +950,37 @@ service cloud.firestore {
       );
     }
 
-    // NOTE: The following collections are already defined earlier in the file:
-    // - employees (lines ~163-176) - global collection rules
-    // - warningCategories (lines ~303-317) - global collection rules
-    // - absenceReports (lines ~236-272) - global collection rules
-    // - auditLogs (lines ~553-566) - global collection rules
-    // Redundant duplicate rules removed to prevent conflicts
+    match /employees/{employeeId} {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+
+    match /warningCategories/{categoryId} {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+
+    match /absenceReports/{reportId} {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+
+    // HR Meetings collection - super user access
+    match /hrMeetings {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+
+    match /hrMeetings/{meetingId} {
+      allow read, write: if isAuthenticated() && isSuperUser();
+    }
+
+    match /counsellings/{counsellingId} {
+      allow list: if isAuthenticated() && isSuperUser();
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isAuthenticated() && isSuperUser();
+      // Audit logs are write-only from Cloud Functions for security
+      allow create: if false; // Only Cloud Functions can create audit logs
+      allow update, delete: if false; // Audit logs are immutable
+    }
 
     // ===================================
     // SUPER-USER SPECIFIC COLLECTIONS
@@ -1035,8 +1018,15 @@ service cloud.firestore {
       allow write: if isAuthenticated() && isSuperUser();
     }
 
-    // NOTE: commissionReports rules are defined earlier in BILLING section (lines ~766-773)
-    // Duplicate removed to prevent rule conflicts
+    // Commission reports (super-user and reseller access)
+    match /commissionReports/{reportId} {
+      allow read: if isAuthenticated() && (
+        isSuperUser() ||
+        // Resellers can read their own commission reports
+        (getUserRole() == 'reseller' && request.auth.uid == resource.data.resellerId)
+      );
+      allow write: if isAuthenticated() && isSuperUser();
+    }
 
     // Global metrics and analytics (super-user only)
     match /globalMetrics/{metricId} {
@@ -1073,9 +1063,16 @@ service cloud.firestore {
     // ENHANCED SECURITY HELPERS
     // ===================================
 
+    function hasValidSuperUserSession() {
+      // Check if super-user has valid session within last hour
+      return isSuperUser() &&
+        exists(/databases/$(database)/documents/superUserSessions/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/superUserSessions/$(request.auth.uid)).data.lastValidated.toMillis() >
+        (request.time.toMillis() - 3600000); // 1 hour
+    }
+
     function isSuperUserPermission() {
-      // Enhanced super-user check with permissions validation
-      // Used in fallback rule to ensure super-users have proper permission claims
+      // Enhanced super-user check with session validation
       return request.auth != null &&
         request.auth.token.role == 'super-user' &&
         request.auth.token.permissions != null &&

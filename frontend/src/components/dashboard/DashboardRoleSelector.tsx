@@ -176,21 +176,37 @@ export function getInitialDashboardRole(
   canManageHR: boolean,
   getPrimaryRole: () => string
 ): string {
+  // Get user's actual primary role
+  const primaryRole = getPrimaryRole();
+
   // Check localStorage first
   const storedRole = localStorage.getItem(STORAGE_KEY);
 
-  // Validate stored role against current permissions
+  // Validate stored role against current permissions AND primary role
+  // Only use stored preference if it matches user's capabilities
   if (storedRole === 'business-owner' && canManageOrganization) return storedRole;
   if (storedRole === 'hr-manager' && canManageHR) return storedRole;
-  // HOD available to org admins and HR managers (not standalone HODs)
-  if (storedRole === 'hod-manager' && (canManageOrganization || canManageHR)) {
+
+  // HOD view only available if:
+  // 1. User explicitly selected it before AND
+  // 2. User is NOT a business-owner or hr-manager by primary role
+  // This prevents Business Owners from getting stuck in Department Manager view
+  if (storedRole === 'hod-manager' &&
+      (canManageOrganization || canManageHR) &&
+      primaryRole !== 'business-owner' &&
+      primaryRole !== 'hr-manager') {
     return storedRole;
   }
 
-  // Default hierarchy if no valid stored role
+  // Default hierarchy based on primary role (no localStorage preference)
+  // This ensures users always see their primary role's dashboard first
+  if (primaryRole === 'business-owner' && canManageOrganization) return 'business-owner';
+  if (primaryRole === 'hr-manager' && canManageHR) return 'hr-manager';
+  if (primaryRole === 'hod-manager') return 'hod-manager';
+
+  // Fallback hierarchy if primary role doesn't match permissions
   if (canManageOrganization) return 'business-owner';
   if (canManageHR) return 'hr-manager';
-  if (getPrimaryRole() === 'hod-manager') return 'hod-manager';
 
-  return 'business-owner'; // Fallback
+  return 'business-owner'; // Final fallback
 }

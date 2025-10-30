@@ -142,7 +142,17 @@ exports.createOrganizationAdmin = (0, https_2.onCall)({
             role: role, // Store as simple string to match current format
             organizationId: organizationId,
             isActive: true,
-            requirePasswordChange: requirePasswordChange,
+            mustChangePassword: password === 'temp123', // Auto-detect temp password
+            hasSeenWelcome: false, // New users should see welcome modal
+            // Default HOD permissions (all features enabled by default, HR can configure)
+            ...(role === 'hod-manager' && {
+                hodPermissions: {
+                    canIssueWarnings: true,
+                    canBookHRMeetings: true,
+                    canReportAbsences: true,
+                    canRecordCounselling: true
+                }
+            }),
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             createdBy: request.auth.uid,
             lastLogin: null,
@@ -264,7 +274,7 @@ exports.createOrganizationUsers = (0, https_2.onCall)({
                 // Create Firebase Authentication user
                 const userRecord = await admin.auth().createUser({
                     email: userToCreate.email,
-                    password: 'demo123', // Default demo password
+                    password: 'temp123', // Temporary password - must be changed on first login
                     displayName: `${userToCreate.firstName} ${userToCreate.lastName}`,
                     emailVerified: false,
                     disabled: false
@@ -279,7 +289,17 @@ exports.createOrganizationUsers = (0, https_2.onCall)({
                     organizationId: organizationId,
                     department: userToCreate.department || '',
                     isActive: true,
-                    requirePasswordChange: true,
+                    mustChangePassword: true, // Always require password change for bulk-created users
+                    hasSeenWelcome: false, // New users should see welcome modal
+                    // Default HOD permissions (all features enabled by default, HR can configure)
+                    ...(userToCreate.role === 'hod-manager' && {
+                        hodPermissions: {
+                            canIssueWarnings: true,
+                            canBookHRMeetings: true,
+                            canReportAbsences: true,
+                            canRecordCounselling: true
+                        }
+                    }),
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
                     createdBy: request.auth.uid,
                     lastLogin: null,
@@ -443,6 +463,8 @@ exports.createResellerUser = (0, https_2.onCall)({
             role: 'reseller',
             resellerId: resellerId,
             isActive: true,
+            mustChangePassword: password === 'temp123', // Auto-detect temp password
+            hasSeenWelcome: false, // New users should see welcome modal
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             claimsVersion: initialClaimsVersion,

@@ -19,6 +19,7 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   AlertTriangle,
   CheckCircle,
   Clock,
@@ -209,6 +210,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<EditingCategory | null>(null);
   const [showAddCustom, setShowAddCustom] = useState(false);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [bulkSelectMode, setBulkSelectMode] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   
@@ -779,50 +781,27 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
           </div>
         )}
 
-        {/* Tabs */}
+        {/* Simplified Header - No Tabs */}
         <div style={{
           borderBottom: '1px solid #e2e8f0',
-          backgroundColor: 'white'
+          backgroundColor: 'white',
+          padding: '1rem 2rem'
         }}>
-          <div style={{
-            display: 'flex',
-            gap: 0,
-            padding: '0 2rem'
+          <h3 style={{
+            fontSize: '1rem',
+            fontWeight: '600',
+            color: '#1e293b',
+            margin: 0
           }}>
-            {[
-              { id: 'overview', label: 'Overview', icon: Eye },
-              { id: 'universal', label: 'Universal Categories', icon: Scale },
-              { id: 'custom', label: 'Custom Categories', icon: Settings },
-              ...(canViewAnalytics ? [{ id: 'analytics', label: 'Analytics', icon: Target }] : [])
-            ].map(tab => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as TabType)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '1rem 1.5rem',
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    borderBottom: isActive ? '2px solid #3b82f6' : '2px solid transparent',
-                    color: isActive ? '#3b82f6' : '#64748b',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
+            Warning Categories
+          </h3>
+          <p style={{
+            fontSize: '0.875rem',
+            color: '#64748b',
+            margin: '0.25rem 0 0 0'
+          }}>
+            Categories configured for this organization
+          </p>
         </div>
 
         {/* Content */}
@@ -839,1087 +818,234 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
               <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin" />
               <p style={{ margin: 0 }}>Loading category configuration...</p>
             </div>
+          ) : organizationCategories.length === 0 ? (
+            <div style={{ padding: '4rem', textAlign: 'center' }}>
+              <Settings className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+              <h3 style={{
+                fontSize: '1.125rem',
+                fontWeight: '600',
+                color: '#1e293b',
+                marginBottom: '0.5rem'
+              }}>
+                No Categories Found
+              </h3>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#64748b',
+                margin: 0
+              }}>
+                No warning categories have been configured for this organization yet.
+              </p>
+            </div>
           ) : (
-            <>
-              {/* Overview Tab */}
-              {activeTab === 'overview' && (
-                <div style={{ padding: '2rem' }}>
-                  {/* Stats Grid */}
-                  {categoryStats && (
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: window.innerWidth > 1024 ? 'repeat(4, 1fr)' : window.innerWidth > 768 ? 'repeat(2, 1fr)' : '1fr',
-                      gap: '1.5rem',
-                      marginBottom: '2rem'
-                    }}>
-                      <div style={{
-                        backgroundColor: 'white',
-                        padding: '1.5rem',
-                        borderRadius: '0.5rem',
-                        border: '1px solid #e2e8f0'
-                      }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          marginBottom: '0.5rem'
-                        }}>
-                          <div style={{
-                            backgroundColor: '#dbeafe',
-                            color: '#3b82f6',
-                            padding: '0.5rem',
-                            borderRadius: '0.375rem'
-                          }}>
-                            <Settings className="h-5 w-5" />
-                          </div>
-                          <span style={{ fontSize: '2rem', fontWeight: '700', color: '#1e293b' }}>
-                            {categoryStats.totalCategories}
-                          </span>
-                        </div>
-                        <p style={{
-                          fontSize: '0.875rem',
-                          color: '#64748b',
-                          margin: 0
-                        }}>
-                          Total Categories
-                        </p>
-                      </div>
-
-                      <div style={{
-                        backgroundColor: 'white',
-                        padding: '1.5rem',
-                        borderRadius: '0.5rem',
-                        border: '1px solid #e2e8f0'
-                      }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          marginBottom: '0.5rem'
-                        }}>
-                          <div style={{
-                            backgroundColor: '#dcfce7',
-                            color: '#16a34a',
-                            padding: '0.5rem',
-                            borderRadius: '0.375rem'
-                          }}>
-                            <CheckCircle className="h-5 w-5" />
-                          </div>
-                          <span style={{ fontSize: '2rem', fontWeight: '700', color: '#1e293b' }}>
-                            {categoryStats.enabledUniversal}
-                          </span>
-                        </div>
-                        <p style={{
-                          fontSize: '0.875rem',
-                          color: '#64748b',
-                          margin: 0
-                        }}>
-                          Universal Categories Enabled
-                        </p>
-                      </div>
-
-                      <div style={{
-                        backgroundColor: 'white',
-                        padding: '1.5rem',
-                        borderRadius: '0.5rem',
-                        border: '1px solid #e2e8f0'
-                      }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          marginBottom: '0.5rem'
-                        }}>
-                          <div style={{
-                            backgroundColor: '#fef3c7',
-                            color: '#d97706',
-                            padding: '0.5rem',
-                            borderRadius: '0.375rem'
-                          }}>
-                            <Plus className="h-5 w-5" />
-                          </div>
-                          <span style={{ fontSize: '2rem', fontWeight: '700', color: '#1e293b' }}>
-                            {categoryStats.customCategories}
-                          </span>
-                        </div>
-                        <p style={{
-                          fontSize: '0.875rem',
-                          color: '#64748b',
-                          margin: 0
-                        }}>
-                          Custom Categories
-                        </p>
-                      </div>
-
-                      <div style={{
-                        backgroundColor: 'white',
-                        padding: '1.5rem',
-                        borderRadius: '0.5rem',
-                        border: '1px solid #e2e8f0'
-                      }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          marginBottom: '0.5rem'
-                        }}>
-                          <div style={{
-                            backgroundColor: '#e0e7ff',
-                            color: '#6366f1',
-                            padding: '0.5rem',
-                            borderRadius: '0.375rem'
-                          }}>
-                            <FileText className="h-5 w-5" />
-                          </div>
-                          <span style={{ fontSize: '2rem', fontWeight: '700', color: '#1e293b' }}>
-                            {categoryStats.activeWarnings}
-                          </span>
-                        </div>
-                        <p style={{
-                          fontSize: '0.875rem',
-                          color: '#64748b',
-                          margin: 0
-                        }}>
-                          Active Warnings
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Quick Actions */}
-                  <div style={{
-                    backgroundColor: 'white',
-                    borderRadius: '0.5rem',
-                    border: '1px solid #e2e8f0',
-                    padding: '1.5rem',
-                    marginBottom: '2rem'
-                  }}>
-                    <h3 style={{
-                      fontSize: '1.125rem',
-                      fontWeight: '600',
-                      marginBottom: '1rem',
-                      color: '#1e293b'
-                    }}>
-                      Quick Actions
-                    </h3>
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: window.innerWidth > 768 ? 'repeat(3, 1fr)' : '1fr',
-                      gap: '1rem'
-                    }}>
-                      <button
-                        onClick={() => setActiveTab('universal')}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.75rem',
-                          padding: '1rem',
-                          backgroundColor: '#f8fafc',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '0.375rem',
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                      >
-                        <Scale className="h-5 w-5" style={{ color: '#3b82f6' }} />
-                        <div>
-                          <div style={{ fontWeight: '500', color: '#1e293b', marginBottom: '0.25rem' }}>
-                            Configure Universal Categories
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                            Enable, disable or customize the 8 standard categories
-                          </div>
-                        </div>
-                      </button>
-
-                      <button
-                        onClick={() => setActiveTab('custom')}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.75rem',
-                          padding: '1rem',
-                          backgroundColor: '#f8fafc',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '0.375rem',
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                        onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                      >
-                        <Settings className="h-5 w-5" style={{ color: '#8b5cf6' }} />
-                        <div>
-                          <div style={{ fontWeight: '500', color: '#1e293b', marginBottom: '0.25rem' }}>
-                            Manage Custom Categories
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                            Create and manage organization-specific categories
-                          </div>
-                        </div>
-                      </button>
-
-                      {canViewAnalytics && (
-                        <button
-                          onClick={() => setActiveTab('analytics')}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.75rem',
-                            padding: '1rem',
-                            backgroundColor: '#f8fafc',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '0.375rem',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
-                          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                        >
-                          <Target className="h-5 w-5" style={{ color: '#10b981' }} />
-                          <div>
-                            <div style={{ fontWeight: '500', color: '#1e293b', marginBottom: '0.25rem' }}>
-                              View Usage Analytics
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                              Analyze category usage patterns and trends
-                            </div>
-                          </div>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Recent Usage */}
-                  {categoryStats && categoryStats.recentUsage.length > 0 && (
-                    <div style={{
-                      backgroundColor: 'white',
-                      borderRadius: '0.5rem',
-                      border: '1px solid #e2e8f0',
-                      overflow: 'hidden'
-                    }}>
-                      <div style={{
-                        padding: '1.5rem 1.5rem 0 1.5rem'
-                      }}>
-                        <h3 style={{
-                          fontSize: '1.125rem',
-                          fontWeight: '600',
-                          marginBottom: '1rem',
-                          color: '#1e293b'
-                        }}>
-                          Recent Category Usage
-                        </h3>
-                      </div>
-                      <div style={{ padding: '0 1.5rem 1.5rem 1.5rem' }}>
-                        {categoryStats.recentUsage.slice(0, 5).map((usage, index) => (
-                          <div
-                            key={usage.categoryId}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              padding: '0.75rem 0',
-                              borderBottom: index < Math.min(categoryStats.recentUsage.length, 5) - 1 ? '1px solid #f1f5f9' : 'none'
-                            }}
-                          >
-                            <div style={{ flex: 1 }}>
-                              <div style={{
-                                fontWeight: '500',
-                                color: '#1e293b',
-                                marginBottom: '0.25rem'
-                              }}>
-                                {usage.categoryName}
-                              </div>
-                              <div style={{
-                                fontSize: '0.75rem',
-                                color: '#64748b'
-                              }}>
-                                Last used {Math.floor((Date.now() - usage.lastUsed.getTime()) / (24 * 60 * 60 * 1000))} days ago
-                              </div>
-                            </div>
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.5rem'
-                            }}>
-                              <div style={{
-                                padding: '0.25rem 0.5rem',
-                                backgroundColor: '#f3f4f6',
-                                borderRadius: '0.25rem',
-                                fontSize: '0.75rem',
-                                fontWeight: '600',
-                                color: '#374151'
-                              }}>
-                                {usage.count} warnings
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+            <div style={{ padding: '2rem' }}>
+              {/* Add Category Button */}
+              {!isReadOnly && (
+                <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => setShowAddCustom(true)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Category
+                  </button>
                 </div>
               )}
 
-              {/* Universal Categories Tab */}
-              {activeTab === 'universal' && (
-                <div style={{ padding: '2rem' }}>
-                  {/* Filters and Search */}
-                  <div style={{
-                    display: 'flex',
-                    gap: '1rem',
-                    marginBottom: '2rem',
-                    flexWrap: 'wrap'
-                  }}>
-                    <div style={{ flex: 1, minWidth: '300px' }}>
-                      <div style={{ position: 'relative' }}>
-                        <Search className="h-4 w-4" style={{
-                          position: 'absolute',
-                          left: '0.75rem',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          color: '#9ca3af'
-                        }} />
-                        <input
-                          type="text"
-                          placeholder="Search categories..."
-                          value={filters.search}
-                          onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                          style={{
-                            width: '100%',
-                            padding: '0.5rem 0.75rem 0.5rem 2.5rem',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '0.375rem',
-                            fontSize: '0.875rem'
-                          }}
-                        />
-                      </div>
-                    </div>
-                    
-                    <select
-                      value={filters.severity}
-                      onChange={(e) => setFilters(prev => ({ ...prev, severity: e.target.value as any }))}
+              {/* Categories List */}
+              <div style={{
+                backgroundColor: 'white',
+                border: '1px solid #e2e8f0',
+                borderRadius: '0.5rem',
+                overflow: 'hidden'
+              }}>
+                {organizationCategories.map((category, index) => {
+                  const severityColors = {
+                    minor: { bg: '#dbeafe', text: '#1e40af', label: 'Minor' },
+                    serious: { bg: '#fed7aa', text: '#c2410c', label: 'Serious' },
+                    gross_misconduct: { bg: '#fecaca', text: '#991b1b', label: 'Gross Misconduct' }
+                  };
+
+                  const severity = severityColors[category.severity as keyof typeof severityColors] || severityColors.serious;
+
+                  return (
+                    <div
+                      key={category.id}
                       style={{
-                        padding: '0.5rem 0.75rem',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '0.375rem',
-                        fontSize: '0.875rem',
-                        backgroundColor: 'white',
-                        minWidth: '120px'
+                        padding: '1.5rem',
+                        borderBottom: index < organizationCategories.length - 1 ? '1px solid #e2e8f0' : 'none'
                       }}
                     >
-                      <option value="all">All Severities</option>
-                      <option value="minor">Minor</option>
-                      <option value="serious">Serious</option>
-                      <option value="gross_misconduct">Gross Misconduct</option>
-                    </select>
-
-                    <select
-                      value={filters.status}
-                      onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value as any }))}
-                      style={{
-                        padding: '0.5rem 0.75rem',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '0.375rem',
-                        fontSize: '0.875rem',
-                        backgroundColor: 'white',
-                        minWidth: '100px'
-                      }}
-                    >
-                      <option value="all">All Status</option>
-                      <option value="enabled">Enabled</option>
-                      <option value="disabled">Disabled</option>
-                    </select>
-                  </div>
-
-                  {/* Categories List */}
-                  <div style={{
-                    backgroundColor: 'white',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '0.5rem',
-                    overflow: 'hidden'
-                  }}>
-                    {filteredUniversalCategories.map((category, index) => {
-                      const isDisabled = isUniversalCategoryDisabled(category.id);
-                      const isExpanded = expandedCategory === category.id;
-                      const isEditing = editingCategory?.id === category.id;
-                      const usage = getCategoryUsage(category.id);
-                      const customizedCategory = getCustomizedCategory(category);
-                      
-                      return (
-                        <div key={category.id}>
-                          <div style={{
-                            padding: '1.5rem',
-                            borderBottom: index < filteredUniversalCategories.length - 1 ? '1px solid #f1f5f9' : 'none',
-                            backgroundColor: isDisabled ? '#f8fafc' : 'white',
-                            opacity: isDisabled ? 0.7 : 1
-                          }}>
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              justifyContent: 'space-between',
-                              gap: '1rem'
-                            }}>
-                              {/* Category Info */}
-                              <div style={{ flex: 1 }}>
-                                <div style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '0.75rem',
-                                  marginBottom: '0.5rem'
-                                }}>
-                                  <h4 style={{
-                                    fontSize: '1.125rem',
-                                    fontWeight: '600',
-                                    color: isDisabled ? '#6b7280' : '#1e293b',
-                                    margin: 0
-                                  }}>
-                                    {customizedCategory.name}
-                                  </h4>
-                                  
-                                  <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.25rem',
-                                    padding: '0.125rem 0.5rem',
-                                    borderRadius: '0.75rem',
-                                    backgroundColor: getSeverityColor(customizedCategory.severity),
-                                    color: 'white',
-                                    fontSize: '0.75rem',
-                                    fontWeight: '600'
-                                  }}>
-                                    {getSeverityIcon(customizedCategory.severity)}
-                                    {customizedCategory.severity.replace('_', ' ')}
-                                  </div>
-                                  
-                                  {usage && usage.count > 0 && (
-                                    <div style={{
-                                      padding: '0.125rem 0.5rem',
-                                      backgroundColor: '#f3f4f6',
-                                      borderRadius: '0.75rem',
-                                      fontSize: '0.75rem',
-                                      fontWeight: '500',
-                                      color: '#374151'
-                                    }}>
-                                      {usage.count} warnings
-                                    </div>
-                                  )}
-                                  
-                                  {isDisabled && (
-                                    <div style={{
-                                      padding: '0.125rem 0.5rem',
-                                      backgroundColor: '#fee2e2',
-                                      borderRadius: '0.75rem',
-                                      fontSize: '0.75rem',
-                                      fontWeight: '500',
-                                      color: '#dc2626'
-                                    }}>
-                                      Disabled
-                                    </div>
-                                  )}
-                                </div>
-                                
-                                <p style={{
-                                  fontSize: '0.875rem',
-                                  color: isDisabled ? '#9ca3af' : '#64748b',
-                                  margin: '0 0 0.75rem 0',
-                                  lineHeight: '1.5'
-                                }}>
-                                  {customizedCategory.description}
-                                </p>
-                                
-                                <div style={{
-                                  display: 'flex',
-                                  flexWrap: 'wrap',
-                                  gap: '0.5rem',
-                                  alignItems: 'center'
-                                }}>
-                                  <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.25rem',
-                                    fontSize: '0.75rem',
-                                    color: '#6b7280'
-                                  }}>
-                                    <Target className="h-3 w-3" />
-                                    {customizedCategory.escalationPath.length} steps
-                                  </div>
-                                  
-                                  <div style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '0.25rem',
-                                    fontSize: '0.75rem',
-                                    color: '#6b7280'
-                                  }}>
-                                    <Scale className="h-3 w-3" />
-                                    {customizedCategory.lraSection}
-                                  </div>
-                                  
-                                  {customizedCategory.commonExamples.length > 0 && (
-                                    <div style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '0.25rem',
-                                      fontSize: '0.75rem',
-                                      color: '#6b7280'
-                                    }}>
-                                      <FileText className="h-3 w-3" />
-                                      {customizedCategory.commonExamples.length} examples
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              {/* Actions */}
-                              <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem'
-                              }}>
-                                {!isReadOnly && (
-                                  <>
-                                    <button
-                                      onClick={() => toggleUniversalCategory(category.id)}
-                                      disabled={saving}
-                                      style={{
-                                        padding: '0.5rem',
-                                        backgroundColor: isDisabled ? '#10b981' : '#ef4444',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '0.375rem',
-                                        cursor: saving ? 'not-allowed' : 'pointer',
-                                        fontSize: '0.75rem',
-                                        fontWeight: '500',
-                                        opacity: saving ? 0.6 : 1,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.25rem'
-                                      }}
-                                    >
-                                      {isDisabled ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                                      {isDisabled ? 'Enable' : 'Disable'}
-                                    </button>
-                                    
-                                    <button
-                                      onClick={() => setEditingCategory({
-                                        type: 'universal',
-                                        id: category.id,
-                                        data: {}
-                                      })}
-                                      style={{
-                                        padding: '0.5rem',
-                                        backgroundColor: '#8b5cf6',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '0.375rem',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center'
-                                      }}
-                                    >
-                                      <Edit className="h-3 w-3" />
-                                    </button>
-                                  </>
-                                )}
-                                
-                                <button
-                                  onClick={() => setExpandedCategory(isExpanded ? null : category.id)}
-                                  style={{
-                                    padding: '0.5rem',
-                                    backgroundColor: 'transparent',
-                                    border: '1px solid #d1d5db',
-                                    borderRadius: '0.375rem',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center'
-                                  }}
-                                >
-                                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                </button>
-                              </div>
-                            </div>
-                            
-                            {/* Expanded Details */}
-                            {isExpanded && (
-                              <div style={{
-                                marginTop: '1.5rem',
-                                padding: '1.5rem',
-                                backgroundColor: '#f8fafc',
-                                borderRadius: '0.5rem',
-                                border: '1px solid #e2e8f0'
-                              }}>
-                                <div style={{
-                                  display: 'grid',
-                                  gap: '1.5rem',
-                                  gridTemplateColumns: window.innerWidth > 1024 ? 'repeat(3, 1fr)' : '1fr'
-                                }}>
-                                  {/* Escalation Path */}
-                                  <div>
-                                    <h5 style={{
-                                      fontSize: '0.875rem',
-                                      fontWeight: '600',
-                                      color: '#374151',
-                                      marginBottom: '0.75rem',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '0.25rem'
-                                    }}>
-                                      <Target className="h-4 w-4" />
-                                      Escalation Path
-                                    </h5>
-                                    <div style={{
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      gap: '0.25rem'
-                                    }}>
-                                      {customizedCategory.escalationPath.map((level, idx) => (
-                                        <div
-                                          key={idx}
-                                          style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '0.5rem',
-                                            padding: '0.25rem 0.5rem',
-                                            backgroundColor: 'white',
-                                            borderRadius: '0.25rem',
-                                            fontSize: '0.75rem'
-                                          }}
-                                        >
-                                          <span style={{
-                                            backgroundColor: '#3b82f6',
-                                            color: 'white',
-                                            width: '1.25rem',
-                                            height: '1.25rem',
-                                            borderRadius: '50%',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '0.625rem',
-                                            fontWeight: '600'
-                                          }}>
-                                            {idx + 1}
-                                          </span>
-                                          {level.replace('_', ' ')}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Legal Framework */}
-                                  <div>
-                                    <h5 style={{
-                                      fontSize: '0.875rem',
-                                      fontWeight: '600',
-                                      color: '#374151',
-                                      marginBottom: '0.75rem',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '0.25rem'
-                                    }}>
-                                      <Scale className="h-4 w-4" />
-                                      Legal Framework
-                                    </h5>
-                                    <div style={{
-                                      padding: '0.75rem',
-                                      backgroundColor: 'white',
-                                      borderRadius: '0.375rem',
-                                      fontSize: '0.75rem',
-                                      lineHeight: '1.4'
-                                    }}>
-                                      <div style={{
-                                        fontWeight: '500',
-                                        color: '#1e293b',
-                                        marginBottom: '0.25rem'
-                                      }}>
-                                        {customizedCategory.lraSection}
-                                      </div>
-                                      <div style={{ color: '#6b7280' }}>
-                                        {customizedCategory.schedule8Reference}
-                                      </div>
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Examples */}
-                                  {customizedCategory.commonExamples.length > 0 && (
-                                    <div>
-                                      <h5 style={{
-                                        fontSize: '0.875rem',
-                                        fontWeight: '600',
-                                        color: '#374151',
-                                        marginBottom: '0.75rem',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.25rem'
-                                      }}>
-                                        <FileText className="h-4 w-4" />
-                                        Common Examples
-                                      </h5>
-                                      <div style={{
-                                        display: 'flex',
-                                        flexWrap: 'wrap',
-                                        gap: '0.5rem'
-                                      }}>
-                                        {customizedCategory.commonExamples.slice(0, 6).map((example, idx) => (
-                                          <span
-                                            key={idx}
-                                            style={{
-                                              padding: '0.25rem 0.5rem',
-                                              backgroundColor: '#dbeafe',
-                                              color: '#1e40af',
-                                              borderRadius: '0.375rem',
-                                              fontSize: '0.75rem',
-                                              fontWeight: '500'
-                                            }}
-                                          >
-                                            {example}
-                                          </span>
-                                        ))}
-                                        {customizedCategory.commonExamples.length > 6 && (
-                                          <span style={{
-                                            fontSize: '0.75rem',
-                                            color: '#6b7280',
-                                            fontStyle: 'italic',
-                                            alignSelf: 'center'
-                                          }}>
-                                            +{customizedCategory.commonExamples.length - 6} more...
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                    
-                    {filteredUniversalCategories.length === 0 && (
                       <div style={{
-                        padding: '3rem',
-                        textAlign: 'center',
-                        color: '#64748b'
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        marginBottom: '0.75rem'
                       }}>
-                        <Search className="h-8 w-8 mx-auto mb-4" style={{ color: '#9ca3af' }} />
-                        <p style={{ margin: 0, fontSize: '0.875rem' }}>
-                          No categories found matching your filters.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Custom Categories Tab */}
-              {activeTab === 'custom' && (
-                <div style={{ padding: '2rem' }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '2rem'
-                  }}>
-                    <div>
-                      <h3 style={{
-                        fontSize: '1.25rem',
-                        fontWeight: '600',
-                        color: '#1e293b',
-                        margin: 0,
-                        marginBottom: '0.25rem'
-                      }}>
-                        Custom Categories
-                      </h3>
-                      <p style={{
-                        fontSize: '0.875rem',
-                        color: '#64748b',
-                        margin: 0
-                      }}>
-                        Organization-specific categories beyond the universal standards.
-                      </p>
-                    </div>
-                  </div>
-
-                  {customCategories.length > 0 ? (
-                    <div style={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '0.5rem',
-                      overflow: 'hidden'
-                    }}>
-                      {customCategories.map((category, index) => (
-                        <div
-                          key={category.id}
-                          style={{
-                            padding: '1.5rem',
-                            borderBottom: index < customCategories.length - 1 ? '1px solid #f1f5f9' : 'none'
-                          }}
-                        >
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            justifyContent: 'space-between',
-                            gap: '1rem'
+                        <div style={{ flex: 1 }}>
+                          <h4 style={{
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            color: '#1e293b',
+                            margin: '0 0 0.5rem 0'
                           }}>
-                            <div style={{ flex: 1 }}>
-                              <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.75rem',
-                                marginBottom: '0.5rem'
-                              }}>
-                                <h4 style={{
-                                  fontSize: '1.125rem',
-                                  fontWeight: '600',
-                                  color: '#1e293b',
-                                  margin: 0
-                                }}>
-                                  {category.name}
-                                </h4>
-                                
-                                <div style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '0.25rem',
-                                  padding: '0.125rem 0.5rem',
-                                  borderRadius: '0.75rem',
-                                  backgroundColor: getSeverityColor(category.severity),
-                                  color: 'white',
-                                  fontSize: '0.75rem',
-                                  fontWeight: '600'
-                                }}>
-                                  {getSeverityIcon(category.severity)}
-                                  {category.severity}
-                                </div>
-                                
-                                <div style={{
-                                  padding: '0.125rem 0.5rem',
-                                  backgroundColor: '#fef3c7',
-                                  borderRadius: '0.75rem',
-                                  fontSize: '0.75rem',
-                                  fontWeight: '500',
-                                  color: '#d97706'
-                                }}>
-                                  Custom
-                                </div>
-                              </div>
-                              
-                              <p style={{
-                                fontSize: '0.875rem',
-                                color: '#64748b',
-                                margin: '0 0 0.75rem 0',
-                                lineHeight: '1.5'
-                              }}>
-                                {category.description || 'No description provided'}
-                              </p>
-                              
-                              <div style={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: '0.5rem',
-                                alignItems: 'center'
-                              }}>
-                                <div style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '0.25rem',
-                                  fontSize: '0.75rem',
-                                  color: '#6b7280'
-                                }}>
-                                  <Target className="h-3 w-3" />
-                                  {category.escalationPath?.length || 0} steps
-                                </div>
-                                
-                                <div style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '0.25rem',
-                                  fontSize: '0.75rem',
-                                  color: '#6b7280'
-                                }}>
-                                  <Clock className="h-3 w-3" />
-                                  Created {new Date(category.createdAt).toLocaleDateString()}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Actions */}
-                            {!isReadOnly && (
-                              <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem'
-                              }}>
-                                <button
-                                  onClick={() => setEditingCategory({
-                                    type: 'custom',
-                                    id: category.id,
-                                    data: category
-                                  })}
-                                  style={{
-                                    padding: '0.5rem',
-                                    backgroundColor: '#8b5cf6',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '0.375rem',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center'
-                                  }}
-                                >
-                                  <Edit className="h-3 w-3" />
-                                </button>
-                                
-                                <button
-                                  onClick={() => deleteCustomCategory(category.id)}
-                                  style={{
-                                    padding: '0.5rem',
-                                    backgroundColor: '#ef4444',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '0.375rem',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center'
-                                  }}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                            {category.name}
+                          </h4>
+                          <p style={{
+                            fontSize: '0.875rem',
+                            color: '#64748b',
+                            margin: 0,
+                            lineHeight: '1.5'
+                          }}>
+                            {category.description}
+                          </p>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{
-                      padding: '3rem',
-                      textAlign: 'center',
-                      border: '2px dashed #e2e8f0',
-                      borderRadius: '0.5rem',
-                      color: '#64748b'
-                    }}>
-                      <Settings className="h-12 w-12 mx-auto mb-4" style={{ color: '#9ca3af' }} />
-                      <h4 style={{
-                        fontSize: '1.125rem',
-                        fontWeight: '600',
-                        marginBottom: '0.5rem',
-                        color: '#374151'
-                      }}>
-                        No Custom Categories
-                      </h4>
-                      <p style={{
-                        margin: '0 0 1.5rem 0',
-                        fontSize: '0.875rem'
-                      }}>
-                        Create organization-specific categories to supplement the universal standards.
-                      </p>
-                      {!isReadOnly && (
-                        <button
-                          onClick={() => setShowAddCustom(true)}
-                          style={{
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: '1rem' }}>
+                          <div style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '0.5rem',
-                            padding: '0.75rem 1.5rem',
-                            backgroundColor: '#8b5cf6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '0.375rem',
-                            fontSize: '0.875rem',
+                            padding: '0.25rem 0.75rem',
+                            backgroundColor: severity.bg,
+                            color: severity.text,
+                            borderRadius: '9999px',
+                            fontSize: '0.75rem',
+                            fontWeight: '500'
+                          }}>
+                            {severity.label}
+                          </div>
+
+                          {/* Edit and Delete buttons - only show if not read-only */}
+                          {!isReadOnly && (
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <button
+                                onClick={() => setEditingCategory({ type: 'custom', id: category.id, data: category })}
+                                title="Edit category"
+                                style={{
+                                  padding: '0.375rem',
+                                  backgroundColor: 'transparent',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '0.375rem',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#6b7280'
+                                }}
+                                onMouseOver={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#f3f4f6';
+                                  e.currentTarget.style.color = '#3b82f6';
+                                }}
+                                onMouseOut={(e) => {
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                  e.currentTarget.style.color = '#6b7280';
+                                }}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => deleteCustomCategory(category.id)}
+                                title="Delete category"
+                                style={{
+                                  padding: '0.375rem',
+                                  backgroundColor: 'transparent',
+                                  border: '1px solid #d1d5db',
+                                  borderRadius: '0.375rem',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#6b7280'
+                                }}
+                                onMouseOver={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#fef2f2';
+                                  e.currentTarget.style.color = '#dc2626';
+                                }}
+                                onMouseOut={(e) => {
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                  e.currentTarget.style.color = '#6b7280';
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {category.examples && category.examples.length > 0 && (
+                        <div style={{ marginTop: '0.75rem' }}>
+                          <p style={{
+                            fontSize: '0.75rem',
                             fontWeight: '500',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <Plus className="h-4 w-4" />
-                          Create First Custom Category
-                        </button>
+                            color: '#6b7280',
+                            margin: '0 0 0.5rem 0',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em'
+                          }}>
+                            Examples
+                          </p>
+                          <ul style={{
+                            margin: 0,
+                            paddingLeft: '1.25rem',
+                            fontSize: '0.875rem',
+                            color: '#64748b'
+                          }}>
+                            {category.examples.slice(0, 3).map((example, idx) => (
+                              <li key={idx} style={{ marginBottom: '0.25rem' }}>
+                                {example}
+                              </li>
+                            ))}
+                            {category.examples.length > 3 && (
+                              <li style={{ color: '#9ca3af', fontStyle: 'italic' }}>
+                                +{category.examples.length - 3} more...
+                              </li>
+                            )}
+                          </ul>
+                        </div>
                       )}
-                    </div>
-                  )}
-                </div>
-              )}
 
-              {/* Analytics Tab */}
-              {activeTab === 'analytics' && canViewAnalytics && (
-                <div style={{ padding: '2rem' }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: '2rem'
-                  }}>
-                    <div>
-                      <h3 style={{
-                        fontSize: '1.25rem',
-                        fontWeight: '600',
-                        color: '#1e293b',
-                        margin: 0,
-                        marginBottom: '0.25rem'
-                      }}>
-                        Category Usage Analytics
-                      </h3>
-                      <p style={{
-                        fontSize: '0.875rem',
-                        color: '#64748b',
-                        margin: 0
-                      }}>
-                        Insights into how categories are being used across your organization.
-                      </p>
-                    </div>
-                  </div>
-
-                  {categoryStats ? (
-                    <div style={{ display: 'grid', gap: '2rem' }}>
-                      {/* Usage Chart Placeholder */}
                       <div style={{
-                        backgroundColor: 'white',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '0.5rem',
-                        padding: '2rem',
-                        textAlign: 'center'
+                        display: 'flex',
+                        gap: '1rem',
+                        marginTop: '0.75rem',
+                        fontSize: '0.75rem',
+                        color: '#9ca3af'
                       }}>
-                        <Target className="h-12 w-12 mx-auto mb-4" style={{ color: '#9ca3af' }} />
-                        <h4 style={{
-                          fontSize: '1.125rem',
-                          fontWeight: '600',
-                          marginBottom: '0.5rem',
-                          color: '#374151'
-                        }}>
-                          Usage Analytics Coming Soon
-                        </h4>
-                        <p style={{
-                          color: '#64748b',
-                          margin: 0,
-                          fontSize: '0.875rem'
-                        }}>
-                          Detailed analytics and charts will be available in a future update.
-                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Scale className="w-3 h-3" />
+                          <span>Section 188(1)</span>
+                        </div>
+                        {category.isActive !== false && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <CheckCircle className="w-3 h-3 text-green-600" />
+                            <span style={{ color: '#16a34a' }}>Active</span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ) : (
-                    <div style={{
-                      padding: '3rem',
-                      textAlign: 'center',
-                      color: '#64748b'
-                    }}>
-                      <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin" />
-                      <p style={{ margin: 0 }}>Loading analytics data...</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Add Custom Category Modal */}
+        {/* Add Category Modal */}
         {showAddCustom && (
           <div style={{
             position: 'fixed',
@@ -1931,7 +1057,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 60
+            zIndex: 10000
           }}>
             <div style={{
               backgroundColor: 'white',
@@ -1942,16 +1068,51 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
               maxHeight: '80vh',
               overflowY: 'auto'
             }}>
-              <h4 style={{
-                fontSize: '1.25rem',
-                fontWeight: '600',
-                marginBottom: '1.5rem',
-                color: '#1e293b'
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '1.5rem'
               }}>
-                Create Custom Category
-              </h4>
-              
-              <div style={{ display: 'grid', gap: '1.5rem' }}>
+                <h4 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '600',
+                  color: '#1e293b',
+                  margin: 0
+                }}>
+                  Add New Category
+                </h4>
+                <button
+                  onClick={() => setShowTemplateSelector(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.5rem 1rem',
+                    backgroundColor: '#f3f4f6',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#e5e7eb';
+                    e.currentTarget.style.borderColor = '#3b82f6';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                  }}
+                >
+                  <Shield className="w-4 h-4" />
+                  Use Template
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {/* Name */}
                 <div>
                   <label style={{
@@ -1967,7 +1128,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
                     type="text"
                     value={newCustomCategory.name || ''}
                     onChange={(e) => setNewCustomCategory(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="e.g., Social Media Policy Violations"
+                    placeholder="e.g., Workplace Safety Violations"
                     style={{
                       width: '100%',
                       padding: '0.75rem',
@@ -1977,7 +1138,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
                     }}
                   />
                 </div>
-                
+
                 {/* Description */}
                 <div>
                   <label style={{
@@ -2004,7 +1165,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
                     }}
                   />
                 </div>
-                
+
                 {/* Severity */}
                 <div>
                   <label style={{
@@ -2018,7 +1179,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
                   </label>
                   <select
                     value={newCustomCategory.severity || 'serious'}
-                    onChange={(e) => setNewCustomCategory(prev => ({ ...prev, severity: e.target.value as CategorySeverity }))}
+                    onChange={(e) => setNewCustomCategory(prev => ({ ...prev, severity: e.target.value as any }))}
                     style={{
                       width: '100%',
                       padding: '0.75rem',
@@ -2028,105 +1189,13 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
                       backgroundColor: 'white'
                     }}
                   >
-                    <option value="minor">Minor - Correctable behavior issues</option>
-                    <option value="serious">Serious - Policy violations or misconduct</option>
-                    <option value="gross_misconduct">Gross Misconduct - Severe violations</option>
+                    <option value="minor">Minor</option>
+                    <option value="serious">Serious</option>
+                    <option value="gross_misconduct">Gross Misconduct</option>
                   </select>
                 </div>
-
-                {/* Icon */}
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Category Icon
-                  </label>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(8, 1fr)',
-                    gap: '0.5rem',
-                    padding: '1rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '0.375rem',
-                    backgroundColor: '#f9fafb'
-                  }}>
-                    {['📋', '⚠️', '📊', '🔒', '👔', '💼', '🏢', '📞', '🖥️', '📝', '🗂️', '📅', '🔧', '⚡', '🎯', '📈'].map((icon) => (
-                      <button
-                        key={icon}
-                        type="button"
-                        onClick={() => setNewCustomCategory(prev => ({ ...prev, icon }))}
-                        style={{
-                          width: '3rem',
-                          height: '3rem',
-                          border: newCustomCategory.icon === icon ? '2px solid #8b5cf6' : '1px solid #d1d5db',
-                          borderRadius: '0.375rem',
-                          backgroundColor: newCustomCategory.icon === icon ? '#f3f4f6' : 'white',
-                          fontSize: '1.25rem',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={(e) => {
-                          if (newCustomCategory.icon !== icon) {
-                            e.currentTarget.style.backgroundColor = '#f3f4f6';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (newCustomCategory.icon !== icon) {
-                            e.currentTarget.style.backgroundColor = 'white';
-                          }
-                        }}
-                      >
-                        {icon}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Examples */}
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Common Examples (Optional)
-                  </label>
-                  <textarea
-                    value={newCustomCategory.examples?.join('\n') || ''}
-                    onChange={(e) => setNewCustomCategory(prev => ({ 
-                      ...prev, 
-                      examples: e.target.value.split('\n').filter(ex => ex.trim()) 
-                    }))}
-                    placeholder="Enter examples, one per line..."
-                    rows={4}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '0.375rem',
-                      fontSize: '0.875rem',
-                      resize: 'vertical'
-                    }}
-                  />
-                  <p style={{
-                    fontSize: '0.75rem',
-                    color: '#6b7280',
-                    margin: '0.5rem 0 0 0'
-                  }}>
-                    Enter one example per line to help managers understand when to use this category.
-                  </p>
-                </div>
               </div>
-              
+
               {/* Buttons */}
               <div style={{
                 display: 'flex',
@@ -2165,7 +1234,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
                   style={{
                     padding: '0.75rem 1.5rem',
                     border: 'none',
-                    backgroundColor: (!newCustomCategory.name?.trim() || saving) ? '#9ca3af' : '#8b5cf6',
+                    backgroundColor: (!newCustomCategory.name?.trim() || saving) ? '#9ca3af' : '#3b82f6',
                     color: 'white',
                     borderRadius: '0.375rem',
                     fontSize: '0.875rem',
@@ -2175,8 +1244,17 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
                     gap: '0.5rem'
                   }}
                 >
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                  {saving ? 'Creating...' : 'Create Category'}
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      Create Category
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -2195,7 +1273,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 60
+            zIndex: 10000
           }}>
             <div style={{
               backgroundColor: 'white',
@@ -2212,9 +1290,9 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
                 marginBottom: '1.5rem',
                 color: '#1e293b'
               }}>
-                Edit {editingCategory.type === 'universal' ? 'Universal' : 'Custom'} Category
+                Edit Category
               </h4>
-              
+
               <div style={{
                 padding: '1rem',
                 backgroundColor: '#f0f9ff',
@@ -2230,10 +1308,10 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
                   color: '#0369a1'
                 }}>
                   <Info className="h-4 w-4" />
-                  Category editing functionality will be implemented in the next phase.
+                  Full category editing functionality will be available soon. For now, you can delete and recreate categories.
                 </div>
               </div>
-              
+
               <div style={{
                 display: 'flex',
                 gap: '0.75rem',
@@ -2257,7 +1335,205 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
             </div>
           </div>
         )}
+
+        {/* Template Selector Modal */}
+        {showTemplateSelector && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10001
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              borderRadius: '0.5rem',
+              width: '90%',
+              maxWidth: '56rem',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}>
+              {/* Header */}
+              <div style={{
+                padding: '1.5rem',
+                borderBottom: '1px solid #e5e7eb'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div>
+                    <h4 style={{
+                      fontSize: '1.25rem',
+                      fontWeight: '600',
+                      color: '#1e293b',
+                      margin: '0 0 0.25rem 0'
+                    }}>
+                      Universal Category Templates
+                    </h4>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: '#6b7280',
+                      margin: 0
+                    }}>
+                      Select a standard SA-compliant warning category
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowTemplateSelector(false)}
+                    style={{
+                      padding: '0.5rem',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer',
+                      color: '#6b7280'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+                    onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Templates List */}
+              <div style={{
+                padding: '1.5rem',
+                overflowY: 'auto',
+                flex: 1
+              }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {universalCategories.map((template) => {
+                    const severityColors = {
+                      minor: { bg: '#dbeafe', text: '#1e40af', label: 'Minor' },
+                      serious: { bg: '#fed7aa', text: '#c2410c', label: 'Serious' },
+                      gross_misconduct: { bg: '#fecaca', text: '#991b1b', label: 'Gross Misconduct' }
+                    };
+                    const severity = severityColors[template.severity];
+
+                    return (
+                      <div
+                        key={template.id}
+                        style={{
+                          padding: '1.25rem',
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '0.5rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = '#f9fafb';
+                          e.currentTarget.style.borderColor = '#3b82f6';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white';
+                          e.currentTarget.style.borderColor = '#e5e7eb';
+                        }}
+                        onClick={() => {
+                          setNewCustomCategory({
+                            name: template.name,
+                            description: template.description,
+                            severity: template.severity,
+                            icon: template.icon,
+                            escalationPath: template.escalationPath,
+                            examples: template.commonExamples.slice(0, 3),
+                            isActive: true
+                          });
+                          setShowTemplateSelector(false);
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '1rem',
+                          marginBottom: '0.75rem'
+                        }}>
+                          <span style={{ fontSize: '2rem', lineHeight: 1 }}>{template.icon}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem',
+                              marginBottom: '0.5rem'
+                            }}>
+                              <h5 style={{
+                                fontSize: '1rem',
+                                fontWeight: '600',
+                                color: '#1e293b',
+                                margin: 0
+                              }}>
+                                {template.name}
+                              </h5>
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                padding: '0.125rem 0.5rem',
+                                backgroundColor: severity.bg,
+                                color: severity.text,
+                                borderRadius: '9999px',
+                                fontSize: '0.75rem',
+                                fontWeight: '500'
+                              }}>
+                                {severity.label}
+                              </span>
+                            </div>
+                            <p style={{
+                              fontSize: '0.875rem',
+                              color: '#6b7280',
+                              margin: '0 0 0.75rem 0',
+                              lineHeight: '1.5'
+                            }}>
+                              {template.description}
+                            </p>
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: '#9ca3af'
+                            }}>
+                              <strong>Examples:</strong> {template.commonExamples.slice(0, 2).join(' • ')}
+                              {template.commonExamples.length > 2 && ` • +${template.commonExamples.length - 2} more`}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'flex-end',
+                          paddingTop: '0.75rem',
+                          borderTop: '1px solid #f3f4f6'
+                        }}>
+                          <div style={{
+                            fontSize: '0.75rem',
+                            color: '#3b82f6',
+                            fontWeight: '500',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}>
+                            Click to use this template
+                            <ChevronRight className="w-3 h-3" />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+export default CategoryManagement;

@@ -238,6 +238,11 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
     setIsGeneratingQR(true);
 
     try {
+      // Validate organization data is available
+      if (!organization || !organization.id) {
+        throw new Error('Organization data is not available. Please try again.');
+      }
+
       // Transform data for PDF using the unified transformer
       const { transformWarningDataForPDF } = await import('../../../../utils/pdfDataTransformer');
 
@@ -263,7 +268,7 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
         }
       };
 
-      const pdfData = transformWarningDataForPDF(
+      const pdfData = await transformWarningDataForPDF(
         warningDataStructure,
         selectedEmployee,
         organization

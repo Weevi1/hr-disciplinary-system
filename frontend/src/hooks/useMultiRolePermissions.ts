@@ -11,8 +11,8 @@ interface MultiRolePermissions {
   canManageOrganization: () => boolean;
   canViewComplianceReports: () => boolean;
   canManageOrganizationSettings: () => boolean;
-  
-  // 👥 HR Manager Functions  
+
+  // 👥 HR Manager Functions
   canManageEmployees: () => boolean;
   canManageHR: () => boolean;
   canReviewWarnings: () => boolean;
@@ -21,13 +21,17 @@ interface MultiRolePermissions {
   canManageDepartments: () => boolean;
   canCreateHRManagers: () => boolean;
   canCreateHODManagers: () => boolean;
-  
+
   // ⚠️ HOD Manager Functions
   canCreateWarnings: () => boolean;
   canCaptureDocuments: () => boolean;
   canViewTeamMembers: () => boolean;
   canManageTeam: () => boolean;
-  
+
+  // 📋 Category Management Functions
+  canManageCategories: boolean;
+  canViewAnalytics: boolean;
+
   // 🛡️ Utility Functions
   hasRole: (role: string) => boolean;
   hasAnyRole: (roles: string[]) => boolean;
@@ -145,13 +149,20 @@ export const useMultiRolePermissions = (): MultiRolePermissions => {
     return hasAnyRole(['hod-manager', 'hr-manager', 'business-owner', 'super-user']);
   };
 
+  // 📋 CATEGORY MANAGEMENT PERMISSIONS
+  // Resellers can manage their client's categories
+  // HR managers and business owners can manage their organization's categories
+  // Super users can manage any organization's categories
+  const canManageCategories = hasAnyRole(['reseller', 'hr-manager', 'business-owner', 'super-user']);
+  const canViewAnalytics = hasAnyRole(['reseller', 'hr-manager', 'business-owner', 'super-user']);
+
   return {
     // Business Owner Functions
     canViewBusinessMetrics,
     canManageOrganization,
     canViewComplianceReports,
     canManageOrganizationSettings,
-    
+
     // HR Manager Functions
     canManageEmployees,
     canManageHR,
@@ -161,13 +172,17 @@ export const useMultiRolePermissions = (): MultiRolePermissions => {
     canManageDepartments,
     canCreateHRManagers,
     canCreateHODManagers,
-    
+
     // HOD Manager Functions
     canCreateWarnings,
     canCaptureDocuments,
     canViewTeamMembers,
     canManageTeam,
-    
+
+    // Category Management Functions
+    canManageCategories,
+    canViewAnalytics,
+
     // Utility Functions
     hasRole,
     hasAnyRole,

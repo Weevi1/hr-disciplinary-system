@@ -4,7 +4,7 @@
 // 📱 Headers stay, but content area is completely flexible
 // 🎨 Uses CSS variables for all styling - no conflicts with index.css
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { globalDeviceCapabilities } from '../utils/deviceDetection';
@@ -13,15 +13,18 @@ import {
   LogOut,
   Users,
   Settings,
-  Key
+  Key,
+  AlertTriangle
 } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
 import { BrandedLogo } from '../components/common/BrandedLogo';
 import { BrandingProvider } from '../contexts/BrandingContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { UnifiedModal } from '../components/common/UnifiedModal';
+import { FirstTimeWelcomeModal } from '../components/auth/FirstTimeWelcomeModal';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import { auth, db } from '../config/firebase';
+import { DatabaseShardingService } from '../services/DatabaseShardingService';
 import Logger from '../utils/logger';
 
 interface MainLayoutProps {
@@ -81,6 +84,38 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
   const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [hasSeenWelcomeThisSession, setHasSeenWelcomeThisSession] = useState(false);
+
+  // Ref for user menu dropdown to detect clicks outside
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [userMenuOpen]);
+
+  // Check if this is user's first login (show welcome modal)
+  useEffect(() => {
+    // Show welcome modal if user hasn't seen it yet
+    // Handles both explicit false and undefined (for existing users)
+    // Also check session state to prevent showing after dismissal
+    if (user && user.hasSeenWelcome !== true && !hasSeenWelcomeThisSession) {
+      setShowWelcomeModal(true);
+    }
+  }, [user, user?.hasSeenWelcome, hasSeenWelcomeThisSession]);
 
   // Password Reset Handler
   const handlePasswordReset = async () => {
@@ -110,6 +145,36 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
     setResetPasswordError(null);
   };
 
+  // Handle welcome modal confirmation (only when "Don't show again" is checked)
+  const handleWelcomeConfirm = async () => {
+    if (!user || !user.organizationId) return;
+
+    try {
+      // Update user document to mark welcome as seen
+      // Use DatabaseShardingService to update the user document
+      await DatabaseShardingService.updateDocument(
+        user.organizationId,
+        'users',
+        user.id,
+        {
+          hasSeenWelcome: true,
+          updatedAt: new Date().toISOString()
+        }
+      );
+
+      Logger.info('Welcome modal dismissed permanently by user');
+
+      // Set session flag to prevent showing again in this session
+      setHasSeenWelcomeThisSession(true);
+      setShowWelcomeModal(false);
+    } catch (error) {
+      Logger.error('Failed to update welcome status:', error);
+      // Still close the modal and set session flag
+      setHasSeenWelcomeThisSession(true);
+      setShowWelcomeModal(false);
+    }
+  };
+
   // 🎨 Effect to update CSS variables when organization branding changes
   useEffect(() => {
     if (organization?.branding) {
@@ -133,9 +198,7 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
         { id: 'settings', label: 'Settings', icon: Settings }
       ];
     } else if (user?.role?.id === 'reseller') {
-      return [
-        { id: 'client-management', label: 'My Clients', icon: Users }
-      ];
+      return [];
     } else {
       return [];
     }
@@ -157,7 +220,10 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
           <div className="flex items-center space-x-4 sm:space-x-6">
             {/* Clickable Logo - more compact on mobile */}
             <button
-              onClick={() => onNavigate?.('dashboard')}
+              onClick={() => {
+                // Navigate to dashboard using React Router
+                navigate('/dashboard');
+              }}
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
               <BrandedLogo size="small" showText={false} className="sm:hidden" />
@@ -221,7 +287,7 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
           <div className="flex items-center gap-2 sm:gap-3">
 
             {/* Compact User Menu - mobile optimized */}
-            <div className="relative">
+            <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="flex items-center gap-1.5 sm:gap-2 p-1.5 rounded-lg transition-colors"
@@ -329,22 +395,41 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
                         setResetPasswordModalOpen(true);
                         setUserMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:px-4 sm:py-2 text-sm transition-colors"
+                      className="w-full flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:px-4 sm:py-2 text-sm transition-colors relative group"
                       style={{
-                        color: 'var(--color-text-secondary)',
+                        color: (user?.mustChangePassword || !user?.passwordChangedAt) ? 'var(--color-alert-warning-text)' : 'var(--color-text-secondary)',
+                        backgroundColor: (user?.mustChangePassword || !user?.passwordChangedAt) ? 'var(--color-alert-warning-bg)' : 'transparent',
                         minHeight: '44px'
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'var(--color-nav-hover)';
-                        e.currentTarget.style.color = 'var(--color-text)';
+                        if (!user?.mustChangePassword && user?.passwordChangedAt) {
+                          e.currentTarget.style.backgroundColor = 'var(--color-nav-hover)';
+                          e.currentTarget.style.color = 'var(--color-text)';
+                        }
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = 'var(--color-text-secondary)';
+                        if (!user?.mustChangePassword && user?.passwordChangedAt) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.color = 'var(--color-text-secondary)';
+                        }
                       }}
+                      title={(user?.mustChangePassword || !user?.passwordChangedAt) ? 'Default password hasn\'t been changed yet' : ''}
                     >
                       <Key className="w-4 h-4" />
-                      <span>Reset Password</span>
+                      <span className="flex-1">Reset Password</span>
+                      {(user?.mustChangePassword || !user?.passwordChangedAt) && (
+                        <AlertTriangle className="w-4 h-4 text-orange-500 animate-pulse" />
+                      )}
+
+                      {/* Tooltip on hover */}
+                      {(user?.mustChangePassword || !user?.passwordChangedAt) && (
+                        <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 hidden group-hover:block z-50 pointer-events-none">
+                          <div className="bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                            Default password hasn't been changed yet
+                            <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-gray-900"></div>
+                          </div>
+                        </div>
+                      )}
                     </button>
 
                     <button
@@ -461,14 +546,31 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
         </div>
       </UnifiedModal>
 
-      {/* Main Content Area - Full width */}
+      {/* First-Time Welcome Modal - Now includes password reminder */}
+      {user && (
+        <FirstTimeWelcomeModal
+          isOpen={showWelcomeModal}
+          onClose={() => {
+            setHasSeenWelcomeThisSession(true);
+            setShowWelcomeModal(false);
+          }}
+          userName={user.firstName}
+          userRole={user.role.id}
+          onConfirm={handleWelcomeConfirm}
+          hodPermissions={user.hodPermissions}
+        />
+      )}
+
+      {/* Main Content Area - Constrained to match header */}
       <main
         id="main-content"
         className="min-h-screen"
         role="main"
         style={{ backgroundColor: 'var(--color-background)' }}
       >
-        {children}
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 sm:py-6">
+          {children}
+        </div>
       </main>
     </div>
   );

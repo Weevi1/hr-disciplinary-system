@@ -222,7 +222,7 @@ export class PDFTemplateService {
             heading: 'WARNING: CONSEQUENCES IF EMPLOYEE\nDOES NOT CHANGE BEHAVIOUR',
             // 🆕 BODY: Default consequences text (v1.1.0 format)
             // Supports {{placeholder}} replacement (e.g., {{issuedDate}})
-            body: 'Any further transgressions related or unrelated to the offences shall result in further disciplinary action which can lead to a disciplinary hearing and it can result in dismissal. Refer to counselling dated {{issuedDate}}.',
+            body: 'Any further transgressions related or unrelated to the offences shall result in further disciplinary action which can lead to a disciplinary hearing and it can result in dismissal.',
             // 🆕 BULLET POINTS: Alternative consequences format (optional, empty by default)
             bulletPoints: []
           },

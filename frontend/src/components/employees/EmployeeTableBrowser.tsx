@@ -607,19 +607,28 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
 
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
-                        {employee.profile.email && (
-                          <Mail
-                            className="w-4 h-4 text-green-600"
-                            title={`Email: ${employee.profile.email}`}
-                          />
+                        {/* Only show contact icons to HR and Business Owner roles */}
+                        {(user?.role === 'hr' || user?.role === 'business_owner') && (
+                          <>
+                            {employee.profile.email && (
+                              <Mail
+                                className="w-4 h-4 text-green-600"
+                                title={`Email: ${employee.profile.email}`}
+                              />
+                            )}
+                            {employee.profile.phoneNumber && (
+                              <Phone
+                                className="w-4 h-4 text-blue-600"
+                                title={`Phone: ${employee.profile.phoneNumber}`}
+                              />
+                            )}
+                            {!employee.profile.email && !employee.profile.phoneNumber && (
+                              <span className="text-sm text-gray-400">—</span>
+                            )}
+                          </>
                         )}
-                        {employee.profile.phoneNumber && (
-                          <Phone
-                            className="w-4 h-4 text-blue-600"
-                            title={`Phone: ${employee.profile.phoneNumber}`}
-                          />
-                        )}
-                        {!employee.profile.email && !employee.profile.phoneNumber && (
+                        {/* Show dash for HOD managers */}
+                        {user?.role !== 'hr' && user?.role !== 'business_owner' && (
                           <span className="text-sm text-gray-400">—</span>
                         )}
                       </div>
@@ -714,8 +723,13 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
                               <div className="space-y-2 text-sm">
                                 <p><span className="font-medium">Name:</span> {employee.profile.firstName} {employee.profile.lastName}</p>
                                 <p><span className="font-medium">ID:</span> {employee.profile.employeeNumber}</p>
-                                <p><span className="font-medium">Email:</span> {employee.profile.email}</p>
-                                <p><span className="font-medium">Phone:</span> {employee.profile.phoneNumber || 'Not provided'}</p>
+                                {/* Only show contact details to HR and Business Owner roles */}
+                                {(user?.role === 'hr' || user?.role === 'business_owner') && (
+                                  <>
+                                    <p><span className="font-medium">Email:</span> {employee.profile.email}</p>
+                                    <p><span className="font-medium">Phone:</span> {employee.profile.phoneNumber || 'Not provided'}</p>
+                                  </>
+                                )}
                               </div>
                             </div>
                             <div>
@@ -758,27 +772,30 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
                             </div>
                           </div>
 
-                          <div className="flex gap-3 mt-4 pt-4 border-t border-gray-200">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEmployeeEdit?.(employee);
-                              }}
-                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                            >
-                              Edit Employee
-                            </button>
-                            {/* Promote to Manager button removed - now available in dedicated Managers tab */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEmployeeDelete?.(employee);
-                              }}
-                              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-                            >
-                              Archive Employee
-                            </button>
-                          </div>
+                          {/* Only show Edit and Archive buttons to HR and Business Owner roles */}
+                          {(user?.role === 'hr' || user?.role === 'business_owner') && (
+                            <div className="flex gap-3 mt-4 pt-4 border-t border-gray-200">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEmployeeEdit?.(employee);
+                                }}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                              >
+                                Edit Employee
+                              </button>
+                              {/* Promote to Manager button removed - now available in dedicated Managers tab */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEmployeeDelete?.(employee);
+                                }}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                              >
+                                Archive Employee
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>
