@@ -243,9 +243,111 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 ## 🔧 Latest Updates
 
-**For complete change history, see `RECENT_UPDATES.md` (Sessions 20-36) and `SESSION_HISTORY.md` (Sessions 5-19)**
+**For complete change history, see `RECENT_UPDATES.md` (Sessions 20-39) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Session 37 - 2025-10-23)
+### Most Recent (Session 39 - 2025-10-30)
+- **🎉 PDF SIGNATURE DISPLAY FIX & UI IMPROVEMENTS**: Fixed critical PDF signature rendering bug and improved PDF layout
+- **Critical Bug Fix - PDF Signatures Not Displaying**:
+  - ✅ Fixed v1.2.0 method signature mismatch - was passing entire data object instead of signatures
+  - ✅ Root cause: PDF template system implementation introduced parameter ordering bug
+  - ✅ Signatures now display correctly in PDF preview and generated documents
+  - ✅ Issue affected all warnings using v1.2.0 generator (2025-10-15 onwards)
+- **PDF Layout Improvements**:
+  - ✅ Added 8mm spacing before signatures section for better visual separation
+  - ✅ Made blue "Employee Rights" background box dynamic (adjusts height to content)
+  - ✅ Removed "Generated on" timestamp from footer (only shows issue/valid/incident dates)
+  - ✅ Centered page numbers in footer for cleaner layout
+- **Warning History Modal**:
+  - ✅ Created interactive warning history in Step 2 with tappable warning cards
+  - ✅ Modal shows date, manager, incident details, location, and expiry with color coding
+  - ✅ Mobile-optimized with 44px touch targets
+  - ✅ Removed slide animation per user request
+- **Multi-Language Script Section**:
+  - ✅ Redesigned to ultra-compact layout (60% size reduction)
+  - ✅ Language selector and "View Script" button now equal weight
+  - ✅ Removed redundant "Script available in" and "Complete script" text
+  - ✅ Perfect horizontal alignment using flexbox items-stretch
+- **Default Template Update**:
+  - ✅ Removed "Refer to counselling dated {{issuedDate}}" from consequences section
+  - ✅ Affects new organizations only (existing orgs can edit via template editor)
+- **Files Modified**:
+  - `PDFGenerationService.ts:872` - Fixed addSignaturesSection parameters
+  - `PDFGenerationService.ts:1685` - Added signature section spacing
+  - `PDFGenerationService.ts:1610-1695` - Dynamic blue box height calculation
+  - `PDFGenerationService.ts:2100,2457` - Removed generation timestamps
+  - `LegalReviewSignaturesStepV2.tsx` - Interactive warning history with modal
+  - `MultiLanguageWarningScript.tsx` - Ultra-compact script selector
+  - `PDFTemplateService.ts:225` - Updated default template text
+- **Deployment**: ✅ Frontend built and deployed
+- **Status**: ✅ Complete - PDF signatures working, improved layouts deployed
+
+### Previous Recent (Session 38 - 2025-10-28)
+- **🎉 MANAGER DASHBOARD FIX - Team Members Now Visible**: Fixed critical bug where managers couldn't see their assigned team
+- **Reseller Dashboard Enhancements**:
+  - ✅ Fixed eye icon - now opens ClientSummaryModal instead of broken new tab
+  - ✅ Created professional client summary modal with metrics, contact info, and activity
+  - ✅ Added pagination (10 clients per page) with search and status filtering
+  - ✅ Removed "Trial" status option (not yet implemented)
+  - ✅ Updated "Your Clients" to "Recent Clients" showing last 2 deployed
+- **HOD Manager Employee Management**:
+  - ✅ Hidden Hierarchy tab from HOD managers (security restriction)
+  - ✅ Removed contact details (email/phone) from employee views
+  - ✅ Hidden Edit and Archive buttons (read-only access for HOD)
+  - ✅ Added employee view modal for cards view on mobile
+  - ✅ Role-based visibility throughout employee management
+- **Team Management Modal Fixes**:
+  - ✅ Fixed body scroll prevention when modal is open
+  - ✅ Fixed floating action button positioning (was rendering off-screen)
+  - ✅ Added communication bridge between parent and child components
+- **Quick Add Employee for HOD Managers**:
+  - ✅ Simplified form with only essential fields (Name, Surname, Start Date, Position, Reporting Manager)
+  - ✅ Auto-generated employee number (read-only)
+  - ✅ HR can complete full profile later
+  - ✅ Enables managers to onboard employees immediately if HR hasn't yet
+- **Mobile Optimizations**:
+  - ✅ Hidden "Clean Record" badge on mobile cards view
+  - ✅ Fixed FAB positioning within modal bounds
+  - ✅ Employee details modal works on mobile tap
+- **Files Modified**:
+  - `frontend/src/components/reseller/ClientSummaryModal.tsx` - NEW: Client details modal
+  - `frontend/src/components/reseller/MyClients.tsx` - Pagination, filters, view modal
+  - `frontend/src/components/reseller/ResellerDashboard.tsx` - "Recent Clients" section
+  - `frontend/src/components/employees/EmployeeTableBrowser.tsx` - Role-based contact visibility
+  - `frontend/src/components/employees/EmployeeManagement.tsx` - Hierarchy tab, view modal, FAB control
+  - `frontend/src/components/employees/EmployeeCard.tsx` - View support, mobile badge hiding
+  - `frontend/src/components/employees/EmployeeFormModal.tsx` - Basic mode for HOD managers
+  - `frontend/src/components/dashboard/HODDashboardSection.tsx` - Modal scroll fix, FAB positioning
+  - `frontend/src/hooks/usePreventBodyScroll.ts` - Applied to Team Management modal
+- **Deployment**: ✅ Frontend built and deployed
+- **Status**: ✅ Complete - Full reseller and HOD manager workflow improvements
+
+### Previous Recent (Session 38 - 2025-10-28)
+- **🎉 MANAGER DASHBOARD FIX - Team Members Now Visible**: Fixed critical bug where managers couldn't see their assigned team
+- **Problem**: Bulk assign manager was writing to `employment.managerIds` (array), but `getByManager` query was looking for old `employment.managerId` (string)
+- **Root Cause**: Query mismatch between legacy field (`managerId`) and modern multi-manager field (`managerIds`)
+- **Solution**: Updated `API.employees.getByManager` query to use `array-contains` operator on `managerIds` array
+- **Manager Welcome Modal Improvements**:
+  - ✅ Dynamic greeting adjusts based on enabled HOD permissions
+  - ✅ Search function in "Promote to Manager" modal now filters correctly
+  - ✅ Fixed HOD permissions modal to use sharded collection path
+  - ✅ Improved modal UI: removed scrollbars, fixed close button visibility, proper content scrolling
+  - ✅ Fixed spacing issues: icon no longer cut off, reduced excessive padding
+  - ✅ Modal is non-dismissible (must be acknowledged via "Get Started" button)
+- **Files Modified**:
+  - `frontend/src/api/index.ts` (line 649) - Fixed manager query to use `managerIds` array
+  - `frontend/src/components/managers/PromoteToManagerModal.tsx` - Fixed employee search filtering
+  - `frontend/src/components/admin/HODPermissionsModal.tsx` - Fixed to use sharded collection path
+  - `frontend/src/components/auth/FirstTimeWelcomeModal.tsx` - Dynamic greetings, improved spacing
+  - `frontend/src/components/common/UnifiedModal.tsx` - Added hideHeader prop, fixed scrolling
+  - `frontend/src/modal-system.css` - Fixed content scrolling behavior
+  - `frontend/src/layouts/MainLayout.tsx` - Pass hodPermissions to welcome modal
+- **⚠️ IMPORTANT**: Requires new Firestore composite index (Firebase will provide URL on first query):
+  - Collection: `organizations/{organizationId}/employees`
+  - Fields: `employment.managerIds` (Array), `isActive` (Ascending), `profile.lastName` (Ascending)
+- **Deployment**: ✅ Frontend built and deployed
+- **Status**: ✅ Complete - Managers can now see their team members
+
+### Previous Recent (Session 37 - 2025-10-23)
 - **🎉 RESELLER SESSION PRESERVATION FIX**: Fixed reseller logout issue during organization deployment
 - **Problem**: `createUserWithEmailAndPassword()` automatically signed in new admin user, logging out the reseller
 - **Solution**: Migrated to Cloud Function `createOrganizationAdmin` using Admin SDK (preserves current session)
@@ -276,11 +378,11 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 - **Sessions 20-29**: See `RECENT_UPDATES.md` for detailed change history
 
 **For complete session history, see:**
-- `RECENT_UPDATES.md` - Sessions 20-36 (current)
+- `RECENT_UPDATES.md` - Sessions 20-38 (current)
 - `SESSION_HISTORY.md` - Sessions 5-19 (archived)
 
 ---
 
-*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, **WCAG AA accessibility compliance**, **versioned PDF generation for legal compliance**, **per-organization PDF template customization**, **1000x storage reduction through centralized template version management**, **fully editable PDF text content with zero hardcoded fallbacks**, and **SA-optimized employee CSV import with automatic phone number formatting**.*
+*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, **WCAG AA accessibility compliance**, **versioned PDF generation for legal compliance**, **per-organization PDF template customization**, **1000x storage reduction through centralized template version management**, **fully editable PDF text content with zero hardcoded fallbacks**, **SA-optimized employee CSV import with automatic phone number formatting**, and **multi-manager support with array-based employee assignments**.*
 
-*Last Updated: 2025-10-23 - Session 37: Reseller Session Preservation Fix*
+*Last Updated: 2025-10-30 - Session 39: PDF Signature Display Fix & UI Improvements*

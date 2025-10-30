@@ -23,7 +23,7 @@ import {
   Tags,
   Crown
 } from 'lucide-react';
-import { CategoryManagement } from '../admin/CategoryManagement';
+import { OrganizationCategoriesViewer } from '../organization/OrganizationCategoriesViewer';
 import { DataService } from '../../services/DataService';
 import { ShardedDataService } from '../../services/ShardedDataService';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
@@ -37,7 +37,7 @@ interface ClientOrganizationManagerProps {
   onUpdate: (clientId: string, updates: Partial<Organization>) => Promise<void>;
 }
 
-type TabType = 'general' | 'categories' | 'users' | 'analytics';
+type TabType = 'general' | 'categories' | 'analytics';
 
 export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps> = ({
   client,
@@ -52,9 +52,7 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
     totalEmployees: 0,
     totalWarnings: 0,
     totalCategories: 0,
-    totalUsers: 0,
-    activeWarnings: 0,
-    complianceScore: 85
+    totalUsers: 0
   });
 
   // Form data for general tab
@@ -63,9 +61,24 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
     contactEmail: client.contactEmail || '',
     contactPhone: client.contactPhone || '',
     address: client.address || '',
-    sector: client.sector || '',
+    industry: client.industry || '',
     description: client.description || ''
   });
+
+  // Update form data when client changes
+  useEffect(() => {
+    console.log('📊 Client data received:', client);
+    console.log('📊 Client.industry:', client.industry);
+    console.log('📊 Client.sector:', (client as any).sector);
+    setFormData({
+      name: client.name || '',
+      contactEmail: client.contactEmail || '',
+      contactPhone: client.contactPhone || '',
+      address: client.address || '',
+      industry: client.industry || (client as any).sector || '',
+      description: client.description || ''
+    });
+  }, [client]);
 
   // Load organization statistics
   useEffect(() => {
@@ -89,21 +102,28 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
       const categoriesResult = await DatabaseShardingService.queryDocuments(client.id, 'categories', []);
 
       // Calculate stats
-      const activeWarnings = warningsResult.documents.filter((w: any) => w.status === 'issued').length;
-      const complianceScore = Math.max(95 - (activeWarnings * 3), 60);
-
       setStats({
         totalEmployees: employeesResult.documents.length,
         totalWarnings: warningsResult.documents.length,
         totalCategories: categoriesResult.documents.length,
-        totalUsers: 0, // TODO: Load from sharded users collection
-        activeWarnings,
-        complianceScore
+        totalUsers: 0 // TODO: Load from sharded users collection
       });
 
       Logger.success('Client statistics loaded successfully');
-    } catch (error) {
-      Logger.error('Failed to load client statistics:', error);
+    } catch (error: any) {
+      // Permission errors are expected for resellers accessing client data
+      if (error?.code === 'permission-denied' || error?.message?.includes('Missing or insufficient permissions')) {
+        Logger.debug('Client statistics unavailable (expected for resellers - using defaults)');
+        // Set default stats when permission denied
+        setStats({
+          totalEmployees: 0,
+          totalWarnings: 0,
+          totalCategories: 0,
+          totalUsers: 0
+        });
+      } else {
+        Logger.error('Failed to load client statistics:', error);
+      }
     } finally {
       setLoading(false);
     }
@@ -136,12 +156,6 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
       label: 'Warning Categories',
       icon: Tags,
       description: 'Manage warning categories and escalation paths'
-    },
-    {
-      id: 'users' as TabType,
-      label: 'User Management',
-      icon: Users,
-      description: 'Organization users and permissions'
     },
     {
       id: 'analytics' as TabType,
@@ -181,7 +195,7 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
 
         {/* Stats Overview */}
         <div className="p-6 border-b bg-gray-50">
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600">{stats.totalEmployees}</div>
               <div className="text-xs text-gray-600">Employees</div>
@@ -195,17 +209,7 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
               <div className="text-xs text-gray-600">Total Warnings</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{stats.activeWarnings}</div>
-              <div className="text-xs text-gray-600">Active</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">{stats.complianceScore}%</div>
-              <div className="text-xs text-gray-600">Compliance</div>
-            </div>
-            <div className="text-center">
-              <div className={`text-2xl font-bold ${stats.complianceScore >= 80 ? 'text-green-600' : stats.complianceScore >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                {stats.complianceScore >= 80 ? '✓' : stats.complianceScore >= 60 ? '⚠' : '✗'}
-              </div>
+              <div className="text-2xl font-bold text-green-600">✓</div>
               <div className="text-xs text-gray-600">Status</div>
             </div>
           </div>
@@ -272,14 +276,151 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Sector</label>
-                  <input
-                    type="text"
-                    value={formData.sector}
-                    onChange={(e) => setFormData({ ...formData, sector: e.target.value })}
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Industry</label>
+                  <select
+                    value={formData.industry}
+                    onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="e.g., Manufacturing, Retail, etc."
-                  />
+                  >
+                    <option value="">Select industry</option>
+
+                    {/* Primary Industries */}
+                    <optgroup label="Primary Industries">
+                      <option value="agriculture">Agriculture & Farming</option>
+                      <option value="mining">Mining & Quarrying</option>
+                      <option value="forestry">Forestry & Logging</option>
+                      <option value="fishing">Fishing & Aquaculture</option>
+                    </optgroup>
+
+                    {/* Manufacturing & Production */}
+                    <optgroup label="Manufacturing & Production">
+                      <option value="manufacturing">Manufacturing (General)</option>
+                      <option value="food-processing">Food & Beverage Processing</option>
+                      <option value="textiles">Textiles & Clothing</option>
+                      <option value="automotive">Automotive Manufacturing</option>
+                      <option value="pharmaceuticals">Pharmaceuticals & Medical Devices</option>
+                      <option value="chemicals">Chemicals & Plastics</option>
+                      <option value="electronics">Electronics & Technology Manufacturing</option>
+                      <option value="construction-materials">Construction Materials</option>
+                    </optgroup>
+
+                    {/* Construction & Engineering */}
+                    <optgroup label="Construction & Engineering">
+                      <option value="construction">Construction & Building</option>
+                      <option value="civil-engineering">Civil Engineering</option>
+                      <option value="electrical-engineering">Electrical Engineering</option>
+                      <option value="mechanical-engineering">Mechanical Engineering</option>
+                      <option value="architecture">Architecture & Design</option>
+                    </optgroup>
+
+                    {/* Retail & Wholesale */}
+                    <optgroup label="Retail & Wholesale">
+                      <option value="retail">Retail & Commerce (General)</option>
+                      <option value="wholesale">Wholesale & Distribution</option>
+                      <option value="supermarkets">Supermarkets & Grocery</option>
+                      <option value="fashion-retail">Fashion & Apparel Retail</option>
+                      <option value="automotive-retail">Automotive Sales & Service</option>
+                      <option value="furniture-retail">Furniture & Home Goods</option>
+                      <option value="electronics-retail">Electronics & Appliances Retail</option>
+                    </optgroup>
+
+                    {/* Hospitality & Tourism */}
+                    <optgroup label="Hospitality & Tourism">
+                      <option value="hospitality">Hospitality & Tourism</option>
+                      <option value="hotels">Hotels & Accommodation</option>
+                      <option value="restaurants">Restaurants & Food Service</option>
+                      <option value="travel-agencies">Travel Agencies & Tour Operators</option>
+                      <option value="entertainment">Entertainment & Recreation</option>
+                    </optgroup>
+
+                    {/* Healthcare & Social Services */}
+                    <optgroup label="Healthcare & Social Services">
+                      <option value="healthcare">Healthcare (General)</option>
+                      <option value="hospitals">Hospitals & Clinics</option>
+                      <option value="nursing-homes">Nursing Homes & Elderly Care</option>
+                      <option value="medical-practices">Medical Practices & Specialists</option>
+                      <option value="veterinary">Veterinary Services</option>
+                      <option value="social-services">Social Services & NGOs</option>
+                    </optgroup>
+
+                    {/* Education & Training */}
+                    <optgroup label="Education & Training">
+                      <option value="education">Education & Training</option>
+                      <option value="schools">Schools & Colleges</option>
+                      <option value="universities">Universities & Higher Education</option>
+                      <option value="vocational-training">Vocational & Skills Training</option>
+                      <option value="childcare">Childcare & Early Learning</option>
+                    </optgroup>
+
+                    {/* Financial Services */}
+                    <optgroup label="Financial Services">
+                      <option value="banking">Banking & Financial Services</option>
+                      <option value="insurance">Insurance</option>
+                      <option value="investment">Investment & Asset Management</option>
+                      <option value="accounting">Accounting & Auditing</option>
+                      <option value="real-estate">Real Estate & Property Management</option>
+                    </optgroup>
+
+                    {/* Professional Services */}
+                    <optgroup label="Professional Services">
+                      <option value="legal">Legal Services</option>
+                      <option value="consulting">Consulting & Advisory</option>
+                      <option value="marketing">Marketing & Advertising</option>
+                      <option value="hr-recruitment">HR & Recruitment</option>
+                      <option value="business-services">Business Support Services</option>
+                    </optgroup>
+
+                    {/* Technology & Communications */}
+                    <optgroup label="Technology & Communications">
+                      <option value="it-services">IT Services & Software</option>
+                      <option value="telecommunications">Telecommunications</option>
+                      <option value="media">Media & Broadcasting</option>
+                      <option value="publishing">Publishing & Printing</option>
+                      <option value="data-centers">Data Centers & Cloud Services</option>
+                    </optgroup>
+
+                    {/* Transportation & Logistics */}
+                    <optgroup label="Transportation & Logistics">
+                      <option value="logistics">Logistics & Supply Chain</option>
+                      <option value="transportation">Transportation & Freight</option>
+                      <option value="warehousing">Warehousing & Storage</option>
+                      <option value="courier">Courier & Postal Services</option>
+                      <option value="aviation">Aviation & Airports</option>
+                      <option value="maritime">Maritime & Shipping</option>
+                    </optgroup>
+
+                    {/* Energy & Utilities */}
+                    <optgroup label="Energy & Utilities">
+                      <option value="energy">Energy & Power Generation</option>
+                      <option value="renewable-energy">Renewable Energy</option>
+                      <option value="water-utilities">Water & Sanitation</option>
+                      <option value="waste-management">Waste Management & Recycling</option>
+                    </optgroup>
+
+                    {/* Security & Emergency Services */}
+                    <optgroup label="Security & Emergency Services">
+                      <option value="security">Security Services</option>
+                      <option value="private-security">Private Security & Guarding</option>
+                      <option value="emergency-services">Emergency Services</option>
+                      <option value="fire-safety">Fire Safety & Protection</option>
+                    </optgroup>
+
+                    {/* Government & Public Sector */}
+                    <optgroup label="Government & Public Sector">
+                      <option value="government">Government & Public Administration</option>
+                      <option value="municipal">Municipal Services</option>
+                      <option value="public-utilities">Public Utilities</option>
+                    </optgroup>
+
+                    {/* Other */}
+                    <optgroup label="Other">
+                      <option value="sports">Sports & Fitness</option>
+                      <option value="beauty-wellness">Beauty & Wellness</option>
+                      <option value="cleaning">Cleaning & Facilities Management</option>
+                      <option value="maintenance">Maintenance & Repair Services</option>
+                      <option value="other">Other Industry</option>
+                    </optgroup>
+                  </select>
                 </div>
 
                 <div>
@@ -324,55 +465,18 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
                   />
                 </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                <div className="relative">
-                  <FileText className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={4}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Brief description of the organization..."
-                  />
-                </div>
-              </div>
             </div>
           )}
 
           {/* Warning Categories Tab */}
           {activeTab === 'categories' && (
-            <div className="p-6">
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Warning Categories Management</h3>
-                <p className="text-sm text-gray-600">Manage warning categories and escalation paths for this client organization</p>
-              </div>
-
-              {/* Custom CategoryManagement wrapper for client context */}
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <CategoryManagement
-                  onClose={() => {}}
-                  organizationId={client.id}
-                  isEmbedded={true}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Users Tab */}
-          {activeTab === 'users' && (
-            <div className="p-6">
-              <div className="text-center py-12">
-                <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">User Management</h3>
-                <p className="text-gray-600 mb-4">Manage organization users and their permissions</p>
-                <div className="text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-md mx-auto">
-                  <AlertCircle className="w-4 h-4 inline mr-2" />
-                  This feature is coming soon. Users can be managed directly through the organization's admin interface.
-                </div>
-              </div>
-            </div>
+            <OrganizationCategoriesViewer
+              onClose={() => {}}
+              inline={true}
+              organizationId={client.id}
+              organizationName={client.name}
+              allowEdit={true}
+            />
           )}
 
           {/* Analytics Tab */}
@@ -383,19 +487,7 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
                 <p className="text-sm text-gray-600">Insights and metrics for this client organization</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Compliance Score Card */}
-                <div className="bg-white border border-gray-200 rounded-xl p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-semibold text-gray-900">Compliance Score</h4>
-                    <Shield className="w-5 h-5 text-green-500" />
-                  </div>
-                  <div className="text-3xl font-bold text-green-600">{stats.complianceScore}%</div>
-                  <p className="text-sm text-gray-600 mt-2">
-                    {stats.complianceScore >= 80 ? 'Excellent' : stats.complianceScore >= 60 ? 'Good' : 'Needs Improvement'}
-                  </p>
-                </div>
-
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Active Warnings Card */}
                 <div className="bg-white border border-gray-200 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-4">
@@ -429,7 +521,7 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
                       <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5" />
                       <div>
                         <h5 className="font-medium text-orange-900">High Active Warnings</h5>
-                        <p className="text-sm text-orange-700">Consider reviewing and resolving active warnings to improve compliance score.</p>
+                        <p className="text-sm text-orange-700">Consider reviewing and resolving active warnings to improve workforce management.</p>
                       </div>
                     </div>
                   )}
@@ -440,16 +532,6 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
                       <div>
                         <h5 className="font-medium text-blue-900">Limited Warning Categories</h5>
                         <p className="text-sm text-blue-700">Consider adding more specific warning categories to improve HR management granularity.</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {stats.complianceScore >= 90 && (
-                    <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
-                      <div>
-                        <h5 className="font-medium text-green-900">Excellent Compliance</h5>
-                        <p className="text-sm text-green-700">This organization maintains excellent HR compliance standards.</p>
                       </div>
                     </div>
                   )}

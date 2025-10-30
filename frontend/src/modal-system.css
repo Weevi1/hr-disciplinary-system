@@ -645,26 +645,28 @@
 /* ============================================= */
 
 .modal-content {
-  flex: 0 0 auto !important; /* Don't flex, just use natural height */
+  flex: 1 !important; /* Take available space */
   display: flex !important;
   flex-direction: column !important;
+  overflow: hidden !important; /* Hide overflow on container */
   background: var(--color-card-background) !important;
 }
 
 .modal-content__scrollable {
-  flex: 0 0 auto !important; /* Don't flex, just use natural height */
-  overflow: visible !important; /* No scrolling - let body scroll */
-  
+  flex: 1 !important; /* Take available space */
+  overflow-y: auto !important; /* Enable vertical scrolling */
+  overflow-x: hidden !important; /* Hide horizontal scrolling */
+
   /* Mobile-optimized padding - more comfortable spacing */
   padding: 0.5rem 0.75rem 1rem 0.75rem !important; /* Added bottom padding for footer clearance */
-  
+
   background: var(--color-card-background) !important;
-  
+
   /* Premium iOS-style scrolling */
   -webkit-overflow-scrolling: touch !important;
   scroll-behavior: smooth !important;
   overscroll-behavior: contain !important;
-  
+
   /* Performance optimizations */
   transform: translateZ(0) !important;
   will-change: scroll-position !important;
@@ -2445,5 +2447,34 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Warning Detail Modal Animations */
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUpModal 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUpModal {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -45%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
   }
 }

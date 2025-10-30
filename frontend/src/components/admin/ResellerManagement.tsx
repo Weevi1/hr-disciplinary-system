@@ -257,6 +257,13 @@ The reseller profile has been saved successfully with ID: ${resellerId}
       // Decrypt banking details for editing
       const decryptedBankDetails = EncryptionService.decryptBankingDetails(reseller.bankDetails);
 
+      // Debug: Log the commission rate to see what value we're getting
+      Logger.debug('Loading reseller for edit', {
+        name: `${reseller.firstName} ${reseller.lastName}`,
+        commissionRate: reseller.commissionRate,
+        commissionRateType: typeof reseller.commissionRate
+      });
+
       setEditingReseller(reseller);
       setFormData({
         firstName: reseller.firstName,
@@ -645,7 +652,7 @@ The reseller profile has been saved successfully with ID: ${resellerId}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Commission Rate</label>
                   <select
-                    value={formData.commissionRate}
+                    value={formData.commissionRate.toFixed(2)}
                     onChange={e => setFormData(prev => ({ ...prev, commissionRate: parseFloat(e.target.value) }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >

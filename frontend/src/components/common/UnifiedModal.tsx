@@ -19,6 +19,7 @@ interface UnifiedModalProps {
   subtitle?: string;
   showBackButton?: boolean;
   onBack?: () => void;
+  hideHeader?: boolean; // Hide the entire header (for custom headers)
 
   // Step-based navigation (optional)
   currentStep?: number;
@@ -55,6 +56,7 @@ export const UnifiedModal: React.FC<UnifiedModalProps> = ({
   subtitle,
   showBackButton = false,
   onBack,
+  hideHeader = false,
   currentStep,
   totalSteps,
   stepTitles,
@@ -157,37 +159,71 @@ export const UnifiedModal: React.FC<UnifiedModalProps> = ({
     );
   };
 
+  // Use centered overlay style for non-full modals
+  const isCentered = size !== 'full';
+
   return (
-    <div className="modal-system">
-      <div className="modal-container">
+    <div
+      className={isCentered ? '' : 'modal-system'}
+      style={isCentered ? {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+        background: 'rgba(0, 0, 0, 0.5)',
+        zIndex: 9999,
+        overflow: 'hidden'
+      } : {}}
+    >
+      <div
+        className={isCentered ? `${sizeClasses[size]} ${className}` : `modal-container ${sizeClasses[size]} ${className}`}
+        style={isCentered ? {
+          width: '100%',
+          minHeight: 'auto',
+          maxHeight: '90vh',
+          overflow: 'hidden',
+          borderRadius: '12px',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          background: 'white',
+          display: 'flex',
+          flexDirection: 'column'
+        } : {}}
+      >
           {/* Header - Using Modal System Classes */}
-          <div className="modal-header">
-            <div className="modal-header__left">
-              {/* Back button */}
-              {showBackButton && onBack && (
-                <button onClick={onBack} className="modal-header__close-button">
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-              )}
-
-              {/* Title section */}
-              <div>
-                <h2 className="modal-header__title">
-                  {title}
-                </h2>
-                {subtitle && (
-                  <p className="modal-header__subtitle">
-                    {subtitle}
-                  </p>
+          {!hideHeader && (
+            <div className="modal-header">
+              <div className="modal-header__left">
+                {/* Back button */}
+                {showBackButton && onBack && (
+                  <button onClick={onBack} className="modal-header__close-button">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
                 )}
-              </div>
-            </div>
 
-            {/* Close button */}
-            <button onClick={onClose} className="modal-header__close-button">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+                {/* Title section */}
+                <div>
+                  <h2 className="modal-header__title">
+                    {title}
+                  </h2>
+                  {subtitle && (
+                    <p className="modal-header__subtitle">
+                      {subtitle}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Close button */}
+              <button onClick={onClose} className="modal-header__close-button">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          )}
 
           {/* Step progress */}
           <StepProgress />

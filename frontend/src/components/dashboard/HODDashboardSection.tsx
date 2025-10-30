@@ -18,7 +18,8 @@ import {
   ChevronRight,
   Mic, // NEW: Audio recording icon
   BookOpen, // NEW: Corrective Counselling icon
-  RefreshCw // NEW: Refresh button for cache issues
+  RefreshCw, // NEW: Refresh button for cache issues
+  Plus
 } from 'lucide-react';
 
 // Import enhanced warning wizard (now includes audio consent)
@@ -35,6 +36,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
 import { useDashboardData } from '../../hooks/dashboard/useDashboardData';
+import { usePreventBodyScroll } from '../../hooks/usePreventBodyScroll';
 import { API } from '../../api';
 import { DataServiceV2 } from '../../services/DataServiceV2';
 import { NestedDataService } from '../../services/NestedDataService';
@@ -129,6 +131,9 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
   const [showEmployeeManagement, setShowEmployeeManagement] = useState(false);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [selectedFollowUpSession, setSelectedFollowUpSession] = useState<any>(null);
+
+  // Prevent body scroll when Team Management modal is open
+  usePreventBodyScroll(showEmployeeManagement);
   // 🚀 OPTIMIZED: Use data from unified dashboard hook instead of local state
   const employees = dashboardEmployees || [];
   const categories = contextCategories || [];
@@ -295,6 +300,14 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
   // ============================================
   
   // 🎯 UNIFIED: All tool actions now use consistent modal system
+  // Features are filtered based on HOD permissions set by HR
+  const hodPermissions = user?.hodPermissions || {
+    canIssueWarnings: true,
+    canBookHRMeetings: true,
+    canReportAbsences: true,
+    canRecordCounselling: true
+  };
+
   const toolActions: ToolAction[] = [
     {
       id: 'create-warning',
@@ -302,7 +315,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
       icon: AlertTriangle,
       color: 'orange',
       action: handleIssueWarning, // Modal system with audio consent
-      enabled: canCreateWarnings(),
+      enabled: canCreateWarnings() && hodPermissions.canIssueWarnings,
       hasAudioRecording: true // NEW: Flag for audio recording
     },
     {
@@ -311,7 +324,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
       icon: MessageCircle,
       color: 'purple',
       action: handleOpenBookHRMeeting, // Updated to use modal
-      enabled: true,
+      enabled: hodPermissions.canBookHRMeetings,
       hasAudioRecording: false
     },
     {
@@ -320,7 +333,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
       icon: UserX,
       color: 'red',
       action: handleOpenReportAbsence, // Updated to use modal
-      enabled: true,
+      enabled: hodPermissions.canReportAbsences,
       hasAudioRecording: false
     },
     {
@@ -329,7 +342,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
       icon: BookOpen,
       color: 'blue',
       action: handleOpenCorrectiveCounselling, // Already using modal
-      enabled: true,
+      enabled: hodPermissions.canRecordCounselling,
       hasAudioRecording: false
     },
   ].filter(action => action.enabled);
@@ -530,8 +543,22 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
 
       {/* Employee Management Modal */}
       {showEmployeeManagement && (
-        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4" style={{ backgroundColor: 'var(--color-overlay)' }}>
-          <ThemedCard padding="none" className="max-w-7xl w-full max-h-[90vh] flex flex-col" shadow="xl">
+        <div
+          className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-hidden"
+          style={{ backgroundColor: 'var(--color-overlay)' }}
+          onClick={(e) => {
+            // Close modal if clicking on backdrop
+            if (e.target === e.currentTarget) {
+              setShowEmployeeManagement(false);
+            }
+          }}
+        >
+          <ThemedCard
+            padding="none"
+            className="max-w-7xl w-full max-h-[90vh] flex flex-col relative"
+            shadow="xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between p-6 flex-shrink-0" style={{ borderBottom: '1px solid var(--color-border)' }}>
               <h2 className="text-xl font-bold" style={{ color: 'var(--color-text)' }}>Team Management</h2>
               <ThemedButton
@@ -542,8 +569,28 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
                 ×
               </ThemedButton>
             </div>
-            <div className="overflow-y-auto flex-1 min-h-0">
-              <EmployeeManagement onDataChange={refreshData} />
+            <div className="overflow-y-auto flex-1 min-h-0 pb-20">
+              <EmployeeManagement
+                onDataChange={refreshData}
+                hideFloatingButton={true}
+                onAddEmployeeClick={() => {}}
+              />
+            </div>
+            {/* Floating Action Button - positioned within modal */}
+            <div className="md:hidden absolute bottom-6 right-6 w-14 h-14 z-[60]">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Trigger add employee modal in EmployeeManagement
+                  if ((window as any).__openAddEmployeeModal) {
+                    (window as any).__openAddEmployeeModal();
+                  }
+                }}
+                className="w-full h-full bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 flex items-center justify-center"
+                aria-label="Add Employee"
+              >
+                <Plus className="w-6 h-6" />
+              </button>
             </div>
           </ThemedCard>
         </div>

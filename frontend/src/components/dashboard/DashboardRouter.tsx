@@ -81,17 +81,9 @@ export const DashboardRouter: React.FC = () => {
     case 'super-user':
       // 👑 SUPER USERS: Now use unified WelcomeSection like everyone else
       return (
-        <div>
-          <div className="w-full px-4 sm:px-6 py-6 pb-0">
-            <div className="max-w-7xl mx-auto">
-              <WelcomeSection />
-            </div>
-          </div>
-          <div className="w-full px-4 sm:px-6 py-6 pt-2">
-            <div className="max-w-7xl mx-auto">
-              <SuperAdminDashboard />
-            </div>
-          </div>
+        <div className="space-y-6">
+          <WelcomeSection />
+          <SuperAdminDashboard />
         </div>
       );
 

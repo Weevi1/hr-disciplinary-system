@@ -9,6 +9,7 @@ interface EmployeeCardProps {
   onEdit: (employee: Employee) => void;
   onArchive: (employee: Employee) => void;
   onViewWarnings?: (employee: Employee) => void;
+  onView?: (employee: Employee) => void;
 }
 
 export const EmployeeCard: React.FC<EmployeeCardProps> = ({
@@ -16,7 +17,8 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
   permissions,
   onEdit,
   onArchive,
-  onViewWarnings
+  onViewWarnings,
+  onView
 }) => {
   const getProbationStatus = () => {
     if (!employee.employment?.probationEndDate) return null;
@@ -37,6 +39,16 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
 
   const activeWarnings = employee.disciplinaryRecord?.activeWarnings || 0;
 
+  const handleCardClick = () => {
+    if (permissions.canEdit) {
+      onEdit(employee);
+    } else if (onView) {
+      onView(employee);
+    }
+  };
+
+  const isClickable = permissions.canEdit || onView;
+
   return (
     <div
       className={`
@@ -44,8 +56,8 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
         transition-all duration-200 hover:shadow-md
         ${!employee.isActive ? 'opacity-60' : ''}
       `}
-      onClick={permissions.canEdit ? () => onEdit(employee) : undefined}
-      style={{ cursor: permissions.canEdit ? 'pointer' : 'default' }}
+      onClick={isClickable ? handleCardClick : undefined}
+      style={{ cursor: isClickable ? 'pointer' : 'default' }}
     >
       {/* Compact Header with Visual Hierarchy */}
       <div className="px-3 py-2.5 sm:px-4 sm:py-4">
@@ -121,9 +133,9 @@ export const EmployeeCard: React.FC<EmployeeCardProps> = ({
             </span>
           )}
 
-          {/* No Warnings Badge */}
+          {/* No Warnings Badge - Hidden on mobile */}
           {activeWarnings === 0 && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700">
+            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700">
               <span className="text-xs">✓</span> Clean Record
             </span>
           )}

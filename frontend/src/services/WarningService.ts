@@ -276,33 +276,63 @@ export class WarningService {
   static async getEscalationRecommendation(
     employeeId: string,
     categoryId: string,
-    organizationId?: string
+    organizationId?: string,
+    providedCategory?: any, // 🚀 PERFORMANCE: Accept pre-loaded category to skip Firestore query
+    preloadedWarnings?: any[] // 🚀 ANTICIPATORY: Accept pre-loaded warnings for instant response
   ): Promise<EscalationRecommendation> {
     try {
       Logger.debug(5184)
-      
-      // Get all active warnings for employee
-      const allActiveWarnings = await this.getActiveWarnings(employeeId, organizationId);
-      
-      // 🔧 NEW: First try to get category from organization, then fallback to universal
+
+      // 🚀 PERFORMANCE OPTIMIZATION: Use preloaded data when available
+      let allActiveWarnings: any[];
+      let orgCategory: any = null;
+
+      if (preloadedWarnings && providedCategory) {
+        // ⚡⚡ FASTEST PATH: Both warnings and category preloaded - ZERO queries!
+        Logger.success('⚡⚡ [ANTICIPATORY] Using preloaded warnings AND category - instant response!');
+        allActiveWarnings = preloadedWarnings;
+        orgCategory = providedCategory;
+      } else if (preloadedWarnings) {
+        // ⚡ FAST PATH: Warnings preloaded, only need category
+        Logger.success('⚡ [ANTICIPATORY] Using preloaded warnings, fetching category only');
+        allActiveWarnings = preloadedWarnings;
+        if (organizationId) {
+          const categories = await DatabaseShardingService.queryDocuments(organizationId, 'categories', []);
+          if (categories.documents && categories.documents.length > 0) {
+            orgCategory = categories.documents.find((cat: any) => cat.id === categoryId);
+          }
+        }
+      } else if (providedCategory) {
+        // ⚡ FAST PATH: Category provided, only fetch warnings
+        Logger.debug('⚡ [PERFORMANCE] Using provided category, fetching warnings only');
+        allActiveWarnings = await this.getActiveWarnings(employeeId, organizationId);
+        orgCategory = providedCategory;
+      } else {
+        // 🔄 FALLBACK PATH: Fetch both in parallel for best performance
+        Logger.debug('🔄 [PERFORMANCE] Fetching warnings and categories in parallel');
+        const [warnings, categories] = await Promise.all([
+          this.getActiveWarnings(employeeId, organizationId),
+          organizationId
+            ? DatabaseShardingService.queryDocuments(organizationId, 'categories', [])
+            : Promise.resolve({ documents: [] })
+        ]);
+
+        allActiveWarnings = warnings;
+        if (categories.documents && categories.documents.length > 0) {
+          orgCategory = categories.documents.find((cat: any) => cat.id === categoryId);
+        }
+      }
+
+      // 🔧 Determine escalation path from category or fallback to universal
       let categoryEscalationPath: string[] | null = null;
       let categoryFound = false;
       let universalCategory: any = null;
-      let orgCategory: any = null;
 
-      // Try to get escalation path from organization's categories
-      if (organizationId) {
-        try {
-          const orgCategories = await DatabaseShardingService.queryDocuments(organizationId, 'categories', []);
-          orgCategory = orgCategories.documents.find((cat: any) => cat.id === categoryId);
-          if (orgCategory?.escalationPath) {
-            categoryEscalationPath = orgCategory.escalationPath;
-            categoryFound = true;
-            Logger.debug(`📋 [ESCALATION] Using organization category escalation path:`, categoryEscalationPath);
-          }
-        } catch (error) {
-          Logger.warn('⚠️ [ESCALATION] Failed to load organization categories, falling back to universal');
-        }
+      // Check if we have org category with escalation path
+      if (orgCategory?.escalationPath) {
+        categoryEscalationPath = orgCategory.escalationPath;
+        categoryFound = true;
+        Logger.debug(`📋 [ESCALATION] Using organization category escalation path:`, categoryEscalationPath);
       }
 
       // Fallback to UniversalCategories if no organization-specific escalation path

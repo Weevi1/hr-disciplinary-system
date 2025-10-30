@@ -22,6 +22,12 @@ export interface Manager {
     name: string;
   };
   departmentIds?: string[];
+  hodPermissions?: {
+    canIssueWarnings: boolean;
+    canBookHRMeetings: boolean;
+    canReportAbsences: boolean;
+    canRecordCounselling: boolean;
+  };
   organizationId: string;
   isActive: boolean;
   createdAt: Date | Timestamp;
@@ -65,6 +71,7 @@ class ManagerServiceClass {
           email: user.email,
           role: user.role,
           departmentIds: user.departmentIds || [],
+          hodPermissions: user.hodPermissions,
           organizationId: user.organizationId || organizationId,
           isActive: user.isActive !== false,
           createdAt: user.createdAt || new Date(),
@@ -107,6 +114,7 @@ class ManagerServiceClass {
         email: user.email,
         role: user.role,
         departmentIds: user.departmentIds || [],
+        hodPermissions: user.hodPermissions,
         organizationId: user.organizationId || organizationId,
         isActive: user.isActive !== false,
         createdAt: user.createdAt || new Date(),

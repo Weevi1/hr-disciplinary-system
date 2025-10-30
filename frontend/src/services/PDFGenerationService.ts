@@ -869,7 +869,7 @@ export class PDFGenerationService {
 
       // 9. Signatures Section
       Logger.debug('✍️ Adding signatures section...');
-      currentY = this.addSignaturesSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+      currentY = this.addSignaturesSection(doc, data.signatures, data.employee, currentY, pageWidth, margin, pageHeight, bottomMargin, data.issuedDate, data.issuedByName);
 
       // 10. Appeal Report (if applicable)
       if (data.appealDetails) {
@@ -1600,21 +1600,53 @@ export class PDFGenerationService {
     doc.setTextColor(51, 51, 51);
     doc.text(sectionHeading, margin, startY);
 
-    // 🎨 BACKGROUND BOX - PRESERVED v1.1.0 STYLING
-    // Light blue background box for entire section - INCREASED HEIGHT and PADDING for A4
     const sectionWidth = pageWidth - margin * 2;
-    const sectionHeight = 102; // Further increased height for proper A4 spacing
-    doc.setFillColor(239, 246, 255); // Light blue #EFF6FF
-    doc.setDrawColor(59, 130, 246); // Blue border #3B82F6
-    doc.setLineWidth(0.5);
-    doc.rect(margin, startY + 4, sectionWidth, sectionHeight, 'FD'); // Fill and Draw
-
-    let currentY = startY + 14; // Further increased top padding
-    const contentMargin = margin + 8; // Further increased indent for content inside box
+    const contentMargin = margin + 8; // Indent for content inside box
+    const boxStartY = startY + 4; // Where the box starts
+    let currentY = startY + 14; // Top padding inside box
 
     Logger.debug('📝 Rendering Employee Rights with custom content from sectionConfig');
 
-    // Iterate through custom subsections
+    // 🎯 STEP 1: Calculate content height by simulating rendering
+    const contentStartY = currentY;
+    sectionConfig.content.subsections.forEach((subsection, index) => {
+      // Subsection Title height
+      currentY += 0; // Title is at currentY
+      currentY += 7; // Spacing after subsection title
+
+      // Subsection Content
+      if (Array.isArray(subsection.content)) {
+        // BULLET POINTS
+        subsection.content.forEach((item) => {
+          const processedItem = this.replacePlaceholders(item, data);
+          const itemLines = this.wrapText(doc, processedItem, sectionWidth - 20);
+          currentY += itemLines.length * 5; // Line spacing
+          currentY += 2.5; // Spacing between bullet points
+        });
+      } else {
+        // PARAGRAPH
+        const processedContent = this.replacePlaceholders(subsection.content, data);
+        const contentLines = this.wrapText(doc, processedContent, sectionWidth - 20);
+        currentY += contentLines.length * 5;
+      }
+
+      // Spacing after subsection (except last one)
+      if (index < sectionConfig.content.subsections.length - 1) {
+        currentY += 3.5;
+      }
+    });
+
+    currentY += 8; // Bottom padding inside box
+
+    // 🎨 STEP 2: Draw background box with calculated height
+    const sectionHeight = currentY - boxStartY;
+    doc.setFillColor(239, 246, 255); // Light blue #EFF6FF
+    doc.setDrawColor(59, 130, 246); // Blue border #3B82F6
+    doc.setLineWidth(0.5);
+    doc.rect(margin, boxStartY, sectionWidth, sectionHeight, 'FD'); // Fill and Draw
+
+    // 🖊️ STEP 3: Render actual content on top of the box
+    currentY = contentStartY; // Reset to content start position
     sectionConfig.content.subsections.forEach((subsection, index) => {
       // Subsection Title - PRESERVED v1.1.0 STYLING
       doc.setFontSize(11);
@@ -1660,7 +1692,7 @@ export class PDFGenerationService {
     });
 
     currentY += 8; // Bottom padding inside box
-    return startY + sectionHeight + 35; // Return with proper spacing after section
+    return currentY + 5; // Return with small spacing after section
   }
 
   /**
@@ -1680,6 +1712,9 @@ export class PDFGenerationService {
   ): number {
     // Increased space requirement (was 50mm, now 65mm total)
     startY = this.checkPageOverflow(doc, startY, 65, pageHeight, bottomMargin);
+
+    // Add spacing before signatures section
+    startY += 8;
 
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
@@ -2060,10 +2095,12 @@ export class PDFGenerationService {
       const confWidth = doc.getTextWidth(confText);
       const confX = (pageWidth - confWidth) / 2;
       doc.text(confText, confX, pageHeight - 15);
-      
-      // Page number and timestamp
-      doc.text(`Generated: ${new Date().toLocaleString()}`, 20, pageHeight - 10);
-      doc.text(`Page ${i} of ${totalPages}`, pageWidth - 50, pageHeight - 10);
+
+      // Page number (centered)
+      const pageText = `Page ${i} of ${totalPages}`;
+      const pageWidth_text = doc.getTextWidth(pageText);
+      const pageX = (pageWidth - pageWidth_text) / 2;
+      doc.text(pageText, pageX, pageHeight - 10);
     }
   }
   
@@ -2416,8 +2453,8 @@ export class PDFGenerationService {
         const footerText = 'Official Appeal Decision Report - Confidential HR Document';
         doc.text(footerText, pageWidth / 2, footerY + 5, { align: 'center' });
 
-        doc.text(`Generated: ${new Date().toLocaleString()}`, margin, footerY + 10);
-        doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin - 20, footerY + 10);
+        // Page number (centered)
+        doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, footerY + 10, { align: 'center' });
       }
 
       Logger.success('✅ Appeal Report PDF generated');

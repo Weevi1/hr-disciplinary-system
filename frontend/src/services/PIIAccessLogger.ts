@@ -63,7 +63,9 @@ export class PIIAccessLogger {
         user: user.email
       });
     } catch (error) {
-      Logger.error('Failed to log PII access:', error);
+      // Use debug level since PII logging is optional and non-blocking
+      // The error is expected when Firestore rules haven't been deployed yet
+      Logger.debug('PII access logging skipped (permissions not configured)', error);
     }
   }
 

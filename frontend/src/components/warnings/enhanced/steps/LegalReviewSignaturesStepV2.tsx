@@ -86,6 +86,328 @@ const safeText = (value: any, fallback: string = 'Unknown'): string => {
   return String(value);
 };
 
+// Helper function: Format relative time
+const getRelativeTime = (date: Date | string): string => {
+  const now = new Date();
+  const warningDate = typeof date === 'string' ? new Date(date) : date;
+  const diffMs = now.getTime() - warningDate.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+  return `${Math.floor(diffDays / 365)} years ago`;
+};
+
+// Helper function: Calculate days until expiry
+const getDaysUntilExpiry = (issueDate: Date | string, validityMonths: number): number => {
+  const issue = typeof issueDate === 'string' ? new Date(issueDate) : issueDate;
+  const expiry = new Date(issue);
+  expiry.setMonth(expiry.getMonth() + validityMonths);
+  const now = new Date();
+  const diffMs = expiry.getTime() - now.getTime();
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+};
+
+// Helper function: Get warning level display info
+const getWarningLevelInfo = (level: string): { label: string; color: string; bgColor: string } => {
+  const levelMap: Record<string, { label: string; color: string; bgColor: string }> = {
+    'counselling': { label: 'Counselling', color: '#0ea5e9', bgColor: 'rgba(14, 165, 233, 0.1)' },
+    'verbal': { label: 'Verbal', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
+    'first_written': { label: 'First Written', color: '#f97316', bgColor: 'rgba(249, 115, 22, 0.1)' },
+    'final_written': { label: 'Final Written', color: '#ef4444', bgColor: 'rgba(239, 68, 68, 0.1)' }
+  };
+  return levelMap[level] || { label: level, color: '#6b7280', bgColor: 'rgba(107, 114, 128, 0.1)' };
+};
+
+// 🎯 WARNING HISTORY ITEM COMPONENT - Mobile-optimized tappable card
+interface WarningHistoryItemProps {
+  warning: any;
+}
+
+const WarningHistoryItem: React.FC<WarningHistoryItemProps> = ({ warning }) => {
+  const [showModal, setShowModal] = useState(false);
+
+  const levelInfo = getWarningLevelInfo(warning.level || 'verbal');
+  const relativeTime = getRelativeTime(warning.issueDate || warning.createdAt);
+
+  return (
+    <>
+      {/* Tappable Warning Card */}
+      <button
+        onClick={() => setShowModal(true)}
+        className="w-full text-left p-2 rounded border transition-all hover:shadow-sm active:scale-[0.98]"
+        style={{
+          backgroundColor: 'var(--color-background)',
+          borderColor: 'var(--color-border-light)',
+          minHeight: '44px' // iOS/Android minimum touch target
+        }}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {/* Level Badge */}
+            <span
+              className="px-2 py-0.5 rounded text-xs font-medium flex-shrink-0"
+              style={{
+                backgroundColor: levelInfo.bgColor,
+                color: levelInfo.color
+              }}
+            >
+              {levelInfo.label}
+            </span>
+
+            {/* Date */}
+            <span className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
+              {relativeTime}
+            </span>
+          </div>
+
+          {/* Chevron indicator */}
+          <ChevronDown className="w-3.5 h-3.5 rotate-[-90deg] flex-shrink-0" style={{ color: 'var(--color-text-tertiary)' }} />
+        </div>
+      </button>
+
+      {/* Mini Modal */}
+      {showModal && (
+        <WarningDetailModal
+          warning={warning}
+          onClose={() => setShowModal(false)}
+        />
+      )}
+    </>
+  );
+};
+
+// 🎯 WARNING DETAIL MODAL - Lightweight mobile-optimized modal
+interface WarningDetailModalProps {
+  warning: any;
+  onClose: () => void;
+}
+
+const WarningDetailModal: React.FC<WarningDetailModalProps> = ({ warning, onClose }) => {
+  const levelInfo = getWarningLevelInfo(warning.level || 'verbal');
+  const issueDate = warning.issueDate || warning.createdAt;
+  const formattedDate = issueDate ? new Date(issueDate).toLocaleDateString('en-ZA', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  }) : 'Unknown date';
+
+  const validityMonths = warning.validityPeriod || 6;
+  const daysRemaining = getDaysUntilExpiry(issueDate, validityMonths);
+  const expiryDate = new Date(new Date(issueDate).setMonth(new Date(issueDate).getMonth() + validityMonths));
+  const formattedExpiry = expiryDate.toLocaleDateString('en-ZA', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  // Expiry urgency color
+  const expiryColor = daysRemaining < 30 ? '#ef4444' : daysRemaining < 60 ? '#f59e0b' : '#10b981';
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/50 z-[9500] animate-fade-in"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div
+        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[9600] w-[90vw] max-w-md"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div
+          className="rounded-lg shadow-xl overflow-hidden"
+          style={{
+            backgroundColor: 'var(--color-card-background)',
+            border: '1px solid var(--color-card-border)'
+          }}
+        >
+          {/* Header */}
+          <div
+            className="p-4 border-b flex items-center justify-between"
+            style={{
+              backgroundColor: levelInfo.bgColor,
+              borderColor: 'var(--color-border)'
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <FileText className="w-5 h-5" style={{ color: levelInfo.color }} />
+              <h3 className="font-bold text-base" style={{ color: 'var(--color-text)' }}>
+                Warning Details
+              </h3>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1 rounded-full hover:bg-black/5 active:scale-95 transition-all"
+            >
+              <X className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+            {/* Warning Level */}
+            <div>
+              <div className="text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                Warning Level
+              </div>
+              <div
+                className="inline-block px-3 py-1.5 rounded-lg text-sm font-bold"
+                style={{
+                  backgroundColor: levelInfo.bgColor,
+                  color: levelInfo.color
+                }}
+              >
+                {levelInfo.label}
+              </div>
+            </div>
+
+            {/* Issue Date */}
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <Calendar className="w-3.5 h-3.5" style={{ color: 'var(--color-text-secondary)' }} />
+                <div className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                  Issue Date
+                </div>
+              </div>
+              <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                {formattedDate}
+              </div>
+            </div>
+
+            {/* Manager */}
+            {warning.managerName && (
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <User className="w-3.5 h-3.5" style={{ color: 'var(--color-text-secondary)' }} />
+                  <div className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                    Issued By
+                  </div>
+                </div>
+                <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                  {warning.managerName}
+                </div>
+              </div>
+            )}
+
+            {/* Incident Date */}
+            {warning.incidentDate && (
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Calendar className="w-3.5 h-3.5" style={{ color: 'var(--color-text-secondary)' }} />
+                  <div className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                    Incident Date
+                  </div>
+                </div>
+                <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                  {new Date(warning.incidentDate).toLocaleDateString('en-ZA', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                  {warning.incidentTime && (
+                    <span className="ml-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                      at {warning.incidentTime}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Incident Location */}
+            {warning.incidentLocation && (
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Info className="w-3.5 h-3.5" style={{ color: 'var(--color-text-secondary)' }} />
+                  <div className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                    Location
+                  </div>
+                </div>
+                <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                  {warning.incidentLocation}
+                </div>
+              </div>
+            )}
+
+            {/* Incident Details */}
+            {warning.incidentDescription && (
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <MessageCircle className="w-3.5 h-3.5" style={{ color: 'var(--color-text-secondary)' }} />
+                  <div className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                    Incident Details
+                  </div>
+                </div>
+                <div
+                  className="text-sm leading-relaxed p-3 rounded-lg border"
+                  style={{
+                    backgroundColor: 'var(--color-background)',
+                    borderColor: 'var(--color-border-light)',
+                    color: 'var(--color-text)'
+                  }}
+                >
+                  {warning.incidentDescription}
+                </div>
+              </div>
+            )}
+
+            {/* Expiry Date with Urgency */}
+            <div
+              className="p-3 rounded-lg border"
+              style={{
+                backgroundColor: daysRemaining < 30 ? 'rgba(239, 68, 68, 0.05)' : 'var(--color-background)',
+                borderColor: expiryColor
+              }}
+            >
+              <div className="flex items-center gap-1.5 mb-1">
+                <Clock className="w-3.5 h-3.5" style={{ color: expiryColor }} />
+                <div className="text-xs font-medium" style={{ color: expiryColor }}>
+                  Expiry Date
+                </div>
+              </div>
+              <div className="text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
+                {formattedExpiry}
+              </div>
+              <div className="text-xs" style={{ color: expiryColor }}>
+                {daysRemaining > 0 ? (
+                  <>⏳ {daysRemaining} days remaining</>
+                ) : (
+                  <>⚠️ Expired</>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div
+            className="p-4 border-t"
+            style={{
+              backgroundColor: 'var(--color-background)',
+              borderColor: 'var(--color-border)'
+            }}
+          >
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 px-4 rounded-lg font-medium text-sm transition-all hover:opacity-90 active:scale-[0.98]"
+              style={{
+                backgroundColor: 'var(--color-primary)',
+                color: 'white'
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
 export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Props> = ({
   lraRecommendation,
   selectedEmployee,
@@ -266,45 +588,6 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
 
   return (
     <div className="space-y-3">
-      {/* Step Header with Clear Instructions */}
-      <ThemedCard padding="md" className="border-l-4" style={{ borderLeftColor: 'var(--color-primary)' }}>
-        <div className="flex items-center gap-2 mb-2">
-          <FileText className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
-          <h2 className="text-base font-bold" style={{ color: 'var(--color-text)' }}>
-            📋 Review & Prepare for Warning Meeting
-          </h2>
-        </div>
-        <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-          <Clock className="w-3 h-3" />
-          <span>Takes 5-10 minutes to review</span>
-        </div>
-      </ThemedCard>
-
-      {/* Workflow Guide */}
-      <ThemedCard padding="md" className="border" style={{ borderColor: 'var(--color-primary-light)', backgroundColor: 'var(--color-alert-info-bg)' }}>
-        <h3 className="text-sm font-bold mb-3" style={{ color: 'var(--color-text)' }}>What You'll Do Next:</h3>
-        <div className="space-y-2">
-          <div className="flex items-start gap-2">
-            <span className="text-base">1️⃣</span>
-            <span className="text-sm" style={{ color: 'var(--color-text)' }}>
-              <strong>Review the system recommendation</strong> below (legal analysis)
-            </span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-base">2️⃣</span>
-            <span className="text-sm" style={{ color: 'var(--color-text)' }}>
-              <strong>Read the employee warning script</strong> thoroughly
-            </span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-base">3️⃣</span>
-            <span className="text-sm" style={{ color: 'var(--color-text)' }}>
-              <strong>Collect both signatures</strong> (yours and employee's)
-            </span>
-          </div>
-        </div>
-      </ThemedCard>
-
       {/* Warning Severity Badge */}
       <div className="flex items-center gap-2">
         <ThemedBadge variant="warning" size="lg" className="font-semibold">
@@ -381,12 +664,6 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
                 <span>in category</span>
               </button>
             </div>
-
-            {/* Status Indicator - Step 1 Style */}
-            <div className="flex items-center gap-1">
-              <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
-              <span className="text-xs font-medium" style={{ color: 'var(--color-success)' }}>Analyzed</span>
-            </div>
           </div>
 
           {/* Friendly Explanation */}
@@ -440,20 +717,27 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
               </div>
             )}
 
-            {/* Warning History Context - Category Specific */}
+            {/* Warning History Context - Category Specific - INTERACTIVE */}
             <div className="rounded-lg p-2 border" style={{ backgroundColor: 'var(--color-card-background)', borderColor: 'var(--color-card-border)' }}>
               <div className="flex items-center gap-2 mb-1">
                 <Clock className="w-3 h-3" style={{ color: 'var(--color-text-secondary)' }} />
                 <h4 className="font-medium text-xs" style={{ color: 'var(--color-text)' }}>Warning History (This Category)</h4>
               </div>
-              <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              <div className="text-xs mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                 Employee has <strong>{lraRecommendation?.categoryWarningCount ?? 0}</strong> active warning(s) in this category.
-                {lraRecommendation?.activeWarnings && lraRecommendation.activeWarnings.length > 0 && (
-                  <span className="ml-1">
-                    Most recent warning was issued <strong>0 days ago</strong>.
-                  </span>
-                )}
               </div>
+
+              {/* Interactive Warning List */}
+              {lraRecommendation?.activeWarnings && lraRecommendation.activeWarnings.length > 0 && (
+                <div className="space-y-1 mt-2">
+                  {lraRecommendation.activeWarnings.map((warning: any, index: number) => (
+                    <WarningHistoryItem
+                      key={warning.id || index}
+                      warning={warning}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </ThemedCard>
@@ -543,7 +827,7 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
         </div>
         <ThemedCard padding="sm" className="border" style={{ borderColor: 'var(--color-border-light)' }}>
           <p className="text-xs mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-            <strong>Read this script before your meeting.</strong> It ensures you cover all legal requirements and communicate clearly with the employee.
+            <strong>Read this completely to ensure your employee understands their rights.</strong> This script covers all legal requirements and communicates the warning clearly.
           </p>
           <MultiLanguageWarningScript
             employeeName={selectedEmployee ? `${(selectedEmployee as any).profile?.firstName || 'Unknown'} ${(selectedEmployee as any).profile?.lastName || 'Employee'}` : 'Unknown Employee'}

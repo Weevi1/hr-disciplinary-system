@@ -404,7 +404,6 @@ const AppRoutes: React.FC = () => {
           </Suspense>
         } />
         <Route path="/commissions" element={<div className="hr-card"><h2>💰 Commission Reports</h2><p>Your earnings and commission statements</p></div>} />
-        <Route path="/performance" element={<div className="hr-card"><h2>📈 Performance Analytics</h2><p>Detailed performance metrics and trends</p></div>} />
         <Route path="/client-support" element={<div className="hr-card"><h2>🎯 Client Support</h2><p>Tools to help support your clients</p></div>} />
 
         {/* Role-Specific Placeholder Routes */}

@@ -104,8 +104,13 @@ export class ShardedDataService {
 
       Logger.success(`👥 [SHARD] Loaded ${result.documents.length} employees for ${organizationId}`)
       return result
-    } catch (error) {
-      Logger.error(`❌ [SHARD] Failed to load employees for ${organizationId}:`, error)
+    } catch (error: any) {
+      // Permission errors are expected for resellers accessing client data
+      if (error?.code === 'permission-denied' || error?.message?.includes('Missing or insufficient permissions')) {
+        Logger.debug(`[SHARD] Permission denied for employees in ${organizationId} (expected for resellers)`)
+      } else {
+        Logger.error(`❌ [SHARD] Failed to load employees for ${organizationId}:`, error)
+      }
       throw error
     }
   }
@@ -369,8 +374,13 @@ export class ShardedDataService {
 
       Logger.success(`⚠️ [SHARD] Loaded ${result.documents.length} warnings for ${organizationId}`)
       return result
-    } catch (error) {
-      Logger.error(`❌ [SHARD] Failed to load warnings for ${organizationId}:`, error)
+    } catch (error: any) {
+      // Permission errors are expected for resellers accessing client data
+      if (error?.code === 'permission-denied' || error?.message?.includes('Missing or insufficient permissions')) {
+        Logger.debug(`[SHARD] Permission denied for warnings in ${organizationId} (expected for resellers)`)
+      } else {
+        Logger.error(`❌ [SHARD] Failed to load warnings for ${organizationId}:`, error)
+      }
       throw error
     }
   }
@@ -506,8 +516,13 @@ export class ShardedDataService {
 
       Logger.success(`📂 [SHARD] Loaded ${result.documents.length} categories for ${organizationId}`)
       return result.documents
-    } catch (error) {
-      Logger.error(`❌ [SHARD] Failed to load categories for ${organizationId}:`, error)
+    } catch (error: any) {
+      // Permission errors are expected for resellers accessing client data
+      if (error?.code === 'permission-denied' || error?.message?.includes('Missing or insufficient permissions')) {
+        Logger.debug(`[SHARD] Permission denied for categories in ${organizationId} (expected for resellers)`)
+      } else {
+        Logger.error(`❌ [SHARD] Failed to load categories for ${organizationId}:`, error)
+      }
       throw error
     }
   }
@@ -741,7 +756,7 @@ export class ShardedDataService {
   /**
    * Invalidate cache entries by pattern
    */
-  private static invalidateCache(pattern: string): void {
+  public static invalidateCache(pattern: string): void {
     for (const [key] of this.cache) {
       if (key.includes(pattern)) {
         this.cache.delete(key)

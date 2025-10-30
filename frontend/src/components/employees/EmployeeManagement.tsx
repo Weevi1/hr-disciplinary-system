@@ -5,7 +5,7 @@
 // ✅ Role-based visibility
 // ✅ Interactive employee selection
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { globalDeviceCapabilities, getPerformanceLimits } from '../../utils/deviceDetection';
 import { useEmployees } from '../../hooks/employees/useEmployees';
@@ -27,8 +27,10 @@ import { calculateEmployeePermissions } from '../../types';
 import type { Employee } from '../../types';
 import {
   Users, Plus, Upload, Grid, List, ChevronDown,
-  Workflow, FileSpreadsheet, Eye, Layout, Archive, UserCheck, Filter
+  Workflow, FileSpreadsheet, Eye, Layout, Archive, UserCheck, Filter, X
 } from 'lucide-react';
+import { UnifiedModal } from '../common/UnifiedModal';
+import { getManagerIds } from '../../types/employee';
 // Import legacy skeleton loaders for 2012-era devices
 import { LegacySkeletonDashboard, LegacyLoadingMessage } from '../common/LegacySkeletonLoader';
 import { LoadingState } from '../common/LoadingState';
@@ -36,9 +38,11 @@ import Logger from '../../utils/logger';
 
 interface EmployeeManagementProps {
   onDataChange?: () => void; // Callback to notify parent when employee data changes
+  hideFloatingButton?: boolean; // Hide the floating action button (when parent provides its own)
+  onAddEmployeeClick?: () => void; // Expose the add employee action to parent
 }
 
-export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataChange }) => {
+export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataChange, hideFloatingButton = false, onAddEmployeeClick }) => {
   const { user, organization } = useAuth();
 
   // Check if user is an HOD manager - if so, only load their team members
@@ -89,6 +93,17 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
     isMobile ? 'cards' : 'table' // Mobile defaults to cards, desktop to table
   );
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // Expose add employee action to parent if callback provided
+  useEffect(() => {
+    if (onAddEmployeeClick) {
+      // Store the callback in a way that parent can trigger it
+      (window as any).__openAddEmployeeModal = () => setShowAddModal(true);
+    }
+    return () => {
+      delete (window as any).__openAddEmployeeModal;
+    };
+  }, [onAddEmployeeClick]);
   const [showImportModal, setShowImportModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [archivingEmployee, setArchivingEmployee] = useState<Employee | null>(null);
@@ -231,7 +246,7 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
   }
 
   return (
-    <div className="w-full space-y-2 md:space-y-4">
+    <div className="w-full space-y-2 md:space-y-4 relative">
 
       {/* Mobile: Compact Count Badge */}
       <div className="md:hidden flex items-center justify-between">
@@ -343,17 +358,20 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
             : 'Team directory'}
         </div>
         <div className="flex bg-slate-100 rounded-lg p-1">
-        <button
-          onClick={() => setViewMode('organogram')}
-          className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-all text-xs ${
-            viewMode === 'organogram'
-              ? 'bg-white shadow-md text-indigo-600'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Workflow className="w-3 h-3" />
-          <span>Hierarchy</span>
-        </button>
+        {/* Hide Hierarchy tab for HOD managers */}
+        {user?.role?.id !== 'hod-manager' && (
+          <button
+            onClick={() => setViewMode('organogram')}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-all text-xs ${
+              viewMode === 'organogram'
+                ? 'bg-white shadow-md text-indigo-600'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Workflow className="w-3 h-3" />
+            <span>Hierarchy</span>
+          </button>
+        )}
         <button
           onClick={() => setViewMode('table')}
           className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-all text-xs ${
@@ -494,6 +512,7 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
               permissions={permissions}
               onEdit={setEditingEmployee}
               onArchive={setArchivingEmployee}
+              onView={handleEmployeeSelect}
               onViewWarnings={(employee) => {
                 // Close the employee modal and navigate to warnings with employee filter
                 // This will be handled by parent component (HRDashboardSection)
@@ -620,6 +639,7 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
               setEditingEmployee(null);
             }}
             onSave={handleEmployeeSaved}
+            basicMode={isHODManager}
           />
         )}
 
@@ -664,15 +684,87 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
           />
         )}
 
-        {/* Floating Action Button - Mobile Only */}
-        {permissions.canCreate && (
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 flex items-center justify-center z-50"
-            aria-label="Add Employee"
+        {/* Employee View Modal - For viewing employee details without editing */}
+        {selectedEmployee && viewMode === 'cards' && (
+          <UnifiedModal
+            isOpen={true}
+            onClose={() => setSelectedEmployee(null)}
+            title="Employee Details"
+            maxWidth="2xl"
           >
-            <Plus className="w-6 h-6" />
-          </button>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h5 className="font-medium text-gray-900 mb-2 text-sm">Personal Information</h5>
+                  <div className="space-y-2 text-sm">
+                    <p><span className="font-medium">Name:</span> {selectedEmployee.profile.firstName} {selectedEmployee.profile.lastName}</p>
+                    <p><span className="font-medium">ID:</span> {selectedEmployee.profile.employeeNumber}</p>
+                    {/* Only show contact details to HR and Business Owner roles */}
+                    {(user?.role === 'hr' || user?.role === 'business_owner') && (
+                      <>
+                        <p><span className="font-medium">Email:</span> {selectedEmployee.profile.email}</p>
+                        <p><span className="font-medium">Phone:</span> {selectedEmployee.profile.phoneNumber || 'Not provided'}</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <h5 className="font-medium text-gray-900 mb-2 text-sm">Employment Details</h5>
+                  <div className="space-y-2 text-sm">
+                    <p><span className="font-medium">Department:</span> {selectedEmployee.profile.department}</p>
+                    <p><span className="font-medium">Position:</span> {selectedEmployee.employment.position}</p>
+                    <p><span className="font-medium">Start Date:</span> {selectedEmployee.employment?.startDate ? new Date(selectedEmployee.employment.startDate).toLocaleDateString() : 'Not set'}</p>
+                    <p><span className="font-medium">Status:</span>
+                      <span className={`ml-2 px-2 py-1 rounded text-xs ${
+                        selectedEmployee.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedEmployee.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons - only for users with edit permission */}
+              {permissions.canEdit && (
+                <div className="flex gap-3 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => {
+                      setEditingEmployee(selectedEmployee);
+                      setSelectedEmployee(null);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  >
+                    Edit Employee
+                  </button>
+                  {selectedEmployee.isActive && permissions.canArchive && (
+                    <button
+                      onClick={() => {
+                        setArchivingEmployee(selectedEmployee);
+                        setSelectedEmployee(null);
+                      }}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                    >
+                      Archive Employee
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </UnifiedModal>
+        )}
+
+        {/* Floating Action Button - Mobile Only */}
+        {!hideFloatingButton && permissions.canCreate && (
+          <div className="md:hidden fixed bottom-6 right-6 w-14 h-14 z-50">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="w-full h-full bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 flex items-center justify-center"
+              aria-label="Add Employee"
+            >
+              <Plus className="w-6 h-6" />
+            </button>
+          </div>
         )}
     </div>
   );

@@ -111,13 +111,15 @@ export class ShardedOrganizationService {
       // Step 2: Initialize sharded collections
       await this.initializeShardedCollections(organizationId, batch)
 
-      // Step 3: Create default warning categories in sharded structure
-      await this.createDefaultCategories(organizationId, organizationData.customCategories || [])
-
-      // Step 4: Commit organization and sharded structure
+      // Step 3: Commit organization and sharded structure BEFORE creating categories
+      // This ensures the organization document exists in Firestore before Firestore rules check it
       await batch.commit()
       Logger.success(`✅ [SHARDED ORG] Organization ${organizationId} created with sharded structure`)
       Logger.success(`✅ [SHARDED ORG] PDF template v${defaultPdfSettings.generatorVersion} initialized for ${organizationId}`)
+
+      // Step 4: Create default warning categories AFTER organization exists
+      // This allows Firestore rules to validate resellerManagesOrganization() correctly
+      await this.createDefaultCategories(organizationId, organizationData.customCategories || [])
 
       // Step 5: Create admin user account (separate from batch due to Firebase Auth)
       const adminUserId = await this.createAdminUser(organizationId, organizationData.adminUser)

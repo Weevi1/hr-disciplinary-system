@@ -288,7 +288,8 @@ export const createEmployeeFromForm = (
       department: formData.department || '', // 🔧 FIXED: Handle optional department
       position: formData.position,
       managerIds: formData.managerIds || [], // 🔧 UPDATED: Multi-manager support
-      managerId: formData.managerId || null // ⚠️ DEPRECATED: Keep for backward compatibility
+      ...(formData.managerId && { managerId: formData.managerId }), // ⚠️ DEPRECATED: Only include if exists
+      ...(!formData.managerId && formData.managerIds?.[0] && { managerId: formData.managerIds[0] }) // Fallback to first manager
     },
     
     disciplinaryRecord: {

@@ -3,7 +3,7 @@
 // Displays managers in a table format with action buttons
 
 import React, { useState } from 'react';
-import { Eye, Edit, UserMinus, Archive, Users, Building2, Mail } from 'lucide-react';
+import { Eye, Edit, UserMinus, Archive, Users, Building2, Mail, Settings } from 'lucide-react';
 import { Manager } from '../../services/ManagerService';
 
 interface ManagerTableProps {
@@ -12,6 +12,7 @@ interface ManagerTableProps {
   onEdit: (manager: Manager) => void;
   onDemote: (manager: Manager) => void;
   onArchive: (manager: Manager) => void;
+  onConfigurePermissions: (manager: Manager) => void;
 }
 
 export const ManagerTable: React.FC<ManagerTableProps> = ({
@@ -19,7 +20,8 @@ export const ManagerTable: React.FC<ManagerTableProps> = ({
   onViewDetails,
   onEdit,
   onDemote,
-  onArchive
+  onArchive,
+  onConfigurePermissions
 }) => {
   const [sortField, setSortField] = useState<keyof Manager>('lastName');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -185,6 +187,15 @@ export const ManagerTable: React.FC<ManagerTableProps> = ({
                     >
                       <Edit className="w-4 h-4" />
                     </button>
+                    {manager.role.id === 'hod-manager' && (
+                      <button
+                        onClick={() => onConfigurePermissions(manager)}
+                        className="text-purple-600 hover:text-purple-900 p-1 rounded hover:bg-purple-50"
+                        title="Configure Dashboard Features"
+                      >
+                        <Settings className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={() => onDemote(manager)}
                       className="text-orange-600 hover:text-orange-900 p-1 rounded hover:bg-orange-50"
@@ -262,6 +273,15 @@ export const ManagerTable: React.FC<ManagerTableProps> = ({
               >
                 Edit
               </button>
+              {manager.role.id === 'hod-manager' && (
+                <button
+                  onClick={() => onConfigurePermissions(manager)}
+                  className="px-3 py-2 bg-purple-50 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-100"
+                  title="Features"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              )}
               <button
                 onClick={() => onDemote(manager)}
                 className="flex-1 px-3 py-2 bg-orange-50 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-100"

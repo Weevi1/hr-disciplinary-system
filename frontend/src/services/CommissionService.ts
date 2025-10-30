@@ -556,46 +556,63 @@ class CommissionService {
 
   /**
    * Get metrics for a specific client/organization
+   * @param organizationId - The organization ID
+   * @param organizationData - Optional organization data to avoid refetching
    */
-  async getClientMetrics(organizationId: string): Promise<{
+  async getClientMetrics(organizationId: string, organizationData?: any): Promise<{
     monthlyRevenue: number;
     employeeCount: number;
     lastActivity: string;
     subscriptionStatus: 'active' | 'inactive' | 'trial';
     warningsThisMonth: number;
-    complianceScore: number;
   }> {
     try {
       Logger.debug('Loading client metrics...', { organizationId });
-      
-      // Get organization details
-      const organization = await DataService.getOrganization(organizationId);
-      if (!organization) {
-        throw new Error('Organization not found');
-      }
-      
-      // Get employees count using sharded structure
-      const employeesResult = await ShardedDataService.loadEmployees(organizationId);
-      const employees = employeesResult.documents;
 
-      // Get recent warnings using sharded structure
-      const warningsResult = await ShardedDataService.loadWarnings(organizationId);
-      const warnings = warningsResult.documents;
-      const thisMonth = new Date();
-      thisMonth.setDate(1);
-      const warningsThisMonth = warnings.filter(w => 
-        new Date(w.issueDate) >= thisMonth
-      ).length;
-      
+      // Use provided organization data or fetch it
+      let organization = organizationData;
+      if (!organization) {
+        organization = await DataService.getOrganization(organizationId);
+        if (!organization) {
+          throw new Error('Organization not found');
+        }
+      }
+
+      // Try to get employees count using sharded structure
+      let employeeCount = 0;
+      try {
+        const employeesResult = await ShardedDataService.loadEmployees(organizationId);
+        employeeCount = employeesResult.documents.length;
+      } catch (e) {
+        Logger.debug('Could not load employees, showing 0');
+        // If we can't load, show 0 (don't use stale organization data)
+        employeeCount = 0;
+      }
+
+      // Try to get recent warnings using sharded structure
+      let warningsThisMonth = 0;
+      try {
+        const warningsResult = await ShardedDataService.loadWarnings(organizationId);
+        const warnings = warningsResult.documents;
+        const thisMonth = new Date();
+        thisMonth.setDate(1);
+        warningsThisMonth = warnings.filter((w: any) =>
+          new Date(w.issueDate) >= thisMonth
+        ).length;
+      } catch (e) {
+        Logger.debug('Could not load warnings, showing 0');
+        // If we can't load, show 0
+        warningsThisMonth = 0;
+      }
+
       return {
-        monthlyRevenue: organization.monthlySubscription || 50000,
-        employeeCount: employees.length,
-        lastActivity: new Date().toISOString(),
+        monthlyRevenue: organization.monthlySubscription || 0,
+        employeeCount,
+        lastActivity: organization.lastActivity || organization.updatedAt || new Date().toISOString(),
         subscriptionStatus: organization.isActive === false ? 'inactive' : 'active',
-        warningsThisMonth,
-        complianceScore: Math.max(95 - (warningsThisMonth * 5), 60) // Simple scoring
+        warningsThisMonth
       };
-      
+
     } catch (error) {
       Logger.error('Failed to get client metrics:', error);
       return {
@@ -603,8 +620,7 @@ class CommissionService {
         employeeCount: 0,
         lastActivity: new Date().toISOString(),
         subscriptionStatus: 'inactive',
-        warningsThisMonth: 0,
-        complianceScore: 0
+        warningsThisMonth: 0
       };
     }
   }
