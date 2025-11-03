@@ -25,6 +25,7 @@ import { FirstTimeWelcomeModal } from '../components/auth/FirstTimeWelcomeModal'
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '../config/firebase';
 import { DatabaseShardingService } from '../services/DatabaseShardingService';
+import { FirebaseService } from '../services/FirebaseService';
 import Logger from '../utils/logger';
 
 interface MainLayoutProps {
@@ -86,6 +87,7 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
   const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [hasSeenWelcomeThisSession, setHasSeenWelcomeThisSession] = useState(false);
+  const [deferralTimer, setDeferralTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Ref for user menu dropdown to detect clicks outside
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -107,14 +109,23 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
     };
   }, [userMenuOpen]);
 
-  // Check if this is user's first login (show welcome modal)
+  // 🚀 OPTIMIZED: Defer welcome modal to allow dashboard to load first
   useEffect(() => {
-    // Show welcome modal if user hasn't seen it yet
-    // Handles both explicit false and undefined (for existing users)
-    // Also check session state to prevent showing after dismissal
+    // Clear existing timer
+    if (deferralTimer) clearTimeout(deferralTimer);
+
+    // Show welcome modal AFTER 2 seconds (let dashboard load first)
     if (user && user.hasSeenWelcome !== true && !hasSeenWelcomeThisSession) {
-      setShowWelcomeModal(true);
+      const timer = setTimeout(() => {
+        setShowWelcomeModal(true);
+      }, 2000); // Wait 2s for dashboard to be visible
+
+      setDeferralTimer(timer);
     }
+
+    return () => {
+      if (deferralTimer) clearTimeout(deferralTimer);
+    };
   }, [user, user?.hasSeenWelcome, hasSeenWelcomeThisSession]);
 
   // Password Reset Handler
@@ -147,20 +158,34 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
 
   // Handle welcome modal confirmation (only when "Don't show again" is checked)
   const handleWelcomeConfirm = async () => {
-    if (!user || !user.organizationId) return;
+    if (!user) return;
 
     try {
-      // Update user document to mark welcome as seen
-      // Use DatabaseShardingService to update the user document
-      await DatabaseShardingService.updateDocument(
-        user.organizationId,
-        'users',
-        user.id,
-        {
-          hasSeenWelcome: true,
-          updatedAt: new Date().toISOString()
-        }
-      );
+      // 🔧 FIX: Super users and resellers use flat structure, org users use sharded
+      const isSystemUser = user.organizationId === 'system' || !user.organizationId;
+
+      if (isSystemUser) {
+        // Super users and resellers - use flat structure
+        await FirebaseService.updateDocument(
+          'users',
+          user.id,
+          {
+            hasSeenWelcome: true,
+            updatedAt: new Date().toISOString()
+          }
+        );
+      } else {
+        // Organization users - use sharded structure
+        await DatabaseShardingService.updateDocument(
+          user.organizationId,
+          'users',
+          user.id,
+          {
+            hasSeenWelcome: true,
+            updatedAt: new Date().toISOString()
+          }
+        );
+      }
 
       Logger.info('Welcome modal dismissed permanently by user');
 

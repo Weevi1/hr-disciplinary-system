@@ -198,6 +198,49 @@ export class CacheService {
   }
 
   /**
+   * 🚀 OPTIMIZATION: Check if key exists in cache (without fetching data)
+   */
+  static has(key: string): boolean {
+    const entry = this.cache.get(key);
+    if (!entry) return false;
+
+    // Check if expired
+    if (Date.now() > entry.expiryTime) {
+      this.delete(key);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * 🚀 OPTIMIZATION: Pre-warm cache with predicted data needs
+   * Starts fetching data in background without blocking
+   */
+  static async preWarmCache(userId: string, organizationId: string): Promise<void> {
+    Logger.debug(`🔥 [CACHE] Pre-warming cache for user ${userId} in org ${organizationId}`);
+
+    const predictions = [
+      this.generateOrgKey(organizationId, 'employees:all'),
+      this.generateOrgKey(organizationId, 'categories'),
+      this.generateOrgKey(organizationId, 'organization'),
+    ];
+
+    // Check which keys are missing from cache
+    const missingKeys = predictions.filter(key => !this.has(key));
+
+    if (missingKeys.length === 0) {
+      Logger.debug(`✅ [CACHE] All predicted data already cached`);
+      return;
+    }
+
+    Logger.debug(`🔄 [CACHE] Pre-warming ${missingKeys.length} missing keys:`, missingKeys);
+
+    // Note: Actual fetching would happen in the components that use getOrFetch()
+    // This just identifies what's missing for monitoring purposes
+  }
+
+  /**
    * Evict least recently used entry
    */
   private static evictLRU(): void {

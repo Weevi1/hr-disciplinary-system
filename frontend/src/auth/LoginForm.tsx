@@ -10,52 +10,6 @@ interface LoginFormProps {
   onSuccess?: () => void;
 }
 
-// Enhanced Loading Screen Component with Real-Time Progress
-const LoadingScreen = () => {
-  const { loadingProgress } = useAuth();
-
-  // Default values if no progress data yet
-  const statusMessage = loadingProgress?.message || 'Connecting to server...';
-  const progress = loadingProgress?.progress || 10;
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center px-4">
-      <div className="text-center max-w-md w-full">
-        <div className="mb-8">
-          <Logo size="xlarge" showText={true} />
-        </div>
-
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
-
-        <p className="text-base font-medium text-gray-800 mb-4 transition-all duration-300">
-          {statusMessage}
-        </p>
-
-        <div className="w-full bg-gray-200 rounded-full h-2 mb-2 overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-
-        <p className="text-xs text-gray-500">
-          {Math.round(progress)}% complete
-        </p>
-
-        <div className="mt-4 flex items-center justify-center gap-1">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"
-              style={{ animationDelay: `${i * 150}ms` }}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
@@ -79,10 +33,8 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
     }
   };
 
-  // Show loading screen immediately when logging in
-  if (isLoggingIn) {
-    return <LoadingScreen />;
-  }
+  // 🚀 REMOVED: LoginForm loading screen - App.tsx handles auth loading state
+  // The dashboard renders with skeleton UI immediately, so no need for double loading screens
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">

@@ -191,8 +191,10 @@ export const UnifiedModal: React.FC<UnifiedModalProps> = ({
           boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
           background: 'white',
           display: 'flex',
-          flexDirection: 'column'
+          flexDirection: 'column',
+          position: 'relative'
         } : {}}
+        onClick={(e) => e.stopPropagation()}
       >
           {/* Header - Using Modal System Classes */}
           {!hideHeader && (
