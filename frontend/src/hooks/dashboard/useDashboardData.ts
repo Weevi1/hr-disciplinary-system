@@ -99,11 +99,14 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
 
   // 🚀 PROGRESSIVE DATA LOADING - Show UI immediately, load data independently
   const loadDashboardData = useCallback(async () => {
-    if (!organization?.id || !user?.id || orgLoading || loadingRef.current) {
+    // 🚀 OPTIMIZATION: Start loading even if org is still loading - use user.organizationId
+    const orgId = organization?.id || user?.organizationId;
+
+    if (!orgId || !user?.id || loadingRef.current) {
       return;
     }
 
-    const cacheKey = `${organization.id}-${user.id}-${role || user.role}`;
+    const cacheKey = `${orgId}-${user.id}-${role || user.role}`;
     if (loadedRef.current === cacheKey) {
       return; // Already loaded this combination
     }
@@ -119,12 +122,11 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
       // 🔥 STEP 1: Show UI shell immediately with core data
       setData(prev => ({
         ...prev,
-        organization,
-        categories: orgCategories || [],
+        organization: organization || prev.organization, // Use whatever we have
+        categories: orgCategories || prev.categories || [],
         user,
         loading: {
-          ...prev.loading,
-          overall: false, // ✅ Allow UI to render immediately
+          overall: false, // ✅ RENDER IMMEDIATELY - don't wait for data
           // Set individual loading states for required data
           employees: requirements.includes('employees'),
           followUps: requirements.includes('followUps'),
@@ -155,7 +157,7 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
       // Core data requests - load independently
       if (requirements.includes('permissions')) {
         CacheService.getOrFetch(
-          `permissions:${user.id}:${organization.id}`,
+          `permissions:${user.id}:${orgId}`,
           () => Promise.resolve({}) // Placeholder for permissions - implement if needed
         ).then(data => updateDataItem('permissions', data || {}))
           .catch(error => {
@@ -179,16 +181,16 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
                            actualUserRoleId === 'business-owner';
 
         const cacheKey = isHROrOwner
-          ? CacheService.generateOrgKey(organization.id, 'employees:all')
-          : CacheService.generateOrgKey(organization.id, `employees:manager:${user.id}`);
+          ? CacheService.generateOrgKey(orgId, 'employees:all')
+          : CacheService.generateOrgKey(orgId, `employees:manager:${user.id}`);
 
         CacheService.getOrFetch(
           cacheKey,
           async () => {
             // HR/Business Owner get all employees (even in HOD view), HOD gets their team only
             const employeesData = isHROrOwner
-              ? await API.employees.getAll(organization.id)
-              : await API.employees.getByManager(user.id, organization.id);
+              ? await API.employees.getAll(orgId)
+              : await API.employees.getByManager(user.id, orgId);
 
             Logger.debug(`👥 Loading ${employeesData.length} employees for ${actualUserRoleId} (viewing ${userRole} dashboard)`);
 
@@ -204,7 +206,7 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
 
       if (requirements.includes('followUps')) {
         CacheService.getOrFetch(
-          `followups:${user.id}:${organization.id}`,
+          `followups:${user.id}:${orgId}`,
           () => Promise.resolve([]) // Placeholder for follow-ups - implement if needed
         ).then(data => updateDataItem('followUps', Array.isArray(data) ? data : []))
           .catch(error => {
@@ -215,8 +217,8 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
 
       if (requirements.includes('warnings')) {
         CacheService.getOrFetch(
-          CacheService.generateOrgKey(organization.id, 'warnings'),
-          () => API.warnings.getAll(organization.id)
+          CacheService.generateOrgKey(orgId, 'warnings'),
+          () => API.warnings.getAll(orgId)
         ).then(data => updateDataItem('warnings', Array.isArray(data) ? data : []))
           .catch(error => {
             Logger.error('❌ Failed to load warnings:', error);
@@ -226,8 +228,8 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
 
       if (requirements.includes('reports')) {
         CacheService.getOrFetch(
-          CacheService.generateOrgKey(organization.id, 'reports'),
-          () => API.reports.getAll(organization.id)
+          CacheService.generateOrgKey(orgId, 'reports'),
+          () => API.reports.getAll(orgId)
         ).then(data => updateDataItem('reports', Array.isArray(data) ? data : []))
           .catch(error => {
             Logger.error('❌ Failed to load reports:', error);
@@ -237,8 +239,8 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
 
       if (requirements.includes('teams')) {
         CacheService.getOrFetch(
-          CacheService.generateOrgKey(organization.id, 'teams'),
-          () => ShardedDataService.getAllEmployees(organization.id)
+          CacheService.generateOrgKey(orgId, 'teams'),
+          () => ShardedDataService.getAllEmployees(orgId)
         ).then(data => updateDataItem('teams', Array.isArray(data) ? data : []))
           .catch(error => {
             Logger.error('❌ Failed to load teams:', error);
@@ -248,8 +250,8 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
 
       if (requirements.includes('metrics')) {
         CacheService.getOrFetch(
-          CacheService.generateOrgKey(organization.id, 'metrics'),
-          () => API.analytics.getDashboardMetrics(organization.id)
+          CacheService.generateOrgKey(orgId, 'metrics'),
+          () => API.analytics.getDashboardMetrics(orgId)
         ).then(data => updateDataItem('metrics', data || {}))
           .catch(error => {
             Logger.error('❌ Failed to load metrics:', error);
@@ -280,21 +282,23 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
     } finally {
       loadingRef.current = false;
     }
-  }, [organization, user, orgCategories, orgLoading, role, getDataRequirements]);
+  }, [organization, user, orgCategories, role, getDataRequirements]); // 🚀 REMOVED: orgLoading dependency
 
   // Refresh function
   const refreshData = useCallback(() => {
     loadedRef.current = null;
     CacheService.clearByPrefix(`org:${organization?.id}:`);
     loadDashboardData();
-  }, [organization?.id, loadDashboardData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organization?.id]); // 🔧 FIX: Removed loadDashboardData to prevent unnecessary re-renders
 
-  // Load data when dependencies are ready
+  // 🚀 OPTIMIZED: Load data when user is ready - don't wait for orgLoading
   useEffect(() => {
-    if (organization?.id && user?.id && !orgLoading && orgCategories !== null) {
+    if (user?.id && (organization?.id || user.organizationId)) {
       loadDashboardData();
     }
-  }, [organization?.id, user?.id, orgLoading, orgCategories, loadDashboardData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, organization?.id, user?.organizationId]); // 🔧 FIX: Removed loadDashboardData to prevent infinite loop
 
   return {
     ...data,

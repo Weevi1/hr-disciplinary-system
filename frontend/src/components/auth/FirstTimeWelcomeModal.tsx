@@ -315,16 +315,14 @@ export const FirstTimeWelcomeModal: React.FC<FirstTimeWelcomeModalProps> = ({
       onClose={() => {}} // Prevent closing until acknowledged
       title=""
       size={isMobile ? "sm" : "md"}
-      className="!overflow-hidden"
+      className="first-time-welcome-modal"
       hideHeader={true}
-      maxHeight={isMobile ? "85vh" : "90vh"}
     >
-      <div className={`relative ${isMobile ? '' : '-mx-6 -mb-6'}`}>
-        {/* Solid Color Hero Header - Matching app design */}
-        <div
-          className={`relative overflow-hidden ${isMobile ? 'px-4 pt-3 pb-2' : 'px-8 pt-8 pb-6'}`}
-          style={{ backgroundColor: roleContent.bgColor }}
-        >
+      {/* Solid Color Hero Header - Fixed at top, no scroll */}
+      <div
+        className={`relative overflow-hidden flex-shrink-0 ${isMobile ? 'px-4 pt-3 pb-2' : 'px-8 pt-8 pb-6'}`}
+        style={{ backgroundColor: roleContent.bgColor }}
+      >
           {isMobile ? (
             /* Compact Mobile Header - Horizontal Layout */
             <div
@@ -400,10 +398,14 @@ export const FirstTimeWelcomeModal: React.FC<FirstTimeWelcomeModalProps> = ({
               </div>
             </>
           )}
-        </div>
+      </div>
 
-        {/* Content Section */}
-        <div className={`${isMobile ? 'px-4 pt-4 pb-4 space-y-4' : 'px-8 pt-6 pb-6 space-y-6'}`} style={{ backgroundColor: 'var(--color-card-background)' }}>
+      {/* Scrollable Content Section */}
+      <div className="flex-1 overflow-y-auto" style={{
+        backgroundColor: 'var(--color-card-background)',
+        WebkitOverflowScrolling: 'touch'
+      }}>
+        <div className={`${isMobile ? 'px-4 pt-4 pb-4 space-y-4' : 'px-8 pt-6 pb-6 space-y-6'}`}>
           {/* Description */}
           <div
             className="transition-all duration-500 delay-100"

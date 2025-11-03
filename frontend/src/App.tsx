@@ -50,14 +50,8 @@ import './App.css';
 // LOADING & ERROR SCREENS
 // ============================================
 
-// 🎯 Enhanced Loading Screen with Real-Time Progress Tracking
+// 🚀 OPTIMIZED: Simplified Loading Screen (no complex progress tracking)
 const LoadingScreen = () => {
-  const { loadingProgress } = useAuth();
-
-  // Default values if no progress data yet
-  const statusMessage = loadingProgress?.message || 'Connecting to server...';
-  const progress = loadingProgress?.progress || 10;
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center px-4">
       <div className="text-center max-w-md w-full">
@@ -77,26 +71,11 @@ const LoadingScreen = () => {
           <p className="text-xs text-gray-600 mt-2">by Fifo</p>
         </div>
 
-        {/* Spinner */}
+        {/* Simple Spinner */}
         <div className="w-12 h-12 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
 
-        {/* Status Message */}
-        <p className="text-base font-medium text-gray-800 mb-4 transition-all duration-300">
-          {statusMessage}
-        </p>
-
-        {/* Progress Bar */}
-        <div className="w-full bg-gray-200 rounded-full h-2 mb-2 overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-
-        {/* Progress Percentage */}
-        <p className="text-xs text-gray-500">
-          {Math.round(progress)}% complete
-        </p>
+        {/* Simple Message */}
+        <p className="text-base font-medium text-gray-800">Signing you in...</p>
 
         {/* Loading dots animation */}
         <div className="mt-4 flex items-center justify-center gap-1">

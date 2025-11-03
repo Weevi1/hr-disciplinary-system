@@ -38,12 +38,16 @@ export const useOrganization = () => {
 interface OrganizationProviderProps {
   children: ReactNode;
   organizationId: string;
+  prefetchedOrg?: Organization | null; // 🚀 OPTIMIZATION: Accept pre-fetched organization data
+  prefetchedCategories?: any[] | null; // 🚀 OPTIMIZATION: Accept pre-fetched categories
 }
 
 // 🎯 The Provider component that fetches and holds the state
 export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
   children,
-  organizationId
+  organizationId,
+  prefetchedOrg,
+  prefetchedCategories
 }) => {
   // 🎯 OPTIMIZED STATE - Added categories back for performance
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -74,6 +78,17 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
 
   // 🚀 PARALLEL LOADING: Load organization and categories simultaneously
   const loadOrganizationData = async () => {
+    // 🚀 OPTIMIZATION: Skip loading if prefetched data provided
+    if (prefetchedOrg && prefetchedCategories !== undefined) {
+      Logger.debug(`[OrganizationProvider] ✅ Using prefetched data for: ${organizationId}`);
+      setOrganization(prefetchedOrg);
+      setCategories(prefetchedCategories);
+      setSectorInfo(null);
+      setLoading(false);
+      loadedOrgRef.current = organizationId;
+      return;
+    }
+
     // 🔧 GLOBAL SINGLETON: Prevent duplicate loading across StrictMode instances
     if (loadingRef.current || isGloballyLoading()) {
       Logger.debug(`[OrganizationProvider] Already loading, skipping duplicate for: ${organizationId}`);

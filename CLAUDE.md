@@ -243,9 +243,27 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 ## 🔧 Latest Updates
 
-**For complete change history, see `RECENT_UPDATES.md` (Sessions 20-39) and `SESSION_HISTORY.md` (Sessions 5-19)**
+**For complete change history, see `RECENT_UPDATES.md` (Sessions 20-40) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Session 39 - 2025-10-30)
+### Most Recent (Session 40 - 2025-11-03)
+- **🎉 LOGIN PERFORMANCE OPTIMIZATION & CRITICAL BUG FIXES**: Fixed infinite loop and null reference errors in production
+- **Performance Optimization - Login Flow**:
+  - ✅ Removed circular dependency in `useDashboardData.ts` causing infinite re-renders
+  - ✅ Fixed useEffect dependency array (removed `loadDashboardData` from deps at line 300)
+  - ✅ Fixed useCallback dependency array in `refreshData` (removed `loadDashboardData` at line 293)
+  - ✅ Added ESLint disable comments to document intentional dependency exclusions
+- **Critical Bug Fix - Null Reference Errors**:
+  - ✅ Fixed "Cannot read properties of null (reading 'id')" errors in production
+  - ✅ Root cause: `organization` was null during progressive loading, but code accessed `organization.id` directly
+  - ✅ Replaced all 14 instances of `organization.id` with safe `orgId` variable throughout `loadDashboardData`
+  - ✅ Affected lines: 160, 184, 185, 192, 193, 209, 220, 221, 231, 232, 242, 243, 253, 254
+  - ✅ Dashboard now loads properly without console errors
+- **Files Modified**:
+  - `frontend/src/hooks/dashboard/useDashboardData.ts` (lines 160, 184, 185, 192, 193, 209, 220, 221, 231, 232, 242, 243, 253, 254, 293, 300)
+- **Deployment**: ✅ Frontend built and deployed
+- **Status**: ✅ Complete - Production errors resolved, login performance optimized
+
+### Previous Recent (Session 39 - 2025-10-30)
 - **🎉 PDF SIGNATURE DISPLAY FIX & UI IMPROVEMENTS**: Fixed critical PDF signature rendering bug and improved PDF layout
 - **Critical Bug Fix - PDF Signatures Not Displaying**:
   - ✅ Fixed v1.2.0 method signature mismatch - was passing entire data object instead of signatures
@@ -385,4 +403,4 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, **WCAG AA accessibility compliance**, **versioned PDF generation for legal compliance**, **per-organization PDF template customization**, **1000x storage reduction through centralized template version management**, **fully editable PDF text content with zero hardcoded fallbacks**, **SA-optimized employee CSV import with automatic phone number formatting**, and **multi-manager support with array-based employee assignments**.*
 
-*Last Updated: 2025-10-30 - Session 39: PDF Signature Display Fix & UI Improvements*
+*Last Updated: 2025-11-03 - Session 40: Login Performance Optimization & Critical Bug Fixes*

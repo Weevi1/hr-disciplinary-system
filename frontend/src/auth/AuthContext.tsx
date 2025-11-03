@@ -1,5 +1,6 @@
 import Logger from '../utils/logger';
 // frontend/src/auth/AuthContext.tsx - PRODUCTION VERSION (Backwards Compatible Role Handling)
+// 🚀 OPTIMIZED: Parallel loading, non-blocking claims validation
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
@@ -8,6 +9,7 @@ import { FirebaseService } from '../services/FirebaseService';
 import { DatabaseShardingService } from '../services/DatabaseShardingService';
 import { UserOrgIndexService } from '../services/UserOrgIndexService';
 import { userCreationManager } from '../utils/userCreationContext';
+import { ClaimsValidationService } from '../services/ClaimsValidationService';
 import type { User, Organization } from '../types';
 
 // ✅ FIX: Define collections here since they're not exported from DataService
@@ -69,19 +71,13 @@ const normalizeUserRole = (rawRole: any) => {
   };
 };
 
-// Loading progress type
-export interface LoadingProgress {
-  stage: number;
-  message: string;
-  progress: number; // 0-100
-}
+// 🚀 OPTIMIZED: Removed LoadingProgress - no longer using staged progress tracking
 
 // Context types
 interface AuthContextType {
   user: User | null;
   organization: Organization | null;
   loading: boolean;
-  loadingProgress: LoadingProgress | null;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -94,14 +90,12 @@ interface AuthState {
   user: User | null;
   organization: Organization | null;
   loading: boolean;
-  loadingProgress: LoadingProgress | null;
   error: string | null;
 }
 
 // Action types
 type AuthAction =
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_LOADING_PROGRESS'; payload: LoadingProgress | null }
   | { type: 'SET_USER'; payload: User | null }
   | { type: 'SET_ORGANIZATION'; payload: Organization | null }
   | { type: 'SET_ERROR'; payload: string | null }
@@ -112,14 +106,11 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
   switch (action.type) {
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
-    case 'SET_LOADING_PROGRESS':
-      return { ...state, loadingProgress: action.payload };
     case 'SET_USER':
       return {
         ...state,
         user: action.payload,
         loading: false,
-        loadingProgress: null, // Clear progress when user is set
         error: null // Clear error when user is set successfully
       };
     case 'SET_ORGANIZATION':
@@ -128,15 +119,13 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
       return {
         ...state,
         error: action.payload,
-        loading: false,
-        loadingProgress: null // Clear progress on error
+        loading: false
       };
     case 'LOGOUT':
       return {
         user: null,
         organization: null,
         loading: false,
-        loadingProgress: null,
         error: null
       };
     default:
@@ -149,7 +138,6 @@ const initialState: AuthState = {
   user: null,
   organization: null,
   loading: true,
-  loadingProgress: null,
   error: null
 };
 
@@ -160,29 +148,14 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // 🔥 Firebase Auth State Listener - Production Ready with Role Normalization
+  // 🔥 Firebase Auth State Listener - OPTIMIZED with Parallel Loading
   useEffect(() => {
     Logger.debug('🔐 Initializing Firebase authentication...')
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       try {
-        // Stage 0: Initial connection (10% progress)
-        dispatch({
-          type: 'SET_LOADING_PROGRESS',
-          payload: { stage: 0, message: 'Connecting to server...', progress: 10 }
-        });
-
         if (firebaseUser) {
           Logger.debug('👤 Firebase user authenticated:', firebaseUser.email)
-
-          // Stage 1: User authenticated (30% progress)
-          dispatch({
-            type: 'SET_LOADING_PROGRESS',
-            payload: { stage: 1, message: 'Authenticating user...', progress: 30 }
-          });
-
-          // 🚀 PRODUCTION OPTIMIZATION: Use O(1) UserOrgIndex lookup instead of O(n) organization search
-          // This works for ALL user types: Business Owner, HR Manager, HOD Manager, Super User, Reseller
 
           // Check if this user is currently being created
           if (userCreationManager.isPendingUser(firebaseUser.uid)) {
@@ -220,19 +193,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return;
           }
 
-          // 🎯 SCALABLE LOOKUP: Single index query instead of searching ALL organizations
-          const result = await UserOrgIndexService.getUserWithOrganization(firebaseUser.uid);
+          // 🚀 PARALLEL EXECUTION - All requests start simultaneously
+          const [userResult, orgPreviewResult] = await Promise.allSettled([
+            // 1. User lookup (O(1) index) - PRIMARY DATA
+            UserOrgIndexService.getUserWithOrganization(firebaseUser.uid),
 
-          // Stage 2: User profile loaded (60% progress)
-          dispatch({
-            type: 'SET_LOADING_PROGRESS',
-            payload: { stage: 2, message: 'Loading user profile...', progress: 60 }
+            // 2. Optimistic org fetch (try to get from token claims)
+            (async () => {
+              try {
+                const idTokenResult = await firebaseUser.getIdTokenResult();
+                const claims = idTokenResult.claims as any;
+                if (claims.orgId || claims.organizationId) {
+                  const orgId = claims.orgId || claims.organizationId;
+                  return await FirebaseService.getDocument<Organization>(
+                    COLLECTIONS.ORGANIZATIONS,
+                    orgId
+                  );
+                }
+                return null;
+              } catch {
+                return null;
+              }
+            })()
+          ]);
+
+          // 3. Start background claims validation (non-blocking, fire-and-forget)
+          ClaimsValidationService.validateInBackground(firebaseUser).catch(err => {
+            Logger.warn('⚠️ [AUTH] Background claims validation encountered an error (non-blocking):', err);
           });
 
-          if (result) {
-            // 🔍 ENHANCED: Check if custom claims are valid and up-to-date
-            const idTokenResult = await firebaseUser.getIdTokenResult();
-            const claims = idTokenResult.claims as any;
+          // Handle user result
+          if (userResult.status === 'fulfilled' && userResult.value) {
+            const result = userResult.value;
 
             // Check if user is active (critical security check)
             if (result.user.isActive === false) {
@@ -242,74 +234,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               return;
             }
 
-            // BEST PRACTICE: Check for missing/invalid claims and staleness
-            const hasClaims = claims.r || claims.role; // Support both minimal (r) and legacy (role) format
-            const claimsVersion = claims.v || 0; // Claims version from token
-            const firestoreVersion = result.user.claimsVersion || 1; // Version from Firestore
-            const isStale = claimsVersion < firestoreVersion;
-
-            if (!hasClaims) {
-              // Missing claims - auto-refresh without logout
-              Logger.warn('⚠️ [AUTH] Missing custom claims, auto-refreshing...');
-              try {
-                const { getFunctions, httpsCallable } = await import('firebase/functions');
-                const functions = getFunctions(undefined, 'us-central1');
-                const refreshClaims = httpsCallable(functions, 'refreshUserClaims');
-                await refreshClaims({});
-                // Force token refresh
-                await firebaseUser.getIdToken(true);
-                Logger.success('✅ [AUTH] Claims refreshed and token updated');
-                // Re-trigger auth state change with new token
-                return;
-              } catch (err) {
-                Logger.error('❌ [AUTH] Failed to auto-refresh claims:', err);
-                // Continue anyway - Firestore is source of truth
-              }
-            } else if (isStale) {
-              // Stale token detected - permissions may have changed
-              Logger.warn(`⚠️ [AUTH] Stale token detected (v${claimsVersion} vs v${firestoreVersion}), refreshing...`);
-
-              try {
-                // Force token refresh to get latest claims
-                await firebaseUser.getIdToken(true);
-                Logger.success(`✅ [AUTH] Token refreshed from v${claimsVersion} to v${firestoreVersion}`);
-                // Re-trigger auth state change with new token
-                return;
-              } catch (err) {
-                Logger.error('❌ [AUTH] Failed to refresh stale token:', err);
-                // Continue with Firestore data - it's more current
-              }
-            }
-
-            // ✅ User found via index - instant O(1) lookup regardless of organization count
+            // ✅ User found via index - instant O(1) lookup
             const normalizedRole = normalizeUserRole(result.user.role);
             dispatch({
               type: 'SET_USER',
               payload: { ...result.user, role: normalizedRole } as User
             });
 
-            // Load organization if needed (not for system users)
+            // Handle organization - use preview if available, otherwise fetch
             if (result.organizationId && result.organizationId !== 'system') {
-              // Stage 3: Loading organization data (80% progress)
-              dispatch({
-                type: 'SET_LOADING_PROGRESS',
-                payload: { stage: 3, message: 'Loading organization data...', progress: 80 }
-              });
+              let orgData: Organization | null = null;
 
-              const orgData = await FirebaseService.getDocument<Organization>(
-                COLLECTIONS.ORGANIZATIONS,
-                result.organizationId
-              );
+              // Try to use prefetched org data
+              if (orgPreviewResult.status === 'fulfilled' && orgPreviewResult.value) {
+                orgData = orgPreviewResult.value;
+                Logger.debug('✅ Using prefetched organization data');
+              } else {
+                // Fetch org data if preview failed
+                orgData = await FirebaseService.getDocument<Organization>(
+                  COLLECTIONS.ORGANIZATIONS,
+                  result.organizationId
+                );
+              }
+
               if (orgData) {
                 dispatch({ type: 'SET_ORGANIZATION', payload: orgData });
               }
             }
-
-            // Stage 4: Preparing dashboard (95% progress)
-            dispatch({
-              type: 'SET_LOADING_PROGRESS',
-              payload: { stage: 4, message: 'Preparing your dashboard...', progress: 95 }
-            });
 
             Logger.success(`✅ User authenticated via index: ${result.user.email} → ${result.organizationId}`);
           } else {
@@ -595,7 +546,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     user: state.user,
     organization: state.organization,
     loading: state.loading,
-    loadingProgress: state.loadingProgress,
     error: state.error,
     login,
     logout,
