@@ -22,13 +22,14 @@ firebase deploy
 ```
 
 ### Current System Status
-- **✅ Production**: Online at https://hr-disciplinary-system.web.app
+- **✅ Production**: Online at https://file.fifo.systems (custom domain) and https://hr-disciplinary-system.web.app
 - **✅ Development**: Ubuntu environment at http://localhost:3003/ (dev server running)
 - **✅ Enterprise Ready**: A-grade security, production monitoring, 2,700+ org scalability
 - **✅ Sharded Architecture**: Database sharding implemented for multi-thousand organization support
 - **✅ Progressive Enhancement**: Complete 2012-2025 device compatibility with zero performance punishment
 - **✅ Unified Design System**: Complete visual unification with consistent typography, spacing, and theming
 - **✅ Unified Admin Dashboards**: Business Owner, HR, and SuperAdmin dashboards follow identical structure - Greeting → Metrics → Tabs → Quote
+- **✅ Custom Domain**: file.fifo.systems configured with Firebase Hosting (SSL auto-provisioned)
 
 ---
 
@@ -58,7 +59,7 @@ firebase deploy
 **IMPORTANT**: This file is size-limited to maintain context efficiency.
 
 - **Size Limit**: 500 lines maximum (target: 400-470 lines)
-- **Current Size**: 270 lines ✅
+- **Current Size**: 486 lines ⚠️ (near limit)
 - **Policy**: See `DOCUMENTATION_POLICY.md` for complete maintenance rules
 - **Before Adding Sessions**: Check size with `wc -l CLAUDE.md`
 - **If > 450 lines**: Move previous session to RECENT_UPDATES.md first
@@ -182,6 +183,42 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 ## 📋 CURRENT FOCUS / PENDING TASKS
 
+### **🔬 Priority 1: Research Unified Warning/Counselling System (Session 48)**
+
+**Context**: Client template shows unified approach - every warning includes corrective counselling sections within the same form.
+
+**Client Template Structure** (`hqkob_Scan_Itec25060912130.pdf`):
+- (A) Details and Nature of Misconduct
+- (B) Employee's version (their side of story)
+- (C) Required/Expected behavior/Performance/Conduct/Standards (corrective guidance)
+- (D) Disciplinary Action (tick box: First/Second/Final/Suspension/Dismissal)
+- (E) Facts Leading to Decision Taken
+- (F) Action Steps (employee commits to improve conduct/performance)
+- Review Date, Signatures, Validity period
+
+**Key Insight**: Sections (C) and (F) are essentially corrective counselling WITHIN the warning - not separate.
+
+**Research Required** (Use Opus agents):
+1. **Current Architecture Analysis**: How are counselling and warnings separated today?
+   - Find all counselling-related components, services, types
+   - Analyze `UnifiedCorrectiveCounselling` component and data structure
+   - How does counselling differ from warnings in database?
+   - User flow for recording counselling vs issuing warnings
+2. **Current Warning Wizard Analysis**: What fields do we already capture?
+   - Does EnhancedWarningWizard capture "expected behavior" (like section C)?
+   - Do we capture "action steps/improvement commitments" (like section F)?
+   - Do we capture "employee's version" (like section B)?
+3. **Gap Analysis**: What's missing from our warnings to match client template?
+4. **Impact Assessment**: Components, services, types, database changes needed
+5. **Migration Complexity**: Files affected, data migration, routing changes
+6. **Recommendation**: Should we merge? Support both models? Architectural options?
+
+**Deliverable**: Comprehensive analysis document with architecture map, gap analysis, impact assessment, and recommendations.
+
+**Status**: ⏳ Next session - Do NOT implement, research only
+
+---
+
 ### **🔜 Testing & Validation Tasks**
 
 **✅ Priority 1: Deploy Functions** - COMPLETED
@@ -243,164 +280,202 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 ## 🔧 Latest Updates
 
-**For complete change history, see `RECENT_UPDATES.md` (Sessions 20-40) and `SESSION_HISTORY.md` (Sessions 5-19)**
+**For complete change history, see `RECENT_UPDATES.md` (Sessions 20-47) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Session 40 - 2025-11-03)
-- **🎉 LOGIN PERFORMANCE OPTIMIZATION & CRITICAL BUG FIXES**: Fixed infinite loop and null reference errors in production
-- **Performance Optimization - Login Flow**:
-  - ✅ Removed circular dependency in `useDashboardData.ts` causing infinite re-renders
-  - ✅ Fixed useEffect dependency array (removed `loadDashboardData` from deps at line 300)
-  - ✅ Fixed useCallback dependency array in `refreshData` (removed `loadDashboardData` at line 293)
-  - ✅ Added ESLint disable comments to document intentional dependency exclusions
-- **Critical Bug Fix - Null Reference Errors**:
-  - ✅ Fixed "Cannot read properties of null (reading 'id')" errors in production
-  - ✅ Root cause: `organization` was null during progressive loading, but code accessed `organization.id` directly
-  - ✅ Replaced all 14 instances of `organization.id` with safe `orgId` variable throughout `loadDashboardData`
-  - ✅ Affected lines: 160, 184, 185, 192, 193, 209, 220, 221, 231, 232, 242, 243, 253, 254
-  - ✅ Dashboard now loads properly without console errors
+### Most Recent (Session 48 - 2025-11-11)
+- **🎉 PDF PROFESSIONAL STANDARD IMPROVEMENTS & MULTILINGUAL ALIGNMENT**: Enhanced warning document quality and wizard-PDF synchronization
+- **PDF Formatting Fixes**:
+  - ✅ Enhanced `wrapText()` to handle newlines (`\n`) for proper paragraph/bullet structure
+  - ✅ Fixed orphaned section headers (heading + content now stay together on same page)
+  - ✅ Increased line spacing from 4mm to 5mm for better readability
+  - ✅ Dynamic Consequences box sizing based on content
+- **Professional Document Improvements**:
+  - ✅ Removed redundant intro text from 3 corrective discussion sections
+  - ✅ Reordered sections for logical flow (facts-leading-to-decision moved after employee statement)
+  - ✅ Simplified Review Date section (heading: "FOLLOW-UP REVIEW")
+  - ✅ Streamlined Consequences section with clear, concise language
+  - ✅ Consolidated Employee Rights to 2 subsections (removed "What Happens Next" redundancy)
+  - ✅ Disabled Appeal History section (details not in script)
+- **Wizard-PDF Alignment ("Less is More" Philosophy)**:
+  - ✅ Simplified all 11 SA language warning scripts - removed verbose legal language
+  - ✅ Added missing LRA-compliant representation right: "You may have a fellow employee or shop steward represent you"
+  - ✅ Aligned consequences statement: "Further misconduct will result in additional discipline, including formal hearings, up to ending of service. All unexpired warnings accumulate."
+  - ✅ PDF template now perfectly reflects what's communicated during warning wizard
+- **All 11 South African Languages Updated** (EN, AF, ZU, XH, ST, TS, VE, SS, TN, NR, NS):
+  - ✅ Concise consequences statements
+  - ✅ Representation right added to all languages
+  - ✅ Consistent "ending of service" terminology
+- **Files Modified**: 3 files
+  - `PDFGenerationService.ts` - Text wrapping, orphaned headers, spacing improvements
+  - `PDFTemplateService.ts` - Removed redundancy, reordered sections, simplified language
+  - `MultiLanguageWarningScript.tsx` - Updated all 11 languages with concise scripts
+- **Build & Deploy**: ✅ Success (16.26s)
+- **Status**: ✅ Complete - Warning documents are clearer, more concise, and legally compliant across all 11 SA languages
+
+### Previous Session (Session 47 Part 1 - 2025-11-09)
+- **🎉 CRITICAL FIX: HOD Managers Can Now Submit Absence Reports & Counselling Sessions**
+- **Root Cause**: Firestore security rules only allowed HR managers to write to `organizations/{orgId}/reports` collection
+- **The Fix**:
+  - ✅ Changed Firestore rule from `isHRManager()` to `isManager()` for reports collection
+  - ✅ Now allows all manager types (executive-management, hr-manager, hod-manager, department-manager) to create reports
+  - ✅ Deployed updated Firestore rules to production
+- **Code Cleanup**:
+  - ✅ Removed all debugging console.logs from UnifiedReportAbsence and UnifiedCorrectiveCounselling
+  - ✅ Improved `isFormValid()` to explicitly return boolean with `!!` operator
+- **🎉 READ-ONLY EMPLOYEE MANAGEMENT FOR EXECUTIVE DASHBOARD**:
+  - ✅ Added `readOnly` prop to EmployeeManagement and EmployeeTableBrowser components
+  - ✅ Executive Management dashboard now shows employees in read-only mode (no Edit/Archive buttons)
+  - ✅ HR Manager dashboard retains full CRUD permissions for employee management
+  - ✅ Same user gets different permissions based on which dashboard they're accessing from
 - **Files Modified**:
-  - `frontend/src/hooks/dashboard/useDashboardData.ts` (lines 160, 184, 185, 192, 193, 209, 220, 221, 231, 232, 242, 243, 253, 254, 293, 300)
-- **Deployment**: ✅ Frontend built and deployed
-- **Status**: ✅ Complete - Production errors resolved, login performance optimized
+  - `config/firestore.rules` (line 772) - Security rule fix
+  - `frontend/src/components/absences/UnifiedReportAbsence.tsx` - Cleanup
+  - `frontend/src/components/counselling/UnifiedCorrectiveCounselling.tsx` - Cleanup
+  - `frontend/src/components/employees/EmployeeManagement.tsx` - Added readOnly prop
+  - `frontend/src/components/employees/EmployeeTableBrowser.tsx` - Hide actions when readOnly
+  - `frontend/src/components/dashboard/ExecutiveManagementDashboardSection.tsx` - Pass readOnly={true}
+- **Status**: ✅ Complete - Absence/counselling fixed, executive dashboard now read-only for employees
+- **Deployment**: ✅ Frontend built and deployed, Firestore rules deployed
 
-### Previous Recent (Session 39 - 2025-10-30)
-- **🎉 PDF SIGNATURE DISPLAY FIX & UI IMPROVEMENTS**: Fixed critical PDF signature rendering bug and improved PDF layout
-- **Critical Bug Fix - PDF Signatures Not Displaying**:
-  - ✅ Fixed v1.2.0 method signature mismatch - was passing entire data object instead of signatures
-  - ✅ Root cause: PDF template system implementation introduced parameter ordering bug
-  - ✅ Signatures now display correctly in PDF preview and generated documents
-  - ✅ Issue affected all warnings using v1.2.0 generator (2025-10-15 onwards)
-- **PDF Layout Improvements**:
-  - ✅ Added 8mm spacing before signatures section for better visual separation
-  - ✅ Made blue "Employee Rights" background box dynamic (adjusts height to content)
-  - ✅ Removed "Generated on" timestamp from footer (only shows issue/valid/incident dates)
-  - ✅ Centered page numbers in footer for cleaner layout
-- **Warning History Modal**:
-  - ✅ Created interactive warning history in Step 2 with tappable warning cards
-  - ✅ Modal shows date, manager, incident details, location, and expiry with color coding
-  - ✅ Mobile-optimized with 44px touch targets
-  - ✅ Removed slide animation per user request
-- **Multi-Language Script Section**:
-  - ✅ Redesigned to ultra-compact layout (60% size reduction)
-  - ✅ Language selector and "View Script" button now equal weight
-  - ✅ Removed redundant "Script available in" and "Complete script" text
-  - ✅ Perfect horizontal alignment using flexbox items-stretch
-- **Default Template Update**:
-  - ✅ Removed "Refer to counselling dated {{issuedDate}}" from consequences section
-  - ✅ Affects new organizations only (existing orgs can edit via template editor)
+### Previous Recent (Session 45 - 2025-11-06)
+- **🎉 PROMOTE TO MANAGER MODAL REDESIGN**: Complete UX overhaul for compact, modern employee promotion workflow
+- **Modal Simplification**:
+  - ✅ Changed from 'lg' to 'sm' size - significantly smaller footprint
+  - ✅ Removed redundant search input, replaced with dynamic autocomplete search
+  - ✅ Search icon in input, real-time filtered results dropdown
+  - ✅ Selected employee display with "Change" button
+  - ✅ Click-outside to close results
+- **Role Selection Modernization**:
+  - ✅ Removed large button blocks for HOD/HR selection
+  - ✅ Replaced with minimal radio buttons (10px text) on right side of label
+  - ✅ Dramatically reduced visual prominence (was taking up 30% of modal)
+  - ✅ HOD defaults to selected (most common use case)
+- **Department Assignment UX**:
+  - ✅ Changed from multi-select dropdown to checkbox list
+  - ✅ Visible checkboxes for clear multi-selection feedback
+  - ✅ Hover effects on department rows
+  - ✅ Compact spacing (max-h-24, scrollable)
+  - ✅ Only shows when HOD role selected
+- **Typography Hierarchy**:
+  - ✅ Section labels: 11px, uppercase, semibold, tracking-wide
+  - ✅ Required/optional hints: 10px, gray-400
+  - ✅ Role selector: 10px, subtle positioning
+  - ✅ Clear visual hierarchy throughout
+  - ✅ Proper spacing: mb-3 between sections, pt-3 mt-3 for buttons
+- **Button Improvements**:
+  - ✅ Fixed CSS conflict with modal-system.css button styles
+  - ✅ Used modal-footer__button classes to prevent padding override
+  - ✅ Equal width buttons with inline flex: 1 style
 - **Files Modified**:
-  - `PDFGenerationService.ts:872` - Fixed addSignaturesSection parameters
-  - `PDFGenerationService.ts:1685` - Added signature section spacing
-  - `PDFGenerationService.ts:1610-1695` - Dynamic blue box height calculation
-  - `PDFGenerationService.ts:2100,2457` - Removed generation timestamps
-  - `LegalReviewSignaturesStepV2.tsx` - Interactive warning history with modal
-  - `MultiLanguageWarningScript.tsx` - Ultra-compact script selector
-  - `PDFTemplateService.ts:225` - Updated default template text
-- **Deployment**: ✅ Frontend built and deployed
-- **Status**: ✅ Complete - PDF signatures working, improved layouts deployed
+  - `frontend/src/components/managers/PromoteToManagerModal.tsx` (complete redesign - 349 lines)
+  - Removed Mail, UserPlus, CheckCircle, X, ChevronDown unused imports
+  - Added Search icon and dynamic filtering logic
+- **Build & Deploy**: ✅ Success - Deployed to production
+- **Status**: ✅ Complete - Professional, compact, modern modal with excellent UX
 
-### Previous Recent (Session 38 - 2025-10-28)
-- **🎉 MANAGER DASHBOARD FIX - Team Members Now Visible**: Fixed critical bug where managers couldn't see their assigned team
-- **Reseller Dashboard Enhancements**:
-  - ✅ Fixed eye icon - now opens ClientSummaryModal instead of broken new tab
-  - ✅ Created professional client summary modal with metrics, contact info, and activity
-  - ✅ Added pagination (10 clients per page) with search and status filtering
-  - ✅ Removed "Trial" status option (not yet implemented)
-  - ✅ Updated "Your Clients" to "Recent Clients" showing last 2 deployed
-- **HOD Manager Employee Management**:
-  - ✅ Hidden Hierarchy tab from HOD managers (security restriction)
-  - ✅ Removed contact details (email/phone) from employee views
-  - ✅ Hidden Edit and Archive buttons (read-only access for HOD)
-  - ✅ Added employee view modal for cards view on mobile
-  - ✅ Role-based visibility throughout employee management
-- **Team Management Modal Fixes**:
-  - ✅ Fixed body scroll prevention when modal is open
-  - ✅ Fixed floating action button positioning (was rendering off-screen)
-  - ✅ Added communication bridge between parent and child components
-- **Quick Add Employee for HOD Managers**:
-  - ✅ Simplified form with only essential fields (Name, Surname, Start Date, Position, Reporting Manager)
-  - ✅ Auto-generated employee number (read-only)
-  - ✅ HR can complete full profile later
-  - ✅ Enables managers to onboard employees immediately if HR hasn't yet
-- **Mobile Optimizations**:
-  - ✅ Hidden "Clean Record" badge on mobile cards view
-  - ✅ Fixed FAB positioning within modal bounds
-  - ✅ Employee details modal works on mobile tap
+### Previous Recent (Session 44 - 2025-11-04)
+- **🎉 HOD DASHBOARD MIGRATION TO DASHBOARDSHELL**: Completed dashboard consistency refactoring - all 3 main dashboards now use unified layout
+- **Console Logging Fixes**: Fixed mysterious numeric logs with descriptive messages
+- **Accessibility Improvements**: Added autocomplete attributes to login form
+
+### Previous Recent (Session 43 - 2025-11-04)
+- **🎉 DEPARTMENT MANAGEMENT UX IMPROVEMENTS**: Enhanced department management with clickable blocks and manager assignment
+- **Clickable Department Blocks**:
+  - ✅ Department blocks in Organization tab now clickable
+  - ✅ Clicking any department block switches to Departments tab
+  - ✅ Added hover effects and visual feedback (cursor-pointer, hover:bg-orange-100, active:scale-95)
+  - ✅ Works on both desktop and mobile views
+- **Manager Assignment Feature**:
+  - ✅ Added "Assign Manager" dropdown to Edit/Create Department modal
+  - ✅ Loads all active HR managers and Department managers from organization
+  - ✅ Displays manager role in dropdown (HR Manager / Department Manager)
+  - ✅ Pre-selects current manager when editing
+  - ✅ Allows "No manager assigned" option
+  - ✅ Crown icon for visual polish
+  - ✅ Helpful message when no managers exist
+- **Department Modal Polish**:
+  - ✅ Professional typography with semibold labels and proper spacing
+  - ✅ Larger input padding (px-4 py-2.5) for better touch targets
+  - ✅ Enhanced focus states and transitions
+  - ✅ Amber warning box for "no managers" message with AlertTriangle icon
+  - ✅ Border separator above action buttons
+  - ✅ Fixed button sizing issues by using inline styles to bypass CSS !important rules
+  - ✅ Both Cancel and Update buttons now perfectly aligned
+- **Warnings Management Padding Fix**:
+  - ✅ Added missing padding (p-4) to WarningsReviewDashboard main container
+  - ✅ Fixed cramped appearance of warnings management section
+  - ✅ Consistent spacing throughout warnings interface
 - **Files Modified**:
-  - `frontend/src/components/reseller/ClientSummaryModal.tsx` - NEW: Client details modal
-  - `frontend/src/components/reseller/MyClients.tsx` - Pagination, filters, view modal
-  - `frontend/src/components/reseller/ResellerDashboard.tsx` - "Recent Clients" section
-  - `frontend/src/components/employees/EmployeeTableBrowser.tsx` - Role-based contact visibility
-  - `frontend/src/components/employees/EmployeeManagement.tsx` - Hierarchy tab, view modal, FAB control
-  - `frontend/src/components/employees/EmployeeCard.tsx` - View support, mobile badge hiding
-  - `frontend/src/components/employees/EmployeeFormModal.tsx` - Basic mode for HOD managers
-  - `frontend/src/components/dashboard/HODDashboardSection.tsx` - Modal scroll fix, FAB positioning
-  - `frontend/src/hooks/usePreventBodyScroll.ts` - Applied to Team Management modal
-- **Deployment**: ✅ Frontend built and deployed
-- **Status**: ✅ Complete - Full reseller and HOD manager workflow improvements
+  - `frontend/src/components/organization/OrganizationManagementV2.tsx` - Added onSwitchToDepartments callback, clickable department blocks
+  - `frontend/src/components/dashboard/ExecutiveManagementDashboardSection.tsx` - Passed tab switching callback
+  - `frontend/src/components/admin/DepartmentManagement.tsx` - Manager loading logic, dropdown UI, polished modal, inline button styles
+  - `frontend/src/components/warnings/ReviewDashboard.tsx` (line 553) - Added p-4 padding to main container
+- **Deployment**: ✅ Frontend built and deployed to production
+- **Status**: ✅ Complete - Department management fully enhanced with improved UX
 
-### Previous Recent (Session 38 - 2025-10-28)
-- **🎉 MANAGER DASHBOARD FIX - Team Members Now Visible**: Fixed critical bug where managers couldn't see their assigned team
-- **Problem**: Bulk assign manager was writing to `employment.managerIds` (array), but `getByManager` query was looking for old `employment.managerId` (string)
-- **Root Cause**: Query mismatch between legacy field (`managerId`) and modern multi-manager field (`managerIds`)
-- **Solution**: Updated `API.employees.getByManager` query to use `array-contains` operator on `managerIds` array
-- **Manager Welcome Modal Improvements**:
-  - ✅ Dynamic greeting adjusts based on enabled HOD permissions
-  - ✅ Search function in "Promote to Manager" modal now filters correctly
-  - ✅ Fixed HOD permissions modal to use sharded collection path
-  - ✅ Improved modal UI: removed scrollbars, fixed close button visibility, proper content scrolling
-  - ✅ Fixed spacing issues: icon no longer cut off, reduced excessive padding
-  - ✅ Modal is non-dismissible (must be acknowledged via "Get Started" button)
+### Previous Sessions Summary (41-42 - 2025-11-03 to 2025-11-04)
+- **Session 42**: Major role migration (business-owner → executive-management), 87+ files updated across frontend/backend/security rules
+- **Session 42**: Dashboard tab UX optimization - unified inline styling for employee management and warnings tabs
+- **Session 41**: Welcome modal redesign (60-70% size reduction), deployment performance optimization (80% category creation improvement)
+
+### Most Recent (Session 46 - 2025-11-07)
+- **🎉 WARNING WIZARD STEP 2 AUTO-ADVANCE FIX**: Fixed Next button appearing after signature upload
+- **Step 2 Auto-Advance**:
+  - ✅ Fixed Next button showing blue/clickable after "Upload Signatures & Continue"
+  - ✅ Root cause: Wrong step name check (`INCIDENT_DETAILS_REVIEW` vs `LEGAL_REVIEW_SIGNATURES`)
+  - ✅ Button now completely hidden during save process (`show: false`)
+  - ✅ Auto-advances to Step 3 immediately after successful save
+  - ✅ Success message updated with spinning loader and "Advancing to delivery setup..." text
+  - ✅ Removed confusing "Click Next" instruction from success message
+- **Audio Recording Metadata Fix**:
+  - ✅ Added `recordedBy`, `recordedByName`, and `recordedAt` fields when saving audio
+  - ✅ Audio playback widget now displays manager name and recording date properly
+  - ✅ Fixed "Unknown" and missing metadata in audio playback modal
+- **QR Code Delivery Method Integration**:
+  - ✅ Added QR Code as selectable delivery method in Step 3
+  - ✅ Clicking QR Code option opens modal immediately for scanning
+  - ✅ QR Code treated as instant delivery (no HR action needed)
+  - ✅ Auto-advance works correctly with QR Code selection
+- **HR Dashboard Setup Tasks Fix**:
+  - ✅ Fixed "Getting Started" section flashing on HR login
+  - ✅ Added `setupDataLoaded` state to prevent premature rendering
+  - ✅ Setup tasks only show AFTER fetching data from Firestore and confirming they're needed
+  - ✅ No more flash of setup UI when HR user has already completed setup
+- **Book HR Meeting Signatures Removed**:
+  - ✅ Removed manager signature requirement from HR meeting booking
+  - ✅ Removed employee signature section entirely
+  - ✅ Simplified form to just: employee selection + meeting context (20 chars minimum)
+  - ✅ No signature canvases or acknowledgment sections
+- **Custom Domain Setup**:
+  - ✅ Configured custom domain: `file.fifo.systems`
+  - ✅ Domain purchased from domains.co.za
+  - ✅ CNAME record added pointing to `hr-disciplinary-system.web.app`
+  - ✅ Firebase SSL certificate auto-provisioned
+  - ✅ Both URLs active: `https://file.fifo.systems` and `https://hr-disciplinary-system.web.app`
 - **Files Modified**:
-  - `frontend/src/api/index.ts` (line 649) - Fixed manager query to use `managerIds` array
-  - `frontend/src/components/managers/PromoteToManagerModal.tsx` - Fixed employee search filtering
-  - `frontend/src/components/admin/HODPermissionsModal.tsx` - Fixed to use sharded collection path
-  - `frontend/src/components/auth/FirstTimeWelcomeModal.tsx` - Dynamic greetings, improved spacing
-  - `frontend/src/components/common/UnifiedModal.tsx` - Added hideHeader prop, fixed scrolling
-  - `frontend/src/modal-system.css` - Fixed content scrolling behavior
-  - `frontend/src/layouts/MainLayout.tsx` - Pass hodPermissions to welcome modal
-- **⚠️ IMPORTANT**: Requires new Firestore composite index (Firebase will provide URL on first query):
-  - Collection: `organizations/{organizationId}/employees`
-  - Fields: `employment.managerIds` (Array), `isActive` (Ascending), `profile.lastName` (Ascending)
-- **Deployment**: ✅ Frontend built and deployed
-- **Status**: ✅ Complete - Managers can now see their team members
-
-### Previous Recent (Session 37 - 2025-10-23)
-- **🎉 RESELLER SESSION PRESERVATION FIX**: Fixed reseller logout issue during organization deployment
-- **Problem**: `createUserWithEmailAndPassword()` automatically signed in new admin user, logging out the reseller
-- **Solution**: Migrated to Cloud Function `createOrganizationAdmin` using Admin SDK (preserves current session)
-- **Backend Changes**: Updated `createOrganizationAdmin` function to allow reseller permissions with security check
-- **Frontend Changes**: `ShardedOrganizationService.ts` now calls Cloud Function instead of client-side Auth API
-- **Success Modal**: Removed misleading "You have been signed in as new admin" message
-- **Impact**: ✅ Resellers stay signed in after deploying clients, smooth wizard completion
-- **Files Modified**:
-  - `functions/src/Auth/userCreationService.ts` (lines 87-128) - Added reseller permissions
-  - `frontend/src/services/ShardedOrganizationService.ts` (lines 271-349) - Cloud Function integration
-  - `frontend/src/components/admin/EnhancedOrganizationWizard.tsx` (lines 862-869) - Updated success message
-- **Deployment**: ✅ Backend deployed, frontend built successfully
-- **Status**: ✅ Complete - Ready for testing
-
-### Previous Recent (Session 36 - 2025-10-23)
-- **User Creation & Role Assignment Fix**: Fixed issue where new users had to sign out/in to get roles working
-- **Solution**: Added `auth.setCustomUserClaims()` to all 4 user creation functions
-- **Deployment**: ✅ All 28 functions deployed successfully to production
-- **Status**: ✅ Complete
+  - `frontend/src/components/warnings/enhanced/EnhancedWarningWizard.tsx` - Fixed step name check, audio metadata
+  - `frontend/src/components/warnings/enhanced/steps/LegalReviewSignaturesStepV2.tsx` - Updated success message with loader
+  - `frontend/src/components/warnings/enhanced/steps/DeliveryCompletionStep.tsx` - QR Code integration
+  - `frontend/src/components/dashboard/HRDashboardSection.tsx` - Setup tasks loading fix
+  - `frontend/src/components/meetings/UnifiedBookHRMeeting.tsx` - Removed all signatures
+- **Status**: ✅ Complete - All fixes tested and deployed to production at https://file.fifo.systems
 
 ### Previous Sessions Summary
-- **Session 35**: Documentation policy & maintenance system (500-line limit, rotation rules)
-- **Session 34**: CSV import enhancements (SA phone formatting, dd/mm/yyyy dates)
-- **Session 33**: Editable PDF text content system (zero hardcoded fallbacks, subsections editor)
-- **Session 32**: Multi-manager system fixes & debugging (promotion crashes fixed)
-- **Session 31**: PDF template customization system (per-organization styling)
-- **Session 30**: PDF template version storage optimization (1000x storage reduction)
-- **Sessions 20-29**: See `RECENT_UPDATES.md` for detailed change history
+- **Session 47**: System-wide improvements (ending of service terminology, validity display, code of conduct references)
+- **Session 46**: Warning wizard auto-advance fix, audio metadata, QR code delivery
+- **Session 45**: Promote to Manager Modal Redesign (compact autocomplete search)
+- **Session 44**: HOD Dashboard migration to DashboardShell
+- **Session 43**: Department management UX improvements
+- **Session 42**: business-owner → executive-management role migration
+- **Session 41**: Welcome modal optimization & deployment performance
+- **Sessions 20-40**: See `RECENT_UPDATES.md` for detailed change history
 
 **For complete session history, see:**
-- `RECENT_UPDATES.md` - Sessions 20-38 (current)
+- `RECENT_UPDATES.md` - Sessions 20-48 (current)
 - `SESSION_HISTORY.md` - Sessions 5-19 (archived)
 
 ---
 
-*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components, **WCAG AA accessibility compliance**, **versioned PDF generation for legal compliance**, **per-organization PDF template customization**, **1000x storage reduction through centralized template version management**, **fully editable PDF text content with zero hardcoded fallbacks**, **SA-optimized employee CSV import with automatic phone number formatting**, and **multi-manager support with array-based employee assignments**.*
+*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components with **consistent inline tab UX across all dashboards**, **unified DashboardShell component** powering all 3 main dashboards (HR, Executive Management, HOD), **WCAG AA accessibility compliance**, **versioned PDF generation for legal compliance**, **per-organization PDF template customization**, **1000x storage reduction through centralized template version management**, **fully editable PDF text content with zero hardcoded fallbacks**, **SA-optimized employee CSV import with automatic phone number formatting**, **multi-manager support with array-based employee assignments**, **professional compact welcome modals**, **executive-management role** for inclusive senior leadership, **modern autocomplete employee search**, **seamless auto-advance workflow** in warning wizard with proper loading states, **instant QR code delivery** for warnings, **simplified HR meeting booking** without signature requirements, **all manager roles can submit absence reports and counselling sessions**, **proper employee name display in warning wizard**, and **enhanced microphone permission handling with clear user guidance**.*
 
-*Last Updated: 2025-11-03 - Session 40: Login Performance Optimization & Critical Bug Fixes*
+*Last Updated: 2025-11-11 - Session 48: PDF Professional Standard Improvements & All 11 SA Languages Aligned with "Less is More" Philosophy*
