@@ -194,6 +194,87 @@ export class PDFTemplateService {
 
       // 🆕 SECTION CONFIGURATIONS - Default sections for new organizations
       sections: [
+        // 🆕 CORRECTIVE DISCUSSION SECTIONS (Session 48 - Unified Warning/Counselling System)
+        {
+          id: 'employee-statement',
+          type: 'standard',
+          name: 'Employee Statement (Section B)',
+          enabled: true,
+          order: -5,
+          content: {
+            heading: 'EMPLOYEE\'S VERSION OF EVENTS',
+            body: '' // Removed redundant intro - heading is self-explanatory
+          },
+          description: 'Employee\'s side of the story - what happened from their perspective (Section B)',
+          isLocked: false,
+          requiredFields: ['employeeStatement'],
+          createdAt: new Date(),
+          createdBy: createdBy
+        },
+        {
+          id: 'facts-leading-to-decision',
+          type: 'standard',
+          name: 'Facts Leading to Decision (Section E)',
+          enabled: true,
+          order: -4, // Moved to come right after employee's version for logical flow
+          content: {
+            heading: 'FACTS AND REASONING FOR DISCIPLINARY ACTION',
+            body: '' // Removed redundant intro - heading is self-explanatory
+          },
+          description: 'Manager\'s reasoning - why this disciplinary action was taken (Section E)',
+          isLocked: false,
+          requiredFields: ['factsLeadingToDecision'],
+          createdAt: new Date(),
+          createdBy: createdBy
+        },
+        {
+          id: 'expected-behavior-standards',
+          type: 'standard',
+          name: 'Expected Behavior & Standards (Section C)',
+          enabled: true,
+          order: -3, // Moved down - comes after manager's decision
+          content: {
+            heading: 'REQUIRED/EXPECTED BEHAVIOR & PERFORMANCE STANDARDS',
+            body: '' // Removed redundant intro - heading is self-explanatory
+          },
+          description: 'Clear expectations - what behavior/performance is required going forward (Section C)',
+          isLocked: false,
+          requiredFields: ['expectedBehaviorStandards'],
+          createdAt: new Date(),
+          createdBy: createdBy
+        },
+        {
+          id: 'improvement-commitments',
+          type: 'standard',
+          name: 'Improvement Commitments & Action Steps (Section F)',
+          enabled: true,
+          order: -2,
+          content: {
+            heading: 'ACTION STEPS & IMPROVEMENT COMMITMENTS',
+            body: 'The employee has committed to the following actions to improve their conduct/performance:'
+          },
+          description: 'Specific actions the employee will take to improve (Section F)',
+          isLocked: false,
+          requiredFields: ['improvementCommitments'],
+          createdAt: new Date(),
+          createdBy: createdBy
+        },
+        {
+          id: 'review-date',
+          type: 'standard',
+          name: 'Follow-Up Review',
+          enabled: true,
+          order: -1,
+          content: {
+            heading: 'FOLLOW-UP REVIEW',
+            body: 'A follow-up review meeting has been scheduled to assess your progress. If you demonstrate satisfactory improvement and no further issues arise within 7 days after this review date, this warning will be considered resolved.'
+          },
+          description: 'Follow-up review date with automatic resolution clause (7-day grace period)',
+          isLocked: false,
+          requiredFields: ['reviewDate'],
+          createdAt: new Date(),
+          createdBy: createdBy
+        },
         {
           id: 'previous-disciplinary-actions',
           type: 'standard',
@@ -219,14 +300,14 @@ export class PDFTemplateService {
           enabled: true,
           order: 1,
           content: {
-            heading: 'WARNING: CONSEQUENCES IF EMPLOYEE\nDOES NOT CHANGE BEHAVIOUR',
-            // 🆕 BODY: Default consequences text (v1.1.0 format)
+            heading: 'WARNING: CONSEQUENCES OF CONTINUED MISCONDUCT',
+            // 🆕 BODY: Matches script read aloud to employee - clear and concise
             // Supports {{placeholder}} replacement (e.g., {{issuedDate}})
-            body: 'Any further transgressions related or unrelated to the offences shall result in further disciplinary action which can lead to a disciplinary hearing and it can result in dismissal.',
+            body: 'Further misconduct will result in additional discipline, including formal hearings, up to ending of service. All unexpired warnings accumulate.',
             // 🆕 BULLET POINTS: Alternative consequences format (optional, empty by default)
             bulletPoints: []
           },
-          description: 'Warning box about consequences of continued behavior (red warning box)',
+          description: 'Warning box about consequences (matches script read aloud)',
           isLocked: false,
           requiredFields: ['issuedDate'],
           createdAt: new Date(),
@@ -239,34 +320,24 @@ export class PDFTemplateService {
           enabled: true,
           order: 2,
           content: {
-            heading: 'EMPLOYEE RIGHTS AND NEXT STEPS',
-            // 🆕 SUBSECTIONS: Structured content for Employee Rights section
-            // Used by v1.1.0 rendering method with custom content support
+            heading: 'YOUR RIGHTS UNDER THE LABOUR RELATIONS ACT',
+            // 🆕 SUBSECTIONS: Matches script read aloud to employee - clear and concise
             subsections: [
               {
                 title: 'Your Rights:',
                 content: [
-                  '• Right to Appeal: You may appeal this warning within 48 hours by submitting a written appeal to HR. If your internal appeal is unsuccessful, you may refer the matter to the CCMA within 30 days.',
-                  '• Right to Representation: You have the right to be represented by a fellow employee or shop steward during disciplinary proceedings.',
-                  '• Signing This Document: Your signature acknowledges that this warning has been explained to you. It does NOT mean you agree with the warning.',
-                  '• Confidentiality: All information will be kept confidential and shared only with relevant management and HR personnel.'
+                  '• You may appeal to HR in writing within 48 hours.',
+                  '• You may have a fellow employee or shop steward represent you.',
+                  '• Further misconduct during the validity period may result in additional discipline, up to ending of service.'
                 ]
               },
               {
-                title: 'What Happens Next:',
-                content: [
-                  '• This warning remains valid for {{validityPeriod}} months from the date of issue.',
-                  '• During this period, similar conduct may result in further disciplinary action, up to and including dismissal.',
-                  '• You are expected to demonstrate immediate and sustained improvement in your conduct.'
-                ]
-              },
-              {
-                title: 'Important Notice:',
-                content: 'If you believe this warning is procedurally unfair or unjust, you have recourse through your company\'s internal appeal process or the Commission for Conciliation, Mediation and Arbitration (CCMA).'
+                title: 'Signature Acknowledgment:',
+                content: 'Your signature confirms you understand this warning and your rights - not that you agree with it. If you refuse to sign, a witness will confirm the warning was explained. The warning is valid either way.'
               }
             ]
           },
-          description: 'LRA-compliant employee rights section with next steps (legally required in South Africa)',
+          description: 'LRA rights (matches script read aloud)',
           isLocked: true,
           requiredFields: ['validityPeriod'],
           createdAt: new Date(),
@@ -276,7 +347,7 @@ export class PDFTemplateService {
           id: 'appeal-history',
           type: 'standard',
           name: 'Appeal History Section',
-          enabled: true,
+          enabled: false, // Disabled by default - contains details not communicated in script
           order: 3,
           content: {
             heading: 'Appeal Information',
@@ -289,7 +360,7 @@ export class PDFTemplateService {
               'Decision on appeal is final'
             ]
           },
-          description: 'Information about the employee\'s right to appeal the warning',
+          description: 'Detailed appeal procedures (optional - not in script)',
           isLocked: false,
           requiredFields: ['organization.name'],
           createdAt: new Date(),

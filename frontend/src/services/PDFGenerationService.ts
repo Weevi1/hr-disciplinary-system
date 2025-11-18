@@ -135,7 +135,18 @@ export interface WarningPDFData {
   
   additionalNotes?: string;
   validityPeriod?: number;
-  
+
+  // Corrective counselling sections (unified warning/counselling approach)
+  employeeStatement?: string; // Section B: Employee's version of events
+  expectedBehaviorStandards?: string; // Section C: Required/Expected behavior & standards
+  factsLeadingToDecision?: string; // Section E: Facts & reasoning for disciplinary action
+  improvementCommitments?: Array<{ // Section F: Action steps & improvement commitments
+    commitment: string;
+    timeline: string;
+  }>;
+  reviewDate?: Date; // Follow-up review date
+  interventionDetails?: string; // Training/coaching provided
+
   // AI/LRA recommendation data
   disciplineRecommendation?: {
     suggestedLevel: string;
@@ -488,6 +499,28 @@ export class PDFGenerationService {
       currentY = this.addIncidentDetailsSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
       Logger.success(5387)
 
+      // 5.1. Corrective Counselling Sections (Unified Warning/Counselling Approach)
+      // Section B: Employee's Statement
+      if (data.employeeStatement) {
+        Logger.debug('💬 Adding employee statement section...')
+        currentY = this.addEmployeeStatementSection(doc, data.employeeStatement, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        Logger.success('✅ Employee statement section added')
+      }
+
+      // Section C: Expected Behavior & Standards
+      if (data.expectedBehaviorStandards) {
+        Logger.debug('📊 Adding expected behavior section...')
+        currentY = this.addExpectedBehaviorSection(doc, data.expectedBehaviorStandards, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        Logger.success('✅ Expected behavior section added')
+      }
+
+      // Section E: Facts Leading to Decision
+      if (data.factsLeadingToDecision) {
+        Logger.debug('⚖️ Adding facts leading to decision section...')
+        currentY = this.addFactsLeadingToDecisionSection(doc, data.factsLeadingToDecision, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        Logger.success('✅ Facts leading to decision section added')
+      }
+
       // 6. Previous Disciplinary Action + Consequences (if available)
       if (data.disciplineRecommendation) {
         Logger.debug('📋 Adding previous disciplinary action section...')
@@ -517,6 +550,28 @@ export class PDFGenerationService {
         Logger.success(6716)
       } else {
         Logger.debug('⏭️ Skipping additional notes section (no data)');
+      }
+
+      // 8.1. More Corrective Counselling Sections
+      // Section F: Improvement Commitments
+      if (data.improvementCommitments && data.improvementCommitments.length > 0) {
+        Logger.debug('✅ Adding improvement commitments section...')
+        currentY = this.addImprovementCommitmentsSection(doc, data.improvementCommitments, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        Logger.success('✅ Improvement commitments section added')
+      }
+
+      // Review Date and Auto-Satisfaction Clause
+      if (data.reviewDate) {
+        Logger.debug('📅 Adding review date and auto-satisfaction clause section...')
+        currentY = this.addReviewDateSection(doc, data.reviewDate, currentY, pageWidth, margin, pageHeight, bottomMargin, data.warningLevel);
+        Logger.success('✅ Review date and auto-satisfaction clause section added')
+      }
+
+      // Intervention Details
+      if (data.interventionDetails) {
+        Logger.debug('🎓 Adding intervention details section...')
+        currentY = this.addInterventionDetailsSection(doc, data.interventionDetails, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        Logger.success('✅ Intervention details section added')
       }
 
       // 8.5. Employee Rights and Next Steps Section - LRA Compliant
@@ -669,7 +724,7 @@ export class PDFGenerationService {
           footerText: 'Confidential & Privileged',
           showPageNumbers: true
         },
-        sections: [] // Will be populated from customSettings or defaults
+        sections: undefined // Will be populated from customSettings
       };
 
       const settings = customSettings ? {
@@ -733,7 +788,7 @@ export class PDFGenerationService {
       // professional appearance of v1.1.0 while enabling full customization.
 
       if (settings.sections && settings.sections.length > 0) {
-        Logger.debug(`🎨 Rendering ${settings.sections.length} sections with intelligent routing...`);
+        Logger.debug(`🎨 Rendering ${settings.sections.length} configured sections with intelligent routing...`);
 
         // Sort sections by order
         const sortedSections = [...settings.sections].sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -809,6 +864,42 @@ export class PDFGenerationService {
                     pageHeight,
                     bottomMargin
                   );
+                }
+                break;
+
+              // 🆕 CORRECTIVE DISCUSSION SECTIONS (Session 48)
+              case 'employee-statement':
+                if (data.employeeStatement) {
+                  Logger.debug('💬 Rendering employee statement section...');
+                  currentY = this.addEmployeeStatementSection(doc, data.employeeStatement, currentY, pageWidth, margin, pageHeight, bottomMargin);
+                }
+                break;
+
+              case 'expected-behavior-standards':
+                if (data.expectedBehaviorStandards) {
+                  Logger.debug('📊 Rendering expected behavior section...');
+                  currentY = this.addExpectedBehaviorSection(doc, data.expectedBehaviorStandards, currentY, pageWidth, margin, pageHeight, bottomMargin);
+                }
+                break;
+
+              case 'facts-leading-to-decision':
+                if (data.factsLeadingToDecision) {
+                  Logger.debug('⚖️ Rendering facts leading to decision section...');
+                  currentY = this.addFactsLeadingToDecisionSection(doc, data.factsLeadingToDecision, currentY, pageWidth, margin, pageHeight, bottomMargin);
+                }
+                break;
+
+              case 'improvement-commitments':
+                if (data.improvementCommitments && data.improvementCommitments.length > 0) {
+                  Logger.debug('✅ Rendering improvement commitments section...');
+                  currentY = this.addImprovementCommitmentsSection(doc, data.improvementCommitments, currentY, pageWidth, margin, pageHeight, bottomMargin);
+                }
+                break;
+
+              case 'review-date':
+                if (data.reviewDate) {
+                  Logger.debug('📅 Rendering review date section...');
+                  currentY = this.addReviewDateSection(doc, data.reviewDate, currentY, pageWidth, margin, pageHeight, bottomMargin);
                 }
                 break;
 
@@ -994,28 +1085,46 @@ export class PDFGenerationService {
     const title = this.getWarningLevelTitle(data.warningLevel);
     const titleWidth = doc.getTextWidth(title);
     const titleX = (pageWidth - titleWidth) / 2;
-    
+
     doc.text(title, titleX, startY);
-    
+    startY += 6; // Move down for validity period
+
+    // ✨ VALIDITY PERIOD DISPLAY - Prominent display below title
+    if (data.validityPeriod && data.expiryDate) {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100); // Gray text
+
+      const expiryDateFormatted = this.formatDate(data.expiryDate);
+      const validityText = `Valid for ${data.validityPeriod} months | Expires: ${expiryDateFormatted}`;
+      const validityWidth = doc.getTextWidth(validityText);
+      const validityX = (pageWidth - validityWidth) / 2;
+      doc.text(validityText, validityX, startY);
+      startY += 5; // Extra spacing after validity
+
+      // Reset to black for rest of document
+      doc.setTextColor(0, 0, 0);
+    }
+
     // Check if this is a draft (missing employee or category)
-    const isDraft = data.employee?.firstName === 'Employee' || 
+    const isDraft = data.employee?.firstName === 'Employee' ||
                    data.category === 'Category Not Selected' ||
                    !data.description?.trim();
-    
+
     if (isDraft) {
       doc.setFontSize(12);
       doc.setTextColor(200, 50, 50);
       const draftText = '[DRAFT - INCOMPLETE DATA]';
       const draftWidth = doc.getTextWidth(draftText);
       const draftX = (pageWidth - draftWidth) / 2;
-      doc.text(draftText, draftX, startY + 6);
+      doc.text(draftText, draftX, startY + 1);
       startY += 6; // Extra space for draft indicator
     }
-    
-    // Underline
+
+    // Underline (below everything)
     doc.setTextColor(0, 0, 0);
     doc.setLineWidth(0.5);
-    doc.line(titleX, startY + 2, titleX + titleWidth, startY + 2);
+    doc.line(margin, startY + 2, pageWidth - margin, startY + 2);
     
     // Document ID and date
     doc.setFontSize(10);
@@ -1024,8 +1133,22 @@ export class PDFGenerationService {
     const infoWidth = doc.getTextWidth(docInfo);
     const infoX = (pageWidth - infoWidth) / 2;
     doc.text(docInfo, infoX, startY + 8);
-    
-    return startY + 20;
+    startY += 10;
+
+    // 📋 CODE OF CONDUCT REFERENCE - If organization has one configured
+    if (data.organization?.settings?.codeOfConductReference) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(80, 80, 80); // Dark gray
+      const codeRef = `Issued in terms of: ${data.organization.settings.codeOfConductReference}`;
+      const codeRefWidth = doc.getTextWidth(codeRef);
+      const codeRefX = (pageWidth - codeRefWidth) / 2;
+      doc.text(codeRef, codeRefX, startY + 5);
+      startY += 5;
+      doc.setTextColor(0, 0, 0); // Reset to black
+    }
+
+    return startY + 10;
   }
   
   /**
@@ -1256,46 +1379,69 @@ export class PDFGenerationService {
     // Firestore may store the data as either field name depending on when the warning was created
     const warnings = recommendation.activeWarnings || recommendation.previousWarnings || [];
 
-    // Calculate height dynamically based on number of warnings
-    const baseHeight = 28;
-    const warningCount = warnings.length;
-    const warningHeight = warningCount > 0 ? warningCount * 6 + 20 : 20;
-    const totalHeight = baseHeight + warningHeight;
-
-    startY = this.checkPageOverflow(doc, startY, totalHeight, pageHeight, bottomMargin);
-
-    // 📋 SECTION HEADER - Use custom heading if provided, otherwise use v1.1.0 default
-    const sectionHeading = sectionConfig?.content?.heading || 'PREVIOUS DISCIPLINARY ACTION (Still Valid on File)';
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(51, 51, 51);
-    doc.text(sectionHeading, margin, startY);
-
-    // Gray box for section - INCREASED PADDING
-    doc.setDrawColor(200, 200, 200);
-    doc.setFillColor(248, 248, 248);
-    doc.setLineWidth(0.3);
-    doc.rect(margin, startY + 4, pageWidth - (margin * 2), warningHeight, 'FD');
-
+    // 📋 PRE-CALCULATE HEIGHT - Must calculate BEFORE rendering to avoid orphaned headings
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
 
-    let listY = startY + 12;
+    let contentHeight = 8; // Top padding
+    const boxWidth = pageWidth - (margin * 2) - 10; // Box width minus padding
+    const lineHeight = 5;
 
-    // Display warnings in numbered format - INCREASED LINE SPACING
     if (warnings && warnings.length > 0) {
       warnings.forEach((warning: any, index: number) => {
         const warningDate = this.formatDate(warning.issuedDate || warning.issueDate || new Date());
         const description = warning.description || warning.incidentDescription || 'No description available';
         const level = this.getWarningLevelDisplay(warning.level || warning.warningLevel || 'verbal');
 
-        // Truncate description if too long (max 60 characters)
-        const truncatedDesc = description.length > 60 ? description.substring(0, 57) + '...' : description;
+        const line = `${index + 1}) Date: ${warningDate} | Incident: ${description} | Level: ${level}`;
+        const wrappedLines = doc.splitTextToSize(line, boxWidth);
+        contentHeight += wrappedLines.length * lineHeight + 2; // Add spacing between warnings
+      });
+    } else {
+      contentHeight += lineHeight;
+    }
 
-        const line = `${index + 1}) Date: ${warningDate} | Incident: ${truncatedDesc} | Level: ${level}`;
-        doc.text(line, margin + 5, listY);
-        listY += 6;
+    contentHeight += 4; // Bottom padding
+    const warningHeight = contentHeight;
+    const totalHeight = 28 + warningHeight;
+
+    // 🔥 CHECK PAGE OVERFLOW BEFORE RENDERING HEADING - Keeps heading and content together
+    startY = this.checkPageOverflow(doc, startY, totalHeight, pageHeight, bottomMargin);
+
+    // 📋 SECTION HEADER - Render AFTER page overflow check
+    const sectionHeading = sectionConfig?.content?.heading || 'PREVIOUS DISCIPLINARY ACTION (Still Valid on File)';
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(51, 51, 51);
+    doc.text(sectionHeading, margin, startY);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+
+    // Gray box for section - DYNAMIC HEIGHT
+    doc.setDrawColor(200, 200, 200);
+    doc.setFillColor(248, 248, 248);
+    doc.setLineWidth(0.3);
+    doc.rect(margin, startY + 4, pageWidth - (margin * 2), warningHeight, 'FD');
+
+    let listY = startY + 12;
+
+    // Display warnings with text wrapping
+    if (warnings && warnings.length > 0) {
+      warnings.forEach((warning: any, index: number) => {
+        const warningDate = this.formatDate(warning.issuedDate || warning.issueDate || new Date());
+        const description = warning.description || warning.incidentDescription || 'No description available';
+        const level = this.getWarningLevelDisplay(warning.level || warning.warningLevel || 'verbal');
+
+        const line = `${index + 1}) Date: ${warningDate} | Incident: ${description} | Level: ${level}`;
+        const wrappedLines = doc.splitTextToSize(line, boxWidth);
+
+        wrappedLines.forEach((wrappedLine: string) => {
+          doc.text(wrappedLine, margin + 5, listY);
+          listY += lineHeight;
+        });
+        listY += 2; // Extra spacing between warnings
       });
     } else {
       // No previous warnings
@@ -1421,11 +1567,40 @@ export class PDFGenerationService {
       return startY;
     }
 
-    // Check if we have enough space (need about 40mm)
-    startY = this.checkPageOverflow(doc, startY, 40, pageHeight, bottomMargin);
-
     // 📋 SECTION HEADER - Use custom heading from config
     const sectionHeading = sectionConfig.content.heading || 'WARNING: CONSEQUENCES IF EMPLOYEE\nDOES NOT CHANGE BEHAVIOUR';
+
+    // 🔥 CALCULATE REQUIRED HEIGHT DYNAMICALLY based on actual content
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+
+    let totalLines = 0;
+
+    // Count lines in body
+    if (sectionConfig.content.body) {
+      const processedBody = this.replacePlaceholders(sectionConfig.content.body, data);
+      const bodyLines = this.wrapText(doc, processedBody, pageWidth - (margin * 2) - 15);
+      totalLines += bodyLines.length;
+    }
+
+    // Count lines in bullet points
+    if (sectionConfig.content.bulletPoints && sectionConfig.content.bulletPoints.length > 0) {
+      sectionConfig.content.bulletPoints.forEach((bullet) => {
+        const processedBullet = this.replacePlaceholders(bullet, data);
+        const bulletLines = this.wrapText(doc, processedBullet, pageWidth - (margin * 2) - 15);
+        totalLines += bulletLines.length;
+      });
+    }
+
+    // Calculate box height: 8mm top padding + (lines * 5mm spacing) + 8mm bottom padding
+    const sectionHeight = 8 + (totalLines * 5) + 8;
+    const headerHeight = sectionHeading.split('\n').length * 5;
+    const requiredHeight = headerHeight + sectionHeight + 15;
+
+    // Check if we have enough space
+    startY = this.checkPageOverflow(doc, startY, requiredHeight, pageHeight, bottomMargin);
+
+    // Render header
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(51, 51, 51);
@@ -1436,10 +1611,7 @@ export class PDFGenerationService {
       doc.text(line, margin, startY + (index * 5));
     });
 
-    const headerHeight = headingLines.length * 5;
-
-    // 🎨 RED WARNING BOX - PRESERVED v1.1.0 STYLING
-    const sectionHeight = 30;
+    // 🎨 RED WARNING BOX - DYNAMIC HEIGHT
     doc.setFillColor(254, 226, 226); // Light red #FEE2E2
     doc.setDrawColor(239, 68, 68); // Red border #EF4444
     doc.setLineWidth(0.5);
@@ -1459,8 +1631,13 @@ export class PDFGenerationService {
       const processedBody = this.replacePlaceholders(sectionConfig.content.body, data);
       const bodyLines = this.wrapText(doc, processedBody, pageWidth - (margin * 2) - 15);
       bodyLines.forEach(line => {
-        doc.text(line, margin + 5, textY);
-        textY += 5;
+        // Skip empty lines but preserve spacing
+        if (line.trim() === '') {
+          textY += 3; // Half spacing for empty lines
+        } else {
+          doc.text(line, margin + 5, textY);
+          textY += 5;
+        }
       });
     }
 
@@ -1470,8 +1647,13 @@ export class PDFGenerationService {
         const processedBullet = this.replacePlaceholders(bullet, data);
         const bulletLines = this.wrapText(doc, processedBullet, pageWidth - (margin * 2) - 15);
         bulletLines.forEach(line => {
-          doc.text(line, margin + 5, textY);
-          textY += 5;
+          // Skip empty lines but preserve spacing
+          if (line.trim() === '') {
+            textY += 3; // Half spacing for empty lines
+          } else {
+            doc.text(line, margin + 5, textY);
+            textY += 5;
+          }
         });
       });
     }
@@ -1559,6 +1741,325 @@ export class PDFGenerationService {
     });
     
     return notesY + 5;
+  }
+
+  /**
+   * Section B: Employee's Statement
+   * Employee's version of events regarding the incident
+   */
+  private static addEmployeeStatementSection(
+    doc: any,
+    statement: string,
+    startY: number,
+    pageWidth: number,
+    margin: number,
+    pageHeight: number,
+    bottomMargin: number
+  ): number {
+    // Calculate height based on text length (increased line spacing from 4 to 5)
+    const statementLines = this.wrapText(doc, statement, pageWidth - margin * 2 - 6);
+    const requiredHeight = 20 + (statementLines.length * 5);
+    startY = this.checkPageOverflow(doc, startY, requiredHeight, pageHeight, bottomMargin);
+
+    // Section header
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 100, 100);
+    doc.text("EMPLOYEE'S VERSION OF EVENTS", margin, startY);
+
+    // Content
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+
+    let contentY = startY + 8;
+    statementLines.forEach(line => {
+      // Skip empty lines but preserve spacing
+      if (line.trim() === '') {
+        contentY += 3; // Half spacing for empty lines
+      } else {
+        doc.text(line, margin, contentY);
+        contentY += 5; // Increased from 4 to 5 for better readability
+      }
+    });
+
+    return contentY + 8;
+  }
+
+  /**
+   * Section C: Expected Behavior & Standards
+   * Required/expected behavior, performance, conduct, and standards
+   */
+  private static addExpectedBehaviorSection(
+    doc: any,
+    standards: string,
+    startY: number,
+    pageWidth: number,
+    margin: number,
+    pageHeight: number,
+    bottomMargin: number
+  ): number {
+    // Calculate height based on text length (increased line spacing from 4 to 5)
+    const standardsLines = this.wrapText(doc, standards, pageWidth - margin * 2 - 6);
+    const requiredHeight = 20 + (standardsLines.length * 5);
+    startY = this.checkPageOverflow(doc, startY, requiredHeight, pageHeight, bottomMargin);
+
+    // Section header
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 100, 100);
+    doc.text('REQUIRED/EXPECTED BEHAVIOR & STANDARDS', margin, startY);
+
+    // Content
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+
+    let contentY = startY + 8;
+    standardsLines.forEach(line => {
+      // Skip empty lines but preserve spacing
+      if (line.trim() === '') {
+        contentY += 3; // Half spacing for empty lines
+      } else {
+        doc.text(line, margin, contentY);
+        contentY += 5; // Increased from 4 to 5 for better readability
+      }
+    });
+
+    return contentY + 8;
+  }
+
+  /**
+   * Section E: Facts Leading to Decision
+   * Facts and reasoning for the disciplinary action taken
+   */
+  private static addFactsLeadingToDecisionSection(
+    doc: any,
+    facts: string,
+    startY: number,
+    pageWidth: number,
+    margin: number,
+    pageHeight: number,
+    bottomMargin: number
+  ): number {
+    // Calculate height based on text length (increased line spacing from 4 to 5)
+    const factsLines = this.wrapText(doc, facts, pageWidth - margin * 2 - 6);
+    const requiredHeight = 20 + (factsLines.length * 5);
+    startY = this.checkPageOverflow(doc, startY, requiredHeight, pageHeight, bottomMargin);
+
+    // Section header
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 100, 100);
+    doc.text('FACTS & REASONING FOR DISCIPLINARY ACTION', margin, startY);
+
+    // Content
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+
+    let contentY = startY + 8;
+    factsLines.forEach(line => {
+      // Skip empty lines but preserve spacing
+      if (line.trim() === '') {
+        contentY += 3; // Half spacing for empty lines
+      } else {
+        doc.text(line, margin, contentY);
+        contentY += 5; // Increased from 4 to 5 for better readability
+      }
+    });
+
+    return contentY + 8;
+  }
+
+  /**
+   * Section F: Improvement Commitments
+   * Action steps and improvement commitments with timelines
+   */
+  private static addImprovementCommitmentsSection(
+    doc: any,
+    commitments: Array<{ commitment: string; timeline: string }>,
+    startY: number,
+    pageWidth: number,
+    margin: number,
+    pageHeight: number,
+    bottomMargin: number
+  ): number {
+    // Calculate height based on number of commitments
+    let totalLines = 0;
+    commitments.forEach(item => {
+      const commitmentLines = this.wrapText(doc, item.commitment, pageWidth - margin * 2 - 12);
+      totalLines += commitmentLines.length + 1; // +1 for timeline
+    });
+    const requiredHeight = 20 + (totalLines * 4);
+    startY = this.checkPageOverflow(doc, startY, requiredHeight, pageHeight, bottomMargin);
+
+    // Section header
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 100, 100);
+    doc.text('ACTION STEPS & IMPROVEMENT COMMITMENTS', margin, startY);
+
+    // Content
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+
+    let contentY = startY + 8;
+    commitments.forEach((item, index) => {
+      // Commitment number
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${index + 1}.`, margin, contentY);
+
+      // Commitment text
+      doc.setFont('helvetica', 'normal');
+      const commitmentLines = this.wrapText(doc, item.commitment, pageWidth - margin * 2 - 12);
+      commitmentLines.forEach((line, lineIndex) => {
+        doc.text(line, margin + 6, contentY + (lineIndex * 4));
+      });
+      contentY += commitmentLines.length * 4;
+
+      // Timeline
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(80, 80, 80);
+      doc.text(`Timeline: ${item.timeline}`, margin + 6, contentY);
+      doc.setTextColor(0, 0, 0);
+      contentY += 6;
+    });
+
+    return contentY + 8;
+  }
+
+  /**
+   * Review Date and Auto-Satisfaction Clause Section
+   * Explains review date and automatic satisfaction if no follow-up action taken
+   *
+   * @param doc - jsPDF document
+   * @param reviewDate - Follow-up review date
+   * @param warningLevel - Warning level to determine clause wording
+   * @param startY - Starting Y position
+   * @param pageWidth - Page width
+   * @param margin - Page margin
+   * @param pageHeight - Page height
+   * @param bottomMargin - Bottom margin
+   * @returns New Y position after section
+   */
+  private static addReviewDateSection(
+    doc: any,
+    reviewDate: Date,
+    startY: number,
+    pageWidth: number,
+    margin: number,
+    pageHeight: number,
+    bottomMargin: number,
+    warningLevel?: string
+  ): number {
+    const requiredHeight = 60; // Increased for auto-satisfaction clause
+    startY = this.checkPageOverflow(doc, startY, requiredHeight, pageHeight, bottomMargin);
+
+    // Section header
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 100, 100);
+    doc.text('REVIEW DATE AND AUTO-SATISFACTION CLAUSE', margin, startY);
+
+    // Review date with green highlight background
+    const formattedDate = this.formatDate(reviewDate);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+
+    // Measure text width for highlight background
+    const dateTextWidth = doc.getTextWidth(formattedDate);
+
+    // Add green highlight background
+    doc.setFillColor(220, 252, 231); // Light green background (#dcfce7)
+    doc.rect(margin, startY + 3, dateTextWidth + 4, 6, 'F');
+
+    // Draw review date text on top of highlight
+    doc.text(formattedDate, margin + 2, startY + 8);
+
+    // Auto-satisfaction clause heading
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Automatic Satisfaction Clause:', margin, startY + 18);
+
+    // Auto-satisfaction clause text - varies by warning level
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+
+    let clauseText: string;
+
+    // Determine clause wording based on warning level
+    // Suspension and dismissal are terminal actions - no auto-satisfaction
+    if (warningLevel === 'suspension' || warningLevel === 'dismissal') {
+      // No clause for terminal actions
+      return startY + 18;
+    } else if (warningLevel === 'final_written') {
+      clauseText =
+        'If the required improvements are not demonstrated by the review date and no follow-up ' +
+        'disciplinary action is taken within 7 days thereafter, this matter will be considered ' +
+        'resolved. However, if performance or conduct issues persist, additional corrective ' +
+        'action or further disciplinary measures may be initiated.';
+    } else {
+      // Default for counselling, verbal, first_written, second_written
+      clauseText =
+        'If no follow-up action is required by management within 7 days of this review date, ' +
+        'the employee\'s performance and conduct will be deemed satisfactory, and this matter ' +
+        'will be considered resolved. If performance or conduct issues persist, additional ' +
+        'corrective action or disciplinary measures may be initiated at that time.';
+    }
+
+    // Wrap and render clause text
+    const maxWidth = pageWidth - margin * 2;
+    const clauseLines = this.wrapText(doc, clauseText, maxWidth);
+
+    let clauseY = startY + 24;
+    clauseLines.forEach(line => {
+      doc.text(line, margin, clauseY);
+      clauseY += 4;
+    });
+
+    return clauseY + 8;
+  }
+
+  /**
+   * Intervention Details Section
+   * Training/coaching provided to support improvement
+   */
+  private static addInterventionDetailsSection(
+    doc: any,
+    interventionDetails: string,
+    startY: number,
+    pageWidth: number,
+    margin: number,
+    pageHeight: number,
+    bottomMargin: number
+  ): number {
+    // Calculate height based on text length
+    const interventionLines = this.wrapText(doc, interventionDetails, pageWidth - margin * 2 - 6);
+    const requiredHeight = 20 + (interventionLines.length * 4);
+    startY = this.checkPageOverflow(doc, startY, requiredHeight, pageHeight, bottomMargin);
+
+    // Section header
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 100, 100);
+    doc.text('TRAINING/COACHING PROVIDED', margin, startY);
+
+    // Content
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+
+    let contentY = startY + 8;
+    interventionLines.forEach(line => {
+      doc.text(line, margin, contentY);
+      contentY += 4;
+    });
+
+    return contentY + 8;
   }
 
   /**
@@ -2741,11 +3242,11 @@ export class PDFGenerationService {
     const levelMap: Record<string, string> = {
       'counselling': 'Counselling Session',
       'verbal': 'Verbal Warning',
-      'first_written': 'First Written Warning',
+      'first_written': 'Written Warning',
       'second_written': 'Second Written Warning',
       'final_written': 'Final Written Warning',
       'suspension': 'Suspension',
-      'dismissal': 'Dismissal'
+      'dismissal': 'Ending of Service'
     };
     
     return levelMap[level] || level.replace('_', ' ').toUpperCase();
@@ -2758,13 +3259,13 @@ export class PDFGenerationService {
     const titleMap: Record<string, string> = {
       'counselling': 'COUNSELLING SESSION RECORD',
       'verbal': 'VERBAL WARNING NOTICE',
-      'first_written': 'FIRST WRITTEN WARNING',
+      'first_written': 'WRITTEN WARNING',
       'second_written': 'SECOND WRITTEN WARNING',
       'final_written': 'FINAL WRITTEN WARNING',
       'suspension': 'SUSPENSION NOTICE',
-      'dismissal': 'DISMISSAL NOTICE'
+      'dismissal': 'ENDING OF SERVICE NOTICE'
     };
-    
+
     return titleMap[level] || 'WARNING NOTICE';
   }
   
@@ -2797,31 +3298,48 @@ export class PDFGenerationService {
   
   /**
    * Wrap text to fit within specified width
+   * 🔥 HANDLES NEWLINES: Preserves paragraph structure and bullet points
    */
   private static wrapText(doc: any, text: string, maxWidth: number): string[] {
-    const words = text.split(' ');
-    const lines: string[] = [];
-    let currentLine = '';
-    
-    words.forEach(word => {
-      const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      const testWidth = doc.getTextWidth(testLine);
-      
-      if (testWidth <= maxWidth) {
-        currentLine = testLine;
-      } else {
-        if (currentLine) {
-          lines.push(currentLine);
+    const allLines: string[] = [];
+
+    // Step 1: Split on newlines first to preserve paragraph/bullet structure
+    const paragraphs = text.split('\n');
+
+    // Step 2: Wrap each paragraph individually
+    paragraphs.forEach(paragraph => {
+      const trimmedParagraph = paragraph.trim();
+
+      // Empty line - preserve it for spacing
+      if (!trimmedParagraph) {
+        allLines.push('');
+        return;
+      }
+
+      // Wrap this paragraph to fit width
+      const words = trimmedParagraph.split(' ');
+      let currentLine = '';
+
+      words.forEach(word => {
+        const testLine = currentLine + (currentLine ? ' ' : '') + word;
+        const testWidth = doc.getTextWidth(testLine);
+
+        if (testWidth <= maxWidth) {
+          currentLine = testLine;
+        } else {
+          if (currentLine) {
+            allLines.push(currentLine);
+          }
+          currentLine = word;
         }
-        currentLine = word;
+      });
+
+      if (currentLine) {
+        allLines.push(currentLine);
       }
     });
-    
-    if (currentLine) {
-      lines.push(currentLine);
-    }
-    
-    return lines;
+
+    return allLines;
   }
   
   /**

@@ -38,7 +38,7 @@ const WARNING_LEVEL_TRANSLATIONS = {
   en: {
     counselling: 'Counselling Session',
     verbal: 'Verbal Warning',
-    first_written: 'First Written Warning',
+    first_written: 'Written Warning',
     second_written: 'Second Written Warning',
     final_written: 'Final Written Warning'
   },
@@ -174,15 +174,15 @@ const WARNING_SCRIPTS = {
         : "You have no previous disciplinary action on file.",
 
     consequencesStatement: (issueDate: string) =>
-      `Any further transgressions related or unrelated to the offences shall result in further disciplinary action which can lead to a disciplinary hearing and it can result in dismissal. Refer to counselling dated ${issueDate}.`,
+      `Further misconduct will result in additional discipline, including formal hearings, up to ending of service. All unexpired warnings accumulate.`,
 
     rights: () =>
       "Your rights under the Labour Relations Act:",
 
     rightsList: () => [
-      "Appeal: You may appeal this warning in writing to HR within 48 hours if you believe it is unfair or procedurally incorrect.",
-      "Progressive Discipline: Similar conduct during this warning's validity period may result in further disciplinary action, up to dismissal.",
-      "Confidentiality: This information is confidential and shared only with relevant management and HR."
+      "You may appeal to HR in writing within 48 hours.",
+      "You may have a fellow employee or shop steward represent you.",
+      "Further misconduct during the validity period may result in additional discipline, up to ending of service."
     ],
 
     witnessOption: () =>
@@ -212,15 +212,15 @@ const WARNING_SCRIPTS = {
         : "Jy het geen vorige dissiplinêre aksie op lêer nie.",
 
     consequencesStatement: (issueDate: string) =>
-      `Enige verdere oortredinge verwant of nie-verwant aan die oortredings sal lei tot verdere dissiplinêre aksie wat kan lei tot 'n dissiplinêre verhoor en dit kan lei tot ontslag. Verwys na berading gedateer ${issueDate}.`,
+      `Verdere wangedrag sal lei tot addisionele dissipline, insluitend formele verhore, tot beëindiging van diens. Alle onverstreke waarskuwings akkumuleer.`,
 
     rights: () =>
       "Jou regte onder die Wet op Arbeidsverhoudinge:",
 
     rightsList: () => [
-      "Appèl: Jy mag hierdie waarskuwing binne 48 uur skriftelik by HR appelieer as jy glo dit is onregverdig of prosedureel verkeerd.",
-      "Progressiewe Dissipline: Soortgelyke gedrag gedurende hierdie waarskuwing se geldigheidsperiode kan lei tot verdere dissiplinêre aksie, tot en met ontslag.",
-      "Vertroulikheid: Hierdie inligting is vertroulik en word slegs met relevante bestuur en HR gedeel."
+      "Jy mag binne 48 uur skriftelik by HR appelieer.",
+      "Jy mag 'n mede-werknemer of vakbondverteenwoordiger hê om jou te verteenwoordig.",
+      "Verdere wangedrag gedurende die geldigheidsperiode kan lei tot addisionele dissipline, tot beëindiging van diens."
     ],
 
     witnessOption: () =>
@@ -250,15 +250,15 @@ const WARNING_SCRIPTS = {
         : "Awunayo imithetho yokuqeqesha yangaphambilini efayeleni.",
 
     consequencesStatement: (issueDate: string) =>
-      `Noma iziphi iziphambeko ezingeziwe ezihlobene noma ezingahlobene neziphambeko zizoholela esinyweni esinye sokuqeqesha esingase siholele enkundleni yokuqeqesha futhi singase siholele ekuxoshweni. Bheka ukweluleka kwalesi sikhathi ngo ${issueDate}.`,
+      `Ukuziphatha okubi okwengeziwe kuzoholela esinyweni esinye, kufaka phakathi izinkundla ezisemthethweni, kuya ekuphethweni kwenkonzo. Zonke izixwayiso ezingaphelelanga ziyaqoqeka.`,
 
     rights: () =>
       "Amalungelo akho ngaphansi koMthetho Wobudlelwano Basebenzi:",
 
     rightsList: () => [
-      "Ukuphikisa: Ungaphikisa lesi sixwayiso ngokubhaliwe ku-HR ngamahora angu-48 uma ukholelwa ukuthi asilungile noma asenziwa kabi.",
-      "Ukuqeqesha Okuqhubekayo: Ukuziphatha okufanayo ngesikhathi lesi sixwayiso kungase kuholele esinyweni esinye sokuqeqesha, kuya ekuxoshweni.",
-      "Ubumfihlo: Lolu lwazi luyimfihlo futhi lubelane kuphela nabaphathi abadingekayo kanye ne-HR."
+      "Ungaphikisa ku-HR ngokubhaliwe ngamahora angu-48.",
+      "Ungaba nomsebenzi ofana nawe noma ummeleli wenyunyana ukuthi akumele.",
+      "Ukuziphatha okubi okwengeziwe ngesikhathi sokuqiniseka kungase kuholele esinyweni esinye, kuya ekuphethweni kwenkonzo."
     ],
 
     witnessOption: () =>
@@ -288,15 +288,15 @@ const WARNING_SCRIPTS = {
         : "Akukho manyathelo okulungisa angaphambili kwifayile.",
 
     consequencesStatement: (issueDate: string) =>
-      `Naziphi na iziphoso ezongezelelweyo ezinxulumene okanye ezinganxulumaniyo neziphoso ziya kubangela inyathelo lokulungisa olongezelelweyo elinokukhokelela kwindibano yokulungisa kwaye linokubangela ukugxothwa. Khangela ukucebisana kwangemini ka ${issueDate}.`,
+      `Ukuziphatha okubi okongezelelweyo kuya kubangela ukulungiswa okongezelelweyo, kubandakanya iindibano ezisemthethweni, ukuya ekupheliseni kwenkonzo. Zonke izilumkiso ezingaphelelwanga ziyaqokelelana.`,
 
     rights: () =>
       "Amalungelo akho phantsi koMthetho woBudlelwane baBasebenzi:",
 
     rightsList: () => [
-      "Isibheno: Ungabhena esi silumkiso ngokubhaliwe kwi-HR kwiiyure ezingama-48 ukuba ukholelwa ukuba asifanelekanga okanye senziwa kakubi.",
-      "Ukulungisa Okuqhubekayo: Ukuziphatha okufanayo ngeli xesha lesi silumkiso kunokukhokelela kwelinye inyathelo lokulungisa, kuya ekugxothweni.",
-      "Ubumfihlo: Olu lwazi luyimfihlo kwaye lwabiwe kuphela kubaphathi abafanelekileyo nakwi-HR."
+      "Ungabhena kwi-HR ngokubhaliwe kwiiyure ezingama-48.",
+      "Ungaba nomsebenzi ofana nawe okanye ummeli wemanyano ukuba akumele.",
+      "Ukuziphatha okubi okongezelelweyo ngexesha lokuqinisekiswa kunokubangela ukulungiswa okongezelelweyo, ukuya ekupheliseni kwenkonzo."
     ],
 
     witnessOption: () =>
@@ -326,15 +326,15 @@ const WARNING_SCRIPTS = {
         : "Ha o na litemoso tsa kgetho ea pele faeleng.",
 
     consequencesStatement: (issueDate: string) =>
-      `Litšenyo life kapa life tse eketsehileng tse amanang kapa tse sa amaneng le litšenyo li tla fella ka khato e eketsehileng ea kgetho e ka lebisang kgutlisetsong ea kgetho 'me e ka lebisa tlōsong. Sheba keletso ea letsatsi la ${issueDate}.`,
+      `Boitshwaro bo bobe bo eketsehileng bo tla fella ka kgetho e eketsehileng, ho kenyelletsa lipuisano tsa semolao, ho fihla feteletsong ea ts'ebeletso. Litemoso tsohle tse sa felang li bokellana.`,
 
     rights: () =>
       "Litokelo tsa hao ka tlasa Molao oa Likamano tsa Basebetsi:",
 
     rightsList: () => [
-      "Ho Ipeela: O ka ipeela temoso ena ka ho ngola ho HR ka mora dihora tse 48 haeba o lumela hore ha e nepahale kapa e etsoa hambe.",
-      "Kgetho e Tsoelang Pele: Boitshwaro bo tšoanang nakong ea temoso ena bo ka hlahisa khato e 'ngoe ea kgetho, ho fihla tlōsong.",
-      "Lekunutu: Tlhahisoleseding ena e lekunutu 'me e arolelane feela le bataoli ba hlokahalang le HR."
+      "O ka ipeela ho HR ka ho ngola ka mora dihora tse 48.",
+      "O ka ba le mosebetsi ea tšoanang le uena kapa moemeli oa kesara ho u emela.",
+      "Boitshwaro bo bobe bo eketsehileng nakong ea nako ea netefatso bo ka hlahisa kgetho e eketsehileng, ho fihla feteletsong ea ts'ebeletso."
     ],
 
     witnessOption: () =>
@@ -364,15 +364,15 @@ const WARNING_SCRIPTS = {
         : "A wu na swiyimo swa ndzulavulo swa khale eka fayili.",
 
     consequencesStatement: (issueDate: string) =>
-      `Swo biha swihi na swihi leswi engetelekeke leswi fambelanaka kumbe leswi nga fambelangi ni swo biha swi ta fana ni goza rin'wana ra ndzulavulo leri nga endlaka leswaku ku va ni nhlengeletano ya ndzulavulo naswona swi nga endla ku herisiwa. Languta rivonelo ra siku ra ${issueDate}.`,
+      `Mavanyiselo yo biha lama engetelekeke ma ta fana ni ndzulavulo wo engetela, ku katsa swinghenelo swa nawu, ku ya eka ku herisiwa ka vutirheri. Swilumkiso hinkwaswo leswi nga heli swi hlengeletiwa.`,
 
     rights: () =>
       "Timfanelo ta wena hi ka tlhelo ka Nawu wa Vuhlanganisi bya Vatirhi:",
 
     rightsList: () => [
-      "Ku Appila: U nga appila xilumkiso lexi hi ku tsala eka HR hi nkarhi wa tawa ta 48 loko u tshemba leswaku a xi lulamanga kumbe xi endliwile hambi.",
-      "Ndzulavulo wo ya Emahlweni: Mavanyiselo yo fana eka nkarhi wa ku tirhisa wa xilumkiso lexi swi nga endla ku va goza rin'wana ra ndzulavulo, ku ya eka ku herisiwa.",
-      "Swihlayiselo: Rungula leri i swihlayiselo naswona ri avelaniwa ntsena na vafambisi lava lavekaka ni HR."
+      "U nga appila eka HR hi ku tsala hi nkarhi wa tawa ta 48.",
+      "U nga va ni mutirhimutsongo wa n'wina kumbe muemimuhlangani leswaku a ku yimela.",
+      "Mavanyiselo yo biha lama engetelekeke eka nkarhi wa ku tiyisisa ma nga endla ndzulavulo wo engetela, ku ya eka ku herisiwa ka vutirheri."
     ],
 
     witnessOption: () =>
@@ -401,15 +401,15 @@ const WARNING_SCRIPTS = {
         : "A huna zwiga zwa mulandu wa khale kha fayili.",
 
     consequencesStatement: (issueDate: string) =>
-      `Phambano dzoṱhe dzo engedzeaho dzo vhalana kana dzi sa vhalani na phambano dzi ḓo vha ni magoza maṅwe a mulandu ane a nga vha ni mushumo wa u dzudzanya mulandu nahone zwi nga vha ni u thithiswa. Vhonani themendelo ya ḓuvha ḽa ${issueDate}.`,
+      `Maitele a si zwavhuḓi ano engedziwa o ḓo vha ni mulandu wo engedzeaho, hu tshi katelwa migoro ya mulayo, u swika kha u fhedza ha mushumo. Tivhiso dzoṱhe dzi songo fhela dzi a kuvhanganya.`,
 
     rights: () =>
       "Pfanelo dzavho kha fhasi ha Mulayo wa Vhushaka ha Vhashumi:",
 
     rightsList: () => [
-      "U Appela: No nga appela iyi tivhiso hu tshi ṅwalwa kha HR nga tshifhinga tsha awara dza 48 arali no tenda uri a i kha fhasi ha vhulungana kana yo itiwa zwi si zwone.",
-      "Mulandu wo Fhiraho Phanḓa: Maitele a tshi tou fana nga tshifhinga tsha u shuma ha iyi tivhiso zwi nga khwinisa kha magato mafhelo a mulandu, u swika kha u thithiswa.",
-      "Swihlayiselo: Mafhungo othe ndi swihlayiselo nahone o abelaniwa fhedzi na vhaṱhohi vhane vha tea na vhashumi vha HR."
+      "No nga appela kha HR hu tshi ṅwalwa nga tshifhinga tsha awara dza 48.",
+      "No nga vha na mushumi wa zwiambaro kana muvhuyeli wa shango u ni ṱuṱuwedza.",
+      "Maitele a si zwavhuḓi ano engedziwa nga tshifhinga tsha u tiyisedza zwi nga khwinisa mulandu wo engedzeaho, u swika kha u fhedza ha mushumo."
     ],
 
     witnessOption: () =>
@@ -438,15 +438,15 @@ const WARNING_SCRIPTS = {
         : "Awunato tilajiso tetekadze kufayela.",
 
     consequencesStatement: (issueDate: string) =>
-      `Noma ngutiphi tibhodloko letingetwe letihlobene noma letingahlobeni netibhodloko titawuholela kulajiswa lokucondzako lokungase kuholele emhlanganweni wekulajiswa futhi kungase kuholele ekuxoshwa. Buka tikululeko telilanga la ${issueDate}.`,
+      `Kutiphatsa lokubi lokucondzako kutawuholela kulajiswa lokucondzako, kufaka ekhatsi emhlangano wesemtsetfweni, kuya ekuphetseni kwemsebenzi. Tonkhe tixwayiso letingapheli tiyabutana.`,
 
     rights: () =>
       "Emalungelo akho ngansi kweMtsetfo weTinhlangano teTisebenzi:",
 
     rightsList: () => [
-      "Kuphikisana: Ungaphikisana nalesi sixwayiso ngekubhalwa ku-HR ngetikhatsi tetinshintfu tange-48 uma ukholwa kutsi asifanele noma senziwa hambi.",
-      "Kulajiswa Lokucondzaphambili: Kutiphatsa lekufanako ngelesikhatsi sekuphila salesixwayiso kungase kuholele kusinyatselo sesinye sekulajiswa, kuya ekuxoshwa.",
-      "Buyimfihlo: Lwati luyimfihlo futhi lutsatfwe kubaphati labadzingekako kuphela ne-HR."
+      "Ungaphikisana ku-HR ngekubhalwa ngetikhatsi tetinshintfu tange-48.",
+      "Ungaba nemsebenzi lofana nawe noma umemeti welihlangano kutsi akumele.",
+      "Kutiphatsa lokubi lokucondzako ngelesikhatsi lekucincisekisa kungase kuholele kulajiswa lokucondzako, kuya ekuphetseni kwemsebenzi."
     ],
 
     witnessOption: () =>
@@ -475,15 +475,15 @@ const WARNING_SCRIPTS = {
         : "Ga o na kgalemelo ya kwa morago mo faeleng.",
 
     consequencesStatement: (issueDate: string) =>
-      `Diphoso dipe fela tse di oketsegileng tse di amanang kgotsa tse di sa amaneng le diphoso di tla felela ka kgato e nngwe ya kgalemelo e e ka felang ka kopano ya kgalemelo mme e ka felela ka go tlosa tiro. Bona kgakololo ya letlha la ${issueDate}.`,
+      `Boitshwaro jo bo sa siamang jo bo oketsegileng bo tla felela ka kgalemelo e e oketsegileng, go akaretsa dikopano tsa molao, go fitlha kwa go fediseleng tiro. Ditemoso tsotlhe tse di sa feleng di a kokoana.`,
 
     rights: () =>
       "Ditshwanelo tsa gago ka fa tlase ga Molao wa Dikamano tsa Badiri:",
 
     rightsList: () => [
-      "Go Boipiletsa: O ka boipiletsa temoso eno ka go kwala go HR mo diureng tse 48 fa o dumela gore ga e siame kgotsa e dirwa ka phoso.",
-      "Kgalemelo e e Tswelelang: Boitshwaro jo bo tshwanang ka nako ya go bereka ya temoso eno go ka felela ka kgato e nngwe ya kgalemelo, go fitlha kwa go tlosiwa tiro.",
-      "Sephiri: Tshedimosetso yotlhe e sephiri mme e abelane fela le batsamaisi ba ba tlhokegang le HR."
+      "O ka boipiletsa kwa HR ka go kwala mo diureng tse 48.",
+      "O ka nna le modiri yo o tshwanang le wena kgotsa moemedi wa lekgotla go go emela.",
+      "Boitshwaro jo bo sa siamang jo bo oketsegileng ka nako ya tiiso bo ka felela ka kgalemelo e e oketsegileng, go fitlha kwa go fediseleng tiro."
     ],
 
     witnessOption: () =>
@@ -512,15 +512,15 @@ const WARNING_SCRIPTS = {
         : "Awunayo imithetho yokuqeqesha yangakudala kufayela.",
 
     consequencesStatement: (issueDate: string) =>
-      `Noma iziphi iziphambeko ezingeziwe ezihlobene noma ezingahlobeni neziphambeko zizoholela esinyweni esinye sokuqeqesha esingase siholele enkundleni yokuqeqesha futhi singase siholele ekuxoshweni. Bheka ukweluleka ngosuku luka ${issueDate}.`,
+      `Ukuziphatha okubi okwengeziwe kuzoholela esinyweni esinye, kufaka phakathi izinkundla ezisemthethweni, kuya ekuphethweni kwenkonzo. Zonke izixwayiso ezingaphelelanga ziyaqoqeka.`,
 
     rights: () =>
       "Amalungelo akho ngaphansi koMthetho weBudlelwano Basebenzi:",
 
     rightsList: () => [
-      "Ukubhena: Ungabhena lesi sixwayiso ngokubhaliwe ku-HR ngamahora angama-48 uma ukholelwa ukuthi asilungile noma asenziwa kabi.",
-      "Ukuqeqesha Okuqhubekayo: Ukuziphatha okufanayo ngesikhathi lesi sixwayiso kungase kuholele esinyweni esinye sokuqeqesha, kuya ekuxoshweni.",
-      "Ubumfihlo: Lonke ulwazi luyimfihlo futhi lubelane kuphela nabaphathi abadingekayo ne-HR."
+      "Ungabhena ku-HR ngokubhaliwe ngamahora angama-48.",
+      "Ungaba nomsebenzi ofana nawe noma ummeleli wenyunyana ukukumela.",
+      "Ukuziphatha okubi okwengeziwe ngesikhathi sokuqiniseka kungase kuholele esinyweni esinye, kuya ekuphethweni kwenkonzo."
     ],
 
     witnessOption: () =>
@@ -549,15 +549,15 @@ const WARNING_SCRIPTS = {
         : "Ga o na kgalemelo ya peleng mo faeleng.",
 
     consequencesStatement: (issueDate: string) =>
-      `Diphošo dife goba dife tše di oketšegilego tše di amanago goba tše di sa amaneg le diphošo di tla fela ka kgato ye nngwe ya kgalemo yeo e ka felago ka kopano ya kgalemo gomme e ka fela ka go tlošwa mošomong. Lebelela keletšo ya letšatši la ${issueDate}.`,
+      `Boitshwaro bjo bo sa lokago bjo bo oketšegilego bo tla fela ka kgalemo ye e oketšegilego, go akaretša dikopano tša molao, go fihla go fediša mošomo. Ditemošo tšohle tše di sa feleng di a kokoana.`,
 
     rights: () =>
       "Ditokelo tša gago ka fase ga Molao wa Dikamano tša Bašomi:",
 
     rightsList: () => [
-      "Boipiletšo: O ka boipiletša temošo ye ka go ngwala go HR ka gare ga diiri tše 48 ge o dumela gore ga e nepagetšego goba e dirwa ka phošo.",
-      "Kgalemo ye e Tšwelago Pele: Boitshwaro bjo bjo swanago ka nako ya go šoma ya temošo ye bo ka fela ka kgato ye nngwe ya kgalemo, go fihla go tlošweng mošomo.",
-      "Sephiri: Tshedimošo ye ke sephiri gomme e abelanwa feela le balaodi le HR."
+      "O ka boipiletša go HR ka go ngwala ka gare ga diiri tše 48.",
+      "O ka ba le modiri yo o swanago le wena goba moemeli wa kesara go go emela.",
+      "Boitshwaro bjo bo sa lokago bjo bo oketšegilego ka nako ya go tiišetša bo ka fela ka kgalemo ye e oketšegilego, go fihla go fediša mošomo."
     ],
 
     witnessOption: () =>
@@ -606,60 +606,47 @@ export const MultiLanguageWarningScript: React.FC<MultiLanguageWarningScriptProp
 
   return (
     <div className="space-y-2">
-      {/* Professional Compact Script Section */}
-      <div className="border rounded-lg p-3" style={{
-        background: 'linear-gradient(to right, var(--color-alert-warning-bg), var(--color-alert-warning-bg))',
-        borderColor: 'var(--color-alert-warning-border)'
-      }}>
-        {!showFullScript ? (
-          /* Clean Two-Button Layout - Ultra Compact */
-          <div className="flex items-stretch justify-center gap-1.5 p-1.5 rounded" style={{
-            backgroundColor: 'rgba(251, 191, 36, 0.12)',
-            border: '1px solid rgba(251, 191, 36, 0.25)'
-          }}>
-            {/* Language Selector Button */}
-            <div className="relative flex-1 max-w-[100px]">
-              <select
-                value={selectedLanguage}
-                onChange={(e) => setSelectedLanguage(e.target.value as keyof typeof WARNING_SCRIPTS)}
-                disabled={scriptRead || disabled}
-                className="appearance-none w-full h-full pl-2 pr-6 py-1 border rounded text-xs font-medium focus:ring-1 focus:ring-amber-400 transition-all cursor-pointer"
-                style={{
-                  borderColor: 'rgba(251, 191, 36, 0.35)',
-                  backgroundColor: 'white',
-                  color: 'var(--color-text)',
-                  outline: 'none'
-                }}
-              >
-                {SA_LANGUAGES.map(lang => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.nativeName}
-                  </option>
-                ))}
-              </select>
-              <Globe className="w-3 h-3 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'rgb(251, 191, 36)' }} />
-            </div>
-
-            {/* View Script Button */}
-            <button
-              onClick={() => setShowFullScript(true)}
-              disabled={disabled}
-              className="flex items-center justify-center gap-1 px-2.5 py-1 rounded transition-all text-xs font-semibold hover:shadow-sm active:scale-[0.98] flex-1 max-w-[100px]"
+      {/* Compact Script Section - Subtle Design */}
+      {!showFullScript ? (
+        /* Minimal Inline Controls */
+        <div className="flex items-center gap-2">
+          {/* Language Selector */}
+          <div className="relative flex-1 max-w-[140px]">
+            <select
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value as keyof typeof WARNING_SCRIPTS)}
+              disabled={scriptRead || disabled}
+              className="appearance-none w-full pl-3 pr-7 py-1.5 border rounded text-xs focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer"
               style={{
-                backgroundColor: 'rgb(251, 191, 36)',
-                color: 'white'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(245, 158, 11)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgb(251, 191, 36)';
+                borderColor: 'var(--color-border)',
+                backgroundColor: 'var(--color-input-background)',
+                color: 'var(--color-text)'
               }}
             >
-              <FileText className="w-3 h-3" />
-              View
-            </button>
+              {SA_LANGUAGES.map(lang => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.nativeName}
+                </option>
+              ))}
+            </select>
+            <Globe className="w-3.5 h-3.5 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--color-text-secondary)' }} />
           </div>
+
+          {/* View Script Button - Subtle */}
+          <button
+            onClick={() => setShowFullScript(true)}
+            disabled={disabled}
+            className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-xs font-medium transition-all hover:bg-gray-50 active:scale-95"
+            style={{
+              borderColor: 'var(--color-border)',
+              backgroundColor: 'var(--color-background)',
+              color: 'var(--color-text)'
+            }}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>View Script</span>
+          </button>
+        </div>
         ) : (
           <div className="space-y-4">
             {/* Header with Language Selector */}
@@ -812,26 +799,8 @@ export const MultiLanguageWarningScript: React.FC<MultiLanguageWarningScriptProp
                 </div>
               )}
             </div>
-
-            {/* Legal Notice */}
-            <div className="border rounded-lg p-3" style={{
-              backgroundColor: 'var(--color-alert-info-bg)',
-              borderColor: 'var(--color-alert-info-border)'
-            }}>
-              <div className="flex items-start gap-2">
-                <FileText className="w-4 h-4 mt-0.5" style={{ color: 'var(--color-info)' }} />
-                <div className="text-xs" style={{ color: 'var(--color-alert-info-text)' }}>
-                  <p className="font-medium mb-0.5">Legal Compliance Notice</p>
-                  <p>
-                    This script ensures compliance with the Labour Relations Act (LRA) requirements for procedural fairness
-                    in disciplinary proceedings. All employee rights have been comprehensively covered in their preferred language.
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         )}
-      </div>
     </div>
   );
 };
