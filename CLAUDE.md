@@ -59,7 +59,7 @@ firebase deploy
 **IMPORTANT**: This file is size-limited to maintain context efficiency.
 
 - **Size Limit**: 500 lines maximum (target: 400-470 lines)
-- **Current Size**: 486 lines ⚠️ (near limit)
+- **Current Size**: 415 lines ✅
 - **Policy**: See `DOCUMENTATION_POLICY.md` for complete maintenance rules
 - **Before Adding Sessions**: Check size with `wc -l CLAUDE.md`
 - **If > 450 lines**: Move previous session to RECENT_UPDATES.md first
@@ -378,97 +378,31 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 - **Console Logging Fixes**: Fixed mysterious numeric logs with descriptive messages
 - **Accessibility Improvements**: Added autocomplete attributes to login form
 
-### Previous Recent (Session 43 - 2025-11-04)
-- **🎉 DEPARTMENT MANAGEMENT UX IMPROVEMENTS**: Enhanced department management with clickable blocks and manager assignment
-- **Clickable Department Blocks**:
-  - ✅ Department blocks in Organization tab now clickable
-  - ✅ Clicking any department block switches to Departments tab
-  - ✅ Added hover effects and visual feedback (cursor-pointer, hover:bg-orange-100, active:scale-95)
-  - ✅ Works on both desktop and mobile views
-- **Manager Assignment Feature**:
-  - ✅ Added "Assign Manager" dropdown to Edit/Create Department modal
-  - ✅ Loads all active HR managers and Department managers from organization
-  - ✅ Displays manager role in dropdown (HR Manager / Department Manager)
-  - ✅ Pre-selects current manager when editing
-  - ✅ Allows "No manager assigned" option
-  - ✅ Crown icon for visual polish
-  - ✅ Helpful message when no managers exist
-- **Department Modal Polish**:
-  - ✅ Professional typography with semibold labels and proper spacing
-  - ✅ Larger input padding (px-4 py-2.5) for better touch targets
-  - ✅ Enhanced focus states and transitions
-  - ✅ Amber warning box for "no managers" message with AlertTriangle icon
-  - ✅ Border separator above action buttons
-  - ✅ Fixed button sizing issues by using inline styles to bypass CSS !important rules
-  - ✅ Both Cancel and Update buttons now perfectly aligned
-- **Warnings Management Padding Fix**:
-  - ✅ Added missing padding (p-4) to WarningsReviewDashboard main container
-  - ✅ Fixed cramped appearance of warnings management section
-  - ✅ Consistent spacing throughout warnings interface
+### Most Recent (Session 48 - 2025-11-18/20)
+- **🎉 SVG SIGNATURE SYSTEM**: Complete rewrite from PNG to SVG - 90%+ storage savings with infinite resolution
+- **🎉 WITNESS SIGNATURE SUPPORT**: Dedicated data model with PDF rendering
+- **🔧 SESSION CONTINUATION FIXES**:
+  - ✅ Fixed EmployeeArchiveModal missing imports (usePreventBodyScroll, useModalDialog, Z_INDEX)
+  - ✅ Fixed FirstTimeWelcomeModal only showing 3 features - removed `.slice(0, 3)` limitation
+  - ✅ Updated "Record Counselling" → "Recognition" with Sparkles icon (feature replacement)
+  - ✅ Deep codebase analysis confirmed no other missing imports (283 files checked)
 - **Files Modified**:
-  - `frontend/src/components/organization/OrganizationManagementV2.tsx` - Added onSwitchToDepartments callback, clickable department blocks
-  - `frontend/src/components/dashboard/ExecutiveManagementDashboardSection.tsx` - Passed tab switching callback
-  - `frontend/src/components/admin/DepartmentManagement.tsx` - Manager loading logic, dropdown UI, polished modal, inline button styles
-  - `frontend/src/components/warnings/ReviewDashboard.tsx` (line 553) - Added p-4 padding to main container
-- **Deployment**: ✅ Frontend built and deployed to production
-- **Status**: ✅ Complete - Department management fully enhanced with improved UX
+  - `EmployeeArchiveModal.tsx` - Added missing hook/constant imports
+  - `FirstTimeWelcomeModal.tsx` - Show all features, updated to Recognition
+- **Status**: ✅ Complete - All fixes deployed to production
 
-### Previous Sessions Summary (41-42 - 2025-11-03 to 2025-11-04)
-- **Session 42**: Major role migration (business-owner → executive-management), 87+ files updated across frontend/backend/security rules
-- **Session 42**: Dashboard tab UX optimization - unified inline styling for employee management and warnings tabs
-- **Session 41**: Welcome modal redesign (60-70% size reduction), deployment performance optimization (80% category creation improvement)
+### Previous Session (Session 47 - 2025-11-10/11)
+- **🎉 SYSTEM-WIDE IMPROVEMENTS FOR INSITU PROJECTS & ALL CLIENTS**: 5 major improvements for legal compliance
+- **See RECENT_UPDATES.md for Session 46-47 details**
 
-### Most Recent (Session 46 - 2025-11-07)
-- **🎉 WARNING WIZARD STEP 2 AUTO-ADVANCE FIX**: Fixed Next button appearing after signature upload
-- **Step 2 Auto-Advance**:
-  - ✅ Fixed Next button showing blue/clickable after "Upload Signatures & Continue"
-  - ✅ Root cause: Wrong step name check (`INCIDENT_DETAILS_REVIEW` vs `LEGAL_REVIEW_SIGNATURES`)
-  - ✅ Button now completely hidden during save process (`show: false`)
-  - ✅ Auto-advances to Step 3 immediately after successful save
-  - ✅ Success message updated with spinning loader and "Advancing to delivery setup..." text
-  - ✅ Removed confusing "Click Next" instruction from success message
-- **Audio Recording Metadata Fix**:
-  - ✅ Added `recordedBy`, `recordedByName`, and `recordedAt` fields when saving audio
-  - ✅ Audio playback widget now displays manager name and recording date properly
-  - ✅ Fixed "Unknown" and missing metadata in audio playback modal
-- **QR Code Delivery Method Integration**:
-  - ✅ Added QR Code as selectable delivery method in Step 3
-  - ✅ Clicking QR Code option opens modal immediately for scanning
-  - ✅ QR Code treated as instant delivery (no HR action needed)
-  - ✅ Auto-advance works correctly with QR Code selection
-- **HR Dashboard Setup Tasks Fix**:
-  - ✅ Fixed "Getting Started" section flashing on HR login
-  - ✅ Added `setupDataLoaded` state to prevent premature rendering
-  - ✅ Setup tasks only show AFTER fetching data from Firestore and confirming they're needed
-  - ✅ No more flash of setup UI when HR user has already completed setup
-- **Book HR Meeting Signatures Removed**:
-  - ✅ Removed manager signature requirement from HR meeting booking
-  - ✅ Removed employee signature section entirely
-  - ✅ Simplified form to just: employee selection + meeting context (20 chars minimum)
-  - ✅ No signature canvases or acknowledgment sections
-- **Custom Domain Setup**:
-  - ✅ Configured custom domain: `file.fifo.systems`
-  - ✅ Domain purchased from domains.co.za
-  - ✅ CNAME record added pointing to `hr-disciplinary-system.web.app`
-  - ✅ Firebase SSL certificate auto-provisioned
-  - ✅ Both URLs active: `https://file.fifo.systems` and `https://hr-disciplinary-system.web.app`
-- **Files Modified**:
-  - `frontend/src/components/warnings/enhanced/EnhancedWarningWizard.tsx` - Fixed step name check, audio metadata
-  - `frontend/src/components/warnings/enhanced/steps/LegalReviewSignaturesStepV2.tsx` - Updated success message with loader
-  - `frontend/src/components/warnings/enhanced/steps/DeliveryCompletionStep.tsx` - QR Code integration
-  - `frontend/src/components/dashboard/HRDashboardSection.tsx` - Setup tasks loading fix
-  - `frontend/src/components/meetings/UnifiedBookHRMeeting.tsx` - Removed all signatures
-- **Status**: ✅ Complete - All fixes tested and deployed to production at https://file.fifo.systems
-
-### Previous Sessions Summary
+### Previous Sessions Summary (41-47)
 - **Session 47**: System-wide improvements (ending of service terminology, validity display, code of conduct references)
-- **Session 46**: Warning wizard auto-advance fix, audio metadata, QR code delivery
+- **Session 46**: Warning wizard auto-advance fix, audio metadata, QR code delivery, custom domain setup
 - **Session 45**: Promote to Manager Modal Redesign (compact autocomplete search)
 - **Session 44**: HOD Dashboard migration to DashboardShell
 - **Session 43**: Department management UX improvements
 - **Session 42**: business-owner → executive-management role migration
 - **Session 41**: Welcome modal optimization & deployment performance
-- **Sessions 20-40**: See `RECENT_UPDATES.md` for detailed change history
 
 **For complete session history, see:**
 - `RECENT_UPDATES.md` - Sessions 20-48 (current)
@@ -476,6 +410,6 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 ---
 
-*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components with **consistent inline tab UX across all dashboards**, **unified DashboardShell component** powering all 3 main dashboards (HR, Executive Management, HOD), **WCAG AA accessibility compliance**, **versioned PDF generation for legal compliance**, **per-organization PDF template customization**, **1000x storage reduction through centralized template version management**, **fully editable PDF text content with zero hardcoded fallbacks**, **SA-optimized employee CSV import with automatic phone number formatting**, **multi-manager support with array-based employee assignments**, **professional compact welcome modals**, **executive-management role** for inclusive senior leadership, **modern autocomplete employee search**, **seamless auto-advance workflow** in warning wizard with proper loading states, **instant QR code delivery** for warnings, **simplified HR meeting booking** without signature requirements, **all manager roles can submit absence reports and counselling sessions**, **proper employee name display in warning wizard**, and **enhanced microphone permission handling with clear user guidance**.*
+*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components with **consistent inline tab UX across all dashboards**, **unified DashboardShell component** powering all 3 main dashboards (HR, Executive Management, HOD), **WCAG AA accessibility compliance**, **versioned PDF generation for legal compliance**, **per-organization PDF template customization**, **1000x storage reduction through centralized template version management**, **fully editable PDF text content with zero hardcoded fallbacks**, **SA-optimized employee CSV import with automatic phone number formatting**, **multi-manager support with array-based employee assignments**, **professional compact welcome modals**, **executive-management role** for inclusive senior leadership, **modern autocomplete employee search**, **seamless auto-advance workflow** in warning wizard with proper loading states, **instant QR code delivery** for warnings, **simplified HR meeting booking** without signature requirements, **all manager roles can submit absence reports and counselling sessions**, **SVG signature system with 90%+ storage savings and infinite resolution**, **complete witness signature support with dedicated data model**, and **professional PDF rendering of all 3 signature types (manager, employee, witness)**.*
 
-*Last Updated: 2025-11-11 - Session 48: PDF Professional Standard Improvements & All 11 SA Languages Aligned with "Less is More" Philosophy*
+*Last Updated: 2025-11-20 - Session 48: SVG Signatures, Witness Support, Welcome Modal Fixes, Import Cleanup*

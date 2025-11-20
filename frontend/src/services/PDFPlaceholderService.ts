@@ -21,7 +21,7 @@ import type { WarningPDFData } from './PDFGenerationService';
  * - {{employee.phoneNumber}} → Employee phone
  * - {{employee.department}} → Department name
  * - {{employee.position}} → Job title
- * - {{warning.level}} → Warning level (e.g., "First Written Warning")
+ * - {{warning.level}} → Warning level (e.g., "Written Warning")
  * - {{warning.issueDate}} → Date warning was issued
  * - {{warning.incidentDate}} → Date of incident
  * - {{warning.category}} → Warning category
@@ -154,11 +154,11 @@ export class PDFPlaceholderService {
     const levelMap: Record<string, string> = {
       'counselling': 'Counselling Session',
       'verbal': 'Verbal Warning',
-      'first_written': 'First Written Warning',
+      'first_written': 'Written Warning',
       'second_written': 'Second Written Warning',
       'final_written': 'Final Written Warning',
       'suspension': 'Suspension',
-      'dismissal': 'Dismissal'
+      'dismissal': 'Ending of Service'
     };
 
     return levelMap[level] || level;
@@ -170,12 +170,12 @@ export class PDFPlaceholderService {
   private static getNextEscalationLevel(currentLevel: string): string {
     const escalationPath: Record<string, string> = {
       'counselling': 'Verbal Warning',
-      'verbal': 'First Written Warning',
+      'verbal': 'Written Warning',
       'first_written': 'Second Written Warning',
       'second_written': 'Final Written Warning',
-      'final_written': 'Suspension or Dismissal',
-      'suspension': 'Dismissal',
-      'dismissal': 'Termination'
+      'final_written': 'Suspension or Ending of Service',
+      'suspension': 'Ending of Service',
+      'dismissal': 'Termination of Employment'
     };
 
     return escalationPath[currentLevel] || 'Further Disciplinary Action';

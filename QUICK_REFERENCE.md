@@ -36,6 +36,14 @@ Comprehensive file locations catalog for the HR Disciplinary System codebase.
   - Date formatting (dd/mm/yyyy)
   - Timezone handling (Africa/Johannesburg)
 
+- **`frontend/src/utils/signatureSVG.ts`** ⭐ NEW (Session 48)
+  - **SVG signature generation** from canvas stroke data
+  - SVG→PNG conversion for PDF embedding (jsPDF requirement)
+  - Witness signature watermarking (SVG-native)
+  - Format detection helpers (`isSignatureSVG`, `isSignaturePNG`)
+  - 90%+ storage savings vs PNG (2-5 KB vs 50-200 KB)
+  - See: `SVG_SIGNATURE_SYSTEM.md` for complete documentation
+
 - **`frontend/src/utils/deviceDetection.ts`**
   - Comprehensive device capability detection
   - Browser feature detection

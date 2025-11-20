@@ -129,7 +129,16 @@ export const SimplePDFDownloadModal: React.FC<SimplePDFDownloadModalProps> = ({
       // 🔒 VERSIONING: Pass stored PDF code version to ensure consistent regeneration
       pdfGeneratorVersion: formData.pdfGeneratorVersion || warningData.pdfGeneratorVersion,
       // 🎨 TEMPLATE SETTINGS: Pass stored template settings for consistent styling
-      pdfSettings: formData.pdfSettings || warningData.pdfSettings
+      pdfSettings: formData.pdfSettings || warningData.pdfSettings,
+
+      // 🆕 Corrective Discussion Fields (Step 2) - Pass to PDF generator
+      employeeStatement: formData.employeeStatement || warningData.employeeStatement,
+      expectedBehaviorStandards: formData.expectedBehaviorStandards || warningData.expectedBehaviorStandards,
+      factsLeadingToDecision: formData.factsLeadingToDecision || warningData.factsLeadingToDecision,
+      actionSteps: formData.actionSteps || warningData.actionSteps,
+      reviewDate: formData.reviewDate || warningData.reviewDate,
+      interventionDetails: formData.interventionDetails || warningData.interventionDetails,
+      resourcesProvided: formData.resourcesProvided || warningData.resourcesProvided
     };
 
     // Use unified transformer to ensure consistency

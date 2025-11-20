@@ -491,11 +491,11 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                       >
                         <option value="counselling">Counselling</option>
                         <option value="verbal">Verbal Warning</option>
-                        <option value="first_written">First Written Warning</option>
+                        <option value="first_written">Written Warning</option>
                         <option value="second_written">Second Written Warning</option>
                         <option value="final_written">Final Written Warning</option>
                         <option value="suspension">Suspension</option>
-                        <option value="dismissal">Dismissal</option>
+                        <option value="dismissal">Ending of Service</option>
                       </select>
                     </div>
 
@@ -650,11 +650,11 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                         {[
                           { value: 'counselling', label: 'Counselling' },
                           { value: 'verbal', label: 'Verbal' },
-                          { value: 'first_written', label: 'First Written' },
+                          { value: 'first_written', label: 'Written' },
                           { value: 'second_written', label: 'Second Written' },
                           { value: 'final_written', label: 'Final Written' },
                           { value: 'suspension', label: 'Suspension' },
-                          { value: 'dismissal', label: 'Dismissal' }
+                          { value: 'dismissal', label: 'Ending of Service' }
                         ].map((levelOption) => (
                           <button
                             key={levelOption.value}
@@ -738,11 +738,11 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                       >
                         <option value="counselling">Counselling</option>
                         <option value="verbal">Verbal Warning</option>
-                        <option value="first_written">First Written Warning</option>
+                        <option value="first_written">Written Warning</option>
                         <option value="second_written">Second Written Warning</option>
                         <option value="final_written">Final Written Warning</option>
                         <option value="suspension">Suspension</option>
-                        <option value="dismissal">Dismissal</option>
+                        <option value="dismissal">Ending of Service</option>
                       </select>
                     </div>
 
@@ -897,11 +897,11 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                         {[
                           { value: 'counselling', label: 'Counselling' },
                           { value: 'verbal', label: 'Verbal' },
-                          { value: 'first_written', label: 'First Written' },
+                          { value: 'first_written', label: 'Written' },
                           { value: 'second_written', label: 'Second Written' },
                           { value: 'final_written', label: 'Final Written' },
                           { value: 'suspension', label: 'Suspension' },
-                          { value: 'dismissal', label: 'Dismissal' }
+                          { value: 'dismissal', label: 'Ending of Service' }
                         ].map((levelOption) => (
                           <button
                             key={levelOption.value}

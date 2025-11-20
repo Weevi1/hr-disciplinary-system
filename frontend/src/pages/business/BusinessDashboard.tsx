@@ -15,10 +15,26 @@ import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
 // 🚀 OPTIMIZED COMPONENTS
 import { WelcomeSection } from '../../components/dashboard/WelcomeSection';
 import { QuotesSection } from '../../components/dashboard/QuotesSection';
-import { HRDashboardSection } from '../../components/dashboard/HRDashboardSection';
-import { HODDashboardSection } from '../../components/dashboard/HODDashboardSection';
-import { BusinessOwnerDashboardSection } from '../../components/dashboard/BusinessOwnerDashboardSection';
 import { getInitialDashboardRole } from '../../components/dashboard/DashboardRoleSelector';
+
+// 🚀 LAZY LOADED DASHBOARD SECTIONS - Save 500KB bundle, load only what's needed
+const HRDashboardSection = React.lazy(() =>
+  import('../../components/dashboard/HRDashboardSection').then(m => ({
+    default: m.HRDashboardSection
+  }))
+);
+
+const HODDashboardSection = React.lazy(() =>
+  import('../../components/dashboard/HODDashboardSection').then(m => ({
+    default: m.HODDashboardSection
+  }))
+);
+
+const ExecutiveManagementDashboardSection = React.lazy(() =>
+  import('../../components/dashboard/ExecutiveManagementDashboardSection').then(m => ({
+    default: m.ExecutiveManagementDashboardSection
+  }))
+);
 
 // 🛡️ ERROR FALLBACK COMPONENT
 const ErrorFallback = memo<{ error: Error; resetErrorBoundary: () => void }>(
@@ -121,7 +137,7 @@ export const BusinessDashboard = memo(() => {
     const currentRole = getInitialDashboardRole(canManageOrganization(), canManageHR(), getPrimaryRole);
     // Only update if the current selected role is no longer valid
     if (
-      (selectedRole === 'business-owner' && !canManageOrganization()) ||
+      (selectedRole === 'executive-management' && !canManageOrganization()) ||
       (selectedRole === 'hr-manager' && !canManageHR()) ||
       (selectedRole === 'hod-manager' && !(canManageOrganization() || canManageHR()))
     ) {
@@ -160,7 +176,7 @@ export const BusinessDashboard = memo(() => {
       <div>
 
         {/* 🏢 BUSINESS OWNER DASHBOARD */}
-        {selectedRole === 'business-owner' && canManageOrganization() && (
+        {selectedRole === 'executive-management' && canManageOrganization() && (
           <ErrorBoundary FallbackComponent={ErrorFallback}>
             <Suspense fallback={
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
@@ -169,7 +185,7 @@ export const BusinessDashboard = memo(() => {
                 <SkeletonCard />
               </div>
             }>
-              <BusinessOwnerDashboardSection />
+              <ExecutiveManagementDashboardSection />
             </Suspense>
           </ErrorBoundary>
         )}
@@ -205,16 +221,18 @@ export const BusinessDashboard = memo(() => {
           </ErrorBoundary>
         )}
 
-        {/* 💭 COMPACT QUOTES SECTION */}
-        <div className="mt-6">
-          <ErrorBoundary FallbackComponent={ErrorFallback}>
-            <Suspense fallback={
-              <div className="h-20 bg-white rounded-xl shadow-sm animate-pulse border border-gray-100"></div>
-            }>
-              <QuotesSection />
-            </Suspense>
-          </ErrorBoundary>
-        </div>
+        {/* 💭 COMPACT QUOTES SECTION - Only show if NOT on HOD dashboard (HOD has its own) */}
+        {selectedRole !== 'hod-manager' && getPrimaryRole() !== 'hod-manager' && (
+          <div className="mt-6">
+            <ErrorBoundary FallbackComponent={ErrorFallback}>
+              <Suspense fallback={
+                <div className="h-20 bg-white rounded-xl shadow-sm animate-pulse border border-gray-100"></div>
+              }>
+                <QuotesSection />
+              </Suspense>
+            </ErrorBoundary>
+          </div>
+        )}
       </div>
     </div>
   );

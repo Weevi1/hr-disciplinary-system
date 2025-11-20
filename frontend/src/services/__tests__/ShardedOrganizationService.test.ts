@@ -47,7 +47,7 @@ describe('ShardedOrganizationService', () => {
       lastName: 'Doe',
       email: 'admin@testorg.com',
       password: 'temp123',
-      role: 'business-owner' as const
+      role: 'executive-management' as const
     },
     customCategories: ['Custom Category 1']
   };
@@ -179,7 +179,7 @@ describe('ShardedOrganizationService', () => {
           email: 'admin@testorg.com',
           firstName: 'John',
           lastName: 'Doe',
-          role: 'business-owner',
+          role: 'executive-management',
           organizationId: 'test-org',
           permissions: expect.objectContaining({
             canManageEmployees: true,

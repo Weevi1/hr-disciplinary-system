@@ -30,7 +30,7 @@ export const useWarningFilters = (warnings: Warning[], user: User | null) => {
           filtered = filtered.filter(warning => warning.issuedBy === user.id);
           break;
         case 'hr-manager':
-        case 'business-owner':
+        case 'executive-management':
         case 'super-user':
           // These roles can see all warnings
           break;

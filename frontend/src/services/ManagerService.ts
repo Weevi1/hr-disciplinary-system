@@ -203,10 +203,16 @@ class ManagerServiceClass {
         m => m.departmentIds && m.departmentIds.length > 0
       ).length;
 
-      const totalEmployeesUnderManagement = Array.from(employeeCounts.values()).reduce(
-        (sum, count) => sum + count,
-        0
-      );
+      // Get unique employee count (not sum of all manager-employee relationships)
+      // Since employees can have multiple managers, we need to count distinct employees
+      const result = await DatabaseShardingService.queryDocuments(organizationId, 'employees');
+      const activeEmployees = result.documents.filter((emp: any) => emp.isActive !== false);
+
+      // Count only employees that have at least one manager assigned
+      const totalEmployeesUnderManagement = activeEmployees.filter((emp: any) => {
+        const employeeManagerIds = getManagerIds(emp.employment);
+        return employeeManagerIds.length > 0;
+      }).length;
 
       const averageEmployeesPerManager = managers.length > 0
         ? Math.round(totalEmployeesUnderManagement / managers.length)

@@ -8,6 +8,7 @@ import Logger from '../../../../utils/logger';
 // ✅ Comprehensive error handling and status tracking
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Send,
   Mail,
@@ -85,7 +86,7 @@ interface DeliveryCompletionStepProps {
 }
 
 interface DeliveryOption {
-  id: 'email' | 'whatsapp' | 'printed';
+  id: 'email' | 'whatsapp' | 'printed' | 'qr';
   name: string;
   icon: typeof Mail;
   description: string;
@@ -105,7 +106,7 @@ const formatWarningLevel = (level: string | undefined): string => {
   const levelMap: Record<string, string> = {
     'counselling': 'Counselling Session',
     'verbal': 'Verbal Warning',
-    'first_written': 'First Written Warning',
+    'first_written': 'Written Warning',
     'second_written': 'Second Written Warning',
     'final_written': 'Final Written Warning'
   };
@@ -155,7 +156,7 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
   // STATE
   // ============================================
   
-  const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState<'email' | 'whatsapp' | 'printed'>('email');
+  const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState<'email' | 'whatsapp' | 'printed' | 'qr' | null>(null);
   
   // PDF Preview Modal State
   const [showPDFPreview, setShowPDFPreview] = useState(false);
@@ -164,6 +165,7 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrPdfBlob, setQrPdfBlob] = useState<Blob | null>(null);
   const [isGeneratingQR, setIsGeneratingQR] = useState(false);
+  const [showQRCloseConfirmation, setShowQRCloseConfirmation] = useState(false);
 
   // Warning creation state
   const [isCreatingWarning, setIsCreatingWarning] = useState(false);
@@ -201,6 +203,13 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
       name: 'Printed Copy',
       icon: Printer,
       description: 'Receive a printed physical copy',
+      available: true
+    },
+    {
+      id: 'qr',
+      name: 'QR Code',
+      icon: QrCode,
+      description: 'Download warning with QR code',
       available: true
     }
   ];
@@ -265,7 +274,16 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
           isCompliant: true,
           framework: 'LRA Section 188',
           requirements: lraRecommendation?.legalRequirements || []
-        }
+        },
+
+        // 🆕 Corrective Discussion Fields (Step 2) - Pass to PDF generator
+        employeeStatement: formData.employeeStatement,
+        expectedBehaviorStandards: formData.expectedBehaviorStandards,
+        factsLeadingToDecision: formData.factsLeadingToDecision,
+        actionSteps: formData.actionSteps,
+        reviewDate: formData.reviewDate,
+        interventionDetails: formData.interventionDetails,
+        resourcesProvided: formData.resourcesProvided
       };
 
       const pdfData = await transformWarningDataForPDF(
@@ -368,9 +386,21 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
 ]);
 
   const handleCreateWarning = useCallback(async () => {
-    // Simplified method - only handles HR notification now
+    // Check if QR Code is selected - instant delivery, no HR notification needed
+    if (selectedDeliveryMethod === 'qr') {
+      Logger.debug('🔗 QR Code already generated and shown - marking as complete');
+
+      // QR modal was already shown when user clicked the QR option
+      // Just mark as completed now when they click Close/Finalize
+      setWarningCreated(true);
+      setDeliveryNotificationId('QR_INSTANT_DELIVERY'); // Dummy ID to show success
+      Logger.success('✅ QR Code delivery completed - instant delivery, no HR action needed');
+      return;
+    }
+
+    // For other delivery methods, create HR notification
     return handleCreateHRNotification();
-  }, [handleCreateHRNotification]);
+  }, [selectedDeliveryMethod, handleCreateHRNotification]);
 
   // ============================================
   // COMPUTED VALUES
@@ -429,7 +459,10 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
             Warning {createdWarningId ? `#${createdWarningId.slice(-8)}` : ''} has been created.
           </p>
           <p className="font-medium mt-2" style={{ color: 'var(--color-primary)' }}>
-            📬 HR has been notified to deliver via {selectedDeliveryMethod}
+            {selectedDeliveryMethod === 'qr'
+              ? '🔗 QR Code generated - instant delivery completed!'
+              : `📬 HR has been notified to deliver via ${selectedDeliveryMethod}`
+            }
           </p>
           
           {audioRecording?.audioUrl && !audioUploadError && (
@@ -441,8 +474,8 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
             </ThemedAlert>
           )}
 
-          {/* HR Notification Status - Themed */}
-          {deliveryNotificationId && (
+          {/* HR Notification Status - Themed (only for non-QR deliveries) */}
+          {deliveryNotificationId && selectedDeliveryMethod !== 'qr' && (
             <ThemedAlert variant="info" className="mt-4 text-center">
               <div className="flex items-center justify-center gap-2">
                 <Send className="w-4 h-4" />
@@ -453,21 +486,23 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
               </p>
             </ThemedAlert>
           )}
-          
-          {/* Delivery Instructions Button - Themed */}
-          <div className="mt-6">
-            <ThemedButton
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowDeliveryInstructions(!showDeliveryInstructions)}
-              className="text-sm font-medium underline min-h-[40px]" // Mobile touch target
-            >
-              {showDeliveryInstructions ? 'Hide' : 'View'} Delivery Instructions for HR
-            </ThemedButton>
-          </div>
-          
-          {/* Delivery Instructions */}
-          {showDeliveryInstructions && (
+
+          {/* Delivery Instructions Button - Themed (only for non-QR deliveries) */}
+          {selectedDeliveryMethod !== 'qr' && (
+            <div className="mt-6">
+              <ThemedButton
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDeliveryInstructions(!showDeliveryInstructions)}
+                className="text-sm font-medium underline min-h-[40px]" // Mobile touch target
+              >
+                {showDeliveryInstructions ? 'Hide' : 'View'} Delivery Instructions for HR
+              </ThemedButton>
+            </div>
+          )}
+
+          {/* Delivery Instructions (only for non-QR deliveries) */}
+          {showDeliveryInstructions && selectedDeliveryMethod !== 'qr' && (
             <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
               <h4 className="font-semibold mb-3" style={{ color: 'var(--color-text)' }}>
                 {DeliveryInstructionsService.getDeliveryInstructions(selectedDeliveryMethod).title}
@@ -597,7 +632,16 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
                   borderLeftColor: selectedDeliveryMethod === option.id ? 'var(--color-primary)' : 'transparent',
                   backgroundColor: selectedDeliveryMethod === option.id ? 'var(--color-alert-info-bg)' : 'transparent'
                 }}
-                onClick={() => option.available && setSelectedDeliveryMethod(option.id)}
+                onClick={() => {
+                  if (!option.available) return;
+
+                  setSelectedDeliveryMethod(option.id);
+
+                  // If QR Code selected, immediately open QR modal
+                  if (option.id === 'qr') {
+                    handleQRDownload();
+                  }
+                }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -635,35 +679,6 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
               </ThemedCard>
             );
           })}
-
-          {/* QR Code Action - Styled like delivery options */}
-          <ThemedCard
-            padding="sm"
-            hover={true}
-            className="cursor-pointer transition-all border-l-4"
-            style={{
-              borderLeftColor: 'transparent'
-            }}
-            onClick={handleQRDownload}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <QrCode className="w-4 h-4" style={{ color: 'var(--color-text)' }} />
-                <div>
-                  <p className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>
-                    QR Code
-                  </p>
-                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                    Download warning with QR code
-                  </p>
-                </div>
-              </div>
-
-              {isGeneratingQR && (
-                <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--color-primary)' }} />
-              )}
-            </div>
-          </ThemedCard>
         </div>
       </div>
 
@@ -771,8 +786,8 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
         <QRCodeDownloadModal
           isOpen={showQRModal}
           onClose={() => {
-            setShowQRModal(false);
-            setQrPdfBlob(null);
+            // Show confirmation before closing
+            setShowQRCloseConfirmation(true);
           }}
           pdfBlob={qrPdfBlob}
           filename={`Warning_QR_${selectedEmployee?.profile?.firstName}_${selectedEmployee?.profile?.lastName}_${new Date().toISOString().split('T')[0]}.pdf`}
@@ -787,6 +802,90 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
             Logger.debug('🔗 QR download link generated:', linkData)
           }}
         />
+      )}
+
+      {/* QR Close Confirmation Modal */}
+      {showQRCloseConfirmation && createPortal(
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 10001 }}>
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            {/* Header */}
+            <div className="bg-white border-b px-6 py-4" style={{ borderColor: 'var(--color-border)' }}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'var(--color-warning-light)' }}>
+                  <AlertTriangle className="w-5 h-5" style={{ color: 'var(--color-warning)' }} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>Employee Download Incomplete</h3>
+                  <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Action required before continuing</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <ThemedAlert variant="warning" className="mb-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium mb-2">If the employee did not download their warning document:</p>
+                    <p>You must select another delivery method before exiting this wizard to ensure they receive their copy.</p>
+                  </div>
+                </div>
+              </ThemedAlert>
+
+              <div className="space-y-3">
+                <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                  Choose an option:
+                </p>
+
+                {/* Continue editing - select another method */}
+                <ThemedButton
+                  variant="primary"
+                  size="md"
+                  fullWidth
+                  onClick={() => {
+                    setShowQRCloseConfirmation(false);
+                    setShowQRModal(false);
+                    setQrPdfBlob(null);
+                    // User stays on delivery step to select another method
+                  }}
+                >
+                  <ArrowRight className="w-4 h-4" />
+                  Select Another Delivery Method
+                </ThemedButton>
+
+                {/* Employee downloaded successfully */}
+                <ThemedButton
+                  variant="secondary"
+                  size="md"
+                  fullWidth
+                  onClick={() => {
+                    setShowQRCloseConfirmation(false);
+                    setShowQRModal(false);
+                    setQrPdfBlob(null);
+                    // Just close - employee got their copy
+                  }}
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Employee Successfully Downloaded
+                </ThemedButton>
+
+                {/* Cancel - go back to QR */}
+                <button
+                  onClick={() => {
+                    setShowQRCloseConfirmation(false);
+                    // Keep QR modal open
+                  }}
+                  className="w-full text-sm py-2"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                >
+                  Cancel - Return to QR Code
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

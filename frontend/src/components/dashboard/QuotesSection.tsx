@@ -3,7 +3,7 @@
 // ✅ Renders a compact, premium, pastel-themed "Inspiration Card" on mobile.
 // ✅ Renders the full-featured, classic view on desktop.
 
-import React, { memo, useState, useEffect, useCallback } from 'react';
+import React, { memo } from 'react';
 import { Newspaper, ChevronLeft, ChevronRight, Play, Pause, Heart } from 'lucide-react';
 import { useQuotesRotation } from '../../hooks/dashboard/useQuotesRotation';
 
@@ -12,22 +12,8 @@ import { ThemedCard, ThemedBadge } from '../common/ThemedCard';
 import { ThemedButton } from '../common/ThemedButton';
 import { ThemeSelector } from '../common/ThemeSelector';
 
-// --- A Simple Breakpoint Hook (consistent with other components) ---
-const useBreakpoint = (breakpoint: number) => {
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth > breakpoint);
-
-  const handleResize = useCallback(() => {
-    setIsDesktop(window.innerWidth > breakpoint);
-  }, [breakpoint]);
-
-  useEffect(() => {
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [handleResize]);
-
-  return isDesktop;
-};
+// 🚀 CENTRALIZED HOOK: Replaced local duplicate with shared implementation
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 
 interface QuotesSectionProps {

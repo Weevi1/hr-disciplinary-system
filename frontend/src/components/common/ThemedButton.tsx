@@ -1,20 +1,24 @@
 // ThemedButton - Theme-aware button component that respects all themes
-import React from 'react';
+// 🚀 OPTIMIZED: React.memo + useMemo for style calculations + useCallback for handlers
+import React, { useMemo, useCallback } from 'react';
 
 export interface ThemedButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'accent' | 'ghost' | 'outline' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
   children: React.ReactNode;
+  icon?: React.ComponentType<{ className?: string }>;
 }
 
-export const ThemedButton: React.FC<ThemedButtonProps> = ({
+// 🚀 MEMOIZED: Prevents re-renders when props haven't changed
+export const ThemedButton = React.memo<ThemedButtonProps>(({
   variant = 'primary',
   size = 'md',
   fullWidth = false,
   className = '',
   children,
   style,
+  icon: Icon,
   onMouseEnter,
   onMouseLeave,
   ...props
@@ -25,7 +29,9 @@ export const ThemedButton: React.FC<ThemedButtonProps> = ({
     lg: 'px-6 py-3 text-base'
   };
 
-  const getVariantStyles = (variant: string) => {
+  // 🚀 MEMOIZED: Expensive style calculation only runs when variant changes
+  const variantStyles = useMemo(() => {
+    const getVariantStyles = (variant: string) => {
     switch (variant) {
       case 'primary':
         return {
@@ -77,11 +83,12 @@ export const ThemedButton: React.FC<ThemedButtonProps> = ({
           hoverColor: 'var(--color-primary-hover)'
         };
     }
-  };
+    };
+    return getVariantStyles(variant);
+  }, [variant]);
 
-  const variantStyles = getVariantStyles(variant);
-
-  const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+  // 🚀 MEMOIZED: Hover handlers only recreated when dependencies change
+  const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     if (variant === 'ghost' || variant === 'outline') {
       e.currentTarget.style.backgroundColor = variantStyles.hoverColor;
     } else {
@@ -91,13 +98,13 @@ export const ThemedButton: React.FC<ThemedButtonProps> = ({
       e.currentTarget.style.opacity = '0.9';
     }
     onMouseEnter?.(e);
-  };
+  }, [variant, variantStyles, onMouseEnter]);
 
-  const handleMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     e.currentTarget.style.backgroundColor = variantStyles.backgroundColor;
     e.currentTarget.style.opacity = '1';
     onMouseLeave?.(e);
-  };
+  }, [variantStyles, onMouseLeave]);
 
   return (
     <button
@@ -114,7 +121,11 @@ export const ThemedButton: React.FC<ThemedButtonProps> = ({
       onMouseLeave={handleMouseLeave}
       {...props}
     >
+      {Icon && <Icon className="mr-2" />}
       {children}
     </button>
   );
-};
+});
+
+// Display name for React DevTools
+ThemedButton.displayName = 'ThemedButton';

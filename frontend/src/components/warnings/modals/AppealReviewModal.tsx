@@ -102,7 +102,7 @@ const DECISION_OPTIONS = [
 const WARNING_LEVELS = [
   { value: 'counselling', label: 'Counselling', severity: 1 },
   { value: 'verbal', label: 'Verbal Warning', severity: 2 },
-  { value: 'first_written', label: 'First Written Warning', severity: 3 },
+  { value: 'first_written', label: 'Written Warning', severity: 3 },
   { value: 'second_written', label: 'Second Written Warning', severity: 4 },
   { value: 'final_written', label: 'Final Written Warning', severity: 5 }
 ];

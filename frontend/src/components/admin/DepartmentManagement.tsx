@@ -1,5 +1,6 @@
-// Department Management Component for Business Owners
+// Department Management Component for Executive Managements
 // Full CRUD operations for organizational departments
+// 🚀 REFACTORED: Migrated to useModal hook for form modal
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -18,6 +19,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useOrganization } from '../../contexts/OrganizationContext';
+import { useModal } from '../../hooks/useModal';
 import DepartmentService from '../../services/DepartmentService';
 import { ThemedCard } from '../common/ThemedCard';
 import { ThemedButton } from '../common/ThemedButton';
@@ -47,16 +49,17 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   // Form state
-  const [showForm, setShowForm] = useState(false);
-  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
+  // 🚀 REFACTORED: Migrated to useModal hook with Department data
+  const formModal = useModal<Department | null>();
   const [formData, setFormData] = useState<DepartmentFormData>({
     name: '',
     description: '',
     managerId: ''
   });
   const [formLoading, setFormLoading] = useState(false);
+  const [availableManagers, setAvailableManagers] = useState<Array<{ id: string; name: string; role: string }>>([]);
 
-  // Load departments
+  // Load departments and managers
   useEffect(() => {
     if (!orgId || (!isOpen && !inline)) return;
 
@@ -80,7 +83,38 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
       }
     };
 
+    const loadManagers = async () => {
+      try {
+        // Import DatabaseShardingService dynamically
+        const { DatabaseShardingService } = await import('../../services/DatabaseShardingService');
+
+        // Load all users (HR managers and HOD managers)
+        const usersResult = await DatabaseShardingService.queryDocuments(
+          orgId,
+          'users',
+          []
+        );
+
+        // Filter for HR and HOD managers
+        const managers = usersResult.documents
+          .filter((user: any) => {
+            const roleId = typeof user.role === 'string' ? user.role : user.role?.id;
+            return (roleId === 'hr-manager' || roleId === 'hod-manager') && user.isActive !== false;
+          })
+          .map((user: any) => ({
+            id: user.id,
+            name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+            role: typeof user.role === 'string' ? user.role : user.role?.id || 'unknown'
+          }));
+
+        setAvailableManagers(managers);
+      } catch (err) {
+        Logger.error('Failed to load managers', { error: err });
+      }
+    };
+
     loadDepartments();
+    loadManagers();
   }, [orgId, isOpen, inline]);
 
   // Real-time subscription
@@ -98,19 +132,19 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
   }, [orgId, isOpen, inline]);
 
   const handleCreateDepartment = () => {
-    setEditingDepartment(null);
+    // 🚀 REFACTORED: Using useModal hook
     setFormData({ name: '', description: '', managerId: '' });
-    setShowForm(true);
+    formModal.open(null); // null = create mode
   };
 
   const handleEditDepartment = (department: Department) => {
-    setEditingDepartment(department);
+    // 🚀 REFACTORED: Using useModal hook with data
     setFormData({
       name: department.name,
       description: department.description || '',
       managerId: department.managerId || ''
     });
-    setShowForm(true);
+    formModal.open(department); // Pass department for edit mode
   };
 
   const handleDeleteDepartment = async (department: Department) => {
@@ -143,11 +177,12 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
     try {
       setFormLoading(true);
 
-      if (editingDepartment) {
+      // 🚀 REFACTORED: Using useModal hook data
+      if (formModal.data) {
         // Update existing department
         await DepartmentService.updateDepartment(
           orgId,
-          editingDepartment.id,
+          formModal.data.id,
           formData
         );
         // Real-time subscription will update state automatically
@@ -160,9 +195,9 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
         // Real-time subscription will update state automatically
       }
 
-      setShowForm(false);
+      formModal.close(); // 🚀 REFACTORED: Auto-clears data
       setFormData({ name: '', description: '', managerId: '' });
-      Logger.success(editingDepartment ? 'Department updated successfully' : 'Department created successfully');
+      Logger.success(formModal.data ? 'Department updated successfully' : 'Department created successfully');
     } catch (err) {
       Logger.error('Failed to save department', { error: err });
       alert('Failed to save department. Please try again.');
@@ -172,8 +207,8 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
   };
 
   const handleCloseForm = () => {
-    setShowForm(false);
-    setEditingDepartment(null);
+    // 🚀 REFACTORED: Using useModal hook (auto-clears data)
+    formModal.close();
     setFormData({ name: '', description: '', managerId: '' });
   };
 
@@ -317,66 +352,127 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({
       )}
 
       {/* Department Form Modal */}
-      {showForm && (
+      {/* 🚀 REFACTORED: Using useModal hook */}
+      {formModal.isOpen && (
         <UnifiedModal
-          isOpen={showForm}
+          isOpen={formModal.isOpen}
           onClose={handleCloseForm}
-          title={editingDepartment ? 'Edit Department' : 'Create Department'}
-          subtitle={editingDepartment ? 'Update department information' : 'Add a new department to your organization'}
+          title={formModal.data ? 'Edit Department' : 'Create Department'}
+          subtitle={formModal.data ? 'Update department information' : 'Add a new department to your organization'}
           size="md"
         >
-          <form onSubmit={handleFormSubmit} className="space-y-3">
+          <form onSubmit={handleFormSubmit} className="space-y-4">
+            {/* Department Name */}
             <div>
-              <label className="block text-xs font-medium mb-1.5 text-gray-700">
-                Department Name *
+              <label className="block text-sm font-semibold mb-2 text-gray-900">
+                Department Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 placeholder="e.g., Operations, Admin, Sales"
                 required
               />
             </div>
 
+            {/* Description */}
             <div>
-              <label className="block text-xs font-medium mb-1.5 text-gray-700">
+              <label className="block text-sm font-semibold mb-2 text-gray-900">
                 Description
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 rows={3}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
                 placeholder="Brief description of the department's role and responsibilities"
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-3">
+            {/* Assign Manager */}
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-gray-900">
+                Assign Manager
+              </label>
+              <div className="relative">
+                <select
+                  value={formData.managerId}
+                  onChange={(e) => setFormData(prev => ({ ...prev, managerId: e.target.value }))}
+                  className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none bg-white cursor-pointer"
+                >
+                  <option value="">No manager assigned</option>
+                  {availableManagers.map(manager => (
+                    <option key={manager.id} value={manager.id}>
+                      {manager.name} • {manager.role === 'hr-manager' ? 'HR Manager' : 'Department Manager'}
+                    </option>
+                  ))}
+                </select>
+                <Crown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+              {availableManagers.length === 0 && (
+                <div className="mt-2 flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-800">
+                    No managers available. Create HR or Department managers first.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
               <button
                 type="button"
                 onClick={handleCloseForm}
                 disabled={formLoading}
-                className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                style={{
+                  padding: '0.5rem 1rem',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  color: '#374151',
+                  backgroundColor: 'white',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.375rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'white'}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={formLoading || !formData.name.trim()}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                style={{
+                  padding: '0.5rem 1rem',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  color: 'white',
+                  backgroundColor: '#2563eb',
+                  border: '1px solid #2563eb',
+                  borderRadius: '0.375rem',
+                  cursor: formLoading || !formData.name.trim() ? 'not-allowed' : 'pointer',
+                  opacity: formLoading || !formData.name.trim() ? 0.5 : 1,
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={(e) => {
+                  if (!formLoading && formData.name.trim()) {
+                    e.currentTarget.style.backgroundColor = '#1d4ed8';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!formLoading && formData.name.trim()) {
+                    e.currentTarget.style.backgroundColor = '#2563eb';
+                  }
+                }}
               >
                 {formLoading ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    {editingDepartment ? 'Updating...' : 'Creating...'}
-                  </>
+                  formModal.data ? 'Updating...' : 'Creating...'
                 ) : (
-                  <>
-                    <Save className="w-3.5 h-3.5" />
-                    {editingDepartment ? 'Update' : 'Create'}
-                  </>
+                  formModal.data ? 'Update' : 'Create'
                 )}
               </button>
             </div>

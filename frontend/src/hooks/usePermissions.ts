@@ -63,7 +63,7 @@ export const usePermissions = (): PermissionCheck => {
 
     // Route-based access control
     const routePermissions: Record<string, string[]> = {
-      '/dashboard': ['super-user', 'business-owner', 'hr-manager', 'hod-manager'],
+      '/dashboard': ['super-user', 'executive-management', 'hr-manager', 'hod-manager'],
       
       // Super User routes
       '/organizations': ['super-user'],
@@ -71,10 +71,10 @@ export const usePermissions = (): PermissionCheck => {
       '/system-analytics': ['super-user'],
       '/system-settings': ['super-user'],
       
-      // Business Owner routes
-      '/business-overview': ['business-owner'],
-      '/compliance-reports': ['business-owner'],
-      '/business-analytics': ['business-owner'],
+      // Executive Management routes
+      '/business-overview': ['executive-management'],
+      '/compliance-reports': ['executive-management'],
+      '/business-analytics': ['executive-management'],
       
       // HR Manager routes
       '/employees': ['hr-manager'],
@@ -105,7 +105,7 @@ export const usePermissions = (): PermissionCheck => {
     
     const roleLevels: Record<string, number> = {
       'super-user': 1,
-      'business-owner': 2,
+      'executive-management': 2,
       'hr-manager': 3,
       'hod-manager': 4
     };

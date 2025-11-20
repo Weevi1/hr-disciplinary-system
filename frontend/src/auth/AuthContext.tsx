@@ -1,12 +1,14 @@
 import Logger from '../utils/logger';
 // frontend/src/auth/AuthContext.tsx - PRODUCTION VERSION (Backwards Compatible Role Handling)
 // 🚀 OPTIMIZED: Parallel loading, non-blocking claims validation
+// 🚀 WEEK 4 OPTIMIZATION: Added categories prefetch to eliminate duplicate fetch
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { FirebaseService } from '../services/FirebaseService';
 import { DatabaseShardingService } from '../services/DatabaseShardingService';
+import { ShardedDataService } from '../services/ShardedDataService';  // 🚀 WEEK 4: For categories fetch
 import { UserOrgIndexService } from '../services/UserOrgIndexService';
 import { userCreationManager } from '../utils/userCreationContext';
 import { ClaimsValidationService } from '../services/ClaimsValidationService';
@@ -32,25 +34,31 @@ const normalizeUserRole = (rawRole: any) => {
   
   // If role is a simple string, convert to complex object format
   if (typeof rawRole === 'string') {
-    const roleNames = {
+    const roleNames: Record<string, string> = {
       'super-user': 'Super User',
-      'business-owner': 'Business Owner', 
+      'reseller': 'Reseller',
+      'executive-management': 'Executive Management',
       'hr-manager': 'HR Manager',
-      'hod-manager': 'Department Manager'
+      'hod-manager': 'Department Manager',
+      'department-manager': 'Department Manager'
     };
-    
-    const roleDescriptions = {
+
+    const roleDescriptions: Record<string, string> = {
       'super-user': 'Global system administrator with full access',
-      'business-owner': 'Organization owner with business oversight',
+      'reseller': 'Partner with client organization management access',
+      'executive-management': 'Organization owner with business oversight',
       'hr-manager': 'Human resources manager with employee management access',
-      'hod-manager': 'Department head with team management capabilities'
+      'hod-manager': 'Department head with team management capabilities',
+      'department-manager': 'Department manager with team management capabilities'
     };
-    
-    const roleLevels = {
+
+    const roleLevels: Record<string, number> = {
       'super-user': 1,      // Highest access
-      'business-owner': 2,  // Organization level
-      'hr-manager': 3,      // HR operations
-      'hod-manager': 4      // Department level
+      'reseller': 2,        // Partner level
+      'executive-management': 3,  // Organization level
+      'hr-manager': 4,      // HR operations
+      'hod-manager': 5,     // Department level
+      'department-manager': 5  // Department level (same as hod)
     };
     
     return {
@@ -77,6 +85,7 @@ const normalizeUserRole = (rawRole: any) => {
 interface AuthContextType {
   user: User | null;
   organization: Organization | null;
+  categories: any[] | null;  // 🚀 WEEK 4 OPTIMIZATION: Prefetch categories to eliminate duplicate fetch
   loading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
@@ -89,6 +98,7 @@ interface AuthContextType {
 interface AuthState {
   user: User | null;
   organization: Organization | null;
+  categories: any[] | null;  // 🚀 WEEK 4 OPTIMIZATION: Prefetch categories
   loading: boolean;
   error: string | null;
 }
@@ -98,6 +108,7 @@ type AuthAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_USER'; payload: User | null }
   | { type: 'SET_ORGANIZATION'; payload: Organization | null }
+  | { type: 'SET_CATEGORIES'; payload: any[] | null }  // 🚀 WEEK 4 OPTIMIZATION
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'LOGOUT' };
 
@@ -115,6 +126,8 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
       };
     case 'SET_ORGANIZATION':
       return { ...state, organization: action.payload };
+    case 'SET_CATEGORIES':  // 🚀 WEEK 4 OPTIMIZATION
+      return { ...state, categories: action.payload };
     case 'SET_ERROR':
       return {
         ...state,
@@ -125,6 +138,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
       return {
         user: null,
         organization: null,
+        categories: null,  // 🚀 WEEK 4 OPTIMIZATION: Clear categories on logout
         loading: false,
         error: null
       };
@@ -137,6 +151,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
 const initialState: AuthState = {
   user: null,
   organization: null,
+  categories: null,  // 🚀 WEEK 4 OPTIMIZATION
   loading: true,
   error: null
 };
@@ -241,24 +256,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               payload: { ...result.user, role: normalizedRole } as User
             });
 
-            // Handle organization - use preview if available, otherwise fetch
+            // 🚀 WEEK 4 OPTIMIZATION: Fetch organization AND categories in parallel
             if (result.organizationId && result.organizationId !== 'system') {
               let orgData: Organization | null = null;
+              let categoriesData: any[] | null = null;
 
               // Try to use prefetched org data
               if (orgPreviewResult.status === 'fulfilled' && orgPreviewResult.value) {
                 orgData = orgPreviewResult.value;
                 Logger.debug('✅ Using prefetched organization data');
+
+                // Fetch categories in parallel since org is already available
+                try {
+                  categoriesData = await ShardedDataService.getWarningCategories(result.organizationId);
+                  Logger.debug(`✅ Fetched ${categoriesData?.length || 0} categories during auth`);
+                } catch (error) {
+                  Logger.warn('⚠️ Failed to fetch categories during auth (non-critical):', error);
+                  categoriesData = [];
+                }
               } else {
-                // Fetch org data if preview failed
-                orgData = await FirebaseService.getDocument<Organization>(
-                  COLLECTIONS.ORGANIZATIONS,
-                  result.organizationId
-                );
+                // 🚀 PARALLEL FETCH: Get both org and categories simultaneously
+                const [fetchedOrg, fetchedCategories] = await Promise.allSettled([
+                  FirebaseService.getDocument<Organization>(
+                    COLLECTIONS.ORGANIZATIONS,
+                    result.organizationId
+                  ),
+                  ShardedDataService.getWarningCategories(result.organizationId)
+                ]);
+
+                orgData = fetchedOrg.status === 'fulfilled' ? fetchedOrg.value : null;
+                categoriesData = fetchedCategories.status === 'fulfilled' ? fetchedCategories.value : [];
+
+                Logger.debug(`✅ Fetched org and ${categoriesData?.length || 0} categories in parallel`);
               }
 
+              // Dispatch both organization and categories
               if (orgData) {
                 dispatch({ type: 'SET_ORGANIZATION', payload: orgData });
+              }
+              if (categoriesData !== null) {
+                dispatch({ type: 'SET_CATEGORIES', payload: categoriesData });
               }
             }
 
@@ -311,13 +348,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   Logger.error('❌ Failed to create index entry:', indexError);
                 }
 
-                // Load organization
-                const orgData = await FirebaseService.getDocument<Organization>(
-                  COLLECTIONS.ORGANIZATIONS,
-                  foundResult.orgId
-                );
-                if (orgData) {
-                  dispatch({ type: 'SET_ORGANIZATION', payload: orgData });
+                // 🚀 WEEK 4 OPTIMIZATION: Load organization AND categories in parallel
+                const [orgData, categoriesData] = await Promise.allSettled([
+                  FirebaseService.getDocument<Organization>(
+                    COLLECTIONS.ORGANIZATIONS,
+                    foundResult.orgId
+                  ),
+                  ShardedDataService.getWarningCategories(foundResult.orgId)
+                ]);
+
+                if (orgData.status === 'fulfilled' && orgData.value) {
+                  dispatch({ type: 'SET_ORGANIZATION', payload: orgData.value });
+                }
+                if (categoriesData.status === 'fulfilled' && categoriesData.value) {
+                  dispatch({ type: 'SET_CATEGORIES', payload: categoriesData.value });
+                  Logger.debug(`✅ Fetched ${categoriesData.value.length} categories (legacy path)`);
                 }
               }
             } else {
@@ -390,12 +435,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Firebase authentication
       Logger.debug('🔐 Authenticating with Firebase...')
       const firebaseUser = await FirebaseService.signIn(email, password);
-      
+
       if (!firebaseUser) {
         throw new Error('Authentication failed');
       }
 
-      Logger.success(8714)
+      Logger.success('✅ Firebase authentication successful')
       
       // User data will be loaded automatically by the auth state listener
       // No need to manually load here - let the listener handle it with role normalization
@@ -545,6 +590,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const value: AuthContextType = {
     user: state.user,
     organization: state.organization,
+    categories: state.categories,  // 🚀 WEEK 4 OPTIMIZATION: Expose categories
     loading: state.loading,
     error: state.error,
     login,

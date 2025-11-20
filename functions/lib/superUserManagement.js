@@ -119,7 +119,7 @@ exports.manageSuperUser = (0, https_1.onCall)({
                     throw new https_1.HttpsError('invalid-argument', 'Cannot revoke your own super-user privileges');
                 }
                 await adminAuth.setCustomUserClaims(targetUserId, {
-                    role: 'business-owner', // Downgrade to business owner
+                    role: 'executive-management', // Downgrade to business owner
                     permissions: [],
                     revokedBy: context.uid,
                     revokedAt: new Date().toISOString()

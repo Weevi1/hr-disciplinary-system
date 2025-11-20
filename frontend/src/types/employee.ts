@@ -407,7 +407,7 @@ export const calculateEmployeePermissions = (
         canExport: true,
         };
       
-    case 'business-owner':
+    case 'executive-management':
       return {
         canCreate: false,
         canEdit: false,

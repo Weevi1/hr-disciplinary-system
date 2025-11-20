@@ -81,7 +81,7 @@ export const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({
           const roleId = getRoleId(user.role);
           const isManager = roleId === 'hod-manager' || 
                            roleId === 'hr-manager' || 
-                           roleId === 'business-owner';
+                           roleId === 'executive-management';
           return isManager;
         });
         

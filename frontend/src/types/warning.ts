@@ -80,6 +80,62 @@ export interface Warning {
   appealSubmitted?: boolean;
   appealDate?: Date;
   appealOutcome?: 'upheld' | 'overturned' | 'modified';
+
+  // ============================================
+  // 🆕 CORRECTIVE COUNSELLING FIELDS - Unified Disciplinary Form Approach
+  // ============================================
+
+  /**
+   * Section B - Employee's Version/Response
+   * Employee's side of the story, their perspective on the incident
+   */
+  employeeStatement?: string;
+
+  /**
+   * Section C - Expected Behavior/Standards (Corrective Guidance)
+   * Clear explanation of the required/expected behavior, performance, conduct, or standards
+   */
+  expectedBehaviorStandards?: string;
+
+  /**
+   * Section E - Facts Leading to Decision Taken
+   * Detailed reasoning and evidence that led to the disciplinary decision
+   */
+  factsLeadingToDecision?: string;
+
+  /**
+   * Section F - Action Steps/Improvement Commitments
+   * Specific commitments from the employee to improve conduct/performance
+   */
+  improvementCommitments?: Array<{
+    commitment: string;
+    timeline: string;
+    completedDate?: Date;
+  }>;
+
+  /**
+   * Follow-up/Review Date
+   * Scheduled date to review progress on improvement commitments
+   */
+  reviewDate?: Date;
+
+  /**
+   * Intervention Details
+   * Training, coaching, or support provided to help employee improve
+   */
+  interventionDetails?: string;
+
+  /**
+   * Resources Provided
+   * Tools, materials, or resources given to support improvement
+   */
+  resourcesProvided?: string[];
+
+  /**
+   * Training Provided
+   * Specific training sessions or courses completed
+   */
+  trainingProvided?: string[];
 }
 
 // 🎯 NEW: Audio recording data interface

@@ -14,8 +14,9 @@ import {
 import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
-import { ShardedDataService } from '../../services/ShardedDataService';
-import { DatabaseShardingService } from '../../services/DatabaseShardingService';
+import { useModal } from '../../hooks/useModal';
+import { API } from '../../api';  // 🚀 WEEK 3: Migrated to API layer
+import { DatabaseShardingService } from '../../services/DatabaseShardingService';  // Still needed for queryDocuments
 import { UserCreationService } from '../../services/UserCreationService';
 import { userCreationManager } from '../../utils/userCreationContext';
 import DepartmentService from '../../services/DepartmentService';
@@ -440,7 +441,11 @@ const getRoleId = (role: any): string => {
 };
 
 // Main Organization Management V2 Component
-export const OrganizationManagementV2 = memo(() => {
+interface OrganizationManagementV2Props {
+  onSwitchToDepartments?: () => void; // Callback to switch to departments tab
+}
+
+export const OrganizationManagementV2 = memo(({ onSwitchToDepartments }: OrganizationManagementV2Props = {}) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { organization } = useOrganization();
@@ -453,7 +458,7 @@ export const OrganizationManagementV2 = memo(() => {
 
   // State
   const [users, setUsers] = useState<OrganizationUser[]>([]);
-  const [businessOwner, setBusinessOwner] = useState<OrganizationUser | null>(null);
+  const [executiveManagement, setBusinessOwner] = useState<OrganizationUser | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [stats, setStats] = useState<OrganizationStats>({
@@ -463,8 +468,10 @@ export const OrganizationManagementV2 = memo(() => {
     activeWarnings: 0
   });
   const [loading, setLoading] = useState(true);
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [selectedUserRole, setSelectedUserRole] = useState<'hr-manager' | 'hod-manager'>('hr-manager');
+
+  // 🚀 REFACTORED: Migrated to useModal hook
+  const addUserModal = useModal<'hr-manager' | 'hod-manager'>();
+
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Load organization data with sharded architecture
@@ -502,19 +509,20 @@ export const OrganizationManagementV2 = memo(() => {
       }));
 
       const organizationUsers = allUsers.filter((user: any) => {
-        return getRoleId(user.role) !== 'business-owner';
+        return getRoleId(user.role) !== 'executive-management';
       });
 
-      const businessOwnerUser = allUsers.find((user: any) => {
-        return getRoleId(user.role) === 'business-owner';
+      const executiveManagementUser = allUsers.find((user: any) => {
+        return getRoleId(user.role) === 'executive-management';
       }) || null;
 
+      // 🚀 WEEK 3: Migrated to API layer
       // Load employees for stats
-      const employeesResult = await ShardedDataService.loadEmployees(organization.id);
-      
+      const employeesResult = await API.employees.getAll(organization.id);
+
       // Load warnings for stats
-      const warningsResult = await ShardedDataService.loadWarnings(organization.id);
-      const activeWarnings = warningsResult.documents.filter((w: any) => w.status === 'issued').length;
+      const warningsResult = await API.warnings.getAll(organization.id);
+      const activeWarnings = warningsResult.filter((w: any) => w.status === 'issued').length;
 
       // Load real departments from Firebase
       const departmentsData = await DepartmentService.getDepartments(organization.id);
@@ -533,18 +541,18 @@ export const OrganizationManagementV2 = memo(() => {
       // Calculate stats
       const organizationStats: OrganizationStats = {
         totalUsers: organizationUsers.length,
-        totalEmployees: employeesResult.documents.length,
+        totalEmployees: employeesResult.length,  // 🚀 WEEK 3: API returns array directly
         totalDepartments: realDepartments.length,
         activeWarnings
       };
 
       setUsers(organizationUsers);
-      setBusinessOwner(businessOwnerUser);
+      setBusinessOwner(executiveManagementUser);
       setDepartments(realDepartments);
-      setEmployees(employeesResult.documents);
+      setEmployees(employeesResult);  // 🚀 WEEK 3: API returns array directly
       setStats(organizationStats);
 
-      Logger.success(`✅ Loaded organization data: ${organizationUsers.length} users, ${employeesResult.documents.length} employees`);
+      Logger.success(`✅ Loaded organization data: ${organizationUsers.length} users, ${employeesResult.length} employees`);
       
     } catch (error) {
       Logger.error('❌ Failed to load organization data:', error);
@@ -553,14 +561,14 @@ export const OrganizationManagementV2 = memo(() => {
     }
   };
 
+  // 🚀 REFACTORED: Using useModal hook with data
   const handleAddUser = (role: 'hr-manager' | 'hod-manager') => {
-    setSelectedUserRole(role);
-    setShowAddUserModal(true);
+    addUserModal.open(role);
   };
 
   const handleUserCreated = () => {
-    // Show success message
-    const roleName = selectedUserRole === 'hr-manager' ? 'HR Manager' : 'Department Manager';
+    // 🚀 REFACTORED: Using modal data
+    const roleName = addUserModal.data === 'hr-manager' ? 'HR Manager' : 'Department Manager';
     setSuccessMessage(`✅ ${roleName} created successfully! User can now sign in with their email and password 'temp123'.`);
 
     // Auto-hide success message after 5 seconds
@@ -659,8 +667,9 @@ export const OrganizationManagementV2 = memo(() => {
     if (!organization) return [];
 
     try {
-      const employeesResult = await ShardedDataService.loadEmployees(organization.id);
-      return employeesResult.documents.filter((emp: any) =>
+      // 🚀 WEEK 3: Migrated to API layer
+      const employeesResult = await API.employees.getAll(organization.id);
+      return employeesResult.filter((emp: any) =>
         emp.employment?.managerId === managerId && emp.isActive !== false
       );
     } catch (error) {
@@ -791,8 +800,8 @@ export const OrganizationManagementV2 = memo(() => {
           </div>
         </div>
 
-        {/* Business Owner Section */}
-        {businessOwner && (
+        {/* Executive Management Section */}
+        {executiveManagement && (
           <div className="bg-white border border-gray-200 rounded-lg p-2.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -801,10 +810,10 @@ export const OrganizationManagementV2 = memo(() => {
                 </div>
                 <div>
                   <div className="font-semibold text-sm text-gray-900">
-                    {businessOwner.firstName} {businessOwner.lastName}
+                    {executiveManagement.firstName} {executiveManagement.lastName}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {businessOwner.email} • Business Owner
+                    {executiveManagement.email} • Executive Management
                   </div>
                 </div>
               </div>
@@ -812,9 +821,9 @@ export const OrganizationManagementV2 = memo(() => {
               {/* Super Users and Resellers can manage business owners */}
               {(user?.role === 'super-user' || user?.role === 'reseller') && (
                 <div className="flex items-center gap-1">
-                  {businessOwner.isActive ? (
+                  {executiveManagement.isActive ? (
                     <button
-                      onClick={() => handleArchiveUser(businessOwner.id)}
+                      onClick={() => handleArchiveUser(executiveManagement.id)}
                       className="p-1.5 hover:bg-red-100 rounded transition-colors group"
                       title="Archive business owner"
                     >
@@ -822,7 +831,7 @@ export const OrganizationManagementV2 = memo(() => {
                     </button>
                   ) : (
                     <button
-                      onClick={() => handleRestoreUser(businessOwner.id)}
+                      onClick={() => handleRestoreUser(executiveManagement.id)}
                       className="p-1.5 hover:bg-green-100 rounded transition-colors group"
                       title="Restore business owner"
                     >
@@ -830,17 +839,17 @@ export const OrganizationManagementV2 = memo(() => {
                     </button>
                   )}
                   <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    businessOwner.isActive
+                    executiveManagement.isActive
                       ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
                   }`}>
-                    {businessOwner.isActive ? 'Active' : 'Archived'}
+                    {executiveManagement.isActive ? 'Active' : 'Archived'}
                   </div>
                 </div>
               )}
 
               {/* Business owners cannot manage themselves */}
-              {user?.role === 'business-owner' && (
+              {user?.role === 'executive-management' && (
                 <div className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                   Current User
                 </div>
@@ -999,11 +1008,16 @@ export const OrganizationManagementV2 = memo(() => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {departments.map(dept => (
-                <div key={dept.id} className="bg-orange-50 rounded p-2 border border-orange-200">
+                <div
+                  key={dept.id}
+                  onClick={onSwitchToDepartments}
+                  className="bg-orange-50 rounded p-2 border border-orange-200 cursor-pointer hover:bg-orange-100 hover:border-orange-300 transition-all duration-200 active:scale-95"
+                  title="Click to manage departments"
+                >
                   <div className="mb-1">
                     <h4 className="font-semibold text-xs text-gray-900">{dept.name}</h4>
                   </div>
-                  
+
                   {dept.managerName ? (
                     <div className="text-sm text-green-700 font-medium mb-2">
                       👤 {dept.managerName}
@@ -1013,7 +1027,7 @@ export const OrganizationManagementV2 = memo(() => {
                       ⚠️ No manager assigned
                     </div>
                   )}
-                  
+
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Users className="w-4 h-4" />
                     {dept.employeeCount} employees
@@ -1026,12 +1040,13 @@ export const OrganizationManagementV2 = memo(() => {
       </div>
 
       {/* Add User Modal - Portal to body to ensure proper z-index */}
-      {showAddUserModal && createPortal(
+      {/* 🚀 REFACTORED: Using useModal hook */}
+      {addUserModal.isOpen && addUserModal.data && createPortal(
         <AddUserModal
-          isOpen={showAddUserModal}
-          onClose={() => setShowAddUserModal(false)}
+          isOpen={addUserModal.isOpen}
+          onClose={addUserModal.close}
           onSuccess={handleUserCreated}
-          userRole={selectedUserRole}
+          userRole={addUserModal.data}
           employees={employees}
         />,
         document.body

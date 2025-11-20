@@ -364,7 +364,7 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
   // ============================================
 
   const formatTime = (seconds: number): string => {
-    if (!seconds || isNaN(seconds)) return '0:00';
+    if (!seconds || isNaN(seconds) || !isFinite(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -500,7 +500,7 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
               {/* Time Display */}
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>{formatTime(state.currentTime)}</span>
-                <span>{formatTime(state.duration)}</span>
+                <span>{formatTime(state.duration > 0 ? state.duration : (audioRecording.duration || 0))}</span>
               </div>
             </div>
 
@@ -552,21 +552,7 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
       {/* Metadata Section */}
       {showMetadata && !compact && canPlay && !state.error && (
         <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <p className="text-gray-600 flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                Duration
-              </p>
-              <p className="font-medium">{formatTime(audioRecording.duration || 0)}</p>
-            </div>
-            <div>
-              <p className="text-gray-600 flex items-center gap-1">
-                <FileAudio className="w-3 h-3" />
-                Quality
-              </p>
-              <p className="font-medium">{getQualityLabel(audioRecording.bitrate)}</p>
-            </div>
+          <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-gray-600 flex items-center gap-1">
                 <User className="w-3 h-3" />
@@ -580,7 +566,15 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
                 Recorded
               </p>
               <p className="font-medium">
-                {audioRecording.startTime ? new Date(audioRecording.startTime).toLocaleDateString() : 'Unknown'}
+                {audioRecording.timestamp
+                  ? new Date(audioRecording.timestamp).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' })
+                  : audioRecording.recordedAt
+                    ? new Date(audioRecording.recordedAt).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' })
+                    : audioRecording.startTime
+                      ? new Date(audioRecording.startTime).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' })
+                      : audioRecording.createdAt
+                        ? new Date(audioRecording.createdAt).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' })
+                        : 'Not available'}
               </p>
             </div>
           </div>

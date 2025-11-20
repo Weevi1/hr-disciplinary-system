@@ -7,6 +7,7 @@ import Logger from '../../../utils/logger';
 // ✅ REDESIGNED: Matches PDFPreviewModal design system
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { usePreventBodyScroll } from '../../../hooks/usePreventBodyScroll';
 import { Z_INDEX } from '../../../constants/zIndex';
 import {
@@ -201,8 +202,8 @@ export const QRCodeDownloadModal: React.FC<QRCodeDownloadModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.modalNested1 }}>
+  return createPortal(
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 10000 }}>
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
 
         {/* Clean Header - Matches PDFPreviewModal */}
@@ -384,6 +385,7 @@ export const QRCodeDownloadModal: React.FC<QRCodeDownloadModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

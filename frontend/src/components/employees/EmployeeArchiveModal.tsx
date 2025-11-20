@@ -3,6 +3,9 @@ import Logger from '../../utils/logger';
 // ✅ FIXED: Now passes reason to archive function + debug logging
 import React, { useState } from 'react';
 import type { Employee } from '../../types';
+import { usePreventBodyScroll } from '../../hooks/usePreventBodyScroll';
+import { useModalDialog } from '../../hooks/useFocusTrap';
+import { Z_INDEX } from '../../constants/zIndex';
 
 interface EmployeeArchiveModalProps {
   employee: Employee;

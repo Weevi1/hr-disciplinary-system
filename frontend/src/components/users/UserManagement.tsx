@@ -1,9 +1,11 @@
 // frontend/src/components/UserManagement.tsx
-// 🎯 Enhanced Main User Management component - Business Owner dashboard
+// 🎯 Enhanced Main User Management component - Executive Management dashboard
+// 🚀 REFACTORED: Migrated to useModal hook for create form
 import React, { useState } from 'react';
 import { UserPlus, Users, Shield, AlertCircle, CheckCircle, X, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/auth/AuthContext';
 import { useUserManagement } from '@/hooks/useUserManagement';
+import { useModal } from '@/hooks/useModal';
 import { useNavigate } from 'react-router-dom';
 import { CreateUserForm } from './CreateUserForm';
 import { UserList } from './UserList';
@@ -33,7 +35,8 @@ export const UserManagement: React.FC = () => {
     formatLastLogin
   } = useUserManagement();
 
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  // 🚀 REFACTORED: Migrated to useModal hook
+  const createFormModal = useModal();
   const [createLoading, setCreateLoading] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -57,7 +60,7 @@ export const UserManagement: React.FC = () => {
         type: 'success',
         text: `User ${userData.firstName} ${userData.lastName} created successfully!`
       });
-      setShowCreateForm(false);
+      createFormModal.close(); // 🚀 REFACTORED: Using useModal hook
     } catch (error) {
       setMessage({
         type: 'error',
@@ -201,9 +204,10 @@ export const UserManagement: React.FC = () => {
           </div>
 
           {/* Create User Button */}
+          {/* 🚀 REFACTORED: Using useModal hook */}
           {creatableRoles.length > 0 && (
             <button
-              onClick={() => setShowCreateForm(true)}
+              onClick={createFormModal.open}
               className="hr-button-primary"
               style={{
                 display: 'flex',
@@ -295,10 +299,11 @@ export const UserManagement: React.FC = () => {
       </div>
 
       {/* Enhanced Create User Modal */}
-      {showCreateForm && (
+      {/* 🚀 REFACTORED: Using useModal hook */}
+      {createFormModal.isOpen && (
         <CreateUserForm
           onSubmit={handleCreateUser}
-          onCancel={() => setShowCreateForm(false)}
+          onCancel={createFormModal.close}
           creatableRoles={creatableRoles}
           loading={createLoading}
         />

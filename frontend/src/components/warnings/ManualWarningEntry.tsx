@@ -69,7 +69,7 @@ const STEP_TITLES = [
 const WARNING_LEVEL_LABELS: Record<string, string> = {
   counselling: 'Counselling Session',
   verbal: 'Verbal Warning',
-  first_written: 'First Written Warning',
+  first_written: 'Written Warning',
   second_written: 'Second Written Warning',
   final_written: 'Final Written Warning'
 };

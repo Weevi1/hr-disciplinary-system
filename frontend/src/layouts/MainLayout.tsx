@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { useModal } from '../hooks/useModal';
 import { globalDeviceCapabilities } from '../utils/deviceDetection';
 import { useOrganization, OrganizationProvider } from '../contexts/OrganizationContext';
 import {
@@ -18,8 +19,7 @@ import {
 } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
 import { BrandedLogo } from '../components/common/BrandedLogo';
-import { BrandingProvider } from '../contexts/BrandingContext';
-import { ThemeProvider } from '../contexts/ThemeContext';
+import { ThemeBrandingProvider } from '../contexts/ThemeBrandingContext';  // 🚀 WEEK 4 OPTIMIZATION: Combined provider
 import { UnifiedModal } from '../components/common/UnifiedModal';
 import { FirstTimeWelcomeModal } from '../components/auth/FirstTimeWelcomeModal';
 import { sendPasswordResetEmail } from 'firebase/auth';
@@ -81,11 +81,14 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
 
   // State Management
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [resetPasswordModalOpen, setResetPasswordModalOpen] = useState(false);
+
+  // 🚀 REFACTORED: Migrated to useModal hook
+  const resetPasswordModal = useModal();
+  const welcomeModal = useModal();
+
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
   const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
-  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [hasSeenWelcomeThisSession, setHasSeenWelcomeThisSession] = useState(false);
   const [deferralTimer, setDeferralTimer] = useState<NodeJS.Timeout | null>(null);
 
@@ -117,7 +120,7 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
     // Show welcome modal AFTER 2 seconds (let dashboard load first)
     if (user && user.hasSeenWelcome !== true && !hasSeenWelcomeThisSession) {
       const timer = setTimeout(() => {
-        setShowWelcomeModal(true);
+        welcomeModal.open(); // 🚀 REFACTORED: Using useModal hook
       }, 2000); // Wait 2s for dashboard to be visible
 
       setDeferralTimer(timer);
@@ -149,9 +152,9 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
     }
   };
 
-  // Close modal and reset states
+  // 🚀 REFACTORED: Using useModal hook
   const closeResetPasswordModal = () => {
-    setResetPasswordModalOpen(false);
+    resetPasswordModal.close();
     setResetPasswordSuccess(false);
     setResetPasswordError(null);
   };
@@ -191,12 +194,12 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
 
       // Set session flag to prevent showing again in this session
       setHasSeenWelcomeThisSession(true);
-      setShowWelcomeModal(false);
+      welcomeModal.close(); // 🚀 REFACTORED: Using useModal hook
     } catch (error) {
       Logger.error('Failed to update welcome status:', error);
       // Still close the modal and set session flag
       setHasSeenWelcomeThisSession(true);
-      setShowWelcomeModal(false);
+      welcomeModal.close(); // 🚀 REFACTORED: Using useModal hook
     }
   };
 
@@ -417,7 +420,7 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
 
                     <button
                       onClick={() => {
-                        setResetPasswordModalOpen(true);
+                        resetPasswordModal.open(); // 🚀 REFACTORED: Using useModal hook
                         setUserMenuOpen(false);
                       }}
                       className="w-full flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:px-4 sm:py-2 text-sm transition-colors relative group"
@@ -494,8 +497,9 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
       <TopNavigation />
 
       {/* Password Reset Modal */}
+      {/* 🚀 REFACTORED: Using useModal hook */}
       <UnifiedModal
-        isOpen={resetPasswordModalOpen}
+        isOpen={resetPasswordModal.isOpen}
         onClose={closeResetPasswordModal}
         title="Reset Password"
         size="sm"
@@ -572,12 +576,13 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
       </UnifiedModal>
 
       {/* First-Time Welcome Modal - Now includes password reminder */}
+      {/* 🚀 REFACTORED: Using useModal hook */}
       {user && (
         <FirstTimeWelcomeModal
-          isOpen={showWelcomeModal}
+          isOpen={welcomeModal.isOpen}
           onClose={() => {
             setHasSeenWelcomeThisSession(true);
-            setShowWelcomeModal(false);
+            welcomeModal.close();
           }}
           userName={user.firstName}
           userRole={user.role.id}
@@ -603,28 +608,35 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
 
 export const MainLayout = ({ children, onNavigate, currentView }: MainLayoutProps) => {
   const { user } = useAuth();
-  
+
   // Super users and resellers don't have organizations, so we need to handle this case
   if (user?.role?.id === 'super-user' || user?.role?.id === 'reseller' || !user?.organizationId) {
+    // 🚀 WEEK 4 OPTIMIZATION: Using combined ThemeBrandingProvider (no organization needed)
     return (
-      <ThemeProvider>
+      <ThemeBrandingProvider>
         <MainLayoutContent onNavigate={onNavigate} currentView={currentView}>
           {children}
         </MainLayoutContent>
-      </ThemeProvider>
+      </ThemeBrandingProvider>
     );
   }
 
-  // For regular users with organizations, use OrganizationProvider + ThemeProvider + BrandingProvider
+  // For regular users with organizations, use OrganizationProvider + ThemeBrandingProvider
+  // 🚀 WEEK 4 OPTIMIZATION PHASE 1: Pass prefetched organization AND categories from AuthContext
+  // 🚀 WEEK 4 OPTIMIZATION PHASE 2: Combined Theme + Branding into single provider (reduces nesting 4→3)
+  const { organization: authOrganization, categories: authCategories } = useAuth();
+
   return (
-    <OrganizationProvider organizationId={user.organizationId}>
-      <ThemeProvider>
-        <BrandingProvider>
-          <MainLayoutContent onNavigate={onNavigate} currentView={currentView}>
-            {children}
-          </MainLayoutContent>
-        </BrandingProvider>
-      </ThemeProvider>
+    <OrganizationProvider
+      organizationId={user.organizationId}
+      prefetchedOrg={authOrganization}
+      prefetchedCategories={authCategories}
+    >
+      <ThemeBrandingProvider>
+        <MainLayoutContent onNavigate={onNavigate} currentView={currentView}>
+          {children}
+        </MainLayoutContent>
+      </ThemeBrandingProvider>
     </OrganizationProvider>
   );
 };

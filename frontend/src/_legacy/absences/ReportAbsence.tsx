@@ -13,6 +13,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { FirebaseService } from '../../services/FirebaseService';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
+import { TimeService } from '../../services/TimeService';
 import { API } from '../../api';
 import type { Employee } from '../../types/core';
 
@@ -303,26 +304,37 @@ export const ReportAbsence: React.FC = () => {
 
   // 🚀 SUBMIT ABSENCE REPORT - FIXED: Properly handle optional fields
   const submitAbsenceReport = async () => {
-    if (!user || !selectedEmployee || !user.organizationId || !selectedAbsenceType) return;
+    Logger.debug('🚀 SUBMIT ABSENCE REPORT - Starting validation...');
+    Logger.debug('User:', user?.id, 'Employee:', selectedEmployee?.id, 'Org:', organization?.id, 'Type:', selectedAbsenceType?.id);
+
+    if (!user || !selectedEmployee || !organization?.id || !selectedAbsenceType) {
+      Logger.error('❌ VALIDATION FAILED:', {
+        hasUser: !!user,
+        hasEmployee: !!selectedEmployee,
+        hasOrg: !!organization?.id,
+        hasType: !!selectedAbsenceType
+      });
+      return;
+    }
 
     try {
       setLoading(true);
       setError(null);
 
+      Logger.debug('✅ Validation passed, building absence report data...');
+
       // ✅ FIXED: Build the data object conditionally to avoid undefined values
-      const absenceReport: Partial<AbsenceReport> = {
-        organizationId: user.organizationId,
+      const absenceReport: any = {
+        organizationId: organization.id,
         managerId: user.id,
         managerName: `${user.firstName} ${user.lastName}`,
         employeeId: selectedEmployee.id,
         employeeName: `${selectedEmployee.profile.firstName} ${selectedEmployee.profile.lastName}`,
         absenceDate: absenceDate,
         absenceType: absenceType as AbsenceReport['absenceType'],
-        reportedDate: new Date().toISOString(),
+        reportedDate: TimeService.getServerTimestamp(),
         payrollImpact: selectedAbsenceType.payrollImpact,
-        hrReviewed: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        hrReviewed: false
       };
 
       // ✅ FIXED: Only add optional fields if they have values
@@ -334,12 +346,18 @@ export const ReportAbsence: React.FC = () => {
         absenceReport.reason = reason.trim();
       }
 
+      Logger.debug('📝 Absence report data prepared:', absenceReport);
+      Logger.debug('🔧 Calling DatabaseShardingService.createDocument...');
+
       // 🔧 FIXED: Use sharded structure for absence reports
+      // Note: createdAt and updatedAt will be automatically added by DatabaseShardingService
       await DatabaseShardingService.createDocument(
-        organization.id, 
-        'reports', 
-        absenceReport as AbsenceReport
+        organization.id,
+        'reports',
+        absenceReport
       );
+
+      Logger.success('✅ Absence report created successfully!');
       
       // 💾 V2: Clear auto-save on successful submission
       clearAutoSave();
@@ -376,7 +394,7 @@ export const ReportAbsence: React.FC = () => {
   }
 
   // ❌ ERROR STATE - No organization
-  if (!user?.organizationId) {
+  if (!organization?.id) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 flex items-center justify-center">
         <div className="text-center max-w-md">
@@ -408,7 +426,7 @@ export const ReportAbsence: React.FC = () => {
             }
           </p>
           <div className="space-y-3">
-            {(user.role?.id === 'hr-manager' || user.role?.id === 'business-owner') && (
+            {(user.role?.id === 'hr-manager' || user.role?.id === 'executive-management') && (
               <button
                 onClick={() => navigate('/employees')}
                 className="w-full bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors"

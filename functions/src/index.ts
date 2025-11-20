@@ -53,6 +53,13 @@ import { getApiVersionInfo } from './api/versionInfo';
 // ⏰ ADD TIME SERVICE (fraud-proof server time)
 import { getServerTime, getActiveWarningsServerSide } from './timeService';
 
+// 🔄 ADD REVIEW FOLLOW-UP CRON FUNCTIONS
+import {
+  checkDueReviewsDaily,
+  testReviewFollowUp,
+  manualReviewCheckAll
+} from './reviewFollowUpCron';
+
 // Export all cloud functions
 export {
   // User/Auth functions
@@ -93,5 +100,10 @@ export {
 
   // Time service (fraud-proof timestamps)
   getServerTime,
-  getActiveWarningsServerSide
+  getActiveWarningsServerSide,
+
+  // Review follow-up cron functions
+  checkDueReviewsDaily,
+  testReviewFollowUp,
+  manualReviewCheckAll
 };

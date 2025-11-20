@@ -1,11 +1,13 @@
 // frontend/src/components/admin/SuperAdminDashboard.tsx
 // 👑 SUPER ADMIN DASHBOARD - UNIFIED WITH HR/BUSINESS OWNER DASHBOARD DESIGN
-// ✅ Matches HR/Business Owner Dashboard structure: Greeting → Metrics → Tabs → Quote
+// ✅ Matches HR/Executive Management Dashboard structure: Greeting → Metrics → Tabs → Quote
 // ✅ Mobile: 2x2 grid + tab cards
 // ✅ Desktop: 4 blocks + tab navigation
 // ✅ Clean, professional, consistent
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+// 🚀 CENTRALIZED HOOK: Replaced local duplicate with shared implementation
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 import {
   Building2,
   Users,
@@ -88,20 +90,6 @@ const calculateStorageUsage = async (orgId: string): Promise<number> => {
     Logger.error(`Error calculating storage for ${orgId}:`, error);
     return 0;
   }
-};
-
-// --- Breakpoint Hook ---
-const useBreakpoint = (breakpoint: number) => {
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth > breakpoint);
-  const handleResize = useCallback(() => setIsDesktop(window.innerWidth > breakpoint), [breakpoint]);
-
-  useEffect(() => {
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
-  }, [handleResize]);
-
-  return isDesktop;
 };
 
 export const SuperAdminDashboard = () => {

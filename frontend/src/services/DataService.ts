@@ -1944,11 +1944,11 @@ export class DataService {
    */
   static async loadOrganizations(): Promise<Organization[]> {
     try {
-      Logger.debug(62944)
-      
+      Logger.debug('Loading organizations for SuperAdmin dashboard...')
+
       const orgsRef = collection(db, COLLECTIONS.ORGANIZATIONS);
       const q = query(orgsRef, orderBy('createdAt', 'desc'));
-      
+
       const snapshot = await getDocs(q);
       const organizations = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -1956,8 +1956,8 @@ export class DataService {
         createdAt: this.convertOptionalDate(doc.data().createdAt),
         updatedAt: this.convertOptionalDate(doc.data().updatedAt)
       })) as Organization[];
-      
-      Logger.success(63433)
+
+      Logger.success(`✅ Loaded ${organizations.length} organizations successfully`)
       return organizations;
       
     } catch (error) {

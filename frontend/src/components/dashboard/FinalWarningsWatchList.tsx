@@ -1,7 +1,7 @@
 // frontend/src/components/dashboard/FinalWarningsWatchList.tsx
 // 🚨 REUSABLE FINAL WARNINGS WATCH LIST COMPONENT
 // ✅ Shows employees with final written warnings requiring close monitoring
-// ✅ Supports filtering by employee list (for HOD) or all employees (for HR/Business Owner)
+// ✅ Supports filtering by employee list (for HOD) or all employees (for HR/Executive Management)
 // ✅ Mobile-optimized collapsible design
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -14,7 +14,7 @@ import { ThemedCard, ThemedBadge, ThemedAlert } from '../common/ThemedCard';
 import Logger from '../../utils/logger';
 
 interface FinalWarningsWatchListProps {
-  employees?: any[]; // Optional: If provided, filters to only these employees (for HOD). If not provided, shows all (for HR/Business Owner)
+  employees?: any[]; // Optional: If provided, filters to only these employees (for HOD). If not provided, shows all (for HR/Executive Management)
   className?: string;
 }
 

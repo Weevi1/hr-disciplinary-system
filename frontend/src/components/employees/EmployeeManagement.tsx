@@ -7,6 +7,7 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useAuth } from '../../auth/AuthContext';
+import { useModal } from '../../hooks/useModal';
 import { globalDeviceCapabilities, getPerformanceLimits } from '../../utils/deviceDetection';
 import { useEmployees } from '../../hooks/employees/useEmployees';
 import { useEmployeeFilters } from '../../hooks/employees/useEmployeeFilters';
@@ -27,7 +28,7 @@ import { calculateEmployeePermissions } from '../../types';
 import type { Employee } from '../../types';
 import {
   Users, Plus, Upload, Grid, List, ChevronDown,
-  Workflow, FileSpreadsheet, Eye, Layout, Archive, UserCheck, Filter, X
+  Workflow, FileSpreadsheet, Eye, Layout, Archive, UserCheck, Filter, X, Search
 } from 'lucide-react';
 import { UnifiedModal } from '../common/UnifiedModal';
 import { getManagerIds } from '../../types/employee';
@@ -40,9 +41,11 @@ interface EmployeeManagementProps {
   onDataChange?: () => void; // Callback to notify parent when employee data changes
   hideFloatingButton?: boolean; // Hide the floating action button (when parent provides its own)
   onAddEmployeeClick?: () => void; // Expose the add employee action to parent
+  inline?: boolean; // Render without header when embedded in tabs (for dashboard inline rendering)
+  readOnly?: boolean; // Read-only mode - hides all action buttons (for executive management view)
 }
 
-export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataChange, hideFloatingButton = false, onAddEmployeeClick }) => {
+export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataChange, hideFloatingButton = false, onAddEmployeeClick, inline = false, readOnly = false }) => {
   const { user, organization } = useAuth();
 
   // Check if user is an HOD manager - if so, only load their team members
@@ -92,34 +95,35 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
   const [viewMode, setViewMode] = useState<'organogram' | 'table' | 'cards' | 'archive'>(
     isMobile ? 'cards' : 'table' // Mobile defaults to cards, desktop to table
   );
-  const [showAddModal, setShowAddModal] = useState(false);
+
+  // 🚀 REFACTORED: Migrated to useModal hook
+  const addModal = useModal();
+  const importModal = useModal();
+  const bulkAssignModal = useModal<Employee[]>();
+  const bulkAssignDeptModal = useModal<Employee[]>();
 
   // Expose add employee action to parent if callback provided
   useEffect(() => {
     if (onAddEmployeeClick) {
       // Store the callback in a way that parent can trigger it
-      (window as any).__openAddEmployeeModal = () => setShowAddModal(true);
+      (window as any).__openAddEmployeeModal = () => addModal.open();
     }
     return () => {
       delete (window as any).__openAddEmployeeModal;
     };
-  }, [onAddEmployeeClick]);
-  const [showImportModal, setShowImportModal] = useState(false);
+  }, [onAddEmployeeClick, addModal]);
+
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [archivingEmployee, setArchivingEmployee] = useState<Employee | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   // promotingEmployee state removed - promotion now handled in dedicated Managers tab
-  const [bulkAssignEmployees, setBulkAssignEmployees] = useState<Employee[]>([]);
-  const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
-  const [bulkAssignDeptEmployees, setBulkAssignDeptEmployees] = useState<Employee[]>([]);
-  const [showBulkAssignDeptModal, setShowBulkAssignDeptModal] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const permissions = calculateEmployeePermissions(user?.role.id, user?.departmentIds);
 
   const handleEmployeeSaved = async () => {
     await loadEmployees();
-    setShowAddModal(false);
+    addModal.close(); // 🚀 REFACTORED: Using useModal hook
     setEditingEmployee(null);
 
     // Notify parent dashboard to refresh metrics
@@ -157,14 +161,12 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
   const handleBulkAction = useCallback((action: string, employees: Employee[]) => {
     switch (action) {
       case 'assign-manager':
-        // Open bulk assign manager modal
-        setBulkAssignEmployees(employees);
-        setShowBulkAssignModal(true);
+        // 🚀 REFACTORED: Using useModal hook with data
+        bulkAssignModal.open(employees);
         break;
       case 'assign-department':
-        // Open bulk assign department modal
-        setBulkAssignDeptEmployees(employees);
-        setShowBulkAssignDeptModal(true);
+        // 🚀 REFACTORED: Using useModal hook with data
+        bulkAssignDeptModal.open(employees);
         break;
       case 'export':
         // Export selected employees
@@ -177,13 +179,13 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
       default:
         Logger.debug('Bulk action:', action, employees);
     }
-  }, []);
+  }, [bulkAssignModal, bulkAssignDeptModal]);
 
   const handleBulkAssignManager = useCallback(async (managerId: string, mode: 'add' | 'replace') => {
-    if (!organizationId) return;
+    if (!organizationId || !bulkAssignModal.data) return;
 
     // 🔧 UPDATED: Multi-manager support with ADD/REPLACE modes
-    const updatePromises = bulkAssignEmployees.map(employee => {
+    const updatePromises = bulkAssignModal.data.map(employee => {
       // Get current manager IDs (handles backward compatibility)
       const currentManagerIds = employee.employment?.managerIds ||
                                (employee.employment?.managerId ? [employee.employment.managerId] : []);
@@ -204,15 +206,14 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
 
     await Promise.all(updatePromises);
     await loadEmployees();
-    setShowBulkAssignModal(false);
-    setBulkAssignEmployees([]);
-  }, [bulkAssignEmployees, organizationId, updateEmployee, loadEmployees]);
+    bulkAssignModal.close(); // 🚀 REFACTORED: Using useModal hook
+  }, [bulkAssignModal.data, organizationId, updateEmployee, loadEmployees, bulkAssignModal]);
 
   const handleBulkAssignDepartment = useCallback(async (departmentName: string) => {
-    if (!organizationId) return;
+    if (!organizationId || !bulkAssignDeptModal.data) return;
 
     // Update all selected employees with the new department
-    const updatePromises = bulkAssignDeptEmployees.map(employee =>
+    const updatePromises = bulkAssignDeptModal.data.map(employee =>
       updateEmployee({
         ...employee,
         profile: {
@@ -224,9 +225,8 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
 
     await Promise.all(updatePromises);
     await loadEmployees();
-    setShowBulkAssignDeptModal(false);
-    setBulkAssignDeptEmployees([]);
-  }, [bulkAssignDeptEmployees, organizationId, updateEmployee, loadEmployees]);
+    bulkAssignDeptModal.close(); // 🚀 REFACTORED: Using useModal hook
+  }, [bulkAssignDeptModal.data, organizationId, updateEmployee, loadEmployees, bulkAssignDeptModal]);
 
   if (loading) {
     // Use simplified loading for legacy devices
@@ -246,92 +246,96 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
   }
 
   return (
-    <div className="w-full space-y-2 md:space-y-4 relative">
+    <div className={`w-full ${inline ? 'space-y-3' : 'space-y-2 md:space-y-4'} relative`}>
 
-      {/* Mobile: Compact Count Badge */}
-      <div className="md:hidden flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
-            <Users className="w-4 h-4" />
-            {filteredEmployees.length}
-          </span>
-          {filters.search && (
+      {/* Mobile: Compact Count Badge - Hidden when inline */}
+      {!inline && (
+        <div className="md:hidden flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium">
+              <Users className="w-4 h-4" />
+              {filteredEmployees.length}
+            </span>
+            {filters.search && (
+              <button
+                onClick={() => setFilters({ ...filters, search: '' })}
+                className="text-xs text-gray-500 hover:text-gray-700"
+              >
+                Clear search
+              </button>
+            )}
+          </div>
+          {permissions.canBulkImport && (
             <button
-              onClick={() => setFilters({ ...filters, search: '' })}
-              className="text-xs text-gray-500 hover:text-gray-700"
+              onClick={() => importModal.open()}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium text-sm"
             >
-              Clear search
+              <Upload className="w-4 h-4" />
+              Import
             </button>
           )}
         </div>
-        {permissions.canBulkImport && (
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium text-sm"
-          >
-            <Upload className="w-4 h-4" />
-            Import
-          </button>
-        )}
-      </div>
+      )}
 
-      {/* Desktop Header Only */}
-      <div className="hidden md:block md:bg-white/95 md:backdrop-blur-sm md:rounded-xl md:shadow-lg md:border md:border-white/50 overflow-hidden">
+      {/* Desktop Header Only - Hidden when inline */}
+      {!inline && (
+        <div className="hidden md:block md:bg-white/95 md:backdrop-blur-sm md:rounded-xl md:shadow-lg md:border md:border-white/50 overflow-hidden">
 
-        {/* Desktop: Full Header with Gradient */}
-        <div className="hidden md:block bg-gradient-to-r from-indigo-600 via-purple-700 to-indigo-800 p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                <Users className="w-5 h-5 text-white" />
+          {/* Desktop: Full Header with Gradient */}
+          <div className="hidden md:block bg-gradient-to-r from-indigo-600 via-purple-700 to-indigo-800 p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                  <Users className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white tracking-tight">
+                    Employee Management
+                  </h3>
+                  <p className="text-indigo-100 text-xs font-medium">
+                    {globalDeviceCapabilities?.isLegacyDevice
+                      ? `${paginatedEmployees.length} of ${filteredEmployees.length} employees`
+                      : `${filteredEmployees.length} employees`}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-white tracking-tight">
-                  Employee Management
-                </h3>
-                <p className="text-indigo-100 text-xs font-medium">
-                  {globalDeviceCapabilities?.isLegacyDevice
-                    ? `${paginatedEmployees.length} of ${filteredEmployees.length} employees`
-                    : `${filteredEmployees.length} employees`}
-                </p>
+
+              {/* Desktop Action Buttons */}
+              <div className="flex gap-2">
+                {permissions.canCreate && (
+                  <button
+                    onClick={() => addModal.open()}
+                    className="flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-lg font-medium border border-white/30 hover:border-white/50 transition-all text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add</span>
+                  </button>
+                )}
+
+                {permissions.canBulkImport && (
+                  <button
+                    onClick={() => importModal.open()}
+                    className="flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow-md transition-all text-sm"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span>Import</span>
+                  </button>
+                )}
+
+                {permissions.canViewArchived && (
+                  <button
+                    onClick={() => setViewMode('archive')}
+                    className="flex items-center gap-2 px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium shadow-md transition-all text-sm"
+                  >
+                    <Archive className="w-4 h-4" />
+                    <span className="hidden sm:inline">Archive</span>
+                  </button>
+                )}
               </div>
-            </div>
-
-            {/* Desktop Action Buttons */}
-            <div className="flex gap-2">
-              {permissions.canCreate && (
-                <button
-                  onClick={() => setShowAddModal(true)}
-                  className="flex items-center gap-2 px-3 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white rounded-lg font-medium border border-white/30 hover:border-white/50 transition-all text-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Add</span>
-                </button>
-              )}
-
-              {permissions.canBulkImport && (
-                <button
-                  onClick={() => setShowImportModal(true)}
-                  className="flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow-md transition-all text-sm"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span>Import</span>
-                </button>
-              )}
-
-              {permissions.canViewArchived && (
-                <button
-                  onClick={() => setViewMode('archive')}
-                  className="flex items-center gap-2 px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium shadow-md transition-all text-sm"
-                >
-                  <Archive className="w-4 h-4" />
-                  <span className="hidden sm:inline">Archive</span>
-                </button>
-              )}
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Compact Error State */}
       {error && (
@@ -343,62 +347,185 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
         </div>
       )}
 
-      {/* Stats - Desktop Only */}
-      <div className="hidden md:block">
-        <EmployeeStats employees={filteredEmployees} />
-      </div>
-
-      {/* View Controls - Desktop Only */}
-      <div className="hidden md:flex md:items-center md:justify-between">
-        <div className="text-sm text-slate-600">
-          {user?.role?.id === 'hr-manager'
-            ? 'Full organizational view'
-            : user?.role?.id === 'hod-manager'
-            ? 'Your team structure'
-            : 'Team directory'}
+      {/* Stats - Desktop Only - Hidden when inline */}
+      {!inline && (
+        <div className="hidden md:block">
+          <EmployeeStats employees={filteredEmployees} />
         </div>
-        <div className="flex bg-slate-100 rounded-lg p-1">
-        {/* Hide Hierarchy tab for HOD managers */}
-        {user?.role?.id !== 'hod-manager' && (
+      )}
+
+      {/* Inline Mode: Compact Header Card (matches Organization tab style) */}
+      {inline && (
+        <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-3">
+                <select
+                  value={viewMode}
+                  onChange={(e) => setViewMode(e.target.value as any)}
+                  className="pl-3 pr-8 py-1.5 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                >
+                  {user?.role?.id !== 'hod-manager' && (
+                    <option value="organogram">Hierarchy</option>
+                  )}
+                  <option value="table">Table</option>
+                  <option value="cards">Cards</option>
+                </select>
+                <span className="text-xs text-gray-600">{filteredEmployees.length} employees</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {permissions.canCreate && (
+                  <button
+                    onClick={() => addModal.open()}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 rounded-md transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Employee
+                  </button>
+                )}
+                {permissions.canBulkImport && (
+                  <button
+                    onClick={() => importModal.open()}
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-md transition-colors"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    Import
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Search & Filter Row */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 relative">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search employees..."
+                  value={filters.search}
+                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                  className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+
+              <button
+                onClick={() => setShowMobileFilters(!showMobileFilters)}
+                className={`flex items-center gap-1 px-2.5 py-1.5 border rounded text-xs font-medium transition-all ${
+                  showMobileFilters
+                    ? 'bg-blue-50 border-blue-300 text-blue-700'
+                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Filter className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Filters</span>
+              </button>
+            </div>
+
+            {/* Collapsible Filters */}
+            {showMobileFilters && (
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <select
+                    value={filters.department}
+                    onChange={(e) => setFilters({ ...filters, department: e.target.value })}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="">All Departments</option>
+                    {[...new Set(employees.map(e => e.profile?.department).filter(Boolean))].map(dept => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={filters.contractType}
+                    onChange={(e) => setFilters({ ...filters, contractType: e.target.value })}
+                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="">All Contract Types</option>
+                    <option value="permanent">Permanent</option>
+                    <option value="contract">Contract</option>
+                    <option value="temporary">Temporary</option>
+                  </select>
+
+                  <div className="flex gap-1.5">
+                    <label className="flex-1 flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 rounded border border-gray-200 text-xs cursor-pointer hover:bg-gray-100">
+                      <input
+                        type="checkbox"
+                        checked={filters.hasWarnings}
+                        onChange={(e) => setFilters({ ...filters, hasWarnings: e.target.checked })}
+                        className="w-3.5 h-3.5"
+                      />
+                      <span className="text-gray-700">Warnings</span>
+                    </label>
+                    <label className="flex-1 flex items-center gap-1.5 px-2 py-1.5 bg-gray-50 rounded border border-gray-200 text-xs cursor-pointer hover:bg-gray-100">
+                      <input
+                        type="checkbox"
+                        checked={filters.isActive}
+                        onChange={(e) => setFilters({ ...filters, isActive: e.target.checked })}
+                        className="w-3.5 h-3.5"
+                      />
+                      <span className="text-gray-700">Active</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+        </div>
+      )}
+
+      {/* View Controls - Desktop Only - Hidden when inline */}
+      {!inline && (
+        <div className="hidden md:flex md:items-center md:justify-between">
+          <div className="text-sm text-slate-600">
+            {user?.role?.id === 'hr-manager'
+              ? 'Full organizational view'
+              : user?.role?.id === 'hod-manager'
+              ? 'Your team structure'
+              : 'Team directory'}
+          </div>
+          <div className="flex bg-slate-100 rounded-lg p-1">
+          {/* Hide Hierarchy tab for HOD managers */}
+          {user?.role?.id !== 'hod-manager' && (
+            <button
+              onClick={() => setViewMode('organogram')}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-all text-xs ${
+                viewMode === 'organogram'
+                  ? 'bg-white shadow-md text-indigo-600'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Workflow className="w-3 h-3" />
+              <span>Hierarchy</span>
+            </button>
+          )}
           <button
-            onClick={() => setViewMode('organogram')}
+            onClick={() => setViewMode('table')}
             className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-all text-xs ${
-              viewMode === 'organogram'
+              viewMode === 'table'
                 ? 'bg-white shadow-md text-indigo-600'
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Workflow className="w-3 h-3" />
-            <span>Hierarchy</span>
+            <FileSpreadsheet className="w-3 h-3" />
+            <span>Table</span>
           </button>
-        )}
-        <button
-          onClick={() => setViewMode('table')}
-          className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-all text-xs ${
-            viewMode === 'table'
-              ? 'bg-white shadow-md text-indigo-600'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <FileSpreadsheet className="w-3 h-3" />
-          <span>Table</span>
-        </button>
-        <button
-          onClick={() => setViewMode('cards')}
-          className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-all text-xs ${
-            viewMode === 'cards'
-              ? 'bg-white shadow-md text-indigo-600'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Layout className="w-3 h-3" />
-          <span>Cards</span>
-        </button>
-      </div>
-      </div>
+          <button
+            onClick={() => setViewMode('cards')}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md font-medium transition-all text-xs ${
+              viewMode === 'cards'
+                ? 'bg-white shadow-md text-indigo-600'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Layout className="w-3 h-3" />
+            <span>Cards</span>
+          </button>
+        </div>
+        </div>
+      )}
             
-      {/* Desktop: Show filters in cards view */}
-      {viewMode === 'cards' && (
+      {/* Desktop: Show filters in cards view - Hidden when inline */}
+      {!inline && viewMode === 'cards' && (
         <div className="hidden md:block bg-white/95 backdrop-blur-sm rounded-lg shadow-md border border-white/50 p-3">
           <EmployeeFilters
             filters={filters}
@@ -410,8 +537,9 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
         </div>
       )}
 
-      {/* Mobile: Search bar with filter button */}
-      <div className="md:hidden -mt-1 space-y-2">
+      {/* Mobile: Search bar with filter button - Hidden when inline */}
+      {!inline && (
+        <div className="md:hidden -mt-1 space-y-2">
         <div className="flex gap-2">
           <input
             type="text"
@@ -480,7 +608,8 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
             </div>
           </div>
         )}
-      </div>
+        </div>
+      )}
 
       {/* Main Content Views */}
       {viewMode === 'organogram' && (
@@ -488,6 +617,7 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
           employees={filteredEmployees}
           onEmployeeClick={handleEmployeeSelect}
           selectedEmployee={selectedEmployee}
+          inline={inline}
         />
       )}
 
@@ -495,11 +625,13 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
         <EmployeeTableBrowser
           employees={paginatedEmployees}
           onEmployeeSelect={handleEmployeeSelect}
-          onEmployeeEdit={handleEmployeeEdit}
-          onEmployeeDelete={handleEmployeeDelete}
-          onBulkAction={handleBulkAction}
+          onEmployeeEdit={readOnly ? undefined : handleEmployeeEdit}
+          onEmployeeDelete={readOnly ? undefined : handleEmployeeDelete}
+          onBulkAction={readOnly ? undefined : handleBulkAction}
           selectedEmployee={selectedEmployee}
           loading={loading}
+          compact={inline}
+          readOnly={readOnly}
         />
       )}
 
@@ -605,22 +737,22 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
         </div>
       )}
 
-      {/* Compact Empty State */}
-      {!loading && filteredEmployees.length === 0 && (
+      {/* Compact Empty State - Hidden when inline (table handles empty state) */}
+      {!inline && !loading && filteredEmployees.length === 0 && (
         <div className="bg-white/95 backdrop-blur-sm rounded-lg p-6 text-center shadow-lg border border-white/50">
           <div className="text-3xl mb-3">👥</div>
           <h3 className="text-lg font-bold text-slate-800 mb-2">
             {employees.length === 0 ? 'No employees yet' : 'No matching employees'}
           </h3>
           <p className="text-slate-600 mb-4 text-sm">
-            {employees.length === 0 
+            {employees.length === 0
               ? "Add your first employee or import from CSV"
               : "Try adjusting your search criteria"
             }
           </p>
           {permissions.canCreate && employees.length === 0 && (
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={() => addModal.open()}
               className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white rounded-lg font-medium shadow-md transition-all text-sm"
             >
               <Plus className="w-4 h-4" />
@@ -631,11 +763,12 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
       )}
 
         {/* Modals - Mobile-Optimized */}
-        {(showAddModal || editingEmployee) && (
+        {/* 🚀 REFACTORED: Using useModal hook */}
+        {(addModal.isOpen || editingEmployee) && (
           <EmployeeFormModal
             employee={editingEmployee}
             onClose={() => {
-              setShowAddModal(false);
+              addModal.close();
               setEditingEmployee(null);
             }}
             onSave={handleEmployeeSaved}
@@ -643,9 +776,9 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
           />
         )}
 
-        {showImportModal && (
+        {importModal.isOpen && (
           <EmployeeImportModal
-            onClose={() => setShowImportModal(false)}
+            onClose={importModal.close}
             onImportComplete={handleImportComplete}
           />
         )}
@@ -660,26 +793,21 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
 
         {/* EmployeePromotionModal removed - promotion now handled in dedicated Managers tab */}
 
-        {showBulkAssignModal && (
+        {/* 🚀 REFACTORED: Using useModal hook with data */}
+        {bulkAssignModal.isOpen && bulkAssignModal.data && (
           <BulkAssignManagerModal
-            isOpen={showBulkAssignModal}
-            onClose={() => {
-              setShowBulkAssignModal(false);
-              setBulkAssignEmployees([]);
-            }}
-            employees={bulkAssignEmployees}
+            isOpen={bulkAssignModal.isOpen}
+            onClose={bulkAssignModal.close}
+            employees={bulkAssignModal.data}
             onAssign={handleBulkAssignManager}
           />
         )}
 
-        {showBulkAssignDeptModal && (
+        {bulkAssignDeptModal.isOpen && bulkAssignDeptModal.data && (
           <BulkAssignDepartmentModal
-            isOpen={showBulkAssignDeptModal}
-            onClose={() => {
-              setShowBulkAssignDeptModal(false);
-              setBulkAssignDeptEmployees([]);
-            }}
-            employees={bulkAssignDeptEmployees}
+            isOpen={bulkAssignDeptModal.isOpen}
+            onClose={bulkAssignDeptModal.close}
+            employees={bulkAssignDeptModal.data}
             onAssign={handleBulkAssignDepartment}
           />
         )}
@@ -699,8 +827,8 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
                   <div className="space-y-2 text-sm">
                     <p><span className="font-medium">Name:</span> {selectedEmployee.profile.firstName} {selectedEmployee.profile.lastName}</p>
                     <p><span className="font-medium">ID:</span> {selectedEmployee.profile.employeeNumber}</p>
-                    {/* Only show contact details to HR and Business Owner roles */}
-                    {(user?.role === 'hr' || user?.role === 'business_owner') && (
+                    {/* Only show contact details to HR and Executive Management roles */}
+                    {(user?.role?.id === 'hr-manager' || user?.role?.id === 'executive-management') && (
                       <>
                         <p><span className="font-medium">Email:</span> {selectedEmployee.profile.email}</p>
                         <p><span className="font-medium">Phone:</span> {selectedEmployee.profile.phoneNumber || 'Not provided'}</p>
@@ -757,8 +885,9 @@ export const EmployeeManagement: React.FC<EmployeeManagementProps> = ({ onDataCh
         {/* Floating Action Button - Mobile Only */}
         {!hideFloatingButton && permissions.canCreate && (
           <div className="md:hidden fixed bottom-6 right-6 w-14 h-14 z-50">
+            {/* 🚀 REFACTORED: Using useModal hook */}
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={addModal.open}
               className="w-full h-full bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95 flex items-center justify-center"
               aria-label="Add Employee"
             >

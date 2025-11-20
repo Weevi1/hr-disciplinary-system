@@ -156,7 +156,7 @@ test.describe('🏥 HR System Comprehensive Health Check', () => {
 
       // Check for role-specific elements
       const roleElements = {
-        businessOwner: await page.locator('[class*="business-owner"], [class*="owner"]').count(),
+        executiveManagement: await page.locator('[class*="business-owner"], [class*="owner"]').count(),
         hrManager: await page.locator('[class*="hr-manager"], [class*="hr"]').count(),
         hod: await page.locator('[class*="hod"], [class*="department"]').count(),
         employee: await page.locator('[class*="employee"]').count()

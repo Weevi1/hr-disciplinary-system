@@ -6,6 +6,7 @@ import Logger from '../../utils/logger';
 // ✅ Proper error boundaries and data handling
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useModal } from '../../hooks/useModal';
 import {
   Search, Filter, Calendar, Download, Eye, Printer, AlertTriangle,
   CheckCircle, Clock, Shield, RefreshCw, ChevronDown, ChevronUp,
@@ -143,9 +144,8 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
   const [showDeliveryWorkflow, setShowDeliveryWorkflow] = useState(false);
   const [employeeContactDetails, setEmployeeContactDetails] = useState<{ email?: string; phone?: string }>({});
 
-  // Appeal modal state
-  const [showAppealModal, setShowAppealModal] = useState(false);
-  const [appealWarning, setAppealWarning] = useState<Warning | null>(null);
+  // 🚀 REFACTORED: Migrated to useModal hook
+  const appealModal = useModal<Warning>();
 
   // Appeal Review Modal State (HR Decision Making)
   const [showAppealReview, setShowAppealReview] = useState(false);
@@ -387,9 +387,8 @@ const loadWarnings = useCallback(async () => {
       Logger.success(`Legal appeal submitted for warning ${appealData.warningId}`)
       await loadWarnings(); // Refresh the list
       
-      // Close modal and show success
-      setShowAppealModal(false);
-      setAppealWarning(null);
+      // 🚀 REFACTORED: Using useModal hook (auto-clears data)
+      appealModal.close();
       
       // Success notification
       alert('Appeal submitted successfully. HR will review your appeal within 5 working days as per company policy.');
@@ -550,7 +549,7 @@ const loadWarnings = useCallback(async () => {
 
   // Main render
   return (
-    <div className="space-y-4">
+    <div className="p-4 space-y-4">
       {/* Compact Header - Mobile Responsive */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div className="flex items-center gap-3">
@@ -681,7 +680,7 @@ const loadWarnings = useCallback(async () => {
                           <p className="text-sm font-medium text-gray-900">
                             {warning.level === 'counselling' ? 'Counselling' :
                              warning.level === 'verbal' ? 'Verbal' :
-                             warning.level === 'first_written' ? 'First Written' :
+                             warning.level === 'first_written' ? 'Written' :
                              warning.level === 'second_written' ? 'Second Written' :
                              warning.level === 'final_written' ? 'Final Written' :
                              safeRenderText(warning.level, 'Unknown')}
@@ -814,13 +813,9 @@ const loadWarnings = useCallback(async () => {
               <option value="all">All Levels</option>
               <option value="counselling">Counselling</option>
               <option value="verbal">Verbal</option>
-              <option value="first_written">First Written</option>
+              <option value="first_written">Written</option>
               <option value="second_written">Second Written</option>
               <option value="final_written">Final Written</option>
-              {/* Legacy support */}
-              <option value="written">Written (Legacy)</option>
-              <option value="final">Final (Legacy)</option>
-              <option value="dismissal">Dismissal (Legacy)</option>
             </select>
 
             <button
@@ -1062,7 +1057,7 @@ const loadWarnings = useCallback(async () => {
                     }`}>
                       {warning.level === 'counselling' ? 'Counselling' :
                        warning.level === 'verbal' ? 'Verbal' :
-                       warning.level === 'first_written' ? 'First Written' :
+                       warning.level === 'first_written' ? 'Written' :
                        warning.level === 'second_written' ? 'Second Written' :
                        warning.level === 'final_written' ? 'Final Written' :
                        // Legacy support
@@ -1163,8 +1158,7 @@ const loadWarnings = useCallback(async () => {
                         <button
                           onClick={() => {
                             Logger.debug(`📋 Opening appeal modal for warning:`, { id: warning.id, employeeName: warning.employeeName });
-                            setAppealWarning(warning);
-                            setShowAppealModal(true);
+                            appealModal.open(warning); // 🚀 REFACTORED: Using useModal hook with data
                           }}
                           className="text-amber-600 hover:text-amber-800 text-xs px-2 py-1 hover:bg-amber-50 rounded transition-colors"
                           title={(() => {
@@ -1397,20 +1391,18 @@ const loadWarnings = useCallback(async () => {
       )}
 
       {/* Appeal Modal - Legal SA Compliant */}
-      {showAppealModal && appealWarning && (
+      {/* 🚀 REFACTORED: Using useModal hook */}
+      {appealModal.isOpen && appealModal.data && (
         <AppealModal
-          isOpen={showAppealModal}
-          onClose={() => {
-            setShowAppealModal(false);
-            setAppealWarning(null);
-          }}
+          isOpen={appealModal.isOpen}
+          onClose={appealModal.close}
           warning={{
-            id: appealWarning.id,
-            employeeName: appealWarning.employeeName,
-            category: appealWarning.category,
-            level: appealWarning.level,
-            issueDate: appealWarning.issueDate,
-            description: appealWarning.description || 'No description provided'
+            id: appealModal.data.id,
+            employeeName: appealModal.data.employeeName,
+            category: appealModal.data.category,
+            level: appealModal.data.level,
+            issueDate: appealModal.data.issueDate,
+            description: appealModal.data.description || 'No description provided'
           }}
           onAppealSubmit={handleAppealSubmission}
         />

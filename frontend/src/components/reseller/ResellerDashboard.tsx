@@ -5,7 +5,7 @@
 // ✅ Desktop: 4 blocks + tab navigation
 // ✅ Clean, professional, consistent
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DollarSign,
   TrendingUp,
@@ -30,6 +30,9 @@ import type { Reseller, CommissionStatement, Organization } from '../../types/bi
 import { ThemedCard } from '../common/ThemedCard';
 import { QuotesSection } from '../dashboard/QuotesSection';
 
+// 🚀 CENTRALIZED HOOK: Replaced local duplicate with shared implementation
+import { useBreakpoint } from '../../hooks/useBreakpoint';
+
 interface ResellerMetrics {
   totalClients: number;
   activeClients: number;
@@ -49,20 +52,6 @@ interface ResellerDashboardData {
   recentCommissions: CommissionStatement[];
   monthlyTrend: Array<{ month: string; revenue: number; commissions: number }>;
 }
-
-// --- Breakpoint Hook ---
-const useBreakpoint = (breakpoint: number) => {
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth > breakpoint);
-  const handleResize = useCallback(() => setIsDesktop(window.innerWidth > breakpoint), [breakpoint]);
-
-  useEffect(() => {
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
-  }, [handleResize]);
-
-  return isDesktop;
-};
 
 export const ResellerDashboard: React.FC = () => {
   const { user } = useAuth();

@@ -175,7 +175,7 @@ export const UnifiedReportAbsence: React.FC<UnifiedReportAbsenceProps> = ({
 
   // Form validation
   const isFormValid = () => {
-    return selectedEmployee && absenceDate && absenceType;
+    return !!(selectedEmployee && absenceDate && absenceType);
   };
 
   // Submit report
@@ -210,7 +210,7 @@ export const UnifiedReportAbsence: React.FC<UnifiedReportAbsenceProps> = ({
         Object.entries(reportData).filter(([_, value]) => value !== undefined)
       );
 
-      await DatabaseShardingService.createDocument(
+      const docId = await DatabaseShardingService.createDocument(
         organization.id,
         'reports',
         cleanedData

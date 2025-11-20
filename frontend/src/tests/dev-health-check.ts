@@ -126,7 +126,7 @@ class DevHealthCheck {
 
   private async testRoleBasedAccess(): Promise<void> {
     const roles = [
-      'business_owner',
+      'executive_management',
       'hr_manager',
       'hod',
       'employee',

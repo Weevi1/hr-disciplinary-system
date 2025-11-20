@@ -288,7 +288,45 @@ export const transformWarningDataForPDF = async (
     followUpRequired: warningData.followUpRequired,
     followUpDate: warningData.followUpDate
       ? convertFirestoreTimestamp(warningData.followUpDate)
-      : undefined
+      : undefined,
+
+    // ============================================
+    // 🆕 CORRECTIVE COUNSELLING FIELDS - Unified Disciplinary Form Approach
+    // ============================================
+
+    // Section B - Employee's Version/Response
+    employeeStatement: warningData.employeeStatement || undefined,
+
+    // Section C - Expected Behavior/Standards
+    expectedBehaviorStandards: warningData.expectedBehaviorStandards || undefined,
+
+    // Section E - Facts Leading to Decision
+    factsLeadingToDecision: warningData.factsLeadingToDecision || undefined,
+
+    // Section F - Improvement Commitments (convert any timestamps)
+    // 🔥 CRITICAL FIX: Handle both field names - actionSteps (new) and improvementCommitments (old)
+    improvementCommitments: (() => {
+      const commitments = warningData.improvementCommitments || warningData.actionSteps;
+      if (!commitments || !Array.isArray(commitments)) return undefined;
+
+      return commitments.map((commitment: any) => ({
+        commitment: commitment.commitment || commitment.action || '',
+        timeline: commitment.timeline || '',
+        completedDate: commitment.completedDate
+          ? convertFirestoreTimestamp(commitment.completedDate)
+          : undefined
+      }));
+    })(),
+
+    // Review date (convert timestamp)
+    reviewDate: warningData.reviewDate
+      ? convertFirestoreTimestamp(warningData.reviewDate)
+      : undefined,
+
+    // Intervention and support details
+    interventionDetails: warningData.interventionDetails || undefined,
+    resourcesProvided: warningData.resourcesProvided || undefined,
+    trainingProvided: warningData.trainingProvided || undefined
   };
 
   Logger.debug('✅ PDF data transformation complete:', {

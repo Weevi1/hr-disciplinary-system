@@ -3,7 +3,8 @@
 
 import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Sun, Moon, Palette, Check, ChevronDown } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
+// 🚀 WEEK 4: Using combined ThemeBrandingContext (replaces old ThemeContext)
+import { useTheme } from '../../contexts/ThemeBrandingContext';
 import { OrganizationContext } from '../../contexts/OrganizationContext';
 
 interface ThemeOption {

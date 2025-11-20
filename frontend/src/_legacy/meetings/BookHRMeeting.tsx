@@ -14,6 +14,7 @@ import { useOrganization } from '../../contexts/OrganizationContext';
 import { FirebaseService } from '../../services/FirebaseService';
 import { DataServiceV2 } from '../../services/DataServiceV2';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
+import { TimeService } from '../../services/TimeService';
 import { API } from '../../api';
 import type { Employee } from '../../types/core';
 
@@ -652,9 +653,9 @@ export const BookHRMeeting: React.FC = () => {
         managerSignature: managerSignature || '',
         employeeConsent: employeeConsent || false,
         status: 'pending',
-        requestDate: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        requestDate: TimeService.getServerTimestamp(),
+        createdAt: TimeService.getServerTimestamp(),
+        updatedAt: TimeService.getServerTimestamp()
       };
 
       // Only add employeeSignature if employee consented and provided signature
@@ -738,7 +739,7 @@ export const BookHRMeeting: React.FC = () => {
             }
           </p>
           <div className="space-y-3">
-            {(user.role?.id === 'hr-manager' || user.role?.id === 'business-owner') && (
+            {(user.role?.id === 'hr-manager' || user.role?.id === 'executive-management') && (
               <button
                 onClick={() => navigate('/employees')}
                 className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"

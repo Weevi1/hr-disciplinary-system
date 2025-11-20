@@ -111,7 +111,7 @@ export class FirebaseInitializer {
         email: 'ceo@democorp.com',
         firstName: 'John',
         lastName: 'Smith',
-        role: 'business-owner' as const,
+        role: 'executive-management' as const,
         organizationId: orgId,
         departmentIds: [],
         isActive: true

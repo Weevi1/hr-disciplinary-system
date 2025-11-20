@@ -153,7 +153,7 @@ async function handleCheckoutCompleted(session) {
         });
         // Activate admin users in sharded structure
         const usersQuery = await db.collection(`organizations/${organizationId}/users`)
-            .where('role', '==', 'business-owner')
+            .where('role', '==', 'executive-management')
             .limit(1)
             .get();
         if (!usersQuery.empty) {

@@ -1,4 +1,6 @@
-import React from 'react';
+// ThemedTabNavigation - Tab navigation component for dashboard sections
+// 🚀 OPTIMIZED: React.memo + useMemo for style calculations + useCallback for handlers
+import React, { useMemo, useCallback } from 'react';
 
 export interface TabItem {
   id: string;
@@ -16,7 +18,8 @@ interface ThemedTabNavigationProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-export const ThemedTabNavigation: React.FC<ThemedTabNavigationProps> = ({
+// 🚀 MEMOIZED: Prevents re-renders when props haven't changed
+export const ThemedTabNavigation = React.memo<ThemedTabNavigationProps>(({
   tabs,
   activeTab,
   onTabChange,
@@ -30,16 +33,18 @@ export const ThemedTabNavigation: React.FC<ThemedTabNavigationProps> = ({
     lg: 'px-6 py-3 text-base'
   };
 
-  const baseTabStyles: React.CSSProperties = {
+  // 🚀 MEMOIZED: Base styles only calculated once
+  const baseTabStyles: React.CSSProperties = useMemo(() => ({
     transition: 'all 0.2s ease-in-out',
     cursor: 'pointer',
     borderBottom: '2px solid transparent',
     display: 'flex',
     alignItems: 'center',
     gap: '0.5rem'
-  };
+  }), []);
 
-  const getTabStyles = (tabId: string): React.CSSProperties => {
+  // 🚀 MEMOIZED: Tab styles only recalculated when dependencies change
+  const getTabStyles = useCallback((tabId: string): React.CSSProperties => {
     const isActive = tabId === activeTab;
 
     if (variant === 'minimal') {
@@ -58,12 +63,34 @@ export const ThemedTabNavigation: React.FC<ThemedTabNavigationProps> = ({
       backgroundColor: isActive ? 'var(--color-background-secondary)' : 'transparent',
       borderRadius: isActive ? '0.5rem 0.5rem 0 0' : '0.5rem 0.5rem 0 0'
     };
-  };
+  }, [activeTab, variant, baseTabStyles]);
 
-  const getHoverStyles = (): React.CSSProperties => ({
+  // 🚀 MEMOIZED: Hover styles only recalculated when variant changes
+  const hoverStyles = useMemo((): React.CSSProperties => ({
     color: 'var(--color-nav-tab-hover)',
     backgroundColor: variant === 'minimal' ? 'transparent' : 'var(--color-background-tertiary)'
-  });
+  }), [variant]);
+
+  // 🚀 MEMOIZED: Event handlers only recreated when dependencies change
+  const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>, tabId: string) => {
+    if (tabId !== activeTab) {
+      Object.assign(e.currentTarget.style, hoverStyles);
+    }
+  }, [activeTab, hoverStyles]);
+
+  const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLButtonElement>, tabId: string) => {
+    if (tabId !== activeTab) {
+      Object.assign(e.currentTarget.style, getTabStyles(tabId));
+    }
+  }, [activeTab, getTabStyles]);
+
+  const handleFocus = useCallback((e: React.FocusEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.boxShadow = `0 0 0 2px var(--color-focus-ring)`;
+  }, []);
+
+  const handleBlur = useCallback((e: React.FocusEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.boxShadow = 'none';
+  }, []);
 
   return (
     <div
@@ -76,22 +103,10 @@ export const ThemedTabNavigation: React.FC<ThemedTabNavigationProps> = ({
           className={`${sizeClasses[size]} font-medium focus:outline-none`}
           style={getTabStyles(tab.id)}
           onClick={() => onTabChange(tab.id)}
-          onMouseEnter={(e) => {
-            if (tab.id !== activeTab) {
-              Object.assign(e.currentTarget.style, getHoverStyles());
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (tab.id !== activeTab) {
-              Object.assign(e.currentTarget.style, getTabStyles(tab.id));
-            }
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.boxShadow = `0 0 0 2px var(--color-focus-ring)`;
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.boxShadow = 'none';
-          }}
+          onMouseEnter={(e) => handleMouseEnter(e, tab.id)}
+          onMouseLeave={(e) => handleMouseLeave(e, tab.id)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
         >
           {tab.icon && (
             <span className="w-4 h-4 flex-shrink-0">
@@ -114,6 +129,9 @@ export const ThemedTabNavigation: React.FC<ThemedTabNavigationProps> = ({
       ))}
     </div>
   );
-};
+});
+
+// Display name for React DevTools
+ThemedTabNavigation.displayName = 'ThemedTabNavigation';
 
 export default ThemedTabNavigation;

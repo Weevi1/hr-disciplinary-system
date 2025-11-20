@@ -3,7 +3,7 @@
 // ✅ Renders a vibrant, compact, and premium "Greeting Card" on mobile.
 // ✅ Renders the classic, immersive banner on desktop.
 
-import React, { memo, useState, useEffect, useCallback } from 'react';
+import React, { memo } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
@@ -13,22 +13,8 @@ import { UserCircle } from 'lucide-react';
 import { ThemedCard, ThemedBadge } from '../common/ThemedCard';
 import { DashboardRoleSelector } from './DashboardRoleSelector';
 
-// --- A Simple Breakpoint Hook (consistent with other components) ---
-const useBreakpoint = (breakpoint: number) => {
-  const [isDesktop, setIsDesktop] = useState(window.innerWidth > breakpoint);
-
-  const handleResize = useCallback(() => {
-    setIsDesktop(window.innerWidth > breakpoint);
-  }, [breakpoint]);
-
-  useEffect(() => {
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [handleResize]);
-
-  return isDesktop;
-};
+// 🚀 CENTRALIZED HOOK: Replaced local duplicate with shared implementation
+import { useBreakpoint } from '../../hooks/useBreakpoint';
 
 
 interface WelcomeSectionProps {
@@ -64,7 +50,7 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({
 
     // Use CSS variables for theme-aware gradients
     switch (primaryRole) {
-      case 'business-owner':
+      case 'executive-management':
         return { background: 'linear-gradient(135deg, var(--color-accent), var(--color-primary))' };
       case 'hr-manager':
         return { background: 'linear-gradient(135deg, var(--color-success), var(--color-info))' };

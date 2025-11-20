@@ -31,7 +31,6 @@ interface ValidationErrors {
   incidentTime?: string;
   incidentLocation?: string;
   incidentDescription?: string;
-  additionalNotes?: string;
 }
 
 // 🔧 REMOVED: useAutoSave hook - caused issues with date persistence from localStorage
@@ -70,24 +69,24 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
   //   }
   // }, []);
 
-  // Writing assistance
+  // Writing assistance - word count only (minimum 6 words)
   const writingAssistance = useMemo((): WritingAssistance => {
     const description = formData.incidentDescription || '';
     const words = description.trim().split(/\s+/).filter(word => word.length > 0);
     const wordCount = words.length;
-    const isMinimumMet = wordCount >= 20;
+    const isMinimumMet = wordCount >= 6;
 
     const suggestions: string[] = [];
-    if (wordCount < 20) {
-      suggestions.push(`Add ${20 - wordCount} more words for a complete description`);
+    if (wordCount < 6) {
+      suggestions.push(`Add ${6 - wordCount} more word${6 - wordCount === 1 ? '' : 's'} for a complete description (minimum 6 words)`);
     }
-    if (!description.includes('when') && !description.includes('time')) {
+    if (!description.includes('when') && !description.includes('time') && wordCount >= 6) {
       suggestions.push('Consider adding when the incident occurred');
     }
-    if (!description.includes('where') && !description.includes('location')) {
+    if (!description.includes('where') && !description.includes('location') && wordCount >= 6) {
       suggestions.push('Consider specifying where the incident took place');
     }
-    if (!description.includes('what') && !description.includes('action')) {
+    if (!description.includes('what') && !description.includes('action') && wordCount >= 6) {
       suggestions.push('Be specific about what actions were observed');
     }
     if (!description.includes('witness') && wordCount > 10) {
@@ -118,8 +117,12 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
         return null;
       
       case 'incidentDescription':
-        if (!value || value.trim().length < 20) return 'Description must be at least 20 characters';
-        if (value.trim().length > 2000) return 'Description is too long (maximum 2000 characters)';
+        // Word-based validation (minimum 6 words, maximum 500 words)
+        const words = value.trim().split(/\s+/).filter(word => word.length > 0);
+        const wordCount = words.length;
+        if (wordCount === 0) return 'Description is required';
+        if (wordCount < 6) return `Description must be at least 6 words (currently ${wordCount} word${wordCount === 1 ? '' : 's'})`;
+        if (wordCount > 500) return `Description is too long (maximum 500 words, currently ${wordCount} words)`;
         return null;
       
       default:
@@ -191,12 +194,12 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
         error={validationErrors.incidentLocation && touched.incidentLocation ? validationErrors.incidentLocation : undefined}
       />
 
-      {/* Incident Description */}
+      {/* What Happened */}
       <div className="space-y-1">
         <div className="flex items-center justify-between">
           <label className="block text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             <PenTool className="w-3 h-3 inline mr-1" />
-            Incident Description *
+            What Happened *
           </label>
           <div className="flex items-center gap-1.5">
             <button
@@ -227,7 +230,7 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
         <textarea
           value={formData.incidentDescription || ''}
           onChange={(e) => handleFieldChange('incidentDescription', e.target.value)}
-          placeholder="Describe exactly what happened. Include specific details such as what was said or done, who was present, and any relevant context..."
+          placeholder="Describe the incident: What did the employee do or fail to do? Include specific details like what was said, actions taken, who was present, and when/where it happened..."
           disabled={disabled}
           rows={6}
           className={`w-full px-3 py-2 border rounded-lg focus:ring-2 text-sm min-h-[132px] resize-vertical ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -249,6 +252,14 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
           </div>
         )}
 
+        {/* Helper Text */}
+        <div className="flex items-start gap-1.5 text-xs p-2 rounded" style={{ backgroundColor: 'var(--color-alert-info-bg)', color: 'var(--color-alert-info-text)' }}>
+          <Lightbulb className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+          <span>
+            <strong>Tip:</strong> Focus on describing what happened during the incident. In the next step, you'll explain why this warning level is appropriate.
+          </span>
+        </div>
+
         {/* Writing Assistance */}
         {showWritingAssistance && (
           <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--color-alert-info-bg)', border: '1px solid var(--color-alert-info-border)' }}>
@@ -269,65 +280,6 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
             </div>
           </div>
         )}
-      </div>
-
-      {/* Additional Notes */}
-      <div className="space-y-2">
-        <label className="block text-xs font-medium text-gray-700">
-          Additional Notes
-          <span className="text-gray-500 font-normal ml-1">(optional)</span>
-        </label>
-        <textarea
-          value={formData.additionalNotes || ''}
-          onChange={(e) => handleFieldChange('additionalNotes', e.target.value)}
-          placeholder="Any additional context, background information, or relevant details..."
-          disabled={disabled}
-          rows={3}
-          className={`
-            w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-            ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-          `}
-        />
-      </div>
-
-      {/* Issue Date and Validity Period Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Issue Date */}
-        <div className="space-y-2">
-          <label className="block text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-            Issue Date *
-          </label>
-          <input
-            type="date"
-            value={formData.issueDate || today}
-            onChange={(e) => handleFieldChange('issueDate', e.target.value)}
-            disabled={disabled}
-            className={`
-              w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-              ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-            `}
-          />
-        </div>
-
-        {/* Validity Period */}
-        <div className="space-y-2">
-          <label className="block text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-            Validity Period *
-          </label>
-          <select
-            value={formData.validityPeriod || 6}
-            onChange={(e) => handleFieldChange('validityPeriod', parseInt(e.target.value))}
-            disabled={disabled}
-            className={`
-              w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-              ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-            `}
-          >
-            <option value={3}>3 months</option>
-            <option value={6}>6 months</option>
-            <option value={12}>12 months</option>
-          </select>
-        </div>
       </div>
     </div>
   );

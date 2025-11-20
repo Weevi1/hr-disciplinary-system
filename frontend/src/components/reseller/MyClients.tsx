@@ -148,93 +148,53 @@ export const MyClients: React.FC<MyClientsProps> = ({ onDeployClient }) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Header Bar with Actions */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {/* Search */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search clients by name or sector..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            />
+          </div>
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">My Clients</h2>
-          <p className="text-gray-600">Manage your client organizations</p>
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
         </div>
 
+        {/* Action Buttons */}
         <div className="flex items-center gap-3">
           {onDeployClient && (
             <button
               onClick={onDeployClient}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold"
+              className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium text-sm"
             >
               <Rocket className="w-4 h-4" />
               Deploy New Client
             </button>
           )}
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-500 whitespace-nowrap">
             {filteredClients.length} of {clients.length} clients
           </span>
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search clients by name or sector..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-        
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as any)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm min-w-[140px]"
-        >
-          <option value="all">All Status</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-        </select>
-      </div>
-
-      {/* Client Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Building className="w-5 h-5 text-blue-500" />
-            <span className="font-medium">Active Clients</span>
-          </div>
-          <div className="text-2xl font-bold text-gray-900">
-            {clients.filter(c => c.metrics.subscriptionStatus === 'active').length}
-          </div>
-        </div>
-        
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <DollarSign className="w-5 h-5 text-green-500" />
-            <span className="font-medium">Monthly Revenue</span>
-          </div>
-          <div className="text-2xl font-bold text-gray-900">
-            {formatCurrency(clients.reduce((sum, c) => sum + c.metrics.monthlyRevenue, 0))}
-          </div>
-        </div>
-        
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Users className="w-5 h-5 text-purple-500" />
-            <span className="font-medium">Total Employees</span>
-          </div>
-          <div className="text-2xl font-bold text-gray-900">
-            {clients.reduce((sum, c) => sum + c.metrics.employeeCount, 0)}
-          </div>
-        </div>
-      </div>
-
       {/* Clients Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold">Client Organizations</h3>
-        </div>
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
 
         <div className="overflow-x-auto">
           <table className="w-full">

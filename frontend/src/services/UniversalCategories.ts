@@ -587,7 +587,7 @@ export function getLevelLabel(level: WarningLevel): string {
   const labels: Record<WarningLevel, string> = {
     counselling: 'Counselling Session',
     verbal: 'Verbal Warning',
-    first_written: 'First Written Warning',
+    first_written: 'Written Warning',
     second_written: 'Second Written Warning',
     final_written: 'Final Written Warning'
   };

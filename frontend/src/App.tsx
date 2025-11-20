@@ -8,7 +8,8 @@ import { DashboardRouter } from './components/dashboard/DashboardRouter';
 import { LoginForm } from './auth/LoginForm';
 import { ErrorBoundary, WarningErrorBoundary, EmployeeErrorBoundary, DashboardErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './components/common/ToastContainer';
-import { ThemeProvider } from './contexts/ThemeContext';
+// 🚀 WEEK 4: Using combined ThemeBrandingProvider (replaces old ThemeProvider)
+import { ThemeBrandingProvider } from './contexts/ThemeBrandingContext';
 
 // 🚀 LAZY-LOADED COMPONENTS FOR BUNDLE OPTIMIZATION
 const EnhancedWarningWizard = React.lazy(() => import('./components/warnings/enhanced/EnhancedWarningWizard').then(m => ({ default: m.EnhancedWarningWizard })));
@@ -30,7 +31,6 @@ const ReportAbsence = React.lazy(() => import('./components/absences/UnifiedRepo
 // 🔔 LAZY-LOADED HR REVIEW COMPONENTS
 const AbsenceReportReview = React.lazy(() => import('./components/absences/AbsenceReportReview').then(m => ({ default: m.AbsenceReportReview })));
 const HRMeetingReview = React.lazy(() => import('./components/meetings/HRMeetingReview').then(m => ({ default: m.HRMeetingReview })));
-const CounsellingDashboard = React.lazy(() => import('./components/counselling/CounsellingDashboard').then(m => ({ default: m.CounsellingDashboard })));
 
 // 🔔 LAZY-LOADED WARNINGS REVIEW
 const WarningsReviewDashboard = React.lazy(() => import('./components/warnings/ReviewDashboard'));
@@ -356,12 +356,7 @@ const AppRoutes: React.FC = () => {
             <HRMeetingReview />
           </Suspense>
         } />
-        <Route path="/hr/corrective-counselling" element={
-          <Suspense fallback={<ComponentLoader text="Loading Counselling Dashboard..." />}>
-            <CounsellingDashboard />
-          </Suspense>
-        } />
-        
+
         {/* Reseller Routes */}
         <Route path="/resellers" element={
           <Suspense fallback={<ComponentLoader text="Loading Reseller Management..." />}>

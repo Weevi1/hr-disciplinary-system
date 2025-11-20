@@ -14,10 +14,10 @@ export const USER_ROLES: Record<string, UserRole> = {
     description: 'Provincial sales partner with client management',
     level: 1.5
   },
-  'business-owner': {
-    id: 'business-owner',
-    name: 'Business Owner',
-    description: 'CEO/Director with organization overview',
+  'executive-management': {
+    id: 'executive-management',
+    name: 'Executive Management',
+    description: 'Senior leadership with organization overview',
     level: 2
   },
   'hr-manager': {
@@ -57,7 +57,7 @@ export const ROLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
     deployment: ['create'], // Can deploy new client organizations
     scope: ['assigned-clients'] // Limited to assigned client organizations
   },
-  'business-owner': {
+  'executive-management': {
     organization: ['read'],
     users: ['create', 'read', 'update', 'deactivate'], // ✅ NEW: Organization user management
     employees: ['read'],
@@ -89,9 +89,9 @@ export const ROLE_PERMISSIONS: Record<string, Record<string, string[]>> = {
 // ✅ NEW: User Management Constraints
 export const USER_MANAGEMENT_RULES = {
   'super-user': {
-    canManage: ['super-user', 'reseller', 'business-owner', 'hr-manager', 'hod-manager'],
-    canCreate: ['reseller', 'business-owner', 'hr-manager', 'hod-manager'],
-    canDelete: ['reseller', 'business-owner', 'hr-manager', 'hod-manager'],
+    canManage: ['super-user', 'reseller', 'executive-management', 'hr-manager', 'hod-manager'],
+    canCreate: ['reseller', 'executive-management', 'hr-manager', 'hod-manager'],
+    canDelete: ['reseller', 'executive-management', 'hr-manager', 'hod-manager'],
     scope: 'global'
   },
   'reseller': {
@@ -107,8 +107,8 @@ export const USER_MANAGEMENT_RULES = {
       'Limited to commission and billing information'
     ]
   },
-  'business-owner': {
-    canManage: ['hr-manager', 'hod-manager'], // Cannot manage other business owners
+  'executive-management': {
+    canManage: ['hr-manager', 'hod-manager'], // Cannot manage other executives
     canCreate: ['hr-manager', 'hod-manager'],
     canDelete: false, // Can only deactivate, not delete
     canDeactivate: ['hr-manager', 'hod-manager'],
@@ -116,7 +116,7 @@ export const USER_MANAGEMENT_RULES = {
     restrictions: [
       'Cannot create users for other organizations',
       'Cannot modify super-user accounts',
-      'Cannot modify other business-owner accounts',
+      'Cannot modify other executive-management accounts',
       'Can only deactivate, not permanently delete users'
     ]
   },
@@ -208,7 +208,7 @@ export const getCreatableRoles = (currentUserRole: string): UserRole[] => {
 // Navigation items based on role
 export const getRoleNavigation = (roleId: string) => {
   const baseItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: '📊', roles: ['super-user', 'reseller', 'business-owner', 'hr-manager', 'hod-manager'] }
+    { path: '/dashboard', label: 'Dashboard', icon: '📊', roles: ['super-user', 'reseller', 'executive-management', 'hr-manager', 'hod-manager'] }
   ];
 
   const allNavItems = [
@@ -226,11 +226,11 @@ export const getRoleNavigation = (roleId: string) => {
     { path: '/performance', label: 'Performance', icon: '📈', roles: ['reseller'] },
     { path: '/client-support', label: 'Client Support', icon: '🎯', roles: ['reseller'] },
     
-    // Business Owner Navigation
-    { path: '/business-overview', label: 'Business Overview', icon: '📊', roles: ['business-owner'] },
-    { path: '/compliance-reports', label: 'Compliance Reports', icon: '⚖️', roles: ['business-owner'] },
-    { path: '/business-analytics', label: 'HR Analytics', icon: '📈', roles: ['business-owner'] },
-    { path: '/user-management', label: 'User Management', icon: '👤', roles: ['business-owner'] }, // ✅ NEW
+    // Executive Management Navigation
+    { path: '/business-overview', label: 'Business Overview', icon: '📊', roles: ['executive-management'] },
+    { path: '/compliance-reports', label: 'Compliance Reports', icon: '⚖️', roles: ['executive-management'] },
+    { path: '/business-analytics', label: 'HR Analytics', icon: '📈', roles: ['executive-management'] },
+    { path: '/user-management', label: 'User Management', icon: '👤', roles: ['executive-management'] }, // ✅ NEW
     
     // HR Manager Navigation
     { path: '/employees', label: 'Employee Management', icon: '👥', roles: ['hr-manager'] },
@@ -252,7 +252,7 @@ export const getRoleNavigation = (roleId: string) => {
 
 // ✅ NEW: User Management Feature Definitions
 export const USER_MANAGEMENT_FEATURES = {
-  'business-owner': {
+  'executive-management': {
     capabilities: [
       '✅ Create HR Manager accounts',
       '✅ Create Department Manager accounts', 
@@ -260,7 +260,7 @@ export const USER_MANAGEMENT_FEATURES = {
       '✅ Deactivate user accounts',
       '✅ Reset user passwords',
       '✅ View user activity logs',
-      '❌ Cannot manage other Business Owners',
+      '❌ Cannot manage other Executive Managements',
       '❌ Cannot permanently delete users',
       '❌ Cannot access Super User accounts'
     ],
