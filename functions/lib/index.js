@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getActiveWarningsServerSide = exports.getServerTime = exports.getApiVersionInfo = exports.initializeSuperUser = exports.getSuperUserInfo = exports.manageSuperUser = exports.updateUserPermissions = exports.refreshOrganizationUserClaims = exports.getUserClaims = exports.refreshUserClaims = exports.createPortalSession = exports.processMonthlyCommissions = exports.stripeWebhook = exports.createCheckoutSession = exports.previewAudioCleanup = exports.getGlobalAudioStats = exports.getCleanupStats = exports.manualAudioCleanup = exports.cleanupExpiredAudio = exports.createOrganizationUser = exports.createResellerUser = exports.resetUserPassword = exports.createOrganizationUsers = exports.createOrganizationAdmin = exports.cleanupExpiredTokens = exports.revokeTemporaryToken = exports.validateTemporaryToken = exports.downloadTempFile = exports.generateTemporaryDownloadLink = void 0;
+exports.manualReviewCheckAll = exports.testReviewFollowUp = exports.checkDueReviewsDaily = exports.getActiveWarningsServerSide = exports.getServerTime = exports.getApiVersionInfo = exports.initializeSuperUser = exports.getSuperUserInfo = exports.manageSuperUser = exports.updateUserPermissions = exports.refreshOrganizationUserClaims = exports.getUserClaims = exports.refreshUserClaims = exports.createPortalSession = exports.processMonthlyCommissions = exports.stripeWebhook = exports.createCheckoutSession = exports.previewAudioCleanup = exports.getGlobalAudioStats = exports.getCleanupStats = exports.manualAudioCleanup = exports.cleanupExpiredAudio = exports.createOrganizationUser = exports.createResellerUser = exports.resetUserPassword = exports.createOrganizationUsers = exports.createOrganizationAdmin = exports.cleanupExpiredTokens = exports.revokeTemporaryToken = exports.validateTemporaryToken = exports.downloadTempFile = exports.generateTemporaryDownloadLink = void 0;
 // functions/src/index.ts
 // Main Firebase Functions entry point
 const userCreationService_1 = require("./Auth/userCreationService");
@@ -51,4 +51,9 @@ Object.defineProperty(exports, "getApiVersionInfo", { enumerable: true, get: fun
 const timeService_1 = require("./timeService");
 Object.defineProperty(exports, "getServerTime", { enumerable: true, get: function () { return timeService_1.getServerTime; } });
 Object.defineProperty(exports, "getActiveWarningsServerSide", { enumerable: true, get: function () { return timeService_1.getActiveWarningsServerSide; } });
+// 🔄 ADD REVIEW FOLLOW-UP CRON FUNCTIONS
+const reviewFollowUpCron_1 = require("./reviewFollowUpCron");
+Object.defineProperty(exports, "checkDueReviewsDaily", { enumerable: true, get: function () { return reviewFollowUpCron_1.checkDueReviewsDaily; } });
+Object.defineProperty(exports, "testReviewFollowUp", { enumerable: true, get: function () { return reviewFollowUpCron_1.testReviewFollowUp; } });
+Object.defineProperty(exports, "manualReviewCheckAll", { enumerable: true, get: function () { return reviewFollowUpCron_1.manualReviewCheckAll; } });
 //# sourceMappingURL=index.js.map

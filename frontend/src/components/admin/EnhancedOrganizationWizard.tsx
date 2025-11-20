@@ -20,7 +20,8 @@ import {
   ChevronUp,
   Upload,
   Image as ImageIcon,
-  X
+  X,
+  Search
 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import Logger from '../../utils/logger';
@@ -77,12 +78,123 @@ const getDefaultCategories = (): OrganizationCategory[] => {
 const WARNING_LEVEL_NAMES: Record<WarningLevel, string> = {
   'counselling': 'Counselling',
   'verbal': 'Verbal Warning',
-  'first_written': 'First Written Warning',
+  'first_written': 'Written Warning',
   'second_written': 'Second Written Warning',
   'final_written': 'Final Written Warning',
   'suspension': 'Suspension',
-  'dismissal': 'Dismissal'
+  'dismissal': 'Ending of Service'
 };
+
+// Industry/Sector options organized by category
+const INDUSTRY_OPTIONS = [
+  { group: 'Primary Industries', options: [
+    { value: 'agriculture', label: 'Agriculture & Farming' },
+    { value: 'mining', label: 'Mining & Quarrying' },
+    { value: 'forestry', label: 'Forestry & Logging' },
+    { value: 'fishing', label: 'Fishing & Aquaculture' }
+  ]},
+  { group: 'Manufacturing & Production', options: [
+    { value: 'manufacturing', label: 'Manufacturing (General)' },
+    { value: 'food-processing', label: 'Food & Beverage Processing' },
+    { value: 'textiles', label: 'Textiles & Clothing' },
+    { value: 'automotive', label: 'Automotive Manufacturing' },
+    { value: 'pharmaceuticals', label: 'Pharmaceuticals & Medical Devices' },
+    { value: 'chemicals', label: 'Chemicals & Plastics' },
+    { value: 'electronics', label: 'Electronics & Technology Manufacturing' },
+    { value: 'construction-materials', label: 'Construction Materials' }
+  ]},
+  { group: 'Construction & Engineering', options: [
+    { value: 'construction', label: 'Construction & Building' },
+    { value: 'civil-engineering', label: 'Civil Engineering' },
+    { value: 'electrical-engineering', label: 'Electrical Engineering' },
+    { value: 'mechanical-engineering', label: 'Mechanical Engineering' },
+    { value: 'architecture', label: 'Architecture & Design' }
+  ]},
+  { group: 'Retail & Wholesale', options: [
+    { value: 'retail', label: 'Retail & Commerce (General)' },
+    { value: 'wholesale', label: 'Wholesale & Distribution' },
+    { value: 'supermarkets', label: 'Supermarkets & Grocery' },
+    { value: 'fashion-retail', label: 'Fashion & Apparel Retail' },
+    { value: 'automotive-retail', label: 'Automotive Sales & Service' },
+    { value: 'furniture-retail', label: 'Furniture & Home Goods' },
+    { value: 'electronics-retail', label: 'Electronics & Appliances Retail' }
+  ]},
+  { group: 'Hospitality & Tourism', options: [
+    { value: 'hospitality', label: 'Hospitality & Tourism' },
+    { value: 'hotels', label: 'Hotels & Accommodation' },
+    { value: 'restaurants', label: 'Restaurants & Food Service' },
+    { value: 'travel-agencies', label: 'Travel Agencies & Tour Operators' },
+    { value: 'entertainment', label: 'Entertainment & Recreation' }
+  ]},
+  { group: 'Healthcare & Social Services', options: [
+    { value: 'healthcare', label: 'Healthcare (General)' },
+    { value: 'hospitals', label: 'Hospitals & Clinics' },
+    { value: 'nursing-homes', label: 'Nursing Homes & Elderly Care' },
+    { value: 'medical-practices', label: 'Medical Practices & Specialists' },
+    { value: 'veterinary', label: 'Veterinary Services' },
+    { value: 'social-services', label: 'Social Services & NGOs' }
+  ]},
+  { group: 'Education & Training', options: [
+    { value: 'education', label: 'Education & Training' },
+    { value: 'schools', label: 'Schools & Colleges' },
+    { value: 'universities', label: 'Universities & Higher Education' },
+    { value: 'vocational-training', label: 'Vocational & Skills Training' },
+    { value: 'childcare', label: 'Childcare & Early Learning' }
+  ]},
+  { group: 'Financial Services', options: [
+    { value: 'banking', label: 'Banking & Financial Services' },
+    { value: 'insurance', label: 'Insurance' },
+    { value: 'investment', label: 'Investment & Asset Management' },
+    { value: 'accounting', label: 'Accounting & Auditing' },
+    { value: 'real-estate', label: 'Real Estate & Property Management' }
+  ]},
+  { group: 'Professional Services', options: [
+    { value: 'legal', label: 'Legal Services' },
+    { value: 'consulting', label: 'Consulting & Advisory' },
+    { value: 'marketing', label: 'Marketing & Advertising' },
+    { value: 'hr-recruitment', label: 'HR & Recruitment' },
+    { value: 'business-services', label: 'Business Support Services' }
+  ]},
+  { group: 'Technology & Communications', options: [
+    { value: 'it-services', label: 'IT Services & Software' },
+    { value: 'telecommunications', label: 'Telecommunications' },
+    { value: 'media', label: 'Media & Broadcasting' },
+    { value: 'publishing', label: 'Publishing & Printing' },
+    { value: 'data-centers', label: 'Data Centers & Cloud Services' }
+  ]},
+  { group: 'Transportation & Logistics', options: [
+    { value: 'logistics', label: 'Logistics & Supply Chain' },
+    { value: 'transportation', label: 'Transportation & Freight' },
+    { value: 'warehousing', label: 'Warehousing & Storage' },
+    { value: 'courier', label: 'Courier & Postal Services' },
+    { value: 'aviation', label: 'Aviation & Airports' },
+    { value: 'maritime', label: 'Maritime & Shipping' }
+  ]},
+  { group: 'Energy & Utilities', options: [
+    { value: 'energy', label: 'Energy & Power Generation' },
+    { value: 'renewable-energy', label: 'Renewable Energy' },
+    { value: 'water-utilities', label: 'Water & Sanitation' },
+    { value: 'waste-management', label: 'Waste Management & Recycling' }
+  ]},
+  { group: 'Security & Emergency Services', options: [
+    { value: 'security', label: 'Security Services' },
+    { value: 'private-security', label: 'Private Security & Guarding' },
+    { value: 'emergency-services', label: 'Emergency Services' },
+    { value: 'fire-safety', label: 'Fire Safety & Protection' }
+  ]},
+  { group: 'Government & Public Sector', options: [
+    { value: 'government', label: 'Government & Public Administration' },
+    { value: 'municipal', label: 'Municipal Services' },
+    { value: 'public-utilities', label: 'Public Utilities' }
+  ]},
+  { group: 'Other', options: [
+    { value: 'sports', label: 'Sports & Fitness' },
+    { value: 'beauty-wellness', label: 'Beauty & Wellness' },
+    { value: 'cleaning', label: 'Cleaning & Facilities Management' },
+    { value: 'maintenance', label: 'Maintenance & Repair Services' },
+    { value: 'other', label: 'Other Industry' }
+  ]}
+];
 
 // Category Editor Component
 interface CategoryEditorProps {
@@ -382,7 +494,8 @@ interface WizardFormData {
   industry: string;
   province: SouthAfricanProvince;
   city: string;
-  contactPerson: string;
+  contactFirstName: string;
+  contactLastName: string;
   contactEmail: string;
   contactPhone: string;
   
@@ -420,6 +533,7 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [availableResellers, setAvailableResellers] = useState<Reseller[]>([]);
+  const [showCategoryTemplateSelector, setShowCategoryTemplateSelector] = useState(false);
 
   // Reseller-specific deployment status
   const [deploymentStatus, setDeploymentStatus] = useState<{
@@ -458,7 +572,8 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
     industry: '',
     province: 'gauteng', // Default to largest market
     city: '',
-    contactPerson: '',
+    contactFirstName: '',
+    contactLastName: '',
     contactEmail: '',
     contactPhone: '',
 
@@ -484,6 +599,9 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [industrySearchOpen, setIndustrySearchOpen] = useState(false);
+  const [industrySearchTerm, setIndustrySearchTerm] = useState('');
+  const [expandedTemplateId, setExpandedTemplateId] = useState<string | null>(null);
 
   // Convert JPG to PNG using canvas
   const convertToPng = async (file: File): Promise<Blob> => {
@@ -597,22 +715,16 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
       // Load resellers for both SuperUsers and Resellers
       loadAvailableResellers();
 
-      if (isSuperUser) {
-        // Auto-select plan based on employee count
-        const recommendedPlan = StripeService.getRecommendedTier(formData.employeeCount);
-        setFormData(prev => ({ ...prev, selectedPlan: recommendedPlan }));
-      } else if (isReseller) {
-        // For resellers, auto-assign themselves, skip subscription, and check deployment limits
+      if (isReseller) {
+        // For resellers, auto-assign themselves and check deployment limits
         setFormData(prev => ({
           ...prev,
-          resellerId: user?.resellerId || '', // Use resellerId from user data
-          selectedPlan: 'professional', // Default plan for reseller deployments
-          subscriptionTier: 'professional'
+          resellerId: user?.resellerId || '' // Use resellerId from user data
         }));
         checkResellerDeploymentStatus();
       }
     }
-  }, [isOpen, formData.employeeCount, isSuperUser, isReseller, user]);
+  }, [isOpen, isSuperUser, isReseller, user]);
 
   const loadAvailableResellers = async () => {
     try {
@@ -716,7 +828,8 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
         return { isValid: true };
 
       case 'company': // Company Details
-        if (!formData.contactPerson.trim()) return { isValid: false, message: 'Contact person is required' };
+        if (!formData.contactFirstName.trim()) return { isValid: false, message: 'Contact first name is required' };
+        if (!formData.contactLastName.trim()) return { isValid: false, message: 'Contact last name is required' };
         if (!formData.contactEmail.trim()) return { isValid: false, message: 'Contact email is required' };
         if (!formData.contactPhone.trim()) return { isValid: false, message: 'Contact phone is required' };
         return { isValid: true };
@@ -733,7 +846,10 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
         return { isValid: true };
 
       case 'customize': // Customization
-        return { isValid: true }; // Customization step is always valid
+        if (formData.customCategories.length < 3) {
+          return { isValid: false, message: 'Please configure at least 3 warning categories before deploying' };
+        }
+        return { isValid: true };
 
       default:
         return { isValid: true };
@@ -746,11 +862,24 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
       setError(validation.message || 'Please complete all required fields');
       return;
     }
-    
+
+    // Pre-fill admin fields when leaving step 2 (company details)
+    if (getCurrentStepId() === 'company') {
+      // Only pre-fill if admin fields are empty
+      if (!formData.adminFirstName && !formData.adminLastName && !formData.adminEmail) {
+        setFormData(prev => ({
+          ...prev,
+          adminFirstName: prev.contactFirstName,
+          adminLastName: prev.contactLastName,
+          adminEmail: prev.contactEmail
+        }));
+      }
+    }
+
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
       setError(null);
-      
+
       // Load province-specific resellers when moving to reseller step
       if (getCurrentStepId() === 'reseller') {
         loadAvailableResellers();
@@ -824,7 +953,7 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
           lastName: formData.adminLastName,
           email: formData.adminEmail,
           password: devPassword, // Use predefined password
-          role: 'business-owner'
+          role: 'executive-management'
         },
         
         customCategories: formData.customCategories
@@ -1002,57 +1131,80 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
                       type="number"
                       min="1"
                       value={formData.employeeCount}
-                      onChange={e => updateFormData({ employeeCount: parseInt(e.target.value) || 1 })}
+                      onChange={e => {
+                        const value = e.target.value;
+
+                        if (value === '') {
+                          // Allow empty string for better UX when deleting
+                          updateFormData({ employeeCount: '' as any });
+                        } else {
+                          const num = parseInt(value);
+                          if (!isNaN(num) && num > 0) {
+                            // Auto-select appropriate plan based on employee count
+                            const recommendedPlan = StripeService.getRecommendedTier(num);
+                            Logger.debug(`Employee count changed: ${num} → Recommended plan: ${recommendedPlan}`);
+                            updateFormData({
+                              employeeCount: num,
+                              selectedPlan: recommendedPlan
+                            });
+                          }
+                        }
+                      }}
+                      onBlur={e => {
+                        // Ensure valid value when user leaves the field
+                        const value = e.target.value;
+                        if (value === '' || isNaN(parseInt(value))) {
+                          const recommendedPlan = StripeService.getRecommendedTier(1);
+                          updateFormData({
+                            employeeCount: 1,
+                            selectedPlan: recommendedPlan
+                          });
+                        }
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Subscription Plans */}
+              {/* Subscription Plans - Auto-selected based on employee count */}
               <div>
-                <h4 className="text-md font-semibold mb-4">Select Subscription Plan</h4>
+                <h4 className="text-md font-semibold mb-2">Subscription Plan</h4>
+                <p className="text-sm text-gray-600 mb-4">Plan automatically selected based on employee count</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {Object.entries(SUBSCRIPTION_PLANS).map(([key, plan]) => (
-                    <div
-                      key={key}
-                      className={`relative border rounded-lg p-4 cursor-pointer transition-all ${
-                        formData.selectedPlan === key
-                          ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                      onClick={() => updateFormData({ selectedPlan: key as SubscriptionTier })}
-                    >
-                      <div className="text-center">
-                        <h5 className="font-semibold">{plan.name}</h5>
-                        <div className="text-2xl font-bold text-blue-600 my-2">
-                          {formatCurrency(plan.price)}
+                  {Object.entries(SUBSCRIPTION_PLANS).map(([key, plan]) => {
+                    const isSelected = formData.selectedPlan === key;
+                    return (
+                      <div
+                        key={key}
+                        className={`relative border rounded-lg p-4 transition-all ${
+                          isSelected
+                            ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500'
+                            : 'border-gray-200 bg-gray-50 opacity-60'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <h5 className={`font-semibold ${isSelected ? 'text-gray-900' : 'text-gray-500'}`}>
+                            {plan.name}
+                          </h5>
+                          <div className={`text-2xl font-bold my-2 ${isSelected ? 'text-blue-600' : 'text-gray-400'}`}>
+                            R###
+                          </div>
+                          <div className={`text-sm mb-3 ${isSelected ? 'text-gray-600' : 'text-gray-400'}`}>
+                            per month
+                          </div>
+                          <div className={`text-sm ${isSelected ? 'text-gray-700' : 'text-gray-400'}`}>
+                            Up to {plan.employeeLimit === 999999 ? 'unlimited' : plan.employeeLimit} employees
+                          </div>
+
+                          {isSelected && (
+                            <Check className="absolute top-2 right-2 w-5 h-5 text-blue-500" />
+                          )}
                         </div>
-                        <div className="text-sm text-gray-500 mb-3">per month</div>
-                        <div className="text-sm">
-                          Up to {plan.employeeLimit === 999999 ? 'unlimited' : plan.employeeLimit} employees
-                        </div>
-                        
-                        {formData.selectedPlan === key && (
-                          <Check className="absolute top-2 right-2 w-5 h-5 text-blue-500" />
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-                
-                {/* Plan Recommendation */}
-                {StripeService.getRecommendedTier(formData.employeeCount) !== formData.selectedPlan && (
-                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="flex items-center gap-2 text-yellow-800">
-                      <AlertCircle className="w-4 h-4" />
-                      <span className="text-sm">
-                        Based on {formData.employeeCount} employees, we recommend the{' '}
-                        <strong>{SUBSCRIPTION_PLANS[StripeService.getRecommendedTier(formData.employeeCount)].name}</strong> plan
-                      </span>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -1063,152 +1215,102 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
               <h3 className="text-lg font-semibold mb-4">Company Details</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+                {/* Searchable Industry Selector */}
+                <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Industry</label>
-                  <select
-                    value={formData.industry}
-                    onChange={e => updateFormData({ industry: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+
+                  {/* Selected value display / trigger button */}
+                  <button
+                    type="button"
+                    onClick={() => setIndustrySearchOpen(!industrySearchOpen)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-left flex items-center justify-between bg-white"
                   >
-                    <option value="">Select industry</option>
+                    <span className={formData.industry ? 'text-gray-900' : 'text-gray-400'}>
+                      {formData.industry
+                        ? INDUSTRY_OPTIONS.flatMap(g => g.options).find(o => o.value === formData.industry)?.label || 'Select industry'
+                        : 'Select industry'
+                      }
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${industrySearchOpen ? 'rotate-180' : ''}`} />
+                  </button>
 
-                    {/* Primary Industries */}
-                    <optgroup label="Primary Industries">
-                      <option value="agriculture">Agriculture & Farming</option>
-                      <option value="mining">Mining & Quarrying</option>
-                      <option value="forestry">Forestry & Logging</option>
-                      <option value="fishing">Fishing & Aquaculture</option>
-                    </optgroup>
+                  {/* Dropdown with search */}
+                  {industrySearchOpen && (
+                    <>
+                      {/* Backdrop to close dropdown */}
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setIndustrySearchOpen(false)}
+                      />
 
-                    {/* Manufacturing & Production */}
-                    <optgroup label="Manufacturing & Production">
-                      <option value="manufacturing">Manufacturing (General)</option>
-                      <option value="food-processing">Food & Beverage Processing</option>
-                      <option value="textiles">Textiles & Clothing</option>
-                      <option value="automotive">Automotive Manufacturing</option>
-                      <option value="pharmaceuticals">Pharmaceuticals & Medical Devices</option>
-                      <option value="chemicals">Chemicals & Plastics</option>
-                      <option value="electronics">Electronics & Technology Manufacturing</option>
-                      <option value="construction-materials">Construction Materials</option>
-                    </optgroup>
+                      {/* Dropdown panel */}
+                      <div className="absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-96 overflow-hidden flex flex-col">
+                        {/* Search input */}
+                        <div className="p-2 border-b border-gray-200">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                              type="text"
+                              placeholder="Search industries..."
+                              value={industrySearchTerm}
+                              onChange={(e) => setIndustrySearchTerm(e.target.value)}
+                              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              autoFocus
+                            />
+                          </div>
+                        </div>
 
-                    {/* Construction & Engineering */}
-                    <optgroup label="Construction & Engineering">
-                      <option value="construction">Construction & Building</option>
-                      <option value="civil-engineering">Civil Engineering</option>
-                      <option value="electrical-engineering">Electrical Engineering</option>
-                      <option value="mechanical-engineering">Mechanical Engineering</option>
-                      <option value="architecture">Architecture & Design</option>
-                    </optgroup>
+                        {/* Options list */}
+                        <div className="overflow-y-auto">
+                          {INDUSTRY_OPTIONS.map(group => {
+                            // Filter options based on search term
+                            const filteredOptions = group.options.filter(option =>
+                              option.label.toLowerCase().includes(industrySearchTerm.toLowerCase()) ||
+                              group.group.toLowerCase().includes(industrySearchTerm.toLowerCase())
+                            );
 
-                    {/* Retail & Wholesale */}
-                    <optgroup label="Retail & Wholesale">
-                      <option value="retail">Retail & Commerce (General)</option>
-                      <option value="wholesale">Wholesale & Distribution</option>
-                      <option value="supermarkets">Supermarkets & Grocery</option>
-                      <option value="fashion-retail">Fashion & Apparel Retail</option>
-                      <option value="automotive-retail">Automotive Sales & Service</option>
-                      <option value="furniture-retail">Furniture & Home Goods</option>
-                      <option value="electronics-retail">Electronics & Appliances Retail</option>
-                    </optgroup>
+                            if (filteredOptions.length === 0) return null;
 
-                    {/* Hospitality & Tourism */}
-                    <optgroup label="Hospitality & Tourism">
-                      <option value="hospitality">Hospitality & Tourism</option>
-                      <option value="hotels">Hotels & Accommodation</option>
-                      <option value="restaurants">Restaurants & Food Service</option>
-                      <option value="travel-agencies">Travel Agencies & Tour Operators</option>
-                      <option value="entertainment">Entertainment & Recreation</option>
-                    </optgroup>
+                            return (
+                              <div key={group.group}>
+                                <div className="px-3 py-2 text-xs font-semibold text-gray-500 bg-gray-50 sticky top-0">
+                                  {group.group}
+                                </div>
+                                {filteredOptions.map(option => (
+                                  <button
+                                    key={option.value}
+                                    type="button"
+                                    onClick={() => {
+                                      updateFormData({ industry: option.value });
+                                      setIndustrySearchOpen(false);
+                                      setIndustrySearchTerm('');
+                                    }}
+                                    className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 transition-colors ${
+                                      formData.industry === option.value ? 'bg-blue-100 text-blue-900 font-medium' : 'text-gray-700'
+                                    }`}
+                                  >
+                                    {option.label}
+                                  </button>
+                                ))}
+                              </div>
+                            );
+                          })}
 
-                    {/* Healthcare & Social Services */}
-                    <optgroup label="Healthcare & Social Services">
-                      <option value="healthcare">Healthcare (General)</option>
-                      <option value="hospitals">Hospitals & Clinics</option>
-                      <option value="nursing-homes">Nursing Homes & Elderly Care</option>
-                      <option value="medical-practices">Medical Practices & Specialists</option>
-                      <option value="veterinary">Veterinary Services</option>
-                      <option value="social-services">Social Services & NGOs</option>
-                    </optgroup>
-
-                    {/* Education & Training */}
-                    <optgroup label="Education & Training">
-                      <option value="education">Education & Training</option>
-                      <option value="schools">Schools & Colleges</option>
-                      <option value="universities">Universities & Higher Education</option>
-                      <option value="vocational-training">Vocational & Skills Training</option>
-                      <option value="childcare">Childcare & Early Learning</option>
-                    </optgroup>
-
-                    {/* Financial Services */}
-                    <optgroup label="Financial Services">
-                      <option value="banking">Banking & Financial Services</option>
-                      <option value="insurance">Insurance</option>
-                      <option value="investment">Investment & Asset Management</option>
-                      <option value="accounting">Accounting & Auditing</option>
-                      <option value="real-estate">Real Estate & Property Management</option>
-                    </optgroup>
-
-                    {/* Professional Services */}
-                    <optgroup label="Professional Services">
-                      <option value="legal">Legal Services</option>
-                      <option value="consulting">Consulting & Advisory</option>
-                      <option value="marketing">Marketing & Advertising</option>
-                      <option value="hr-recruitment">HR & Recruitment</option>
-                      <option value="business-services">Business Support Services</option>
-                    </optgroup>
-
-                    {/* Technology & Communications */}
-                    <optgroup label="Technology & Communications">
-                      <option value="it-services">IT Services & Software</option>
-                      <option value="telecommunications">Telecommunications</option>
-                      <option value="media">Media & Broadcasting</option>
-                      <option value="publishing">Publishing & Printing</option>
-                      <option value="data-centers">Data Centers & Cloud Services</option>
-                    </optgroup>
-
-                    {/* Transportation & Logistics */}
-                    <optgroup label="Transportation & Logistics">
-                      <option value="logistics">Logistics & Supply Chain</option>
-                      <option value="transportation">Transportation & Freight</option>
-                      <option value="warehousing">Warehousing & Storage</option>
-                      <option value="courier">Courier & Postal Services</option>
-                      <option value="aviation">Aviation & Airports</option>
-                      <option value="maritime">Maritime & Shipping</option>
-                    </optgroup>
-
-                    {/* Energy & Utilities */}
-                    <optgroup label="Energy & Utilities">
-                      <option value="energy">Energy & Power Generation</option>
-                      <option value="renewable-energy">Renewable Energy</option>
-                      <option value="water-utilities">Water & Sanitation</option>
-                      <option value="waste-management">Waste Management & Recycling</option>
-                    </optgroup>
-
-                    {/* Security & Emergency Services */}
-                    <optgroup label="Security & Emergency Services">
-                      <option value="security">Security Services</option>
-                      <option value="private-security">Private Security & Guarding</option>
-                      <option value="emergency-services">Emergency Services</option>
-                      <option value="fire-safety">Fire Safety & Protection</option>
-                    </optgroup>
-
-                    {/* Government & Public Sector */}
-                    <optgroup label="Government & Public Sector">
-                      <option value="government">Government & Public Administration</option>
-                      <option value="municipal">Municipal Services</option>
-                      <option value="public-utilities">Public Utilities</option>
-                    </optgroup>
-
-                    {/* Other */}
-                    <optgroup label="Other">
-                      <option value="sports">Sports & Fitness</option>
-                      <option value="beauty-wellness">Beauty & Wellness</option>
-                      <option value="cleaning">Cleaning & Facilities Management</option>
-                      <option value="maintenance">Maintenance & Repair Services</option>
-                      <option value="other">Other Industry</option>
-                    </optgroup>
-                  </select>
+                          {/* No results message */}
+                          {INDUSTRY_OPTIONS.every(group =>
+                            group.options.filter(option =>
+                              option.label.toLowerCase().includes(industrySearchTerm.toLowerCase()) ||
+                              group.group.toLowerCase().includes(industrySearchTerm.toLowerCase())
+                            ).length === 0
+                          ) && (
+                            <div className="px-3 py-8 text-center text-sm text-gray-500">
+                              No industries found matching "{industrySearchTerm}"
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div>
@@ -1236,13 +1338,24 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Contact Person *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Contact First Name *</label>
                   <input
                     type="text"
-                    value={formData.contactPerson}
-                    onChange={e => updateFormData({ contactPerson: e.target.value })}
+                    value={formData.contactFirstName}
+                    onChange={e => updateFormData({ contactFirstName: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Primary contact person"
+                    placeholder="First name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Contact Last Name *</label>
+                  <input
+                    type="text"
+                    value={formData.contactLastName}
+                    onChange={e => updateFormData({ contactLastName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Last name"
                   />
                 </div>
 
@@ -1511,30 +1624,69 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
                       }}
                     />
                   ))}
-                  
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newCategory: OrganizationCategory = {
-                        id: `custom-${Date.now()}`,
-                        name: '',
-                        description: '',
-                        level: 'verbal',
-                        color: '#6366f1',
-                        icon: '📋',
-                        isActive: true,
-                        isDefault: false,
-                        escalationPath: ['verbal', 'first_written', 'final_written']
-                      };
-                      updateFormData({ 
-                        customCategories: [...formData.customCategories, newCategory] 
-                      });
-                    }}
-                    className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-center"
-                  >
-                    <Plus className="w-5 h-5 mx-auto mb-2 text-gray-400" />
-                    <span className="text-sm text-gray-600">Add Custom Category</span>
-                  </button>
+
+                  {/* Warning if fewer than 3 categories */}
+                  {formData.customCategories.length < 3 && (
+                    <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <h5 className="font-semibold text-red-900 mb-1">
+                            Minimum 3 Categories Required
+                          </h5>
+                          <p className="text-sm text-red-800">
+                            You currently have <strong>{formData.customCategories.length}</strong> {formData.customCategories.length === 1 ? 'category' : 'categories'}.
+                            Please add at least <strong>{3 - formData.customCategories.length}</strong> more {3 - formData.customCategories.length === 1 ? 'category' : 'categories'} to proceed with deployment.
+                            This ensures your organization has adequate disciplinary options configured.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Simplified choice: Template vs Blank */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowCategoryTemplateSelector(true)}
+                      className="p-4 border-2 border-dashed border-blue-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-center group"
+                    >
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <span className="text-2xl">📋</span>
+                        <Plus className="w-5 h-5 text-blue-400 group-hover:text-blue-600" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">Choose from Template</span>
+                      <p className="text-xs text-gray-500 mt-1">SA-compliant categories</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newCategory: OrganizationCategory = {
+                          id: `custom-${Date.now()}`,
+                          name: '',
+                          description: '',
+                          level: 'verbal',
+                          color: '#6366f1',
+                          icon: '📋',
+                          isActive: true,
+                          isDefault: false,
+                          escalationPath: ['verbal', 'first_written', 'final_written']
+                        };
+                        updateFormData({
+                          customCategories: [...formData.customCategories, newCategory]
+                        });
+                      }}
+                      className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors text-center group"
+                    >
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <span className="text-2xl">✏️</span>
+                        <Plus className="w-5 h-5 text-gray-400 group-hover:text-green-600" />
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">Create Blank Category</span>
+                      <p className="text-xs text-gray-500 mt-1">Start from scratch</p>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1549,7 +1701,7 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
                     <span className="text-gray-600">Plan:</span> {SUBSCRIPTION_PLANS[formData.selectedPlan].name}
                   </div>
                   <div>
-                    <span className="text-gray-600">Monthly Cost:</span> {formatCurrency(SUBSCRIPTION_PLANS[formData.selectedPlan].price)}
+                    <span className="text-gray-600">Monthly Cost:</span> R###
                   </div>
                   <div>
                     <span className="text-gray-600">Province:</span> {SA_PROVINCES[formData.province]?.name}
@@ -1559,10 +1711,10 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
                   <div className="text-sm text-green-800">
                     <strong>Revenue Breakdown (Monthly):</strong><br />
-                    • Client pays: {formatCurrency(SUBSCRIPTION_PLANS[formData.selectedPlan].price)}<br />
-                    • Reseller commission (50%): {formatCurrency(Math.round(SUBSCRIPTION_PLANS[formData.selectedPlan].price * 0.5))}<br />
-                    • Your income (30%): {formatCurrency(Math.round(SUBSCRIPTION_PLANS[formData.selectedPlan].price * 0.3))}<br />
-                    • Company fund (20%): {formatCurrency(Math.round(SUBSCRIPTION_PLANS[formData.selectedPlan].price * 0.2))}
+                    • Client pays: R###<br />
+                    • Reseller commission (50%): R###<br />
+                    • Your income (30%): R###<br />
+                    • Company fund (20%): R###
                   </div>
                 </div>
               </div>
@@ -1630,6 +1782,127 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
         </div>
 
       </div>
+
+      {/* Category Template Selector Modal */}
+      {showCategoryTemplateSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10001]">
+          <div className="bg-white rounded-lg w-[90%] max-w-3xl max-h-[85vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900">
+                    Category Templates
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Click to expand details, then click "Add" to use a template
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowCategoryTemplateSelector(false)}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            {/* Templates List */}
+            <div className="p-4 overflow-y-auto flex-1">
+              <div className="grid gap-2">
+                {UNIVERSAL_SA_CATEGORIES.map((template) => {
+                  const severityConfig = {
+                    minor: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Minor' },
+                    serious: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Serious' },
+                    gross_misconduct: { bg: 'bg-red-100', text: 'text-red-800', label: 'Gross Misconduct' }
+                  };
+                  const severity = severityConfig[template.severity];
+                  const isExpanded = expandedTemplateId === template.id;
+
+                  return (
+                    <div
+                      key={template.id}
+                      className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-blue-500 transition-all"
+                    >
+                      {/* Collapsed Header - Always Visible */}
+                      <div className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedTemplateId(isExpanded ? null : template.id);
+                        }}
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <span className="text-2xl flex-shrink-0">{template.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h5 className="text-sm font-semibold text-gray-900 truncate">
+                                {template.name}
+                              </h5>
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${severity.bg} ${severity.text} flex-shrink-0`}>
+                                {severity.label}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newCategory: OrganizationCategory = {
+                                id: `custom-${Date.now()}`,
+                                name: template.name,
+                                description: template.description,
+                                level: 'verbal',
+                                color: '#6366f1',
+                                icon: template.icon,
+                                isActive: true,
+                                isDefault: false,
+                                escalationPath: template.escalationPath
+                              };
+                              updateFormData({
+                                customCategories: [...formData.customCategories, newCategory]
+                              });
+                              setShowCategoryTemplateSelector(false);
+                            }}
+                            className="px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition-colors"
+                          >
+                            Add
+                          </button>
+                          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        </div>
+                      </div>
+
+                      {/* Expanded Details */}
+                      {isExpanded && (
+                        <div className="px-3 pb-3 pt-0 border-t border-gray-100 bg-gray-50">
+                          <p className="text-sm text-gray-600 mb-2 mt-2">
+                            {template.description}
+                          </p>
+
+                          {/* Common Examples */}
+                          {template.commonExamples.length > 0 && (
+                            <div>
+                              <p className="text-xs font-medium text-gray-700 mb-1">Common Examples:</p>
+                              <ul className="text-xs text-gray-600 space-y-0.5">
+                                {template.commonExamples.map((example, idx) => (
+                                  <li key={idx} className="flex items-start gap-1.5">
+                                    <span className="text-gray-400 mt-0.5">•</span>
+                                    <span>{example}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

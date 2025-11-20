@@ -25,6 +25,7 @@ interface EmployeeOrganogramProps {
   employees: Employee[];
   onEmployeeClick?: (employee: Employee) => void;
   selectedEmployee?: Employee | null;
+  inline?: boolean; // Hide header when embedded in tabs
 }
 
 interface HierarchyNode {
@@ -35,7 +36,7 @@ interface HierarchyNode {
 
 // Role hierarchy for visual representation
 const ROLE_HIERARCHY = {
-  'business-owner': { level: 0, icon: Crown, color: 'from-purple-500 to-purple-600' },
+  'executive-management': { level: 0, icon: Crown, color: 'from-purple-500 to-purple-600' },
   'hr-manager': { level: 1, icon: Shield, color: 'from-blue-500 to-blue-600' },
   'hod-manager': { level: 2, icon: Users, color: 'from-emerald-500 to-emerald-600' },
   'employee': { level: 3, icon: User, color: 'from-gray-500 to-gray-600' }
@@ -44,7 +45,8 @@ const ROLE_HIERARCHY = {
 export const EmployeeOrganogram: React.FC<EmployeeOrganogramProps> = ({
   employees,
   onEmployeeClick,
-  selectedEmployee
+  selectedEmployee,
+  inline = false
 }) => {
   const { user } = useAuth();
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
@@ -98,8 +100,8 @@ export const EmployeeOrganogram: React.FC<EmployeeOrganogramProps> = ({
   const visibleHierarchy = useMemo(() => {
     if (!user) return hierarchyTree;
 
-    // HR and Business Owners see full hierarchy
-    if (['hr-manager', 'business-owner'].includes(user.role?.id)) {
+    // HR and Executive Managements see full hierarchy
+    if (['hr-manager', 'executive-management'].includes(user.role?.id)) {
       return hierarchyTree;
     }
 
@@ -394,58 +396,60 @@ export const EmployeeOrganogram: React.FC<EmployeeOrganogramProps> = ({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header with view controls */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-              <Users className="w-8 h-8 text-blue-600" />
-              Team Structure
-            </h2>
-            <p className="text-gray-600 mt-1">
-              {user?.role?.id === 'hr-manager' 
-                ? 'Complete organizational hierarchy'
-                : user?.role?.id === 'hod-manager'
-                ? 'Your team and direct reports'
-                : 'Team overview'}
-            </p>
-          </div>
+    <div className={inline ? 'space-y-3' : 'space-y-6'}>
+      {/* Header with view controls - Hidden when inline */}
+      {!inline && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                <Users className="w-8 h-8 text-blue-600" />
+                Team Structure
+              </h2>
+              <p className="text-gray-600 mt-1">
+                {user?.role?.id === 'hr-manager'
+                  ? 'Complete organizational hierarchy'
+                  : user?.role?.id === 'hod-manager'
+                  ? 'Your team and direct reports'
+                  : 'Team overview'}
+              </p>
+            </div>
 
-          {/* View Mode Toggle */}
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('tree')}
-              className={`
-                px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
-                ${viewMode === 'tree' 
-                  ? 'bg-white text-blue-600 shadow-sm' 
-                  : 'text-gray-600 hover:text-gray-900'
-                }
-              `}
-            >
-              Hierarchy
-            </button>
-            <button
-              onClick={() => setViewMode('departments')}
-              className={`
-                px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
-                ${viewMode === 'departments' 
-                  ? 'bg-white text-blue-600 shadow-sm' 
-                  : 'text-gray-600 hover:text-gray-900'
-                }
-              `}
-            >
-              Departments
-            </button>
+            {/* View Mode Toggle */}
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('tree')}
+                className={`
+                  px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
+                  ${viewMode === 'tree'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                  }
+                `}
+              >
+                Hierarchy
+              </button>
+              <button
+                onClick={() => setViewMode('departments')}
+                className={`
+                  px-4 py-2 rounded-md text-sm font-medium transition-all duration-200
+                  ${viewMode === 'departments'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                    }
+                  `}
+              >
+                Departments
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Organogram Content */}
-      <div className="bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-200 p-6">
+      <div className={`rounded-lg border border-gray-200 ${inline ? 'bg-white p-3' : 'bg-gradient-to-br from-gray-50 to-white p-6'}`}>
         {viewMode === 'tree' ? (
-          <div className="max-h-96 overflow-y-auto overflow-x-auto p-4">
+          <div className={`max-h-96 overflow-y-auto overflow-x-auto ${inline ? 'p-2' : 'p-4'}`}>
             {visibleHierarchy.length > 0 ? (
               <div className="min-w-max pb-8">
                 {renderOrgChart(visibleHierarchy)}

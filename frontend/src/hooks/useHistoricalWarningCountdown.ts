@@ -152,26 +152,26 @@ export const useHistoricalWarningCountdown = (
   // Determine urgency level and display text
   const getUrgencyData = (): { level: HistoricalWarningCountdown['urgencyLevel'], text: string } => {
     if (daysRemaining === null || !featureAccess) {
-      return { level: 'normal', text: 'Enter Historical Warning' };
+      return { level: 'normal', text: 'Capture Historical Warnings' };
     }
 
     if (daysRemaining === 0) {
-      return { level: 'urgent', text: 'Enter Historical Warning (Last day!)' };
+      return { level: 'urgent', text: 'Capture Historical Warnings (Last day!)' };
     }
 
     if (daysRemaining === 1) {
-      return { level: 'urgent', text: 'Enter Historical Warning (1 day left!)' };
+      return { level: 'urgent', text: 'Capture Historical Warnings (1 day left!)' };
     }
 
     if (daysRemaining <= 7) {
-      return { level: 'warning', text: `Enter Historical Warning (${daysRemaining} days left - Hurry!)` };
+      return { level: 'warning', text: `Capture Historical Warnings (${daysRemaining} days left - Hurry!)` };
     }
 
     if (daysRemaining <= 14) {
-      return { level: 'warning', text: `Enter Historical Warning (${daysRemaining} days left)` };
+      return { level: 'warning', text: `Capture Historical Warnings (${daysRemaining} days left)` };
     }
 
-    return { level: 'normal', text: `Enter Historical Warning (${daysRemaining} days left)` };
+    return { level: 'normal', text: `Capture Historical Warnings (${daysRemaining} days left)` };
   };
 
   const { level: urgencyLevel, text: displayText } = getUrgencyData();

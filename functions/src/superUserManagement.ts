@@ -149,7 +149,7 @@ export const manageSuperUser = onCall<UpdateSuperUserRequest>(
           }
 
           await adminAuth.setCustomUserClaims(targetUserId, {
-            role: 'business-owner', // Downgrade to business owner
+            role: 'executive-management', // Downgrade to business owner
             permissions: [],
             revokedBy: context.uid,
             revokedAt: new Date().toISOString()

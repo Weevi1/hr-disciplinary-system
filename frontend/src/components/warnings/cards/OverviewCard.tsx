@@ -19,7 +19,7 @@ import { useWarningsStats } from '@/hooks/useWarningsStats';
 import WarningsStatsCard from './StatsCard';
 
 interface WarningsOverviewCardProps {
-  userRole: 'business-owner' | 'hr-manager';
+  userRole: 'executive-management' | 'hr-manager';
   variant?: 'executive' | 'detailed' | 'compact';
   gradientColors?: string;
   showHeader?: boolean;
@@ -34,21 +34,21 @@ export const WarningsOverviewCard: React.FC<WarningsOverviewCardProps> = ({
   const { stats, loading, error, refreshStats } = useWarningsStats();
 
   const getRoleIcon = () => {
-    return userRole === 'business-owner' ? Shield : AlertTriangle;
+    return userRole === 'executive-management' ? Shield : AlertTriangle;
   };
 
   const getRoleColor = () => {
-    return userRole === 'business-owner' ? 'text-purple-600' : 'text-emerald-600';
+    return userRole === 'executive-management' ? 'text-purple-600' : 'text-emerald-600';
   };
 
   const getHeaderTitle = () => {
-    return userRole === 'business-owner' 
+    return userRole === 'executive-management' 
       ? 'Warnings Overview' 
       : 'Warnings Management';
   };
 
   const getHeaderSubtitle = () => {
-    return userRole === 'business-owner'
+    return userRole === 'executive-management'
       ? 'Executive summary of disciplinary actions'
       : 'Active warnings requiring review and management';
   };
@@ -104,38 +104,40 @@ export const WarningsOverviewCard: React.FC<WarningsOverviewCardProps> = ({
   // Executive variant for business owners
   if (variant === 'executive') {
     return (
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+      <div className="space-y-3">
         {showHeader && (
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className={`text-lg font-semibold ${getRoleColor()} flex items-center gap-2 mb-1`}>
-                {React.createElement(getRoleIcon(), { className: 'w-6 h-6' })}
-                {getHeaderTitle()}
-              </h3>
-              <p className="text-gray-600 text-sm">{getHeaderSubtitle()}</p>
+          <div className="bg-white border border-gray-200 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className={`text-sm font-semibold ${getRoleColor()} flex items-center gap-2`}>
+                  {React.createElement(getRoleIcon(), { className: 'w-4 h-4' })}
+                  {getHeaderTitle()}
+                </h3>
+                <p className="text-gray-600 text-xs mt-0.5">{getHeaderSubtitle()}</p>
+              </div>
+              <button
+                onClick={refreshStats}
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded hover:bg-gray-50 transition-colors"
+                disabled={loading}
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
             </div>
-            <button
-              onClick={refreshStats}
-              className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
-              disabled={loading}
-            >
-              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-            </button>
           </div>
         )}
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
             <div className="flex items-center gap-2 text-red-700">
-              <XCircle className="w-5 h-5" />
-              <span className="font-medium">Failed to load warnings data</span>
+              <XCircle className="w-4 h-4" />
+              <span className="font-medium text-sm">Failed to load warnings data</span>
             </div>
-            <p className="text-red-600 text-sm mt-1">{error}</p>
+            <p className="text-red-600 text-xs mt-1">{error}</p>
           </div>
         )}
 
         {/* Executive Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <WarningsStatsCard
             title="Total Warnings"
             value={stats.totalWarnings}
@@ -159,14 +161,14 @@ export const WarningsOverviewCard: React.FC<WarningsOverviewCardProps> = ({
           <WarningsStatsCard
             title="High Risk"
             value={stats.highRisk}
-            subtitle="Final/Suspension/Dismissal"
+            subtitle="Final warnings"
             icon={AlertTriangle}
             color="text-red-600"
             bgColor="bg-red-100"
             isLoading={loading}
             pulse={stats.highRisk > 0}
           />
-          
+
           <WarningsStatsCard
             title="This Month"
             value={stats.recentActivity.monthCount}
@@ -179,32 +181,24 @@ export const WarningsOverviewCard: React.FC<WarningsOverviewCardProps> = ({
         </div>
 
         {/* Level Breakdown for Executive View */}
-        <div className="bg-gray-50 rounded-xl p-4 mb-6">
-          <h4 className="font-semibold text-gray-800 mb-3">Warning Level Distribution</h4>
-          <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="bg-white border border-gray-200 rounded-lg p-3">
+          <h4 className="text-sm font-semibold text-gray-800 mb-3">Warning Level Distribution</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="text-center">
-              <div className="text-lg font-bold text-green-600">{stats.byLevel.verbal}</div>
+              <div className="text-2xl font-bold text-green-600">{stats.byLevel.verbal}</div>
               <div className="text-xs text-gray-600">Verbal</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-yellow-600">{stats.byLevel.first_written}</div>
+              <div className="text-2xl font-bold text-yellow-600">{stats.byLevel.first_written}</div>
               <div className="text-xs text-gray-600">1st Written</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-orange-600">{stats.byLevel.second_written}</div>
+              <div className="text-2xl font-bold text-orange-600">{stats.byLevel.second_written}</div>
               <div className="text-xs text-gray-600">2nd Written</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-red-600">{stats.byLevel.final_written}</div>
+              <div className="text-2xl font-bold text-red-600">{stats.byLevel.final_written}</div>
               <div className="text-xs text-gray-600">Final</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-purple-600">{stats.byLevel.suspension}</div>
-              <div className="text-xs text-gray-600">Suspension</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-gray-900">{stats.byLevel.dismissal}</div>
-              <div className="text-xs text-gray-600">Dismissal</div>
             </div>
           </div>
         </div>
@@ -262,14 +256,14 @@ export const WarningsOverviewCard: React.FC<WarningsOverviewCardProps> = ({
         <WarningsStatsCard
           title="High Risk"
           value={stats.highRisk}
-          subtitle="Final/Suspension/Dismissal"
+          subtitle="Final warnings"
           icon={AlertTriangle}
           color="text-red-600"
           bgColor="bg-red-100"
           isLoading={loading}
           pulse={stats.highRisk > 0}
         />
-        
+
         <WarningsStatsCard
           title="Expiring Soon"
           value={stats.expiringSoon}
@@ -279,7 +273,7 @@ export const WarningsOverviewCard: React.FC<WarningsOverviewCardProps> = ({
           bgColor="bg-yellow-100"
           isLoading={loading}
         />
-        
+
         <WarningsStatsCard
           title="Active Total"
           value={stats.activeWarnings}
@@ -297,7 +291,7 @@ export const WarningsOverviewCard: React.FC<WarningsOverviewCardProps> = ({
           <BarChart3 className="w-5 h-5 text-gray-600" />
           Warning Level Distribution
         </h4>
-        <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="text-center p-3 bg-white rounded-lg">
             <div className="text-xl font-bold text-green-600">{stats.byLevel.verbal}</div>
             <div className="text-xs text-gray-600 mt-1">Verbal</div>
@@ -313,14 +307,6 @@ export const WarningsOverviewCard: React.FC<WarningsOverviewCardProps> = ({
           <div className="text-center p-3 bg-white rounded-lg">
             <div className="text-xl font-bold text-red-600">{stats.byLevel.final_written}</div>
             <div className="text-xs text-gray-600 mt-1">Final</div>
-          </div>
-          <div className="text-center p-3 bg-white rounded-lg">
-            <div className="text-xl font-bold text-purple-600">{stats.byLevel.suspension}</div>
-            <div className="text-xs text-gray-600 mt-1">Suspension</div>
-          </div>
-          <div className="text-center p-3 bg-white rounded-lg">
-            <div className="text-xl font-bold text-gray-900">{stats.byLevel.dismissal}</div>
-            <div className="text-xs text-gray-600 mt-1">Dismissal</div>
           </div>
         </div>
       </div>

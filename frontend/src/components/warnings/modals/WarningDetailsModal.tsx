@@ -486,7 +486,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
   const renderLevelBadge = (level: string, size: 'sm' | 'lg' = 'sm') => {
     const levelConfig = {
       verbal: { text: 'Verbal Warning', intensity: 1 },
-      first_written: { text: 'First Written', intensity: 2 },
+      first_written: { text: 'Written', intensity: 2 },
       second_written: { text: 'Second Written', intensity: 3 },
       final_written: { text: 'Final Written', intensity: 4 },
       suspension: { text: 'Suspension', intensity: 5 },

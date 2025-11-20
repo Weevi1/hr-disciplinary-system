@@ -209,7 +209,16 @@ export const PDFPreviewModal: React.FC<PDFPreviewModalProps> = ({
           timestamp: new Date(),
           chosenBy: 'Manager',
           contactDetails: deliveryChoice.contactDetails
-        } : undefined
+        } : undefined,
+
+        // 🆕 Corrective Discussion Fields (Step 2) - Pass to PDF generator
+        employeeStatement: extractedData.formData.employeeStatement || warningData.employeeStatement,
+        expectedBehaviorStandards: extractedData.formData.expectedBehaviorStandards || warningData.expectedBehaviorStandards,
+        factsLeadingToDecision: extractedData.formData.factsLeadingToDecision || warningData.factsLeadingToDecision,
+        actionSteps: extractedData.formData.actionSteps || warningData.actionSteps,
+        reviewDate: extractedData.formData.reviewDate || warningData.reviewDate,
+        interventionDetails: extractedData.formData.interventionDetails || warningData.interventionDetails,
+        resourcesProvided: extractedData.formData.resourcesProvided || warningData.resourcesProvided
       };
 
       // 🔒 ASYNC TRANSFORMATION: Transform warning data for PDF (fetches template if needed)

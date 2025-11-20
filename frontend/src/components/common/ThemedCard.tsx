@@ -1,5 +1,6 @@
 // ThemedCard - Theme-aware card component that respects all themes
-import React from 'react';
+// 🚀 OPTIMIZED: React.memo + useMemo for style calculations + useCallback for handlers
+import React, { useMemo, useCallback } from 'react';
 
 export interface ThemedCardProps {
   children: React.ReactNode;
@@ -11,7 +12,8 @@ export interface ThemedCardProps {
   onClick?: () => void;
 }
 
-export const ThemedCard: React.FC<ThemedCardProps> = ({
+// 🚀 MEMOIZED: Prevents re-renders when props haven't changed
+export const ThemedCard = React.memo<ThemedCardProps>(({
   children,
   className = '',
   style,
@@ -34,27 +36,29 @@ export const ThemedCard: React.FC<ThemedCardProps> = ({
     xl: 'var(--shadow-xl)'
   };
 
-  const cardStyle: React.CSSProperties = {
+  // 🚀 MEMOIZED: Style calculation only runs when dependencies change
+  const cardStyle: React.CSSProperties = useMemo(() => ({
     backgroundColor: 'var(--color-card-background)',
     border: '1px solid var(--color-card-border)',
     boxShadow: shadowVar[shadow],
     transition: 'all 0.2s ease',
     ...style
-  };
+  }), [shadow, style]);
 
-  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+  // 🚀 MEMOIZED: Hover handlers only recreated when dependencies change
+  const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (hover) {
       e.currentTarget.style.transform = 'translateY(-2px)';
       e.currentTarget.style.boxShadow = shadowVar.lg;
     }
-  };
+  }, [hover]);
 
-  const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (hover) {
       e.currentTarget.style.transform = 'translateY(0)';
       e.currentTarget.style.boxShadow = shadowVar[shadow];
     }
-  };
+  }, [hover, shadow]);
 
   return (
     <div
@@ -67,7 +71,10 @@ export const ThemedCard: React.FC<ThemedCardProps> = ({
       {children}
     </div>
   );
-};
+});
+
+// Display name for React DevTools
+ThemedCard.displayName = 'ThemedCard';
 
 // ThemedSectionHeader - Unified section header component
 export interface ThemedSectionHeaderProps {
@@ -78,7 +85,8 @@ export interface ThemedSectionHeaderProps {
   className?: string;
 }
 
-export const ThemedSectionHeader: React.FC<ThemedSectionHeaderProps> = ({
+// 🚀 MEMOIZED: Prevents re-renders when props haven't changed
+export const ThemedSectionHeader = React.memo<ThemedSectionHeaderProps>(({
   icon: Icon,
   title,
   subtitle,
@@ -103,7 +111,10 @@ export const ThemedSectionHeader: React.FC<ThemedSectionHeaderProps> = ({
       )}
     </div>
   );
-};
+});
+
+// Display name for React DevTools
+ThemedSectionHeader.displayName = 'ThemedSectionHeader';
 
 // ThemedFormInput - Unified form input component
 export interface ThemedFormInputProps {
@@ -120,7 +131,8 @@ export interface ThemedFormInputProps {
   className?: string;
 }
 
-export const ThemedFormInput: React.FC<ThemedFormInputProps> = ({
+// 🚀 MEMOIZED: Prevents re-renders when props haven't changed
+export const ThemedFormInput = React.memo<ThemedFormInputProps>(({
   type = 'text',
   label,
   value,
@@ -133,16 +145,22 @@ export const ThemedFormInput: React.FC<ThemedFormInputProps> = ({
   options,
   className = ''
 }) => {
-  const inputStyle: React.CSSProperties = {
+  // 🚀 MEMOIZED: Style calculation only runs when error state changes
+  const inputStyle: React.CSSProperties = useMemo(() => ({
     backgroundColor: error ? 'var(--color-alert-error-bg)' : 'var(--color-input-background)',
     borderColor: error ? 'var(--color-alert-error-border)' : 'var(--color-input-border)',
     color: 'var(--color-text)'
-  };
+  }), [error]);
+
+  // 🚀 MEMOIZED: Change handler only recreated when onChange changes
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    onChange(e.target.value);
+  }, [onChange]);
 
   const renderInput = () => {
     const commonProps = {
       value,
-      onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => onChange(e.target.value),
+      onChange: handleChange,
       placeholder,
       disabled,
       className: `w-full h-11 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`,
@@ -189,7 +207,10 @@ export const ThemedFormInput: React.FC<ThemedFormInputProps> = ({
       )}
     </div>
   );
-};
+});
+
+// Display name for React DevTools
+ThemedFormInput.displayName = 'ThemedFormInput';
 
 // ThemedBadge component for status indicators
 export interface ThemedBadgeProps {
@@ -199,7 +220,8 @@ export interface ThemedBadgeProps {
   className?: string;
 }
 
-export const ThemedBadge: React.FC<ThemedBadgeProps> = ({
+// 🚀 MEMOIZED: Prevents re-renders when props haven't changed
+export const ThemedBadge = React.memo<ThemedBadgeProps>(({
   children,
   variant = 'default',
   size = 'sm',
@@ -210,7 +232,8 @@ export const ThemedBadge: React.FC<ThemedBadgeProps> = ({
     md: 'px-3 py-1 text-sm'
   };
 
-  const getVariantStyles = () => {
+  // 🚀 MEMOIZED: Expensive style calculation only runs when variant changes
+  const variantStyles = useMemo(() => {
     switch (variant) {
       case 'primary':
         return {
@@ -238,9 +261,7 @@ export const ThemedBadge: React.FC<ThemedBadgeProps> = ({
           color: 'var(--color-badge-default-text)'
         };
     }
-  };
-
-  const variantStyles = getVariantStyles();
+  }, [variant]);
 
   return (
     <span
@@ -250,7 +271,10 @@ export const ThemedBadge: React.FC<ThemedBadgeProps> = ({
       {children}
     </span>
   );
-};
+});
+
+// Display name for React DevTools
+ThemedBadge.displayName = 'ThemedBadge';
 
 // ThemedAlert component for notifications
 export interface ThemedAlertProps {
@@ -260,13 +284,15 @@ export interface ThemedAlertProps {
   onClose?: () => void;
 }
 
-export const ThemedAlert: React.FC<ThemedAlertProps> = ({
+// 🚀 MEMOIZED: Prevents re-renders when props haven't changed
+export const ThemedAlert = React.memo<ThemedAlertProps>(({
   children,
   variant = 'info',
   className = '',
   onClose
 }) => {
-  const getVariantStyles = () => {
+  // 🚀 MEMOIZED: Expensive style calculation only runs when variant changes
+  const variantStyles = useMemo(() => {
     switch (variant) {
       case 'success':
         return {
@@ -293,9 +319,7 @@ export const ThemedAlert: React.FC<ThemedAlertProps> = ({
           color: 'var(--color-alert-info-text)'
         };
     }
-  };
-
-  const variantStyles = getVariantStyles();
+  }, [variant]);
 
   return (
     <div
@@ -320,4 +344,7 @@ export const ThemedAlert: React.FC<ThemedAlertProps> = ({
       </div>
     </div>
   );
-};
+});
+
+// Display name for React DevTools
+ThemedAlert.displayName = 'ThemedAlert';

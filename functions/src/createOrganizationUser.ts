@@ -75,7 +75,7 @@ export const createOrganizationUser = onCall<CreateUserRequest>(
       const callerRole = typeof callerData?.role === 'string' ? callerData.role : callerData?.role?.id;
 
       // Business owners and HR managers can create HR/HOD managers
-      if (callerRole !== 'business-owner' && callerRole !== 'hr-manager') {
+      if (callerRole !== 'executive-management' && callerRole !== 'hr-manager') {
         throw new HttpsError('permission-denied', 'Only business owners and HR managers can create managers');
       }
 

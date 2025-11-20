@@ -76,6 +76,23 @@ export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerPr
         return;
       }
 
+      // 🔍 Check current permission state using Permissions API (if available)
+      try {
+        if (navigator.permissions && navigator.permissions.query) {
+          const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+
+          if (permissionStatus.state === 'denied') {
+            Logger.warn('⚠️ Microphone permission is permanently blocked');
+            setPermissionState('denied');
+            setErrorMessage('Microphone access is blocked in your browser settings. Click the lock icon in the address bar to allow access.');
+            return;
+          }
+        }
+      } catch (permCheckError) {
+        // Permissions API not supported or query failed - continue with getUserMedia attempt
+        Logger.debug('Permissions API check failed, proceeding with getUserMedia:', permCheckError);
+      }
+
       // Request microphone access
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
@@ -110,16 +127,16 @@ export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerPr
 
       if (error.name === 'NotAllowedError') {
         setPermissionState('denied');
-        setErrorMessage('Microphone access was denied. Please allow microphone access and try again.');
+        setErrorMessage('Microphone access was denied. Click the lock/info icon in your browser\'s address bar, then allow microphone access and refresh this page.');
       } else if (error.name === 'NotFoundError') {
         setPermissionState('error');
-        setErrorMessage('No microphone was found on your device.');
+        setErrorMessage('No microphone was found on your device. Please connect a microphone and try again.');
       } else if (error.name === 'NotReadableError') {
         setPermissionState('error');
-        setErrorMessage('Your microphone is being used by another application.');
+        setErrorMessage('Your microphone is being used by another application. Please close other apps and try again.');
       } else {
         setPermissionState('error');
-        setErrorMessage('An error occurred while accessing your microphone.');
+        setErrorMessage('An error occurred while accessing your microphone. Please check your browser settings.');
       }
 
       // Call all registered error callbacks
@@ -200,16 +217,28 @@ export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerPr
           {/* Actions */}
           {(permissionState === 'denied' || permissionState === 'error') && (
             <div className="space-y-3">
+              {/* Visual Instructions */}
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-left">
+                <div className="flex items-start gap-2 mb-2">
+                  <Lock className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-xs text-blue-900">
+                    <p className="font-semibold mb-1">To enable microphone:</p>
+                    <ol className="list-decimal list-inside space-y-1 text-blue-800">
+                      <li>Click the <strong>lock icon</strong> or <strong>site settings</strong> in your browser's address bar</li>
+                      <li>Find <strong>Microphone</strong> settings</li>
+                      <li>Change to <strong>Allow</strong></li>
+                      <li>Refresh this page or click Try Again below</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+
               <button
                 onClick={requestMicrophonePermission}
                 className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
               >
                 Try Again
               </button>
-              
-              <div className="text-xs text-gray-500">
-                <p>Look for the microphone icon in your browser's address bar and click "Allow"</p>
-              </div>
             </div>
           )}
 

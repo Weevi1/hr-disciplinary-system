@@ -55,6 +55,11 @@ interface RoleContent {
 }
 
 const getRoleContent = (role: UserRoleId, hodPermissions?: HODPermissions): RoleContent => {
+  // Debug logging to see what permissions are being passed
+  console.log('🔐 Welcome Modal - Role:', role);
+  console.log('🔐 Welcome Modal - hodPermissions:', hodPermissions);
+  console.log('🔐 Welcome Modal - canReportAbsences:', hodPermissions?.canReportAbsences);
+
   switch (role) {
     case 'super-user':
       return {
@@ -110,10 +115,10 @@ const getRoleContent = (role: UserRoleId, hodPermissions?: HODPermissions): Role
         bgColor: '#eff6ff'
       };
 
-    case 'business-owner':
+    case 'executive-management':
       return {
         icon: <Briefcase className="w-12 h-12" />,
-        title: 'Business Owner',
+        title: 'Executive Management',
         subtitle: 'Executive Dashboard',
         description: 'Complete oversight of your organization\'s disciplinary processes and compliance. Access powerful insights and manage your entire workforce.',
         features: [
@@ -165,6 +170,14 @@ const getRoleContent = (role: UserRoleId, hodPermissions?: HODPermissions): Role
       };
 
     case 'hod-manager': {
+      // Default each permission individually (handles partial/empty hodPermissions objects)
+      const permissions = {
+        canIssueWarnings: hodPermissions?.canIssueWarnings ?? true,
+        canBookHRMeetings: hodPermissions?.canBookHRMeetings ?? true,
+        canReportAbsences: hodPermissions?.canReportAbsences ?? true,
+        canRecordCounselling: hodPermissions?.canRecordCounselling ?? true
+      };
+
       // Build dynamic features array based on HOD permissions
       const features: FeatureItem[] = [
         {
@@ -175,7 +188,7 @@ const getRoleContent = (role: UserRoleId, hodPermissions?: HODPermissions): Role
       ];
 
       // Add permission-based features
-      if (hodPermissions?.canIssueWarnings) {
+      if (permissions.canIssueWarnings) {
         features.push({
           icon: <FileText className="w-5 h-5" />,
           title: 'Issue Warnings',
@@ -183,7 +196,7 @@ const getRoleContent = (role: UserRoleId, hodPermissions?: HODPermissions): Role
         });
       }
 
-      if (hodPermissions?.canBookHRMeetings) {
+      if (permissions.canBookHRMeetings) {
         features.push({
           icon: <MessageSquare className="w-5 h-5" />,
           title: 'HR Meetings',
@@ -191,7 +204,7 @@ const getRoleContent = (role: UserRoleId, hodPermissions?: HODPermissions): Role
         });
       }
 
-      if (hodPermissions?.canReportAbsences) {
+      if (permissions.canReportAbsences) {
         features.push({
           icon: <UserX className="w-5 h-5" />,
           title: 'Absence Reporting',
@@ -199,36 +212,81 @@ const getRoleContent = (role: UserRoleId, hodPermissions?: HODPermissions): Role
         });
       }
 
-      if (hodPermissions?.canRecordCounselling) {
+      if (permissions.canRecordCounselling) {
         features.push({
-          icon: <BookOpen className="w-5 h-5" />,
-          title: 'Record Counselling',
-          description: 'Document counselling sessions with team members'
+          icon: <Sparkles className="w-5 h-5" />,
+          title: 'Recognition',
+          description: 'Recognize and reward team member achievements'
         });
-      }
-
-      // Build dynamic description based on enabled features
-      const enabledCount = hodPermissions
-        ? Object.values(hodPermissions).filter(Boolean).length
-        : 4;
-
-      let description = 'Manage your team members and handle day-to-day disciplinary matters. ';
-
-      if (enabledCount === 0) {
-        description = 'View your team members and their disciplinary records. Your HR manager can enable additional features for you.';
-      } else if (enabledCount === 1 && hodPermissions?.canIssueWarnings) {
-        description = 'Issue warnings to your team members and manage disciplinary matters. Additional features can be enabled by your HR manager.';
-      } else if (enabledCount <= 2) {
-        description = 'Manage your team members with selected disciplinary tools. Additional features can be enabled by your HR manager.';
-      } else {
-        description = 'Manage your team members and handle day-to-day disciplinary matters. Keep your department running smoothly with streamlined reporting tools.';
       }
 
       return {
         icon: <Users className="w-12 h-12" />,
         title: 'Department Manager',
         subtitle: 'Team Management',
-        description,
+        description: 'Manage your team members and handle day-to-day disciplinary matters. Keep your department running smoothly with streamlined reporting tools.',
+        features,
+        primaryColor: '#14b8a6',
+        bgColor: '#f0fdfa'
+      };
+    }
+
+    case 'department-manager': {
+      // Default each permission individually (handles partial/empty hodPermissions objects)
+      const permissions = {
+        canIssueWarnings: hodPermissions?.canIssueWarnings ?? true,
+        canBookHRMeetings: hodPermissions?.canBookHRMeetings ?? true,
+        canReportAbsences: hodPermissions?.canReportAbsences ?? true,
+        canRecordCounselling: hodPermissions?.canRecordCounselling ?? true
+      };
+
+      // Build dynamic features array based on department manager permissions
+      const features: FeatureItem[] = [
+        {
+          icon: <Users className="w-5 h-5" />,
+          title: 'Team Overview',
+          description: 'View all team members and their disciplinary records'
+        }
+      ];
+
+      // Add permission-based features (uses same hodPermissions)
+      if (permissions.canIssueWarnings) {
+        features.push({
+          icon: <FileText className="w-5 h-5" />,
+          title: 'Issue Warnings',
+          description: 'Create and issue warnings to team members'
+        });
+      }
+
+      if (permissions.canBookHRMeetings) {
+        features.push({
+          icon: <MessageSquare className="w-5 h-5" />,
+          title: 'HR Meetings',
+          description: 'Request HR meetings and document team issues'
+        });
+      }
+
+      if (permissions.canReportAbsences) {
+        features.push({
+          icon: <UserX className="w-5 h-5" />,
+          title: 'Absence Reporting',
+          description: 'Report employee absences to HR'
+        });
+      }
+
+      if (permissions.canRecordCounselling) {
+        features.push({
+          icon: <Sparkles className="w-5 h-5" />,
+          title: 'Recognition',
+          description: 'Recognize and reward team member achievements'
+        });
+      }
+
+      return {
+        icon: <Users className="w-12 h-12" />,
+        title: 'Department Manager',
+        subtitle: 'Team Management',
+        description: 'Manage your team members and handle day-to-day disciplinary matters. Keep your department running smoothly with streamlined reporting tools.',
         features,
         primaryColor: '#14b8a6',
         bgColor: '#f0fdfa'
@@ -314,336 +372,114 @@ export const FirstTimeWelcomeModal: React.FC<FirstTimeWelcomeModalProps> = ({
       isOpen={isOpen}
       onClose={() => {}} // Prevent closing until acknowledged
       title=""
-      size={isMobile ? "sm" : "md"}
+      size="sm"
       className="first-time-welcome-modal"
       hideHeader={true}
     >
-      {/* Solid Color Hero Header - Fixed at top, no scroll */}
-      <div
-        className={`relative overflow-hidden flex-shrink-0 ${isMobile ? 'px-4 pt-3 pb-2' : 'px-8 pt-8 pb-6'}`}
-        style={{ backgroundColor: roleContent.bgColor }}
-      >
-          {isMobile ? (
-            /* Compact Mobile Header - Horizontal Layout */
-            <div
-              className="flex items-center gap-3 transition-all duration-500"
-              style={{
-                opacity: isAnimated ? 1 : 0,
-                transform: isAnimated ? 'translateY(0)' : 'translateY(10px)'
-              }}
-            >
-              {/* Icon - Smaller, Left-aligned */}
-              <div
-                className="flex items-center justify-center w-12 h-12 rounded-lg shadow-md flex-shrink-0"
-                style={{
-                  backgroundColor: 'white',
-                  color: roleContent.primaryColor
-                }}
-              >
-                {React.cloneElement(roleContent.icon as React.ReactElement, {
-                  className: 'w-6 h-6'
-                })}
-              </div>
-
-              {/* Text - Left-aligned, Compact */}
-              <div className="flex-1 min-w-0">
-                <h2
-                  className="text-base font-bold tracking-tight truncate"
-                  style={{ color: roleContent.primaryColor }}
-                >
-                  Welcome, {userName}! 👋
-                </h2>
-                <div className="flex items-center gap-1.5 text-gray-700 text-xs">
-                  <span className="font-semibold truncate">{roleContent.title}</span>
-                  <span className="text-gray-400">•</span>
-                  <span className="truncate">{roleContent.subtitle}</span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Desktop Header - Original Centered Layout */
-            <>
-              {/* Icon - Centered */}
-              <div className="flex justify-center mb-6">
-                <div
-                  className="flex items-center justify-center w-20 h-20 rounded-2xl shadow-lg"
-                  style={{
-                    backgroundColor: 'white',
-                    color: roleContent.primaryColor
-                  }}
-                >
-                  {roleContent.icon}
-                </div>
-              </div>
-
-              {/* Welcome message - Centered */}
-              <div
-                className="text-center space-y-2 transition-all duration-500"
-                style={{
-                  opacity: isAnimated ? 1 : 0,
-                  transform: isAnimated ? 'translateY(0)' : 'translateY(10px)'
-                }}
-              >
-                <h2
-                  className="text-3xl font-bold tracking-tight"
-                  style={{ color: roleContent.primaryColor }}
-                >
-                  Welcome, {userName}! 👋
-                </h2>
-                <div className="flex flex-wrap items-center justify-center gap-2 text-gray-700">
-                  <span className="text-lg font-semibold">{roleContent.title}</span>
-                  <span className="text-gray-400">•</span>
-                  <span className="text-base">{roleContent.subtitle}</span>
-                </div>
-              </div>
-            </>
-          )}
-      </div>
-
-      {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto" style={{
-        backgroundColor: 'var(--color-card-background)',
-        WebkitOverflowScrolling: 'touch'
-      }}>
-        <div className={`${isMobile ? 'px-4 pt-4 pb-4 space-y-4' : 'px-8 pt-6 pb-6 space-y-6'}`}>
-          {/* Description */}
+      {/* Professional Compact Content */}
+      <div className="p-6 space-y-4">
+        {/* Header */}
+        <div className="flex items-center gap-3">
           <div
-            className="transition-all duration-500 delay-100"
+            className="flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0"
             style={{
-              opacity: isAnimated ? 1 : 0,
-              transform: isAnimated ? 'translateY(0)' : 'translateY(10px)'
+              backgroundColor: roleContent.primaryColor,
+              opacity: 0.12
             }}
           >
-            <p className={`${isMobile ? 'text-sm' : 'text-base'} leading-relaxed`} style={{ color: 'var(--color-text-secondary)' }}>
-              {roleContent.description}
+            <div style={{ color: roleContent.primaryColor }}>
+              {React.cloneElement(roleContent.icon as React.ReactElement, {
+                className: 'w-5 h-5'
+              })}
+            </div>
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-gray-900 mb-0.5">
+              Welcome, {userName}!
+            </h2>
+            <p className="text-sm text-gray-500">
+              {roleContent.title}
             </p>
           </div>
+        </div>
 
-          {/* Features Grid */}
-          <div
-            className="transition-all duration-500 delay-200"
-            style={{
-              opacity: isAnimated ? 1 : 0,
-              transform: isAnimated ? 'translateY(0)' : 'translateY(10px)'
-            }}
-          >
-            <h3
-              className={`${isMobile ? 'text-xs' : 'text-sm'} font-semibold uppercase tracking-wider ${isMobile ? 'mb-2' : 'mb-4'}`}
-              style={{ color: 'var(--color-text-tertiary)' }}
-            >
-              What You Can Do
-            </h3>
-            <div className={`grid ${isMobile ? 'gap-2' : 'gap-3'}`}>
-              {(() => {
-                const visibleFeatures = isMobile && !showAllFeatures
-                  ? roleContent.features.slice(0, 2)
-                  : roleContent.features;
-                const hiddenCount = roleContent.features.length - 2;
-
-                return (
-                  <>
-                    {visibleFeatures.map((feature, index) => (
-                      <div
-                        key={index}
-                        className={`group relative rounded-xl ${isMobile ? 'p-3' : 'p-4'} border transition-all duration-200 cursor-default hover:shadow-md`}
-                        style={{
-                          backgroundColor: 'var(--color-background)',
-                          borderColor: 'var(--color-border)',
-                          transitionDelay: `${300 + index * 75}ms`
-                        }}
-                      >
-                        <div className={`flex items-start ${isMobile ? 'gap-2' : 'gap-3'}`}>
-                          <div
-                            className={`flex-shrink-0 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'} rounded-lg flex items-center justify-center text-white shadow-sm group-hover:shadow-md transition-all`}
-                            style={{ backgroundColor: roleContent.primaryColor }}
-                          >
-                            {React.cloneElement(feature.icon as React.ReactElement, {
-                              className: isMobile ? 'w-4 h-4' : 'w-5 h-5'
-                            })}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4
-                              className={`font-semibold ${isMobile ? 'text-xs' : 'text-sm'} mb-0.5`}
-                              style={{ color: 'var(--color-text)' }}
-                            >
-                              {feature.title}
-                            </h4>
-                            <p
-                              className={`${isMobile ? 'text-xs' : 'text-sm'} leading-relaxed`}
-                              style={{ color: 'var(--color-text-secondary)' }}
-                            >
-                              {feature.description}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Show More/Less Button for Mobile */}
-                    {isMobile && roleContent.features.length > 2 && (
-                      <button
-                        onClick={() => setShowAllFeatures(!showAllFeatures)}
-                        className="w-full py-2.5 px-3 rounded-lg border-2 border-dashed transition-all duration-200 hover:border-solid hover:shadow-sm"
-                        style={{
-                          borderColor: roleContent.primaryColor,
-                          color: roleContent.primaryColor,
-                          backgroundColor: showAllFeatures ? 'var(--color-background)' : 'transparent'
-                        }}
-                      >
-                        <span className="text-xs font-semibold">
-                          {showAllFeatures ? '▲ Show Less' : `▼ Show ${hiddenCount} More Feature${hiddenCount > 1 ? 's' : ''}`}
-                        </span>
-                      </button>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-
-          {/* Security Notice */}
-          <div
-            className="transition-all duration-500 delay-500"
-            style={{
-              opacity: isAnimated ? 1 : 0,
-              transform: isAnimated ? 'translateY(0)' : 'translateY(10px)'
-            }}
-          >
-            <div
-              className={`border-2 rounded-xl ${isMobile ? 'p-3' : 'p-4'} shadow-sm`}
-              style={{
-                backgroundColor: 'var(--color-alert-warning-bg)',
-                borderColor: 'var(--color-alert-warning-border)'
-              }}
-            >
-              <div className={`flex items-start ${isMobile ? 'gap-2' : 'gap-3'}`}>
+        {/* Key Features - Compact List */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2.5">
+            Your Capabilities
+          </h3>
+          <div className="space-y-2">
+            {roleContent.features.map((feature, index) => (
+              <div key={index} className="flex items-center gap-2.5 text-sm text-gray-700">
                 <div
-                  className={`flex-shrink-0 ${isMobile ? 'w-8 h-8' : 'w-10 h-10'} rounded-lg flex items-center justify-center text-white shadow-md`}
-                  style={{ backgroundColor: 'var(--color-warning)' }}
-                >
-                  <Key className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} />
-                </div>
-                <div className="flex-1">
-                  <h4
-                    className={`font-bold ${isMobile ? 'mb-0.5 text-xs' : 'mb-1 text-sm'} flex items-center gap-2 flex-wrap`}
-                    style={{ color: 'var(--color-alert-warning-text)' }}
-                  >
-                    Important: Change Your Password
-                    {!isMobile && (
-                      <span
-                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
-                        style={{
-                          backgroundColor: 'var(--color-badge-warning)',
-                          color: 'var(--color-badge-warning-text)'
-                        }}
-                      >
-                        Action Required
-                      </span>
-                    )}
-                  </h4>
-                  <p
-                    className={`${isMobile ? 'text-xs' : 'text-sm'} leading-relaxed`}
-                    style={{ color: 'var(--color-alert-warning-text)' }}
-                  >
-                    {isMobile ? (
-                      <>Change your default password (<span className="font-mono font-bold">temp123</span>) from the profile menu.</>
-                    ) : (
-                      <>
-                        If you're using the temporary password <span className="font-mono font-bold bg-orange-100 px-1.5 py-0.5 rounded">temp123</span>,
-                        please change it immediately for security. Click your profile icon in the top right and select
-                        <span className="font-semibold"> "Reset Password"</span>.
-                      </>
-                    )}
-                  </p>
-                </div>
+                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: roleContent.primaryColor }}
+                />
+                <span className="leading-tight">{feature.title}</span>
               </div>
-            </div>
+            ))}
           </div>
+        </div>
 
-          {/* Acknowledgment Checkboxes */}
-          <div
-            className={`border-t ${isMobile ? 'pt-3 space-y-3' : 'pt-4 space-y-2.5'} transition-all duration-500 delay-600`}
-            style={{
-              opacity: isAnimated ? 1 : 0,
-              transform: isAnimated ? 'translateY(0)' : 'translateY(10px)',
-              borderColor: 'var(--color-border)'
-            }}
-          >
-            <label className={`flex items-center ${isMobile ? 'gap-3 py-1' : 'gap-2.5'} cursor-pointer group`}>
-              <input
-                type="checkbox"
-                checked={acknowledged}
-                onChange={(e) => setAcknowledged(e.target.checked)}
-                className={`${isMobile ? 'w-5 h-5' : 'w-4 h-4'} rounded border-2 border-gray-300 focus:ring-2 focus:ring-offset-2 cursor-pointer transition-all`}
-                style={{
-                  color: roleContent.primaryColor,
-                  accentColor: roleContent.primaryColor
-                }}
-              />
-              <span
-                className={`${isMobile ? 'text-sm' : 'text-sm'} leading-snug group-hover:opacity-100 transition-opacity flex-1`}
-                style={{ color: 'var(--color-text-secondary)', opacity: 0.9 }}
-              >
-                I understand my role and responsibilities, and I'll change my password if needed.
-              </span>
-            </label>
-
-            <label className={`flex items-center ${isMobile ? 'gap-3 py-1' : 'gap-2.5'} cursor-pointer group`}>
-              <input
-                type="checkbox"
-                checked={dontShowAgain}
-                onChange={(e) => setDontShowAgain(e.target.checked)}
-                className={`${isMobile ? 'w-5 h-5' : 'w-4 h-4'} rounded border-2 border-gray-300 focus:ring-2 focus:ring-offset-2 cursor-pointer transition-all`}
-                style={{
-                  color: roleContent.primaryColor,
-                  accentColor: roleContent.primaryColor
-                }}
-              />
-              <span
-                className={`${isMobile ? 'text-sm' : 'text-sm'} leading-snug group-hover:opacity-100 transition-opacity flex-1`}
-                style={{ color: 'var(--color-text-secondary)', opacity: 0.9 }}
-              >
-                Don't show this welcome message again
-              </span>
-            </label>
+        {/* Password Notice - Compact */}
+        <div className="flex items-start gap-2.5 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+          <Key className="w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-xs text-orange-900 leading-relaxed">
+              <strong className="font-semibold">Change your password:</strong> If using temporary password <code className="px-1.5 py-0.5 bg-orange-100 rounded text-[10px] font-mono font-medium">temp123</code>, update it via <span className="font-medium">Profile → Reset Password</span>
+            </p>
           </div>
+        </div>
 
-          {/* Action Button */}
-          <div
-            className={`flex justify-end ${isMobile ? 'pt-3' : 'pt-4'} transition-all duration-500 delay-700`}
-            style={{
-              opacity: isAnimated ? 1 : 0,
-              transform: isAnimated ? 'translateY(0)' : 'translateY(10px)'
-            }}
-          >
-            <button
-              onClick={handleConfirm}
-              disabled={!acknowledged}
-              className={`flex items-center justify-center gap-2 ${isMobile ? 'w-full px-6 py-3' : 'px-6 py-2.5'} rounded-lg font-semibold transition-all ${isMobile ? 'text-base' : 'text-sm'} transform active:scale-95`}
+        {/* Acknowledgment */}
+        <div className="space-y-2.5 pt-3 border-t border-gray-200">
+          <label className="flex items-start gap-3 cursor-pointer group hover:opacity-80 transition-opacity">
+            <input
+              type="checkbox"
+              checked={acknowledged}
+              onChange={(e) => setAcknowledged(e.target.checked)}
+              className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer flex-shrink-0 transition-all"
               style={{
-                backgroundColor: acknowledged ? roleContent.primaryColor : 'var(--color-muted)',
-                color: acknowledged ? 'white' : 'var(--color-text-tertiary)',
-                cursor: acknowledged ? 'pointer' : 'not-allowed',
-                boxShadow: acknowledged ? 'var(--shadow-lg)' : 'none',
-                transform: acknowledged ? 'scale(1)' : 'scale(1)',
+                accentColor: roleContent.primaryColor
               }}
-              onMouseEnter={(e) => {
-                if (acknowledged) {
-                  e.currentTarget.style.boxShadow = 'var(--shadow-xl)';
-                  e.currentTarget.style.transform = 'scale(1.02)';
-                }
+            />
+            <span className="text-sm text-gray-700 leading-relaxed">
+              I understand my role and will change my password if needed
+            </span>
+          </label>
+
+          <label className="flex items-start gap-3 cursor-pointer group hover:opacity-80 transition-opacity">
+            <input
+              type="checkbox"
+              checked={dontShowAgain}
+              onChange={(e) => setDontShowAgain(e.target.checked)}
+              className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer flex-shrink-0 transition-all"
+              style={{
+                accentColor: roleContent.primaryColor
               }}
-              onMouseLeave={(e) => {
-                if (acknowledged) {
-                  e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }
-              }}
-            >
-              <span>Get Started</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+            />
+            <span className="text-sm text-gray-700 leading-relaxed">
+              Don't show this message again
+            </span>
+          </label>
+        </div>
+
+        {/* Action Button */}
+        <div className="flex justify-end pt-3">
+          <button
+            onClick={handleConfirm}
+            disabled={!acknowledged}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium text-sm transition-all shadow-sm hover:shadow-md disabled:shadow-none"
+            style={{
+              backgroundColor: acknowledged ? roleContent.primaryColor : '#e5e7eb',
+              color: acknowledged ? 'white' : '#9ca3af',
+              cursor: acknowledged ? 'pointer' : 'not-allowed',
+              opacity: acknowledged ? 1 : 0.6
+            }}
+          >
+            Get Started
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </UnifiedModal>

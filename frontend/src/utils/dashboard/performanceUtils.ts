@@ -352,7 +352,7 @@ export const DASHBOARD_CONFIG = {
 // 🎨 THEME CONSTANTS
 export const DASHBOARD_THEMES = {
   ROLE_GRADIENTS: {
-    'business-owner': 'from-purple-500 to-indigo-600',
+    'executive-management': 'from-purple-500 to-indigo-600',
     'hr-manager': 'from-emerald-500 to-teal-600',
     'hod-manager': 'from-blue-500 to-cyan-600',
     'supervisor': 'from-orange-500 to-amber-600',
@@ -362,7 +362,7 @@ export const DASHBOARD_THEMES = {
   },
 
   ROLE_COLORS: {
-    'business-owner': 'purple',
+    'executive-management': 'purple',
     'hr-manager': 'emerald',
     'hod-manager': 'blue',
     'supervisor': 'orange',

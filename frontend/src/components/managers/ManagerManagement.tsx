@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { useManagers } from '../../hooks/managers/useManagers';
+import { useModal } from '../../hooks/useModal';
 import { ManagerStats } from './ManagerStats';
 import { ManagerTable } from './ManagerTable';
 import { ManagerDetailsModal } from './ManagerDetailsModal';
@@ -30,12 +31,11 @@ export const ManagerManagement: React.FC = () => {
     archiveManager
   } = useManagers(organization?.id);
 
-  // Modal state
-  const [showPromoteModal, setShowPromoteModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [showDemoteModal, setShowDemoteModal] = useState(false);
-  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
-  const [selectedManager, setSelectedManager] = useState<Manager | null>(null);
+  // 🚀 REFACTORED: Migrated to useModal hook
+  const promoteModal = useModal();
+  const detailsModal = useModal<Manager>();
+  const demoteModal = useModal<Manager>();
+  const permissionsModal = useModal<Manager>();
 
   // Search and filter
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,19 +53,17 @@ export const ManagerManagement: React.FC = () => {
     return matchesSearch && matchesRole;
   });
 
+  // 🚀 REFACTORED: Using useModal hook with data
   const handleViewDetails = (manager: Manager) => {
-    setSelectedManager(manager);
-    setShowDetailsModal(true);
+    detailsModal.open(manager);
   };
 
   const handleEdit = (manager: Manager) => {
-    setSelectedManager(manager);
-    setShowDetailsModal(true);
+    detailsModal.open(manager);
   };
 
   const handleDemote = (manager: Manager) => {
-    setSelectedManager(manager);
-    setShowDemoteModal(true);
+    demoteModal.open(manager);
   };
 
   const handleConfigurePermissions = (manager: Manager) => {
@@ -74,8 +72,7 @@ export const ManagerManagement: React.FC = () => {
       Logger.warn('Permissions can only be configured for Department Managers');
       return;
     }
-    setSelectedManager(manager);
-    setShowPermissionsModal(true);
+    permissionsModal.open(manager);
   };
 
   const handleArchive = async (manager: Manager) => {
@@ -139,7 +136,8 @@ export const ManagerManagement: React.FC = () => {
               .filter(Boolean) as string[] || []
           };
 
-          setSelectedManager(enhancedManager);
+          // 🚀 REFACTORED: Update modal data using useModal hook
+          detailsModal.open(enhancedManager);
         }
       }
 
@@ -171,8 +169,9 @@ export const ManagerManagement: React.FC = () => {
             Manage manager roles, departments, and employee assignments
           </p>
         </div>
+        {/* 🚀 REFACTORED: Using useModal hook */}
         <button
-          onClick={() => setShowPromoteModal(true)}
+          onClick={promoteModal.open}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
         >
           <UserPlus className="w-4 h-4" />
@@ -239,50 +238,45 @@ export const ManagerManagement: React.FC = () => {
       />
 
       {/* Promote Employee Modal */}
-      {showPromoteModal && (
+      {/* 🚀 REFACTORED: Using useModal hook */}
+      {promoteModal.isOpen && (
         <PromoteToManagerModal
-          isOpen={showPromoteModal}
-          onClose={() => setShowPromoteModal(false)}
+          isOpen={promoteModal.isOpen}
+          onClose={promoteModal.close}
           onPromote={handlePromoteEmployee}
         />
       )}
 
       {/* Manager Details Modal */}
-      {showDetailsModal && selectedManager && (
+      {/* 🚀 REFACTORED: Using useModal hook with data */}
+      {detailsModal.isOpen && detailsModal.data && (
         <ManagerDetailsModal
-          isOpen={showDetailsModal}
-          onClose={() => {
-            setShowDetailsModal(false);
-            setSelectedManager(null);
-          }}
-          manager={selectedManager}
+          isOpen={detailsModal.isOpen}
+          onClose={detailsModal.close}
+          manager={detailsModal.data}
           onUpdate={handleUpdateDepartments}
         />
       )}
 
       {/* Demote Manager Modal */}
-      {showDemoteModal && selectedManager && (
+      {/* 🚀 REFACTORED: Using useModal hook with data */}
+      {demoteModal.isOpen && demoteModal.data && (
         <DemoteManagerModal
-          isOpen={showDemoteModal}
-          onClose={() => {
-            setShowDemoteModal(false);
-            setSelectedManager(null);
-          }}
-          manager={selectedManager}
+          isOpen={demoteModal.isOpen}
+          onClose={demoteModal.close}
+          manager={demoteModal.data}
           onDemote={handleDemoteManager}
-          availableManagers={managers.filter(m => m.id !== selectedManager.id)}
+          availableManagers={managers.filter(m => m.id !== demoteModal.data.id)}
         />
       )}
 
       {/* HOD Permissions Modal */}
-      {showPermissionsModal && selectedManager && (
+      {/* 🚀 REFACTORED: Using useModal hook with data */}
+      {permissionsModal.isOpen && permissionsModal.data && (
         <HODPermissionsModal
-          isOpen={showPermissionsModal}
-          onClose={() => {
-            setShowPermissionsModal(false);
-            setSelectedManager(null);
-          }}
-          manager={selectedManager}
+          isOpen={permissionsModal.isOpen}
+          onClose={permissionsModal.close}
+          manager={permissionsModal.data}
           onSuccess={() => {
             refreshManagers();
           }}

@@ -1,4 +1,6 @@
-import React from 'react';
+// ThemedStatusCard - Status card component for metrics and statistics
+// 🚀 OPTIMIZED: React.memo + useMemo for style calculations + useCallback for handlers
+import React, { useMemo, useCallback } from 'react';
 import { ThemedCard } from './ThemedCard';
 
 export interface ThemedStatusCardProps {
@@ -14,7 +16,8 @@ export interface ThemedStatusCardProps {
   gradient?: boolean;
 }
 
-export const ThemedStatusCard: React.FC<ThemedStatusCardProps> = ({
+// 🚀 MEMOIZED: Prevents re-renders when props haven't changed
+export const ThemedStatusCard = React.memo<ThemedStatusCardProps>(({
   title,
   count,
   total,
@@ -52,7 +55,8 @@ export const ThemedStatusCard: React.FC<ThemedStatusCardProps> = ({
 
   const config = sizeConfig[size];
 
-  const getVariantStyles = (): React.CSSProperties => {
+  // 🚀 MEMOIZED: Expensive style calculation only runs when dependencies change
+  const variantStyles = useMemo((): React.CSSProperties => {
     const baseStyles: React.CSSProperties = {
       transition: 'all 0.2s ease-in-out'
     };
@@ -149,9 +153,10 @@ export const ThemedStatusCard: React.FC<ThemedStatusCardProps> = ({
           color: 'var(--color-text)'
         };
     }
-  };
+  }, [variant, gradient]);
 
-  const getHoverStyles = (): React.CSSProperties => {
+  // 🚀 MEMOIZED: Hover styles only calculated when onClick exists
+  const hoverStyles = useMemo((): React.CSSProperties => {
     if (!onClick) return {};
 
     return {
@@ -159,25 +164,30 @@ export const ThemedStatusCard: React.FC<ThemedStatusCardProps> = ({
       boxShadow: 'var(--shadow-lg)',
       cursor: 'pointer'
     };
-  };
+  }, [onClick]);
+
+  // 🚀 MEMOIZED: Event handlers only recreated when dependencies change
+  const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (onClick) {
+      Object.assign(e.currentTarget.style, hoverStyles);
+    }
+  }, [onClick, hoverStyles]);
+
+  const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (onClick) {
+      Object.assign(e.currentTarget.style, variantStyles);
+    }
+  }, [onClick, variantStyles]);
 
   return (
     <ThemedCard
       padding={config.padding}
       hover={!!onClick}
       className={`${className} ${onClick ? 'cursor-pointer' : ''}`}
-      style={getVariantStyles()}
+      style={variantStyles}
       onClick={onClick}
-      onMouseEnter={(e) => {
-        if (onClick) {
-          Object.assign(e.currentTarget.style, getHoverStyles());
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (onClick) {
-          Object.assign(e.currentTarget.style, getVariantStyles());
-        }
-      }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <div className="flex items-center justify-between">
         <div className="flex-1">
@@ -210,6 +220,9 @@ export const ThemedStatusCard: React.FC<ThemedStatusCardProps> = ({
       </div>
     </ThemedCard>
   );
-};
+});
+
+// Display name for React DevTools
+ThemedStatusCard.displayName = 'ThemedStatusCard';
 
 export default ThemedStatusCard;

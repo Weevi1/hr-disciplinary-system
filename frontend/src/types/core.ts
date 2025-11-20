@@ -8,7 +8,7 @@
 // CORE ENUMS & UNIONS - ENHANCED
 // ============================================
 
-export type UserRoleId = 'super-user' | 'business-owner' | 'hr-manager' | 'hod-manager';
+export type UserRoleId = 'super-user' | 'executive-management' | 'hr-manager' | 'hod-manager';
 // Industry type - accepts any string to support 90+ industry categories
 export type IndustryType = string;
 export type DeliveryMethod = 'email' | 'whatsapp' | 'printed';
@@ -265,6 +265,8 @@ export interface Organization {
         email: string;
       };
     };
+    // 📋 Code of Conduct / Disciplinary Code Reference
+    codeOfConductReference?: string; // e.g., "Annexure B: Disciplinary Code 2022" or "Company Code of Conduct"
   };
   customization: {
     enablePhotoCapture: boolean;
@@ -417,6 +419,157 @@ export interface Warning {
   // This ensures warnings can regenerate with the exact styling they had originally
   pdfGeneratorVersion?: string;       // Global code version (e.g., '1.1.0') - routes to correct handler
   pdfSettings?: PDFTemplateSettings;  // Snapshot of org's template configuration at creation time
+
+  // ============================================
+  // 🆕 CORRECTIVE COUNSELLING FIELDS - Unified Disciplinary Form Approach
+  // Matches client template sections (B, C, E, F) for comprehensive corrective action
+  // ============================================
+
+  /**
+   * Section B - Employee's Version/Response
+   * Employee's side of the story, their perspective on the incident
+   */
+  employeeStatement?: string;
+
+  /**
+   * Section C - Expected Behavior/Standards (Corrective Guidance)
+   * Clear explanation of the required/expected behavior, performance, conduct, or standards
+   * What the employee should be doing instead of the misconduct
+   */
+  expectedBehaviorStandards?: string;
+
+  /**
+   * Section E - Facts Leading to Decision Taken
+   * Detailed reasoning and evidence that led to the disciplinary decision
+   * Legal/HR justification for the action level chosen
+   */
+  factsLeadingToDecision?: string;
+
+  /**
+   * Section F - Action Steps/Improvement Commitments
+   * Specific commitments from the employee to improve conduct/performance
+   * Each commitment has a timeline and optional completion tracking
+   */
+  improvementCommitments?: Array<{
+    commitment: string;        // What the employee commits to do
+    timeline: string;          // When this commitment should be completed by
+    completedDate?: any;       // Firestore Timestamp when commitment was completed
+  }>;
+
+  /**
+   * Follow-up/Review Date
+   * Scheduled date to review progress on improvement commitments
+   * Often 30-90 days after warning issuance
+   */
+  reviewDate?: any;            // Firestore Timestamp for review meeting
+
+  /**
+   * Intervention Details
+   * Training, coaching, or support provided to help employee improve
+   * Examples: "One-on-one coaching sessions", "Time management training"
+   */
+  interventionDetails?: string;
+
+  /**
+   * Resources Provided
+   * Tools, materials, or resources given to support improvement
+   * Examples: ["Training manual", "Mentorship program", "Performance checklist"]
+   */
+  resourcesProvided?: string[];
+
+  /**
+   * Training Provided
+   * Specific training sessions or courses completed
+   * Examples: ["Customer service workshop", "Safety procedures refresher"]
+   */
+  trainingProvided?: string[];
+
+  // ============================================
+  // 🔄 REVIEW FOLLOW-UP TRACKING - Auto-Satisfaction System
+  // ============================================
+
+  /**
+   * Review Status
+   * Tracks the current state of the review process
+   * - pending: Review date is in the future
+   * - due_soon: Review date is within 3 days
+   * - overdue: Review date has passed, but within 7-day grace period
+   * - in_progress: HR has started the review process
+   * - completed_satisfactory: Employee met improvement commitments
+   * - completed_unsatisfactory: Employee did not meet commitments (requires escalation)
+   * - auto_satisfied: Automatically marked satisfactory after 7 days overdue
+   * - escalated: Unsatisfactory review resulted in new warning
+   */
+  reviewStatus?: 'pending' | 'due_soon' | 'overdue' | 'in_progress' | 'completed_satisfactory' | 'completed_unsatisfactory' | 'auto_satisfied' | 'escalated';
+
+  /**
+   * Review Completion Date
+   * Timestamp when HR completed the review
+   */
+  reviewCompletedDate?: any; // Firestore Timestamp
+
+  /**
+   * Review Completed By
+   * User ID of the HR manager who completed the review
+   */
+  reviewCompletedBy?: string;
+
+  /**
+   * Review Completed By Name
+   * Full name of the HR manager for display purposes
+   */
+  reviewCompletedByName?: string;
+
+  /**
+   * Review HOD Feedback
+   * Verbal feedback from the employee's direct manager (HOD) about progress
+   * This is gathered by HR during the review process
+   */
+  reviewHODFeedback?: string;
+
+  /**
+   * Review HR Notes
+   * HR manager's notes and observations during the review
+   * Internal notes for audit trail and future reference
+   */
+  reviewHRNotes?: string;
+
+  /**
+   * Review Outcome
+   * Final assessment of employee's progress
+   * - satisfactory: Employee met improvement commitments
+   * - some_concerns: Showing improvement but needs continued monitoring
+   * - unsatisfactory: Did not meet commitments, requires escalation
+   */
+  reviewOutcome?: 'satisfactory' | 'some_concerns' | 'unsatisfactory';
+
+  /**
+   * Review Next Steps
+   * Action taken if review was unsatisfactory
+   * Examples: "Escalated to Final Warning", "Extended improvement period by 30 days"
+   */
+  reviewNextSteps?: string;
+
+  /**
+   * Auto-Satisfied Date
+   * Timestamp when the warning was automatically marked satisfactory
+   * Set after 7 days past review date with no HR action
+   */
+  autoSatisfiedDate?: any; // Firestore Timestamp
+
+  /**
+   * Escalated To Warning ID
+   * Link to the new warning created if this review resulted in escalation
+   * Maintains audit trail of progressive discipline
+   */
+  escalatedToWarningId?: string;
+
+  /**
+   * Review Last Checked
+   * Timestamp of last automated review status check
+   * Used by cron job to track processing
+   */
+  reviewLastChecked?: any; // Firestore Timestamp
 }
 
 export interface WarningCategory {
@@ -433,6 +586,75 @@ export interface WarningCategory {
   type?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+// ============================================
+// RECOGNITION TYPES
+// ============================================
+
+export type RecognitionType =
+  | 'exceptional_performance'
+  | 'going_above_beyond'
+  | 'innovation'
+  | 'teamwork'
+  | 'leadership'
+  | 'customer_service'
+  | 'safety_excellence'
+  | 'continuous_improvement'
+  | 'mentorship'
+  | 'problem_solving';
+
+export type RecognitionRewardType =
+  | 'verbal_praise'
+  | 'certificate'
+  | 'monetary_bonus'
+  | 'gift_voucher'
+  | 'extra_leave_day'
+  | 'public_recognition'
+  | 'career_development'
+  | 'none';
+
+export interface Recognition {
+  id: string;
+  organizationId: string;
+
+  // Employee Information
+  employeeId: string;
+  employeeName: string;
+  employeePhotoUrl?: string;
+  employeeRole?: string;
+  departmentId?: string;
+  departmentName?: string;
+
+  // Recognition Details
+  recognitionType: RecognitionType;
+  achievementTitle: string;
+  achievementDescription: string;
+  businessImpact?: string;
+  skillsDemonstrated?: string[];
+
+  // Recognition Given
+  rewardsGiven?: RecognitionRewardType[];
+  monetaryAmount?: number;
+
+  // Manager Information
+  recognizedBy: string;           // Manager UID
+  recognizedByName: string;       // Manager full name
+  recognizedByRole?: string;      // Manager role for context
+
+  // Timestamps
+  recognitionDate: Date | string;
+  createdAt: Date | string;
+  updatedAt?: Date | string;
+
+  // Additional Context
+  witnessedBy?: string[];         // UIDs of witnesses (other managers)
+  isPublic: boolean;              // Whether to share in company-wide announcements
+  notes?: string;                 // Private notes for HR
+
+  // Certificate Generation
+  certificateUrl?: string;        // PDF certificate URL if generated
+  certificateGeneratedAt?: Date | string;
 }
 
 // ============================================

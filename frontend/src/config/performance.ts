@@ -166,7 +166,7 @@ export function trackMetric(
 export const TraceNames = {
   // Dashboard loading
   LOAD_DASHBOARD: 'load_dashboard',
-  LOAD_BUSINESS_OWNER_DASHBOARD: 'load_business_owner_dashboard',
+  LOAD_BUSINESS_OWNER_DASHBOARD: 'load_executive_management_dashboard',
   LOAD_HR_DASHBOARD: 'load_hr_dashboard',
   LOAD_HOD_DASHBOARD: 'load_hod_dashboard',
 

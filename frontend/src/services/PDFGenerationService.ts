@@ -7,10 +7,12 @@ import Logger from '../utils/logger';
 // ✅ RESILIENT to incomplete data states
 // 🚨 MEMORY OPTIMIZED for 2012-era devices with <1GB RAM
 // 🔒 VERSIONED PDF GENERATION - Legal compliance through consistent regeneration
+// ✅ SVG SIGNATURE SUPPORT - Converts to PNG for PDF embedding
 
 import { globalDeviceCapabilities, getPerformanceLimits } from '../utils/deviceDetection';
 import { PDFPlaceholderService } from './PDFPlaceholderService';
 import type { PDFSectionConfig } from '../types/core';
+import { convertSVGToPNG, isSignatureSVG } from '../utils/signatureSVG';
 
 /**
  * 🔒 PDF GENERATOR VERSION HISTORY - SECURITY CRITICAL
@@ -192,7 +194,31 @@ export interface WarningPDFData {
 // ============================================
 
 export class PDFGenerationService {
-  
+
+  /**
+   * 🔄 SIGNATURE FORMAT CONVERTER
+   * Converts SVG signatures to PNG for PDF embedding
+   * jsPDF doesn't support SVG natively, so we convert on-the-fly
+   */
+  private async convertSignatureToPNG(signature: string): Promise<string> {
+    if (!signature) return signature;
+
+    // If already PNG or other format, return as-is
+    if (!isSignatureSVG(signature)) {
+      return signature;
+    }
+
+    try {
+      // Convert SVG to PNG using canvas rendering
+      const pngSignature = await convertSVGToPNG(signature, 400, 200);
+      return pngSignature;
+    } catch (error) {
+      Logger.error('Failed to convert SVG signature to PNG for PDF:', error);
+      // Return original signature (will likely fail in PDF, but better than nothing)
+      return signature;
+    }
+  }
+
   /**
    * 🎯 MAIN PDF GENERATION METHOD - VERSIONED & RESILIENT
    *
@@ -289,6 +315,20 @@ export class PDFGenerationService {
       if (capabilities.isLegacyDevice) {
         Logger.warn('🚨 Legacy device detected - using simplified PDF generation');
         return this.generateSimplifiedPDF(data);
+      }
+
+      // 🔄 Convert SVG signatures to PNG for PDF embedding
+      if (data.signatures) {
+        const service = new PDFGenerationService();
+        if (data.signatures.manager) {
+          data.signatures.manager = await service.convertSignatureToPNG(data.signatures.manager);
+        }
+        if (data.signatures.employee) {
+          data.signatures.employee = await service.convertSignatureToPNG(data.signatures.employee);
+        }
+        if ((data.signatures as any).witness) {
+          (data.signatures as any).witness = await service.convertSignatureToPNG((data.signatures as any).witness);
+        }
       }
 
       const startTime = Date.now();
@@ -396,6 +436,20 @@ export class PDFGenerationService {
       if (capabilities.isLegacyDevice) {
         Logger.warn('🚨 Legacy device detected - using simplified PDF generation');
         return this.generateSimplifiedPDF(data);
+      }
+
+      // 🔄 Convert SVG signatures to PNG for PDF embedding
+      if (data.signatures) {
+        const service = new PDFGenerationService();
+        if (data.signatures.manager) {
+          data.signatures.manager = await service.convertSignatureToPNG(data.signatures.manager);
+        }
+        if (data.signatures.employee) {
+          data.signatures.employee = await service.convertSignatureToPNG(data.signatures.employee);
+        }
+        if ((data.signatures as any).witness) {
+          (data.signatures as any).witness = await service.convertSignatureToPNG((data.signatures as any).witness);
+        }
       }
 
       // 🎨 PHASE 6: Merge custom settings with defaults
@@ -702,6 +756,20 @@ export class PDFGenerationService {
       if (capabilities.isLegacyDevice) {
         Logger.warn('🚨 Legacy device detected - using simplified PDF generation');
         return this.generateSimplifiedPDF(data);
+      }
+
+      // 🔄 Convert SVG signatures to PNG for PDF embedding
+      if (data.signatures) {
+        const service = new PDFGenerationService();
+        if (data.signatures.manager) {
+          data.signatures.manager = await service.convertSignatureToPNG(data.signatures.manager);
+        }
+        if (data.signatures.employee) {
+          data.signatures.employee = await service.convertSignatureToPNG(data.signatures.employee);
+        }
+        if ((data.signatures as any).witness) {
+          (data.signatures as any).witness = await service.convertSignatureToPNG((data.signatures as any).witness);
+        }
       }
 
       // 🎨 Merge custom settings with defaults
@@ -2361,9 +2429,73 @@ export class PDFGenerationService {
       doc.text('Date: ___________', employeeBoxX + 2, startY + signatureBoxHeight + 11);
     }
 
+    // === WITNESS SIGNATURE (if present) ===
+    if (signatures?.witness) {
+      // Add spacing before witness signature
+      startY += signatureBoxHeight + 18; // Below manager/employee signatures
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(80, 80, 80);
+      doc.text('Witness Signature:', margin, startY);
+
+      // Draw witness signature box (full width)
+      doc.setDrawColor(150, 150, 150);
+      doc.setLineWidth(0.3);
+      doc.setTextColor(0, 0, 0);
+      doc.rect(margin, startY + 3, signatureBoxWidth, signatureBoxHeight);
+
+      try {
+        // 🎨 ASPECT RATIO PRESERVED: Get actual image properties from jsPDF
+        const maxWidth = signatureBoxWidth - 16; // 8mm padding on each side
+        const maxHeight = 35; // Maximum height for signature PNG
+
+        // Get image properties from jsPDF (which can read the base64 data)
+        const imgProps = doc.getImageProperties(signatures.witness);
+        const imgWidth = imgProps.width;
+        const imgHeight = imgProps.height;
+        const aspectRatio = imgWidth / imgHeight;
+
+        // Scale to fit within max dimensions while preserving aspect ratio
+        let finalWidth = maxWidth;
+        let finalHeight = maxWidth / aspectRatio;
+
+        // If height exceeds maximum, scale based on height instead
+        if (finalHeight > maxHeight) {
+          finalHeight = maxHeight;
+          finalWidth = maxHeight * aspectRatio;
+        }
+
+        // Center signature horizontally within the box, position vertically from top
+        const xOffset = (signatureBoxWidth - finalWidth) / 2;
+        const yOffset = 5; // 5mm from top of box
+
+        // Add witness signature image with watermark
+        doc.addImage(signatures.witness, 'PNG', margin + xOffset, startY + 3 + yOffset, finalWidth, finalHeight);
+
+        // Witness name and date BELOW the box
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        const witnessName = (signatures as any).witnessName || '_____________________';
+        doc.text(`Witness Name: ${witnessName}`, margin + 2, startY + signatureBoxHeight + 7);
+        doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + signatureBoxHeight + 11);
+      } catch (error) {
+        Logger.warn('Failed to embed witness signature image:', error)
+        // Fallback to text
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text('✓ Digitally Signed (Witness)', margin + 5, startY + 25);
+        const witnessName = (signatures as any).witnessName || '_____________________';
+        doc.text(`Witness Name: ${witnessName}`, margin + 2, startY + signatureBoxHeight + 7);
+        doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + signatureBoxHeight + 11);
+      }
+
+      return startY + signatureBoxHeight + 12;
+    }
+
     return startY + signatureBoxHeight + 12;
   }
-  
+
   /**
    * Delivery Information Section
    */

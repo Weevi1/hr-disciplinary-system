@@ -13,13 +13,14 @@ import Logger from '../../../utils/logger';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../../config/firebase';
-import { Check, CheckCircle, ChevronLeft, ChevronRight, X, FileText, Scale, Send, Mic, ChevronDown, ChevronUp, Info, AlertTriangle } from 'lucide-react';
+import { Check, CheckCircle, ChevronLeft, ChevronRight, X, FileText, Scale, Send, Mic, ChevronDown, ChevronUp, Info, AlertTriangle, MessageSquare } from 'lucide-react';
 // Import debugging components
 import { useWizardLogging } from '../../../hooks/useWizardLogging';
 
 // Import the step components - V2 versions with performance improvements
-import { CombinedIncidentStepV2 } from './steps/CombinedIncidentStepV2'; 
+import { CombinedIncidentStepV2 } from './steps/CombinedIncidentStepV2';
 import { LegalReviewSignaturesStepV2 } from './steps/LegalReviewSignaturesStepV2';
+import { CorrectiveDiscussionStep } from './steps/CorrectiveDiscussionStep';
 import { DeliveryCompletionStep } from './steps/DeliveryCompletionStep';
 
 // Import microphone permission handler
@@ -65,16 +66,19 @@ type FormData = EnhancedWarningFormData;
 interface SignatureData {
   manager: string | null;
   employee: string | null;
+  witness: string | null;
   timestamp?: string;
   managerName?: string;
   employeeName?: string;
+  witnessName?: string;
 }
 
-// 3-STEP WIZARD ENUM (AUDIO CONSENT REMOVED - AUTOMATIC)
+// 4-STEP WIZARD ENUM (AUDIO CONSENT REMOVED - AUTOMATIC)
 enum WizardStep {
   INCIDENT_DETAILS = 0,
-  LEGAL_REVIEW_SIGNATURES = 1,
-  DELIVERY_COMPLETION = 2
+  CORRECTIVE_DISCUSSION = 1,
+  LEGAL_REVIEW_SIGNATURES = 2,
+  DELIVERY_COMPLETION = 3
 }
 
 interface EnhancedWarningWizardProps {
@@ -237,6 +241,25 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   // 🆕 Override level from Step 2 (user can override system recommendation)
   const [overrideLevel, setOverrideLevel] = useState<string | null>(null);
 
+  // 🆕 Corrective discussion data from Step 2.5
+  const [correctiveDiscussionData, setCorrectiveDiscussionData] = useState<{
+    employeeStatement: string;
+    expectedBehavior: string;
+    factsAndReasoning: string;
+    actionCommitments: Array<{ id: string; commitment: string; timeline: string }>;
+    reviewDate: string;
+    interventionDetails?: string;
+    resourcesProvided?: string[];
+  }>({
+    employeeStatement: '',
+    expectedBehavior: '',
+    factsAndReasoning: '',
+    actionCommitments: [],
+    reviewDate: '',
+    interventionDetails: '',
+    resourcesProvided: []
+  });
+
   // 🔄 Sync override level to formData whenever it changes
   useEffect(() => {
     const newLevel = overrideLevel || lraRecommendation?.suggestedLevel || 'counselling';
@@ -285,6 +308,7 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   });
 
   const [signaturesFinalized, setSignaturesFinalized] = useState(false);
+  const [isSavingWarning, setIsSavingWarning] = useState(false); // Track warning save state
 
   // Audio upload status for Step 2
   const [audioUploadStatus, setAudioUploadStatus] = useState<'recording' | 'stopping' | 'uploading' | 'complete' | null>(null);
@@ -370,7 +394,7 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   }, [currentStep, isNavigating]);
 
   const handleNextStep = useCallback(() => {
-    if (currentStep < 3 && !isNavigating) {
+    if (currentStep < 4 && !isNavigating) {
       setCurrentStep(currentStep + 1);
     }
   }, [currentStep, isNavigating]);
@@ -424,6 +448,7 @@ useEffect(() => {
         to: currentStep,
         stepName: currentStep === WizardStep.INCIDENT_DETAILS ? 'Incident Details' :
                   currentStep === WizardStep.LEGAL_REVIEW_SIGNATURES ? 'Legal Review' :
+                  currentStep === WizardStep.CORRECTIVE_DISCUSSION ? 'Corrective Discussion' :
                   'Delivery Completion'
       });
       previousStepRef.current = currentStep;
@@ -518,7 +543,7 @@ useEffect(() => {
       Logger.debug('🚨 BLOCKING WIZARD - Cannot verify if escalation is safe');
       setHasFinalWarningBlock(true);
       setFinalWarningBlockData({
-        employeeName: employee ? `${employee.firstName} ${employee.lastName}` : 'Employee',
+        employeeName: employee ? `${employee.profile?.firstName || employee.firstName || ''} ${employee.profile?.lastName || employee.lastName || ''}`.trim() || 'Employee' : 'Employee',
         categoryName: category?.name || 'Category',
         warningDate: 'cannot_verify_escalation' // Special flag for safety message
       });
@@ -548,7 +573,7 @@ useEffect(() => {
       Logger.debug('🚨 FINAL WARNING DETECTED FOR SAME CATEGORY - Blocking wizard progression');
       setHasFinalWarningBlock(true);
       setFinalWarningBlockData({
-        employeeName: employee ? `${employee.firstName} ${employee.lastName}` : 'Employee',
+        employeeName: employee ? `${employee.profile?.firstName || employee.firstName || ''} ${employee.profile?.lastName || employee.lastName || ''}`.trim() || 'Employee' : 'Employee',
         categoryName: category?.name || 'Category',
         warningDate: finalWarning?.issueDate || new Date().toISOString()
       });
@@ -596,7 +621,7 @@ useEffect(() => {
         suggestedLevel: categoryEscalationPath[0] || 'counselling',
         recommendedLevel: categoryEscalationPath[0] === 'counselling' ? 'Counselling Session' :
                          categoryEscalationPath[0] === 'verbal' ? 'Verbal Warning' :
-                         categoryEscalationPath[0] === 'first_written' ? 'First Written Warning' :
+                         categoryEscalationPath[0] === 'first_written' ? 'Written Warning' :
                          'Counselling Session',
         reason: 'Fallback recommendation due to analysis error. Manual review required.',
         activeWarnings: activeWarnings, // Use the warnings we fetched earlier
@@ -783,11 +808,11 @@ useEffect(() => {
 
     const nextStepNumber = (currentStep + 1) as WizardStep;
     setCompletedSteps(prev => new Set([...prev, currentStep]));
-    
+
     // Handle Step 1 → Step 2 transition with LRA generation
-    if (currentStep === WizardStep.INCIDENT_DETAILS && 
-        nextStepNumber === WizardStep.LEGAL_REVIEW_SIGNATURES) {
-      
+    if (currentStep === WizardStep.INCIDENT_DETAILS &&
+        nextStepNumber === WizardStep.CORRECTIVE_DISCUSSION) {
+
       if (!formData.employeeId || !formData.categoryId || !formData.incidentDescription) {
         logging.trackError(new Error('Missing required data for step 2'), {
           employeeId: !!formData.employeeId,
@@ -845,6 +870,7 @@ useEffect(() => {
     logging.trackSuccess('SIGNATURES_COMPLETED', {
       hasManager: !!newSignatures.manager,
       hasEmployee: !!newSignatures.employee,
+      hasWitness: !!newSignatures.witness,
       finalized,
       timestamp: newSignatures.timestamp
     });
@@ -853,8 +879,9 @@ useEffect(() => {
     
     // 🔒 Only finalize and enable next step when explicitly finalized
     if (finalized) {
+      setIsSavingWarning(true);
       setSignaturesFinalized(true);
-      
+
       // 🔥 CREATE AND FULLY COMPLETE WARNING WHEN SIGNATURES ARE FINALIZED
       try {
         // 🎤 CRITICAL: Auto-stop audio recording FIRST before creating warning
@@ -965,6 +992,39 @@ useEffect(() => {
           // Signature data
           signatures: newSignatures,
 
+          // 🆕 Corrective Discussion Data (Step 2.5)
+          // Section B - Employee's Version/Statement
+          employeeStatement: correctiveDiscussionData.employeeStatement || undefined,
+
+          // Section C - Expected Behavior/Standards (Corrective Guidance)
+          expectedBehaviorStandards: correctiveDiscussionData.expectedBehavior || undefined,
+
+          // Section E - Facts Leading to Decision Taken
+          factsLeadingToDecision: correctiveDiscussionData.factsAndReasoning || undefined,
+
+          // Section F - Action Steps/Commitments
+          actionSteps: correctiveDiscussionData.actionCommitments.length > 0
+            ? correctiveDiscussionData.actionCommitments.map(c => ({
+                action: c.commitment,
+                timeline: c.timeline
+              }))
+            : undefined,
+
+          // Review date for follow-up
+          reviewDate: correctiveDiscussionData.reviewDate || undefined,
+
+          // Initialize review tracking fields if review date is set
+          ...(correctiveDiscussionData.reviewDate && {
+            reviewStatus: 'pending' as const,
+            reviewLastChecked: new Date(),
+          }),
+
+          // Optional intervention details and resources
+          interventionDetails: correctiveDiscussionData.interventionDetails || undefined,
+          resourcesProvided: correctiveDiscussionData.resourcesProvided && correctiveDiscussionData.resourcesProvided.length > 0
+            ? correctiveDiscussionData.resourcesProvided
+            : undefined,
+
           // 🔒 CRITICAL: PDF Generator Version for Legal Compliance
           // ⚠️ DO NOT REMOVE OR MODIFY - Required for consistent document regeneration
           //
@@ -1031,6 +1091,11 @@ useEffect(() => {
             duration: audioRecording?.duration || 0,
             size: audioRecording?.size || 0,
             recordingId: audioRecording?.recordingId,
+            timestamp: new Date(),
+            recordedAt: new Date(), // Add recordedAt as fallback
+            recordedBy: user?.id || '', // Manager user ID
+            recordedByName: user?.name || currentManagerName || 'Manager', // Manager name
+            format: 'webm',
             uploadToFirebase: true,
             status: 'ready',
             processingStatus: 'pending'
@@ -1146,19 +1211,34 @@ useEffect(() => {
             audioRecording.forceCleanup();
           }
         }
-        
+
         logging.trackSuccess('WARNING_FULLY_CREATED_STEP2', { warningId });
-        
+
+        // 🚀 AUTO-ADVANCE: Move to Step 3 immediately - DON'T mark step complete first!
+        // Marking the step complete would show the Next button before transition
+        setIsSavingWarning(false); // Clear saving state
+        setCurrentStep(WizardStep.DELIVERY_COMPLETION);
+
+        // Mark previous step as complete AFTER step change
+        setTimeout(() => {
+          setCompletedSteps(prev => new Set([...prev, WizardStep.LEGAL_REVIEW_SIGNATURES]));
+          logging.trackSuccess('SIGNATURES_FINALIZED_AFTER_ADVANCE', { currentStep });
+        }, 50);
+
+        logging.trackSuccess('AUTO_ADVANCED_TO_STEP3', { fromStep: currentStep });
+
       } catch (error) {
         Logger.error('❌ Error creating warning:', error)
         logging.trackError(error as Error, { context: 'WARNING_CREATION_ON_SIGNATURE_COMPLETE' });
-        // Don't prevent step progression - let user continue to step 3 and retry there
+
+        // ❌ FAILURE: Clear saving state but don't auto-advance
+        setIsSavingWarning(false);
+
+        // Mark step as complete anyway to allow manual progression
+        setCompletedSteps(prev => new Set([...prev, currentStep]));
       }
-      
-      setCompletedSteps(prev => new Set([...prev, currentStep]));
-      logging.trackSuccess('SIGNATURES_FINALIZED_NEXT_ENABLED', { currentStep });
     }
-  }, [currentStep, logging, audioRecording, selectedEmployee, selectedCategory, organization, formData, lraRecommendation, API]);
+  }, [currentStep, logging, audioRecording, selectedEmployee, selectedCategory, organization, formData, lraRecommendation, API, user, currentManagerName, overrideLevel, correctiveDiscussionData]);
 
   // ============================================
   // 🔥 STEP CONFIGURATION
@@ -1167,19 +1247,25 @@ useEffect(() => {
   const stepConfig = useMemo(() => ({
     [WizardStep.INCIDENT_DETAILS]: {
       title: 'Incident Details',
-      subtitle: `Step ${WizardStep.INCIDENT_DETAILS + 1} of 3`,
+      subtitle: `Step ${WizardStep.INCIDENT_DETAILS + 1} of 4`,
       description: 'Select employee, choose violation category, and document the incident with all relevant details.',
       icon: FileText,
     },
+    [WizardStep.CORRECTIVE_DISCUSSION]: {
+      title: 'Corrective Discussion',
+      subtitle: `Step ${WizardStep.CORRECTIVE_DISCUSSION + 1} of 4`,
+      description: 'Document employee response, expected behavior, and improvement commitments.',
+      icon: MessageSquare,
+    },
     [WizardStep.LEGAL_REVIEW_SIGNATURES]: {
       title: 'Review & Sign',
-      subtitle: `Step ${WizardStep.LEGAL_REVIEW_SIGNATURES + 1} of 3`,
+      subtitle: `Step ${WizardStep.LEGAL_REVIEW_SIGNATURES + 1} of 4`,
       description: 'Review escalation recommendation, read warning script, and collect required signatures.',
       icon: Scale,
     },
     [WizardStep.DELIVERY_COMPLETION]: {
       title: 'Delivery Setup',
-      subtitle: `Step ${WizardStep.DELIVERY_COMPLETION + 1} of 3 - Administrative`,
+      subtitle: `Step ${WizardStep.DELIVERY_COMPLETION + 1} of 4 - Administrative`,
       description: '✅ Warning saved. Choose how HR will deliver to employee.',
       icon: Send,
     }
@@ -1193,28 +1279,57 @@ useEffect(() => {
     switch (currentStep) {
       case WizardStep.INCIDENT_DETAILS:
         return !!(
-          formData.employeeId && 
-          formData.categoryId && 
-          formData.incidentDate && 
-          formData.incidentTime && 
-          formData.incidentLocation && 
+          formData.employeeId &&
+          formData.categoryId &&
+          formData.incidentDate &&
+          formData.incidentTime &&
+          formData.incidentLocation &&
           formData.incidentDescription &&
           formData.incidentDescription.length >= 20
         );
       case WizardStep.LEGAL_REVIEW_SIGNATURES:
         return !!(
-          lraRecommendation && 
-          !isAnalyzing && 
-          signatures.manager && 
-          signatures.employee && 
+          lraRecommendation &&
+          !isAnalyzing &&
+          signatures.manager &&
+          signatures.employee &&
           signaturesFinalized
         );
+      case WizardStep.CORRECTIVE_DISCUSSION: {
+        // Get current warning level
+        const currentLevel = overrideLevel || lraRecommendation?.suggestedLevel || 'counselling';
+
+        // Determine if commitments are required based on level
+        const requiresCommitments = !['final_written', 'suspension', 'dismissal'].includes(currentLevel);
+
+        // Expected behavior is always required (min 20 chars)
+        if (!correctiveDiscussionData.expectedBehavior || correctiveDiscussionData.expectedBehavior.trim().length < 20) {
+          return false;
+        }
+
+        // For Counselling/Verbal/Written: employee statement required
+        if (requiresCommitments && (!correctiveDiscussionData.employeeStatement || correctiveDiscussionData.employeeStatement.trim().length < 20)) {
+          return false;
+        }
+
+        // For Counselling/Verbal/Written: at least one action commitment required
+        if (requiresCommitments && correctiveDiscussionData.actionCommitments.length === 0) {
+          return false;
+        }
+
+        // For Counselling/Verbal/Written: review date required
+        if (requiresCommitments && !correctiveDiscussionData.reviewDate) {
+          return false;
+        }
+
+        return true;
+      }
       case WizardStep.DELIVERY_COMPLETION:
         return true;
       default:
         return false;
     }
-  }, [currentStep, formData, lraRecommendation, isAnalyzing, signatures, signaturesFinalized]);
+  }, [currentStep, formData, lraRecommendation, isAnalyzing, signatures, signaturesFinalized, correctiveDiscussionData, overrideLevel]);
 
   // ============================================
   // 🔥 FIXED: RENDER STEP CONTENT WITHOUT LOGGING LOOPS
@@ -1305,6 +1420,19 @@ useEffect(() => {
           />
         );
 
+      case WizardStep.CORRECTIVE_DISCUSSION:
+        return (
+          <CorrectiveDiscussionStep
+            warningLevel={overrideLevel || lraRecommendation?.suggestedLevel || 'counselling'}
+            currentData={correctiveDiscussionData}
+            onDataChange={setCorrectiveDiscussionData}
+            issueDate={formData.issueDate}
+            validityPeriod={formData.validityPeriod}
+            onIssueDateChange={(date) => updateFormData({ issueDate: date })}
+            onValidityPeriodChange={(months) => updateFormData({ validityPeriod: months })}
+          />
+        );
+
       case WizardStep.LEGAL_REVIEW_SIGNATURES:
         return (
           <LegalReviewSignaturesStepV2
@@ -1365,7 +1493,9 @@ useEffect(() => {
     handleWizardComplete,
     hasFinalWarningBlock,
     finalWarningBlockData,
-    onCancel
+    onCancel,
+    correctiveDiscussionData,
+    overrideLevel
   ]);
 
   // ============================================
@@ -1376,6 +1506,16 @@ useEffect(() => {
     // 🚨 Hide navigation buttons when final warning block is showing
     if (hasFinalWarningBlock) {
       return { show: false, disabled: true, loading: false, text: '' };
+    }
+
+    // 💾 Step 2 (Signatures): HIDE button completely when warning is being saved
+    if (currentStep === WizardStep.LEGAL_REVIEW_SIGNATURES && isSavingWarning) {
+      return {
+        show: false, // Hide button entirely during save
+        disabled: true,
+        loading: false,
+        text: ''
+      };
     }
 
     if (currentStep === WizardStep.DELIVERY_COMPLETION) {

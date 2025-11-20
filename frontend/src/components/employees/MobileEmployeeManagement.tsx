@@ -3,9 +3,11 @@
 // ✅ Compact design for Samsung S8 era devices
 // ✅ Touch-friendly interface with larger targets
 // ✅ Simplified navigation and filtering
+// 🚀 REFACTORED: Migrated to useModal hook for 4 employee modals
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../../auth/AuthContext';
+import { useModal } from '../../hooks/useModal';
 import { globalDeviceCapabilities, getPerformanceLimits } from '../../utils/deviceDetection';
 import { useEmployees } from '../../hooks/employees/useEmployees';
 import { useEmployeeFilters } from '../../hooks/employees/useEmployeeFilters';
@@ -38,10 +40,11 @@ export const MobileEmployeeManagement: React.FC = () => {
 
   // Mobile-specific states
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
-  const [archivingEmployee, setArchivingEmployee] = useState<Employee | null>(null);
+  // 🚀 REFACTORED: Migrated to useModal hook for 4 modals
+  const addModal = useModal();
+  const importModal = useModal();
+  const editModal = useModal<Employee>();
+  const archiveModal = useModal<Employee>();
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -58,13 +61,14 @@ export const MobileEmployeeManagement: React.FC = () => {
 
   const handleEmployeeSaved = async () => {
     refreshData();
-    setShowAddModal(false);
-    setEditingEmployee(null);
+    // 🚀 REFACTORED: Using useModal hook (auto-clears data)
+    addModal.close();
+    editModal.close();
   };
 
   const handleEmployeeArchived = async (employee: Employee) => {
     // TODO: Implement archive functionality
-    setArchivingEmployee(null);
+    archiveModal.close(); // 🚀 REFACTORED: Using useModal hook (auto-clears data)
     refreshData();
   };
 
@@ -107,9 +111,10 @@ export const MobileEmployeeManagement: React.FC = () => {
               </div>
             </div>
             <div className="flex gap-1">
+              {/* 🚀 REFACTORED: Using useModal hook */}
               {permissions.canCreate && (
                 <button
-                  onClick={() => setShowAddModal(true)}
+                  onClick={addModal.open}
                   className="p-2 bg-white/20 hover:bg-white/30 text-white rounded-lg"
                 >
                   <Plus className="w-4 h-4" />
@@ -214,9 +219,10 @@ export const MobileEmployeeManagement: React.FC = () => {
                 : "Try adjusting your search criteria"
               }
             </p>
+            {/* 🚀 REFACTORED: Using useModal hook */}
             {permissions.canCreate && employees.length === 0 && (
               <button
-                onClick={() => setShowAddModal(true)}
+                onClick={addModal.open}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium text-sm"
               >
                 <Plus className="w-4 h-4" />
@@ -230,7 +236,7 @@ export const MobileEmployeeManagement: React.FC = () => {
               <div
                 key={employee.id}
                 className={`p-3 transition-colors ${permissions.canEdit ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-default'}`}
-                onClick={() => permissions.canEdit ? setEditingEmployee(employee) : null}
+                onClick={() => permissions.canEdit ? editModal.open(employee) : null}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -265,7 +271,7 @@ export const MobileEmployeeManagement: React.FC = () => {
               <div
                 key={employee.id}
                 className={`bg-white border border-gray-200 rounded-lg p-3 transition-shadow ${permissions.canEdit ? 'hover:shadow-md cursor-pointer' : 'cursor-default'}`}
-                onClick={() => permissions.canEdit ? setEditingEmployee(employee) : null}
+                onClick={() => permissions.canEdit ? editModal.open(employee) : null}
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="font-medium text-gray-900">
@@ -298,29 +304,30 @@ export const MobileEmployeeManagement: React.FC = () => {
       )}
 
       {/* Modals */}
-      {(showAddModal || editingEmployee) && (
+      {/* 🚀 REFACTORED: Using useModal hook for all 4 modals */}
+      {(addModal.isOpen || editModal.isOpen) && (
         <EmployeeFormModal
-          employee={editingEmployee}
+          employee={editModal.data}
           onClose={() => {
-            setShowAddModal(false);
-            setEditingEmployee(null);
+            addModal.close();
+            editModal.close();
           }}
           onSave={handleEmployeeSaved}
-          basicMode={!editingEmployee && !permissions.canEdit} // Basic mode for new employees when user can't edit
+          basicMode={!editModal.data && !permissions.canEdit} // Basic mode for new employees when user can't edit
         />
       )}
 
-      {showImportModal && (
+      {importModal.isOpen && (
         <EmployeeImportModal
-          onClose={() => setShowImportModal(false)}
+          onClose={importModal.close}
           onImportComplete={refreshData}
         />
       )}
 
-      {archivingEmployee && (
+      {archiveModal.isOpen && archiveModal.data && (
         <EmployeeArchiveModal
-          employee={archivingEmployee}
-          onClose={() => setArchivingEmployee(null)}
+          employee={archiveModal.data}
+          onClose={archiveModal.close}
           onArchive={handleEmployeeArchived}
         />
       )}

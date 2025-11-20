@@ -28,7 +28,7 @@ interface ShardedOrganizationData extends Partial<Organization> {
     lastName: string
     email: string
     password: string
-    role: 'business-owner' | 'hr-manager'
+    role: 'executive-management' | 'hr-manager'
   }
   
   // Optional branding
@@ -200,10 +200,12 @@ export class ShardedOrganizationService {
       // The wizard has provided modified categories - use them directly instead of UNIVERSAL_SA_CATEGORIES
       Logger.debug(`📚 [SHARDED ORG] Using ${customCategories.length} wizard-modified categories`)
 
-      // Create all categories passed from the wizard (both modified universal and custom)
-      for (const category of customCategories) {
-        await ShardedDataService.createWarningCategory(category as any, organizationId)
-      }
+      // Create all categories passed from the wizard in parallel (both modified universal and custom)
+      await Promise.all(
+        customCategories.map(category =>
+          ShardedDataService.createWarningCategory(category as any, organizationId)
+        )
+      )
 
       Logger.success(`✅ [SHARDED ORG] Created ${customCategories.length} categories for ${organizationId}`)
       return
@@ -258,10 +260,12 @@ export class ShardedOrganizationService {
       }
     })
 
-    // Create categories in sharded structure
-    for (const category of allCategories) {
-      await ShardedDataService.createWarningCategory(category as any, organizationId)
-    }
+    // Create categories in sharded structure in parallel
+    await Promise.all(
+      allCategories.map(category =>
+        ShardedDataService.createWarningCategory(category as any, organizationId)
+      )
+    )
 
     Logger.success(`✅ [SHARDED ORG] Created ${allCategories.length} categories for ${organizationId} (${defaultCategories.length} default + ${trueCustomCategories.length} custom)`)
   }
@@ -323,7 +327,7 @@ export class ShardedOrganizationService {
         await UserOrgIndexService.setUserOrganization(
           userId,
           organizationId,
-          'business-owner',
+          'executive-management',
           adminData.email,
           'sharded'
         )
@@ -388,7 +392,7 @@ export class ShardedOrganizationService {
 
       // Activate admin user
       const users = await DatabaseShardingService.queryDocuments(organizationId, 'users', [
-        ['role', '==', 'business-owner']
+        ['role', '==', 'executive-management']
       ])
 
       if (users.documents.length > 0) {

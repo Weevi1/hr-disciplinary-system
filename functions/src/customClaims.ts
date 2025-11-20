@@ -40,7 +40,7 @@ export const refreshUserClaims = onCall(async (request) => {
     // Check if requesting user has permission to refresh claims for target user
     const requestingUserClaims = await auth.getUser(uid).then(user => user.customClaims);
     const isSuperUser = requestingUserClaims?.role === 'super-user';
-    const isBusinessOwner = requestingUserClaims?.role === 'business-owner';
+    const isBusinessOwner = requestingUserClaims?.role === 'executive-management';
     const isSameUser = uid === userIdToRefresh;
     
     if (!isSuperUser && !isSameUser && !isBusinessOwner) {
@@ -238,7 +238,7 @@ export const refreshOrganizationUserClaims = onCall(async (request) => {
     // Check permissions
     const requestingUserClaims = await auth.getUser(uid).then(user => user.customClaims);
     const isSuperUser = requestingUserClaims?.role === 'super-user';
-    const isOrgBusinessOwner = requestingUserClaims?.role === 'business-owner' && 
+    const isOrgBusinessOwner = requestingUserClaims?.role === 'executive-management' && 
                               requestingUserClaims?.organizationId === organizationId;
     
     if (!isSuperUser && !isOrgBusinessOwner) {

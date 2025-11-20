@@ -19,10 +19,6 @@ interface HRReportsCount {
     unread: number;
     total: number;
   };
-  correctiveCounselling: {
-    unread: number;
-    total: number;
-  };
 }
 
 interface HRReportsData {
@@ -40,8 +36,7 @@ export const useHRReportsData = (): HRReportsData => {
   // 🎯 STATE MANAGEMENT
   const [hrReportsCount, setHrReportsCount] = useState<HRReportsCount>({
     absenceReports: { unread: 0, total: 0 },
-    hrMeetings: { unread: 0, total: 0 },
-    correctiveCounselling: { unread: 0, total: 0 }
+    hrMeetings: { unread: 0, total: 0 }
   });
   const [hrCountsLoading, setHrCountsLoading] = useState(true);
   const [hrCountsError, setHrCountsError] = useState<string | null>(null);
@@ -164,49 +159,6 @@ export const useHRReportsData = (): HRReportsData => {
       );
 
       unsubscribeRefs.current.push(meetingsUnsubscribe);
-
-      // 📋 CORRECTIVE COUNSELLING LISTENER (SHARDED)
-      Logger.debug('🔔 Setting up corrective counselling listener')
-      const counsellingQuery = query(
-        collection(db, `organizations/${user.organizationId}/corrective_counselling`),
-        orderBy('dateCreated', 'desc')
-      );
-
-      const counsellingUnsubscribe = onSnapshot(
-        counsellingQuery,
-        (snapshot) => {
-          if (!isMountedRef.current) return;
-
-          const records = snapshot.docs
-            .filter(doc => doc.id !== '_metadata') // Exclude metadata documents
-            .map(doc => ({ id: doc.id, ...doc.data() }));
-          const recentCount = records.filter(record => {
-            // Consider records from the last 7 days as "unread"
-            const recordDate = new Date(record.dateCreated);
-            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-            return recordDate > weekAgo && !record.hrReviewed;
-          }).length;
-
-          setHrReportsCount(prev => ({
-            ...prev,
-            correctiveCounselling: {
-              unread: recentCount,
-              total: records.length
-            }
-          }));
-
-          setLastUpdated(new Date());
-          Logger.debug(`🔔 Corrective counselling updated: ${recentCount} recent of ${records.length} total`)
-        },
-        (error) => {
-          Logger.error('❌ Corrective counselling listener error:', error)
-          if (isMountedRef.current) {
-            setHrCountsError('Failed to load counselling records');
-          }
-        }
-      );
-
-      unsubscribeRefs.current.push(counsellingUnsubscribe);
 
       // Set loading to false after short delay
       setTimeout(() => {

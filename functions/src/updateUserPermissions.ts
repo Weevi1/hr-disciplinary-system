@@ -57,7 +57,7 @@ export const updateUserPermissions = onCall<UpdatePermissionsRequest>(
       const callerRole = callerData?.role?.id || callerData?.role;
 
       // 3. Permission check: Only business owners and super users can update permissions
-      if (callerRole !== 'business-owner' && callerRole !== 'super-user') {
+      if (callerRole !== 'executive-management' && callerRole !== 'super-user') {
         logger.warn(`Permission denied: ${callerRole} tried to update permissions`);
         throw new HttpsError('permission-denied', 'Only business owners can update permissions');
       }

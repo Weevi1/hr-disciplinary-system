@@ -56,13 +56,13 @@ export interface Warning {
   organizationId: string;
   employeeId: string;
   categoryId: string;
-  
+
   // Employee info (populated by DataService for HR review)
   employeeName?: string;
-  employeeNumber?: string;  
+  employeeNumber?: string;
   department?: string;
   category?: string; // Category name for display
-  
+
   // Content
   level: WarningLevel;
   title: string;
@@ -81,18 +81,18 @@ export interface Warning {
   expiryDate: Date;
   validityPeriod: 3 | 6 | 12; // months
   issuedBy: string; // manager/HR ID
-  
+
   // Status
   isActive: boolean;
   isSigned: boolean;
   isDelivered: boolean;
   status?: 'issued' | 'delivered' | 'acknowledged' | 'expired';
-  
+
   // Delivery
   deliveryMethod: DeliveryMethod;
   deliveryStatus: 'pending' | 'delivered' | 'failed' | 'cancelled';
   deliveryDate?: Date;
-  
+
   // Signatures
   managerSignature?: string;
   employeeSignature?: string;
@@ -103,6 +103,78 @@ export interface Warning {
   disciplineRecommendation?: EscalationRecommendation;
   pdfGeneratorVersion?: string;
   pdfTemplateVersion?: string; // Reference to template version in versions collection (e.g., "1.9.0") - 1000x more efficient than storing full settings
+
+  // ============================================
+  // 🆕 CORRECTIVE COUNSELLING FIELDS - Unified Disciplinary Form Approach
+  // ============================================
+
+  /**
+   * Section B - Employee's Version/Response
+   * Employee's side of the story, their perspective on the incident
+   */
+  employeeStatement?: string;
+
+  /**
+   * Section C - Expected Behavior/Standards (Corrective Guidance)
+   * Clear explanation of the required/expected behavior, performance, conduct, or standards
+   */
+  expectedBehaviorStandards?: string;
+
+  /**
+   * Section E - Facts Leading to Decision Taken
+   * Detailed reasoning and evidence that led to the disciplinary decision
+   */
+  factsLeadingToDecision?: string;
+
+  /**
+   * Section F - Action Steps/Improvement Commitments
+   * Specific commitments from the employee to improve conduct/performance
+   */
+  improvementCommitments?: Array<{
+    commitment: string;
+    timeline: string;
+    completedDate?: any;
+  }>;
+
+  /**
+   * Follow-up/Review Date
+   * Scheduled date to review progress on improvement commitments
+   */
+  reviewDate?: any;
+
+  /**
+   * Intervention Details
+   * Training, coaching, or support provided to help employee improve
+   */
+  interventionDetails?: string;
+
+  /**
+   * Resources Provided
+   * Tools, materials, or resources given to support improvement
+   */
+  resourcesProvided?: string[];
+
+  /**
+   * Training Provided
+   * Specific training sessions or courses completed
+   */
+  trainingProvided?: string[];
+
+  // ============================================
+  // 🔄 REVIEW FOLLOW-UP TRACKING
+  // ============================================
+
+  reviewStatus?: 'pending' | 'due_soon' | 'overdue' | 'in_progress' | 'completed_satisfactory' | 'completed_unsatisfactory' | 'auto_satisfied' | 'escalated';
+  reviewCompletedDate?: any;
+  reviewCompletedBy?: string;
+  reviewCompletedByName?: string;
+  reviewHODFeedback?: string;
+  reviewHRNotes?: string;
+  reviewOutcome?: 'satisfactory' | 'some_concerns' | 'unsatisfactory';
+  reviewNextSteps?: string;
+  autoSatisfiedDate?: any;
+  escalatedToWarningId?: string;
+  reviewLastChecked?: any;
 
   // Metadata
   createdAt: Date;
@@ -710,6 +782,7 @@ export class WarningService {
 
   /**
    * Save warning to database
+   * ✅ Handles all warning fields including new corrective counselling fields
    */
   static async saveWarning(warningData: Partial<Warning>, organizationId: string): Promise<string> {
     try {
@@ -733,6 +806,24 @@ export class WarningService {
       const expiryDate = new Date(issueDate);
       expiryDate.setMonth(expiryDate.getMonth() + validityMonths);
 
+      // 🆕 Convert reviewDate to Firestore Timestamp if provided
+      const reviewDate = warningData.reviewDate
+        ? (warningData.reviewDate instanceof Date
+            ? Timestamp.fromDate(warningData.reviewDate)
+            : (typeof warningData.reviewDate === 'string'
+                ? Timestamp.fromDate(new Date(warningData.reviewDate))
+                : warningData.reviewDate)) // Already a Timestamp
+        : undefined;
+
+      // 🆕 Validate improvement commitments if provided
+      const improvementCommitments = warningData.improvementCommitments
+        ? warningData.improvementCommitments.map(commitment => ({
+            commitment: commitment.commitment || '',
+            timeline: commitment.timeline || '',
+            completedDate: commitment.completedDate || null
+          }))
+        : undefined;
+
       const dataToSave = {
         ...warningData,
         organizationId,
@@ -740,7 +831,17 @@ export class WarningService {
         expiryDate: Timestamp.fromDate(expiryDate),
         incidentDate: Timestamp.fromDate(incidentDate),
         updatedAt: TimeService.getServerTimestamp(),
-        ...(warningData.id ? {} : { createdAt: TimeService.getServerTimestamp() })
+        ...(warningData.id ? {} : { createdAt: TimeService.getServerTimestamp() }),
+
+        // 🆕 Corrective Counselling Fields (only include if provided)
+        ...(warningData.employeeStatement && { employeeStatement: warningData.employeeStatement }),
+        ...(warningData.expectedBehaviorStandards && { expectedBehaviorStandards: warningData.expectedBehaviorStandards }),
+        ...(warningData.factsLeadingToDecision && { factsLeadingToDecision: warningData.factsLeadingToDecision }),
+        ...(improvementCommitments && { improvementCommitments }),
+        ...(reviewDate && { reviewDate }),
+        ...(warningData.interventionDetails && { interventionDetails: warningData.interventionDetails }),
+        ...(warningData.resourcesProvided && { resourcesProvided: warningData.resourcesProvided }),
+        ...(warningData.trainingProvided && { trainingProvided: warningData.trainingProvided })
       };
 
       if (warningData.id) {
@@ -762,6 +863,7 @@ export class WarningService {
 
   /**
    * Get warning by ID
+   * ✅ Properly converts all Firestore Timestamps including counselling fields
    */
   static async getWarningById(warningId: string): Promise<Warning | null> {
     try {
@@ -769,24 +871,286 @@ export class WarningService {
       const organization = await DataService.getOrganization();
       const warningRef = doc(db, 'organizations', organization.id, 'warnings', warningId);
       const warningDoc = await getDoc(warningRef);
-      
+
       if (!warningDoc.exists()) {
         return null;
       }
-      
+
+      const data = warningDoc.data();
+
       return {
         id: warningDoc.id,
-        ...warningDoc.data(),
-        issueDate: warningDoc.data().issueDate?.toDate() || new Date(),
-        expiryDate: warningDoc.data().expiryDate?.toDate() || new Date(),
-        incidentDate: warningDoc.data().incidentDate?.toDate() || new Date(),
-        createdAt: warningDoc.data().createdAt?.toDate() || new Date(),
-        updatedAt: warningDoc.data().updatedAt?.toDate() || new Date()
+        ...data,
+        issueDate: data.issueDate?.toDate() || new Date(),
+        expiryDate: data.expiryDate?.toDate() || new Date(),
+        incidentDate: data.incidentDate?.toDate() || new Date(),
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date(),
+        // 🆕 Convert reviewDate if present
+        reviewDate: data.reviewDate?.toDate() || undefined,
+        // 🆕 Ensure improvement commitments have proper structure
+        improvementCommitments: data.improvementCommitments
+          ? data.improvementCommitments.map((c: any) => ({
+              commitment: c.commitment || '',
+              timeline: c.timeline || '',
+              completedDate: c.completedDate?.toDate() || undefined
+            }))
+          : undefined
       } as Warning;
-      
+
     } catch (error) {
       Logger.error('❌ [GET] Error getting warning by ID:', error)
       return null;
+    }
+  }
+
+  // ============================================
+  // 🔄 REVIEW TRACKING METHODS
+  // ============================================
+
+  /**
+   * 📋 Get warnings needing review
+   * Returns warnings with review dates that are due, overdue, or in progress
+   */
+  static async getWarningsNeedingReview(organizationId: string): Promise<Warning[]> {
+    try {
+      const warningsRef = collection(db, `organizations/${organizationId}/warnings`);
+      const q = query(
+        warningsRef,
+        where('reviewDate', '!=', null),
+        where('reviewStatus', 'in', ['due_soon', 'overdue', 'in_progress']),
+        orderBy('reviewDate', 'asc')
+      );
+
+      const snapshot = await getDocs(q);
+
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          issueDate: data.issueDate?.toDate() || new Date(),
+          expiryDate: data.expiryDate?.toDate() || new Date(),
+          incidentDate: data.incidentDate?.toDate() || new Date(),
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          reviewDate: data.reviewDate?.toDate() || undefined,
+          reviewCompletedDate: data.reviewCompletedDate?.toDate() || undefined,
+          autoSatisfiedDate: data.autoSatisfiedDate?.toDate() || undefined,
+          reviewLastChecked: data.reviewLastChecked?.toDate() || undefined
+        } as Warning;
+      });
+
+    } catch (error) {
+      Logger.error('❌ [REVIEW] Error getting warnings needing review:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 🔄 Update review status
+   * Updates review tracking fields for a warning
+   */
+  static async updateReviewStatus(
+    warningId: string,
+    organizationId: string,
+    statusData: {
+      reviewStatus?: string;
+      reviewCompletedDate?: Date;
+      reviewCompletedBy?: string;
+      reviewCompletedByName?: string;
+      reviewHODFeedback?: string;
+      reviewHRNotes?: string;
+      reviewOutcome?: string;
+      reviewNextSteps?: string;
+      autoSatisfiedDate?: Date;
+      escalatedToWarningId?: string;
+      reviewLastChecked?: Date;
+    }
+  ): Promise<void> {
+    try {
+      const warningRef = doc(db, `organizations/${organizationId}/warnings`, warningId);
+
+      const updateData: any = {
+        updatedAt: Timestamp.now()
+      };
+
+      // Convert dates to Timestamps
+      if (statusData.reviewStatus) {
+        updateData.reviewStatus = statusData.reviewStatus;
+      }
+      if (statusData.reviewCompletedDate) {
+        updateData.reviewCompletedDate = Timestamp.fromDate(statusData.reviewCompletedDate);
+      }
+      if (statusData.reviewCompletedBy) {
+        updateData.reviewCompletedBy = statusData.reviewCompletedBy;
+      }
+      if (statusData.reviewCompletedByName) {
+        updateData.reviewCompletedByName = statusData.reviewCompletedByName;
+      }
+      if (statusData.reviewHODFeedback !== undefined) {
+        updateData.reviewHODFeedback = statusData.reviewHODFeedback;
+      }
+      if (statusData.reviewHRNotes !== undefined) {
+        updateData.reviewHRNotes = statusData.reviewHRNotes;
+      }
+      if (statusData.reviewOutcome) {
+        updateData.reviewOutcome = statusData.reviewOutcome;
+      }
+      if (statusData.reviewNextSteps !== undefined) {
+        updateData.reviewNextSteps = statusData.reviewNextSteps;
+      }
+      if (statusData.autoSatisfiedDate) {
+        updateData.autoSatisfiedDate = Timestamp.fromDate(statusData.autoSatisfiedDate);
+      }
+      if (statusData.escalatedToWarningId) {
+        updateData.escalatedToWarningId = statusData.escalatedToWarningId;
+      }
+      if (statusData.reviewLastChecked) {
+        updateData.reviewLastChecked = Timestamp.fromDate(statusData.reviewLastChecked);
+      }
+
+      await updateDoc(warningRef, updateData);
+
+      Logger.info('✅ [REVIEW] Review status updated', { warningId, statusData });
+
+    } catch (error) {
+      Logger.error('❌ [REVIEW] Error updating review status:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ✅ Mark review as satisfactory
+   * Quick method for HR to complete a review positively
+   */
+  static async markReviewSatisfactory(
+    warningId: string,
+    organizationId: string,
+    hrUserId: string,
+    hrUserName: string,
+    hrNotes?: string
+  ): Promise<void> {
+    try {
+      await this.updateReviewStatus(warningId, organizationId, {
+        reviewStatus: 'completed_satisfactory',
+        reviewCompletedDate: new Date(),
+        reviewCompletedBy: hrUserId,
+        reviewCompletedByName: hrUserName,
+        reviewHRNotes: hrNotes || '',
+        reviewOutcome: 'satisfactory',
+        reviewLastChecked: new Date()
+      });
+
+      Logger.info('✅ [REVIEW] Review marked satisfactory', { warningId });
+
+    } catch (error) {
+      Logger.error('❌ [REVIEW] Error marking review satisfactory:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ⚠️ Mark review as unsatisfactory
+   * Requires feedback and next steps
+   */
+  static async markReviewUnsatisfactory(
+    warningId: string,
+    organizationId: string,
+    hrUserId: string,
+    hrUserName: string,
+    feedback: string,
+    nextSteps: string
+  ): Promise<void> {
+    try {
+      await this.updateReviewStatus(warningId, organizationId, {
+        reviewStatus: 'completed_unsatisfactory',
+        reviewCompletedDate: new Date(),
+        reviewCompletedBy: hrUserId,
+        reviewCompletedByName: hrUserName,
+        reviewHRNotes: feedback,
+        reviewOutcome: 'unsatisfactory',
+        reviewNextSteps: nextSteps,
+        reviewLastChecked: new Date()
+      });
+
+      Logger.info('⚠️ [REVIEW] Review marked unsatisfactory', { warningId });
+
+    } catch (error) {
+      Logger.error('❌ [REVIEW] Error marking review unsatisfactory:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 📊 Get review statistics for dashboard
+   * Returns counts of warnings by review status
+   */
+  static async getReviewStatistics(organizationId: string): Promise<{
+    pending: number;
+    dueSoon: number;
+    overdue: number;
+    inProgress: number;
+    completedSatisfactory: number;
+    completedUnsatisfactory: number;
+    autoSatisfied: number;
+    escalated: number;
+  }> {
+    try {
+      const warningsRef = collection(db, `organizations/${organizationId}/warnings`);
+      const q = query(warningsRef, where('reviewDate', '!=', null));
+
+      const snapshot = await getDocs(q);
+
+      const stats = {
+        pending: 0,
+        dueSoon: 0,
+        overdue: 0,
+        inProgress: 0,
+        completedSatisfactory: 0,
+        completedUnsatisfactory: 0,
+        autoSatisfied: 0,
+        escalated: 0
+      };
+
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const status = data.reviewStatus || 'pending';
+
+        switch (status) {
+          case 'pending':
+            stats.pending++;
+            break;
+          case 'due_soon':
+            stats.dueSoon++;
+            break;
+          case 'overdue':
+            stats.overdue++;
+            break;
+          case 'in_progress':
+            stats.inProgress++;
+            break;
+          case 'completed_satisfactory':
+            stats.completedSatisfactory++;
+            break;
+          case 'completed_unsatisfactory':
+            stats.completedUnsatisfactory++;
+            break;
+          case 'auto_satisfied':
+            stats.autoSatisfied++;
+            break;
+          case 'escalated':
+            stats.escalated++;
+            break;
+        }
+      });
+
+      Logger.info('📊 [REVIEW] Review statistics calculated', { organizationId, stats });
+      return stats;
+
+    } catch (error) {
+      Logger.error('❌ [REVIEW] Error getting review statistics:', error);
+      throw error;
     }
   }
 }

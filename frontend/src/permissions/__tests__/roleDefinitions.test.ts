@@ -5,7 +5,7 @@ import { USER_ROLES, ROLE_PERMISSIONS, USER_MANAGEMENT_RULES } from '../roleDefi
 describe('Role Definitions', () => {
   describe('USER_ROLES', () => {
     it('should define all required roles', () => {
-      const expectedRoles = ['super-user', 'business-owner', 'hr-manager', 'hod-manager']
+      const expectedRoles = ['super-user', 'executive-management', 'hr-manager', 'hod-manager']
       
       expectedRoles.forEach(roleId => {
         expect(USER_ROLES[roleId]).toBeDefined()
@@ -18,7 +18,7 @@ describe('Role Definitions', () => {
 
     it('should have correct role hierarchy levels', () => {
       expect(USER_ROLES['super-user'].level).toBe(1) // Highest
-      expect(USER_ROLES['business-owner'].level).toBe(2)
+      expect(USER_ROLES['executive-management'].level).toBe(2)
       expect(USER_ROLES['hr-manager'].level).toBe(3)
       expect(USER_ROLES['hod-manager'].level).toBe(4) // Lowest
     })
@@ -51,15 +51,15 @@ describe('Role Definitions', () => {
     })
 
     it('should validate business-owner permissions', () => {
-      const businessOwnerPerms = ROLE_PERMISSIONS['business-owner']
+      const executiveManagementPerms = ROLE_PERMISSIONS['executive-management']
       
-      expect(businessOwnerPerms.scope).toContain('organization')
-      expect(businessOwnerPerms.users).toContain('create')
-      expect(businessOwnerPerms.users).toContain('deactivate')
-      expect(businessOwnerPerms.employees).toContain('read')
-      expect(businessOwnerPerms.employees).not.toContain('create')
-      expect(businessOwnerPerms.warnings).toContain('read')
-      expect(businessOwnerPerms.warnings).not.toContain('create')
+      expect(executiveManagementPerms.scope).toContain('organization')
+      expect(executiveManagementPerms.users).toContain('create')
+      expect(executiveManagementPerms.users).toContain('deactivate')
+      expect(executiveManagementPerms.employees).toContain('read')
+      expect(executiveManagementPerms.employees).not.toContain('create')
+      expect(executiveManagementPerms.warnings).toContain('read')
+      expect(executiveManagementPerms.warnings).not.toContain('create')
     })
 
     it('should validate hr-manager permissions', () => {
@@ -117,25 +117,25 @@ describe('Role Definitions', () => {
       const superUserRules = USER_MANAGEMENT_RULES['super-user']
       
       expect(superUserRules.canManage).toContain('super-user')
-      expect(superUserRules.canManage).toContain('business-owner')
+      expect(superUserRules.canManage).toContain('executive-management')
       expect(superUserRules.canManage).toContain('hr-manager')
       expect(superUserRules.canManage).toContain('hod-manager')
-      expect(superUserRules.canCreate).toContain('business-owner')
-      expect(superUserRules.canDelete).toContain('business-owner')
+      expect(superUserRules.canCreate).toContain('executive-management')
+      expect(superUserRules.canDelete).toContain('executive-management')
       expect(superUserRules.scope).toBe('global')
     })
 
     it('should validate business-owner restrictions', () => {
-      const businessOwnerRules = USER_MANAGEMENT_RULES['business-owner']
+      const executiveManagementRules = USER_MANAGEMENT_RULES['executive-management']
       
-      expect(businessOwnerRules.canManage).not.toContain('super-user')
-      expect(businessOwnerRules.canManage).not.toContain('business-owner')
-      expect(businessOwnerRules.canManage).toContain('hr-manager')
-      expect(businessOwnerRules.canManage).toContain('hod-manager')
-      expect(businessOwnerRules.canDelete).toBe(false)
-      expect(businessOwnerRules.canDeactivate).toBeDefined()
-      expect(businessOwnerRules.scope).toBe('organization')
-      expect(businessOwnerRules.restrictions).toBeDefined()
+      expect(executiveManagementRules.canManage).not.toContain('super-user')
+      expect(executiveManagementRules.canManage).not.toContain('executive-management')
+      expect(executiveManagementRules.canManage).toContain('hr-manager')
+      expect(executiveManagementRules.canManage).toContain('hod-manager')
+      expect(executiveManagementRules.canDelete).toBe(false)
+      expect(executiveManagementRules.canDeactivate).toBeDefined()
+      expect(executiveManagementRules.scope).toBe('organization')
+      expect(executiveManagementRules.restrictions).toBeDefined()
     })
 
     it('should validate hr-manager limitations', () => {
@@ -196,11 +196,11 @@ describe('Role Definitions', () => {
 
     it('should ensure management capabilities align with permissions', () => {
       // Business owners should have user management permissions if they can manage users
-      const businessOwnerPerms = ROLE_PERMISSIONS['business-owner']
-      const businessOwnerRules = USER_MANAGEMENT_RULES['business-owner']
+      const executiveManagementPerms = ROLE_PERMISSIONS['executive-management']
+      const executiveManagementRules = USER_MANAGEMENT_RULES['executive-management']
 
-      if (businessOwnerRules.canManage.length > 0) {
-        expect(businessOwnerPerms.users).toContain('create')
+      if (executiveManagementRules.canManage.length > 0) {
+        expect(executiveManagementPerms.users).toContain('create')
       }
 
       // HR managers should have user permissions if they can update users

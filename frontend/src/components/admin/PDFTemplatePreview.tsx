@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import type { PDFTemplateSettings, Organization } from '../../types/core';
 import { ThemedCard } from '../common/ThemedCard';
-import { PDFGenerationService } from '../../services/PDFGenerationService';
+// 🚀 LAZY LOAD: PDFGenerationService imported dynamically (saves 574KB bundle)
 import Logger from '../../utils/logger';
 
 interface PDFTemplatePreviewProps {
@@ -47,6 +47,9 @@ export const PDFTemplatePreview: React.FC<PDFTemplatePreviewProps> = ({
       const sampleData = generateSampleWarningData(organization, settings);
 
       // Generate PDF blob
+      // 🚀 LAZY LOAD: Import PDFGenerationService dynamically when needed
+      const { PDFGenerationService } = await import('../../services/PDFGenerationService');
+
       // 🎨 TEMPLATE PREVIEW: Pass the settings being previewed to see how they affect the PDF
       const pdfBlob = await PDFGenerationService.generateWarningPDF(
         sampleData,
@@ -371,6 +374,38 @@ function generateSampleWarningData(
     // Additional fields
     additionalNotes: 'Employee expressed understanding of the policy and committed to improved punctuality.',
     validityPeriod: 6,
+
+    // 🆕 Corrective Discussion Fields (Session 48 - Unified Warning/Counselling System)
+    employeeStatement: 'I apologize for being late. I had car trouble and my phone battery died so I couldn\'t call ahead. I understand this has happened before and I take full responsibility. I will ensure I leave earlier to account for potential delays.',
+
+    expectedBehaviorStandards: 'All employees are expected to:\n• Arrive at their designated workstation at least 5 minutes before shift start time\n• Notify their supervisor immediately if they will be late (via phone call, not SMS)\n• Maintain a punctuality record of at least 95% over any 3-month period\n• Plan transportation with buffer time to account for potential delays',
+
+    factsLeadingToDecision: 'After reviewing the attendance records, CCTV footage, and the employee\'s statement, the following facts were established:\n\n1. Employee arrived at 08:45 AM, 45 minutes after shift start (08:00 AM)\n2. No advance notification was provided to the supervisor\n3. This is the third late arrival in the past 30 days\n4. Previous verbal warning was issued on ' + new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString() + '\n5. Employee\'s explanation is noted, but the pattern of tardiness remains a concern\n\nGiven the repeated nature of the offense and the previous warning, escalation to a written warning is appropriate under our progressive discipline policy.',
+
+    improvementCommitments: [
+      {
+        commitment: 'Leave home 30 minutes earlier each day to ensure on-time arrival',
+        timeline: 'Immediate - starting next shift'
+      },
+      {
+        commitment: 'Keep phone charged and ensure supervisor\'s number is saved for emergency contact',
+        timeline: 'Immediate'
+      },
+      {
+        commitment: 'Maintain 100% on-time attendance for the next 90 days',
+        timeline: '90 days from ' + now.toLocaleDateString()
+      }
+    ],
+
+    reviewDate: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+
+    interventionDetails: 'Employee was provided with a copy of the attendance policy and counseled on time management strategies. Discussed setting multiple alarms and planning alternative transport routes.',
+
+    resourcesProvided: [
+      'Company Attendance Policy (Updated 2024)',
+      'Time Management Tips for Shift Workers',
+      'Emergency Contact Procedures Guide'
+    ],
 
     // LRA recommendation (sample previous warning)
     disciplineRecommendation: {

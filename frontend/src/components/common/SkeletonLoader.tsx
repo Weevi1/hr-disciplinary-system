@@ -1,6 +1,7 @@
 // frontend/src/components/common/SkeletonLoader.tsx
 // 🎨 SKELETON LOADING COMPONENTS FOR PROGRESSIVE DASHBOARD LOADING
 // ✅ Provides smooth loading states while data loads in background
+// 🚀 OPTIMIZED: React.memo for skeleton components to prevent unnecessary re-renders
 
 import React from 'react';
 
@@ -10,14 +11,17 @@ interface SkeletonProps {
 }
 
 // Base skeleton component
-export const Skeleton: React.FC<SkeletonProps> = ({ className = '', rounded = false }) => (
+// 🚀 MEMOIZED: Prevents re-renders when props haven't changed
+export const Skeleton = React.memo<SkeletonProps>(({ className = '', rounded = false }) => (
   <div
     className={`animate-pulse bg-gray-200 ${rounded ? 'rounded-full' : 'rounded'} ${className}`}
   />
-);
+));
+Skeleton.displayName = 'Skeleton';
 
 // Card skeleton for dashboard sections
-export const SkeletonCard: React.FC<{ className?: string }> = ({ className = '' }) => (
+// 🚀 MEMOIZED: Prevents re-renders when props haven't changed
+export const SkeletonCard = React.memo<{ className?: string }>(({ className = '' }) => (
   <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
     <div className="animate-pulse">
       {/* Header */}
@@ -34,7 +38,8 @@ export const SkeletonCard: React.FC<{ className?: string }> = ({ className = '' 
       </div>
     </div>
   </div>
-);
+));
+SkeletonCard.displayName = 'SkeletonCard';
 
 // List skeleton for employee lists, warnings, etc
 export const SkeletonList: React.FC<{
@@ -73,10 +78,11 @@ export const SkeletonList: React.FC<{
 );
 
 // Stats skeleton for metrics
-export const SkeletonStats: React.FC<{
+// 🚀 MEMOIZED: Prevents re-renders when props haven't changed
+export const SkeletonStats = React.memo<{
   stats?: number;
   className?: string;
-}> = ({
+}>(({
   stats = 4,
   className = ''
 }) => (
@@ -94,7 +100,8 @@ export const SkeletonStats: React.FC<{
       </div>
     ))}
   </div>
-);
+));
+SkeletonStats.displayName = 'SkeletonStats';
 
 // Chart skeleton for analytics
 export const SkeletonChart: React.FC<{

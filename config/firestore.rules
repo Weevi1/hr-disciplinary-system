@@ -36,16 +36,16 @@ service cloud.firestore {
       return isAuthenticated() && getUserRole() == 'reseller';
     }
 
-    function isBusinessOwner() {
-      return isAuthenticated() && getUserRole() == 'business-owner';
+    function isExecutiveManagement() {
+      return isAuthenticated() && getUserRole() == 'executive-management';
     }
 
     function isHRManager() {
-      return isAuthenticated() && getUserRole() in ['business-owner', 'hr-manager'];
+      return isAuthenticated() && getUserRole() in ['executive-management', 'hr-manager'];
     }
 
     function isManager() {
-      return isAuthenticated() && getUserRole() in ['business-owner', 'hr-manager', 'hod-manager', 'department-manager'];
+      return isAuthenticated() && getUserRole() in ['executive-management', 'hr-manager', 'hod-manager', 'department-manager'];
     }
 
     function belongsToOrganization(orgId) {
@@ -116,7 +116,7 @@ service cloud.firestore {
       allow write: if isAuthenticated() && (
         request.auth.uid == userId ||
         isSuperUser() ||
-        (isBusinessOwner() && (
+        (isExecutiveManagement() && (
           (resource != null && belongsToOrganization(resource.data.organizationId)) ||
           (resource == null && request.resource.data.organizationId != null)
         )) ||
@@ -148,10 +148,21 @@ service cloud.firestore {
         resellerManagesOrganization(organizationId)
       );
 
-      allow write: if isAuthenticated() && (
+      // Full write access for super-users, executive management, and resellers
+      allow create, delete: if isAuthenticated() && (
         isSuperUser() ||
-        (isBusinessOwner() && belongsToOrganization(organizationId)) ||
+        (isExecutiveManagement() && belongsToOrganization(organizationId)) ||
         isReseller()  // Resellers can create and manage organizations
+      );
+
+      // Allow HR managers to update only setupSkipped field (for dashboard onboarding)
+      allow update: if isAuthenticated() && (
+        isSuperUser() ||
+        (isExecutiveManagement() && belongsToOrganization(organizationId)) ||
+        isReseller() ||
+        // HR managers can only update setupSkipped field
+        (isHRManager() && belongsToOrganization(organizationId) &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['setupSkipped']))
       );
     }
 
@@ -212,7 +223,7 @@ service cloud.firestore {
           // HR managers can see all requests in their org
           isHRManager() ||
           // Business owners can see all requests in their org
-          isBusinessOwner()
+          isExecutiveManagement()
         ))
       );
 
@@ -254,7 +265,7 @@ service cloud.firestore {
           // HR managers can see all reports in their org
           isHRManager() ||
           // Business owners can see all reports in their org
-          isBusinessOwner()
+          isExecutiveManagement()
         ))
       );
 
@@ -417,56 +428,35 @@ service cloud.firestore {
     }
 
     // ===================================
-    // 📋 CORRECTIVE COUNSELLING COLLECTION
+    // 📋 CORRECTIVE COUNSELLING - DEPRECATED (MERGED INTO WARNINGS)
     // ===================================
+    // NOTE: As of Session 48, corrective counselling has been merged into the warnings system.
+    // Counselling data is now stored as optional fields within warning documents:
+    // - counsellingDetails (object with expectedBehavior, actionSteps, reviewDate)
+    // - counsellingType (optional: 'informal' | 'corrective')
+    // - isCounselling (boolean flag)
+    //
+    // Historical counselling records remain accessible via super-user for data migration/archival purposes.
+    // No new counselling records should be created in these standalone collections.
 
-    // Corrective counselling records - managers and HR access
+    // DEPRECATED: Global corrective_counselling collection (read-only for super-users)
     match /corrective_counselling {
       allow list: if isAuthenticated() && isSuperUser();
     }
 
     match /corrective_counselling/{counsellingId} {
-      allow read: if isAuthenticated() && (
-        isSuperUser() ||
-        // Managers can read counselling records they created
-        request.auth.uid == resource.data.managerId ||
-        // HR can read counselling records for their organization
-        (isHRManager() && belongsToOrganization(resource.data.organizationId)) ||
-        // Business owners can read records for their organization
-        (isBusinessOwner() && belongsToOrganization(resource.data.organizationId))
-      );
-
-      allow create: if isAuthenticated() && (
-        isSuperUser() ||
-        // Managers can create counselling records for their organization
-        (isManager() && belongsToOrganization(request.resource.data.organizationId) &&
-         request.auth.uid == request.resource.data.managerId)
-      );
-
-      allow update: if isAuthenticated() && (
-        isSuperUser() ||
-        // Managers can update their own counselling records
-        (request.auth.uid == resource.data.managerId && belongsToOrganization(resource.data.organizationId)) ||
-        // HR can update counselling records in their organization
-        (isHRManager() && belongsToOrganization(resource.data.organizationId))
-      );
-
-      allow delete: if isAuthenticated() && (
-        isSuperUser() ||
-        // HR can delete counselling records in their organization
-        (isHRManager() && belongsToOrganization(resource.data.organizationId))
-      );
+      // Read-only access for super-users (data migration/archival only)
+      allow read: if isAuthenticated() && isSuperUser();
+      // No writes allowed - use warnings collection instead
+      allow create, update, delete: if false;
     }
 
-    // Counselling follow-up records
+    // DEPRECATED: Counselling follow-up records (read-only for super-users)
     match /counselling_followups/{followUpId} {
-      allow read, write: if isAuthenticated() && (
-        isSuperUser() ||
-        // Managers can manage follow-ups for their counselling records
-        (isManager() && request.auth.uid == resource.data.createdBy) ||
-        // HR can manage all follow-ups in their organization
-        (isHRManager() && belongsToOrganization(resource.data.organizationId))
-      );
+      // Read-only access for super-users (data migration/archival only)
+      allow read: if isAuthenticated() && isSuperUser();
+      // No writes allowed - counselling is now part of warnings
+      allow create, update, delete: if false;
     }
 
     // ===================================
@@ -546,7 +536,7 @@ service cloud.firestore {
     match /analytics/{document} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        isBusinessOwner()
+        isExecutiveManagement()
       );
 
       allow write: if isAuthenticated() && isSuperUser();
@@ -595,7 +585,7 @@ service cloud.firestore {
       allow write: if isAuthenticated() && (
         isSuperUser() ||
         request.auth.uid == userId ||
-        (belongsToOrganization(organizationId) && isBusinessOwner()) ||
+        (belongsToOrganization(organizationId) && isExecutiveManagement()) ||
         // Allow HR managers to update user department assignments and manager-related fields
         (belongsToOrganization(organizationId) && isHRManager()) ||
         resellerManagesOrganization(organizationId) ||
@@ -650,6 +640,17 @@ service cloud.firestore {
     }
 
     // Sharded warnings collection
+    // NOTE: As of Session 48, this collection includes corrective counselling data as optional fields:
+    // - counsellingDetails (object with expectedBehavior, actionSteps, reviewDate)
+    // - counsellingType (optional: 'informal' | 'corrective')
+    // - isCounselling (boolean flag)
+    // All new counselling records are stored here, not in separate corrective_counselling collections.
+    //
+    // REVIEW TRACKING FIELDS (Session 48):
+    // Managers (including HR) can update review status and follow-up tracking fields:
+    // - reviewStatus, reviewCompletedDate, reviewCompletedBy, reviewCompletedByName
+    // - reviewHODFeedback, reviewHRNotes, reviewOutcome, reviewNextSteps
+    // - autoSatisfiedDate, escalatedToWarningId, reviewLastChecked
     match /organizations/{organizationId}/warnings/{warningId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
@@ -714,7 +715,7 @@ service cloud.firestore {
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isBusinessOwner()) ||
+        (belongsToOrganization(organizationId) && isExecutiveManagement()) ||
         resellerManagesOrganization(organizationId) ||
         (isReseller() && resource == null)  // Allow resellers to create during deployment
       );
@@ -749,7 +750,9 @@ service cloud.firestore {
       );
     }
 
-    // Sharded reports collection
+    // Sharded reports collection - ABSENCE REPORTS ONLY
+    // NOTE: This collection now stores only absence reports.
+    // Counselling reports are deprecated and merged into the warnings system.
     match /organizations/{organizationId}/reports/{reportId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
@@ -758,7 +761,7 @@ service cloud.firestore {
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isHRManager())
+        (belongsToOrganization(organizationId) && isManager())
       );
     }
 
@@ -772,7 +775,7 @@ service cloud.firestore {
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isBusinessOwner()) ||
+        (belongsToOrganization(organizationId) && isExecutiveManagement()) ||
         resellerManagesOrganization(organizationId) ||
         (isReseller() && resource == null)  // Allow resellers to create during deployment
       );
@@ -859,19 +862,16 @@ service cloud.firestore {
     }
 
     // ===================================
-    // 🆕 SHARDED ORGANIZATION COLLECTIONS - CORRECTIVE COUNSELLING
+    // 🆕 SHARDED ORGANIZATION COLLECTIONS - CORRECTIVE COUNSELLING (DEPRECATED)
     // ===================================
+    // NOTE: Counselling is now merged into the warnings system.
+    // Keeping this collection for historical data access only (read-only for super-users).
 
     match /organizations/{organizationId}/corrective_counselling/{counsellingId} {
-      allow read: if isAuthenticated() && (
-        isSuperUser() ||
-        belongsToOrganization(organizationId)
-      );
-
-      allow write: if isAuthenticated() && (
-        isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager())
-      );
+      // Read-only access for super-users (data migration/archival only)
+      allow read: if isAuthenticated() && isSuperUser();
+      // No writes allowed - counselling is now part of warnings
+      allow create, update, delete: if false;
     }
 
     // ===================================

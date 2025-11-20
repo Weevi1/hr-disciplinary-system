@@ -44,7 +44,7 @@ export const useUserManagement = () => {
     loading: true,
     error: null,
     creatableRoles: [],
-    userManagementRules: USER_MANAGEMENT_RULES['business-owner'] // default
+    userManagementRules: USER_MANAGEMENT_RULES['executive-management'] // default
   });
 
   // Get user's permissions and rules
@@ -55,7 +55,7 @@ export const useUserManagement = () => {
       
       setState(prev => ({
         ...prev,
-        userManagementRules: rules || USER_MANAGEMENT_RULES['business-owner'],
+        userManagementRules: rules || USER_MANAGEMENT_RULES['executive-management'],
         creatableRoles
       }));
     }
@@ -64,7 +64,7 @@ export const useUserManagement = () => {
   // Enhanced role color function matching your original
   const getRoleColor = (roleId: string) => {
     switch (roleId) {
-      case 'business-owner': return '#dc2626';
+      case 'executive-management': return '#dc2626';
       case 'hr-manager': return '#059669';
       case 'hod-manager': return '#7c3aed';
       default: return '#64748b';
@@ -119,7 +119,7 @@ export const useUserManagement = () => {
       const manageableUsers = usersResult.documents
         .filter((user: any) => {
           const userRoleId = getRoleId(user.role);
-          return userRoleId !== 'business-owner' && canManageUser(
+          return userRoleId !== 'executive-management' && canManageUser(
             currentUser.role.id,
             currentUser.organizationId,
             userRoleId,

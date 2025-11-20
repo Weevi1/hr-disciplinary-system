@@ -9,7 +9,7 @@ import { ChevronDown, Briefcase, Shield, Users } from 'lucide-react';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
 
 interface DashboardRole {
-  id: 'business-owner' | 'hr-manager' | 'hod-manager';
+  id: 'executive-management' | 'hr-manager' | 'hod-manager';
   label: string;
   description: string;
   icon: any;
@@ -37,8 +37,8 @@ export const DashboardRoleSelector = memo<DashboardRoleSelectorProps>(({
 
   if (canManageOrganization()) {
     availableRoles.push({
-      id: 'business-owner',
-      label: 'Business Owner',
+      id: 'executive-management',
+      label: 'Executive Management',
       description: 'Executive & Configuration',
       icon: Briefcase
     });
@@ -184,29 +184,29 @@ export function getInitialDashboardRole(
 
   // Validate stored role against current permissions AND primary role
   // Only use stored preference if it matches user's capabilities
-  if (storedRole === 'business-owner' && canManageOrganization) return storedRole;
+  if (storedRole === 'executive-management' && canManageOrganization) return storedRole;
   if (storedRole === 'hr-manager' && canManageHR) return storedRole;
 
   // HOD view only available if:
   // 1. User explicitly selected it before AND
   // 2. User is NOT a business-owner or hr-manager by primary role
-  // This prevents Business Owners from getting stuck in Department Manager view
+  // This prevents Executive Managements from getting stuck in Department Manager view
   if (storedRole === 'hod-manager' &&
       (canManageOrganization || canManageHR) &&
-      primaryRole !== 'business-owner' &&
+      primaryRole !== 'executive-management' &&
       primaryRole !== 'hr-manager') {
     return storedRole;
   }
 
   // Default hierarchy based on primary role (no localStorage preference)
   // This ensures users always see their primary role's dashboard first
-  if (primaryRole === 'business-owner' && canManageOrganization) return 'business-owner';
+  if (primaryRole === 'executive-management' && canManageOrganization) return 'executive-management';
   if (primaryRole === 'hr-manager' && canManageHR) return 'hr-manager';
   if (primaryRole === 'hod-manager') return 'hod-manager';
 
   // Fallback hierarchy if primary role doesn't match permissions
-  if (canManageOrganization) return 'business-owner';
+  if (canManageOrganization) return 'executive-management';
   if (canManageHR) return 'hr-manager';
 
-  return 'business-owner'; // Final fallback
+  return 'executive-management'; // Final fallback
 }

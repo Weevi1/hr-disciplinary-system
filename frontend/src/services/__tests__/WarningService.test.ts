@@ -21,7 +21,7 @@ vi.mock('../UniversalCategories', () => ({
     const labels = {
       counselling: 'Counselling',
       verbal: 'Verbal Warning',
-      first_written: 'First Written Warning',
+      first_written: 'Written Warning',
       final_written: 'Final Written Warning',
       dismissal: 'Dismissal'
     }
@@ -217,7 +217,7 @@ describe('WarningService', () => {
     it('should normalize string levels correctly', () => {
       expect(WarningService.normalizeWarningLevel('counselling')).toBe('counselling')
       expect(WarningService.normalizeWarningLevel('Verbal Warning')).toBe('verbal')
-      expect(WarningService.normalizeWarningLevel('First Written Warning')).toBe('first_written')
+      expect(WarningService.normalizeWarningLevel('Written Warning')).toBe('first_written')
       expect(WarningService.normalizeWarningLevel('final written warning')).toBe('final_written')
     })
 

@@ -45,6 +45,8 @@ interface EmployeeTableBrowserProps {
   onBulkAction?: (action: string, employees: Employee[]) => void;
   selectedEmployee?: Employee | null;
   loading?: boolean;
+  compact?: boolean; // Hide header and controls when used inline
+  readOnly?: boolean; // Read-only mode - hides all action buttons
 }
 
 type SortField = 'name' | 'department' | 'position' | 'manager' | 'startDate' | 'status';
@@ -66,7 +68,9 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
   onEmployeePromote,
   onBulkAction,
   selectedEmployee,
-  loading = false
+  loading = false,
+  compact = false,
+  readOnly = false
 }) => {
   const { user } = useAuth();
   const { organization } = useOrganization();
@@ -352,51 +356,52 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Table Header Controls */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <FileSpreadsheet className="w-6 h-6 text-blue-600" />
-              Employee Directory
-            </h2>
-            <p className="text-gray-600 text-sm">
-              {filteredAndSortedEmployees.length} of {employees.length} employees
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Search */}
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search employees..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-64"
-              />
+      {/* Table Header Controls - Hidden when compact */}
+      {!compact && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <FileSpreadsheet className="w-6 h-6 text-blue-600" />
+                Employee Directory
+              </h2>
+              <p className="text-gray-600 text-sm">
+                {filteredAndSortedEmployees.length} of {employees.length} employees
+              </p>
             </div>
 
-            {/* Filter Toggle */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`
-                flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors
-                ${showFilters 
-                  ? 'bg-blue-50 border-blue-300 text-blue-700' 
-                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                }
-              `}
-            >
-              <Filter className="w-4 h-4" />
-              Filters
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Search */}
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search employees..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-64"
+                />
+              </div>
 
-            {/* Export */}
-            <button
-              onClick={exportToCSV}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              {/* Filter Toggle */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`
+                  flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors
+                  ${showFilters
+                    ? 'bg-blue-50 border-blue-300 text-blue-700'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }
+                `}
+              >
+                <Filter className="w-4 h-4" />
+                Filters
+              </button>
+
+              {/* Export */}
+              <button
+                onClick={exportToCSV}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               <Download className="w-4 h-4" />
               Export
@@ -452,49 +457,45 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
           </div>
         )}
 
-        {/* Bulk Actions */}
-        {selectedRows.size > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                {selectedRows.size} employee{selectedRows.size !== 1 ? 's' : ''} selected
-              </span>
-              <div className="flex gap-2">
-                {user?.role?.id === 'hr-manager' && (
-                  <>
-                    <button
-                      onClick={() => handleBulkAction('assign-manager')}
-                      className="flex items-center gap-1 px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
-                    >
-                      <Users className="w-3 h-3" />
-                      Assign to Manager
-                    </button>
-                    <button
-                      onClick={() => handleBulkAction('assign-department')}
-                      className="flex items-center gap-1 px-3 py-1 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700"
-                    >
-                      <Building className="w-3 h-3" />
-                      Assign to Department
-                    </button>
-                  </>
-                )}
-                <button
-                  onClick={() => handleBulkAction('export')}
-                  className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-                >
-                  Export Selected
-                </button>
-                <button
-                  onClick={() => handleBulkAction('email')}
-                  className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-                >
-                  Send Email
-                </button>
-              </div>
+      </div>
+      )}
+
+      {/* Bulk Actions - Always visible when employees selected, even in compact mode */}
+      {selectedRows.size > 0 && (
+        <div className="mt-4 p-4 bg-white rounded-xl border border-blue-200 shadow-sm">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-900">
+              {selectedRows.size} employee{selectedRows.size !== 1 ? 's' : ''} selected
+            </span>
+            <div className="flex gap-2 flex-wrap">
+              {user?.role?.id === 'hr-manager' && (
+                <>
+                  <button
+                    onClick={() => handleBulkAction('assign-manager')}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    Assign to Manager
+                  </button>
+                  <button
+                    onClick={() => handleBulkAction('assign-department')}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700 transition-colors"
+                  >
+                    <Building className="w-3.5 h-3.5" />
+                    Assign to Department
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => handleBulkAction('export')}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+              >
+                Export Selected
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Data Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -607,8 +608,8 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
 
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
-                        {/* Only show contact icons to HR and Business Owner roles */}
-                        {(user?.role === 'hr' || user?.role === 'business_owner') && (
+                        {/* Only show contact icons to HR and Executive Management roles */}
+                        {(user?.role?.id === 'hr-manager' || user?.role?.id === 'executive-management') && (
                           <>
                             {employee.profile.email && (
                               <Mail
@@ -628,7 +629,7 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
                           </>
                         )}
                         {/* Show dash for HOD managers */}
-                        {user?.role !== 'hr' && user?.role !== 'business_owner' && (
+                        {user?.role?.id !== 'hr-manager' && user?.role?.id !== 'executive-management' && (
                           <span className="text-sm text-gray-400">—</span>
                         )}
                       </div>
@@ -723,8 +724,8 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
                               <div className="space-y-2 text-sm">
                                 <p><span className="font-medium">Name:</span> {employee.profile.firstName} {employee.profile.lastName}</p>
                                 <p><span className="font-medium">ID:</span> {employee.profile.employeeNumber}</p>
-                                {/* Only show contact details to HR and Business Owner roles */}
-                                {(user?.role === 'hr' || user?.role === 'business_owner') && (
+                                {/* Only show contact details to HR and Executive Management roles */}
+                                {(user?.role?.id === 'hr-manager' || user?.role?.id === 'executive-management') && (
                                   <>
                                     <p><span className="font-medium">Email:</span> {employee.profile.email}</p>
                                     <p><span className="font-medium">Phone:</span> {employee.profile.phoneNumber || 'Not provided'}</p>
@@ -772,8 +773,8 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
                             </div>
                           </div>
 
-                          {/* Only show Edit and Archive buttons to HR and Business Owner roles */}
-                          {(user?.role === 'hr' || user?.role === 'business_owner') && (
+                          {/* Only show Edit and Archive buttons to HR and Executive Management roles, and not in read-only mode */}
+                          {!readOnly && (user?.role?.id === 'hr-manager' || user?.role?.id === 'executive-management') && (
                             <div className="flex gap-3 mt-4 pt-4 border-t border-gray-200">
                               <button
                                 onClick={(e) => {

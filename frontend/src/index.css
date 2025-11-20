@@ -1330,4 +1330,26 @@ a.hr-button,
   padding: 12px;
 }
 
+/* ============================================= */
+/* 🎉 RECOGNITION SYSTEM ANIMATIONS */
+/* ============================================= */
+
+/* Confetti animation for recognition success */
+@keyframes confetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.animate-confetti {
+  animation: confetti 4s ease-in forwards;
+  font-size: 1.5rem;
+  position: absolute;
+}
+
 /* ✨ PROGRESSIVE ENHANCEMENT COMPLETE ✨ */

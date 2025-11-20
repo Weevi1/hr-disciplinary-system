@@ -20,13 +20,13 @@ interface DashboardData {
   user: any | null;
 
   // Role-specific data
-  employees: any[];           // HOD, HR, Business Owner
+  employees: any[];           // HOD, HR, Executive Management
   followUps: any[];          // HOD, HR
   permissions: any;          // All roles
   warnings: any[];           // HR mainly
-  reports: any[];            // Business Owner, HR
-  teams: any[];              // Business Owner
-  metrics: any;              // Business Owner, HR
+  reports: any[];            // Executive Management, HR
+  teams: any[];              // Executive Management
+  metrics: any;              // Executive Management, HR
 
   // Progressive loading states - individual loading states for each data type
   loading: {
@@ -87,7 +87,7 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
       core: ['organization', 'categories', 'permissions'],
       hod: ['employees', 'followUps'],
       hr: ['employees', 'followUps', 'warnings', 'reports', 'metrics'],
-      business_owner: ['employees', 'teams', 'reports', 'metrics'],
+      executive_management: ['employees', 'teams', 'reports', 'metrics'],
       super_admin: ['employees', 'warnings', 'reports', 'metrics', 'teams']
     };
 
@@ -168,7 +168,7 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
 
       // Role-specific data requests - load independently
       if (requirements.includes('employees')) {
-        // HR and Business Owner see ALL employees ALWAYS (even when viewing HOD dashboard)
+        // HR and Executive Management see ALL employees ALWAYS (even when viewing HOD dashboard)
         // Check ACTUAL user role, not requested dashboard role
         // Note: user.role can be an object {id: 'hr-manager', name: 'HR Manager'} or a string
         const actualUserRoleId = typeof user.role === 'object' && user.role?.id
@@ -176,9 +176,9 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
           : (user.role || userRole);
 
         const isHROrOwner = actualUserRoleId === 'hr' ||
-                           actualUserRoleId === 'business_owner' ||
+                           actualUserRoleId === 'executive_management' ||
                            actualUserRoleId === 'hr-manager' ||
-                           actualUserRoleId === 'business-owner';
+                           actualUserRoleId === 'executive-management';
 
         const cacheKey = isHROrOwner
           ? CacheService.generateOrgKey(orgId, 'employees:all')
@@ -187,7 +187,7 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
         CacheService.getOrFetch(
           cacheKey,
           async () => {
-            // HR/Business Owner get all employees (even in HOD view), HOD gets their team only
+            // HR/Executive Management get all employees (even in HOD view), HOD gets their team only
             const employeesData = isHROrOwner
               ? await API.employees.getAll(orgId)
               : await API.employees.getByManager(user.id, orgId);

@@ -6,7 +6,7 @@
 import { useAuth } from '../auth/AuthContext';
 
 interface MultiRolePermissions {
-  // 🏢 Business Owner Functions
+  // 🏢 Executive Management Functions
   canViewBusinessMetrics: () => boolean;
   canManageOrganization: () => boolean;
   canViewComplianceReports: () => boolean;
@@ -84,57 +84,57 @@ export const useMultiRolePermissions = (): MultiRolePermissions => {
 
   // 🏢 BUSINESS OWNER PERMISSIONS
   const canViewBusinessMetrics = (): boolean => {
-    return hasRole('business-owner') || hasRole('super-user');
+    return hasRole('executive-management') || hasRole('super-user');
   };
 
   const canManageOrganization = (): boolean => {
-    return hasRole('business-owner') || hasRole('super-user');
+    return hasRole('executive-management') || hasRole('super-user');
   };
 
   const canViewComplianceReports = (): boolean => {
-    return hasAnyRole(['business-owner', 'hr-manager', 'super-user']);
+    return hasAnyRole(['executive-management', 'hr-manager', 'super-user']);
   };
 
   const canManageOrganizationSettings = (): boolean => {
-    return hasRole('business-owner') || hasRole('super-user');
+    return hasRole('executive-management') || hasRole('super-user');
   };
 
   // 👥 HR MANAGER PERMISSIONS
   const canManageEmployees = (): boolean => {
-    return hasAnyRole(['hr-manager', 'business-owner', 'super-user']);
+    return hasAnyRole(['hr-manager', 'executive-management', 'super-user']);
   };
 
   const canManageHR = (): boolean => {
-    return hasAnyRole(['hr-manager', 'business-owner', 'super-user']);
+    return hasAnyRole(['hr-manager', 'executive-management', 'super-user']);
   };
 
   const canReviewWarnings = (): boolean => {
-    return hasAnyRole(['hr-manager', 'business-owner', 'super-user']);
+    return hasAnyRole(['hr-manager', 'executive-management', 'super-user']);
   };
 
   const canReviewDocuments = (): boolean => {
-    return hasAnyRole(['hr-manager', 'business-owner', 'super-user']);
+    return hasAnyRole(['hr-manager', 'executive-management', 'super-user']);
   };
 
   const canManageUsers = (): boolean => {
-    return hasAnyRole(['hr-manager', 'business-owner', 'super-user']);
+    return hasAnyRole(['hr-manager', 'executive-management', 'super-user']);
   };
 
   const canManageDepartments = (): boolean => {
-    return hasAnyRole(['hr-manager', 'business-owner', 'super-user']);
+    return hasAnyRole(['hr-manager', 'executive-management', 'super-user']);
   };
 
   const canCreateHRManagers = (): boolean => {
-    return hasRole('business-owner') || hasRole('super-user');
+    return hasRole('executive-management') || hasRole('super-user');
   };
 
   const canCreateHODManagers = (): boolean => {
-    return hasAnyRole(['hr-manager', 'business-owner', 'super-user']);
+    return hasAnyRole(['hr-manager', 'executive-management', 'super-user']);
   };
 
   // ⚠️ HOD MANAGER PERMISSIONS
   const canCreateWarnings = (): boolean => {
-    return hasAnyRole(['hod-manager', 'hr-manager', 'business-owner', 'super-user']);
+    return hasAnyRole(['hod-manager', 'hr-manager', 'executive-management', 'super-user']);
   };
 
   const canCaptureDocuments = (): boolean => {
@@ -142,22 +142,22 @@ export const useMultiRolePermissions = (): MultiRolePermissions => {
   };
 
   const canViewTeamMembers = (): boolean => {
-    return hasAnyRole(['hod-manager', 'hr-manager', 'business-owner', 'super-user']);
+    return hasAnyRole(['hod-manager', 'hr-manager', 'executive-management', 'super-user']);
   };
 
   const canManageTeam = (): boolean => {
-    return hasAnyRole(['hod-manager', 'hr-manager', 'business-owner', 'super-user']);
+    return hasAnyRole(['hod-manager', 'hr-manager', 'executive-management', 'super-user']);
   };
 
   // 📋 CATEGORY MANAGEMENT PERMISSIONS
   // Resellers can manage their client's categories
   // HR managers and business owners can manage their organization's categories
   // Super users can manage any organization's categories
-  const canManageCategories = hasAnyRole(['reseller', 'hr-manager', 'business-owner', 'super-user']);
-  const canViewAnalytics = hasAnyRole(['reseller', 'hr-manager', 'business-owner', 'super-user']);
+  const canManageCategories = hasAnyRole(['reseller', 'hr-manager', 'executive-management', 'super-user']);
+  const canViewAnalytics = hasAnyRole(['reseller', 'hr-manager', 'executive-management', 'super-user']);
 
   return {
-    // Business Owner Functions
+    // Executive Management Functions
     canViewBusinessMetrics,
     canManageOrganization,
     canViewComplianceReports,

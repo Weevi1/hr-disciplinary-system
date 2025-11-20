@@ -91,7 +91,7 @@ export const DashboardRouter: React.FC = () => {
       // 🤝 RESELLERS: Use dedicated reseller dashboard
       return <ResellerDashboard />;
 
-    case 'business-owner':
+    case 'executive-management':
     case 'hr-manager':
     case 'hod-manager':
       // 🏆 ALL COMPANY USERS: Use unified BusinessDashboard

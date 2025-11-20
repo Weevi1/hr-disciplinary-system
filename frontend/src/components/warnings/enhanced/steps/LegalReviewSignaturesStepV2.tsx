@@ -24,6 +24,9 @@ import { ThemedAlert } from '../../../common/ThemedCard';
 import { DigitalSignaturePad } from './DigitalSignaturePad';
 import { MultiLanguageWarningScript } from './components/MultiLanguageWarningScript';
 
+// Import SVG signature utilities
+import { applyWitnessWatermarkToSVG } from '../../../../utils/signatureSVG';
+
 interface Employee {
   id: string;
   firstName: string;
@@ -52,9 +55,11 @@ interface FormData {
 interface SignatureData {
   manager: string | null;
   employee: string | null;
+  witness: string | null;
   timestamp?: string;
   managerName?: string;
   employeeName?: string;
+  witnessName?: string;
 }
 
 interface WarningCategory {
@@ -116,7 +121,7 @@ const getWarningLevelInfo = (level: string): { label: string; color: string; bgC
   const levelMap: Record<string, { label: string; color: string; bgColor: string }> = {
     'counselling': { label: 'Counselling', color: '#0ea5e9', bgColor: 'rgba(14, 165, 233, 0.1)' },
     'verbal': { label: 'Verbal', color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
-    'first_written': { label: 'First Written', color: '#f97316', bgColor: 'rgba(249, 115, 22, 0.1)' },
+    'first_written': { label: 'Written', color: '#f97316', bgColor: 'rgba(249, 115, 22, 0.1)' },
     'final_written': { label: 'Final Written', color: '#ef4444', bgColor: 'rgba(239, 68, 68, 0.1)' }
   };
   return levelMap[level] || { label: level, color: '#6b7280', bgColor: 'rgba(107, 114, 128, 0.1)' };
@@ -207,6 +212,13 @@ const WarningDetailModal: React.FC<WarningDetailModalProps> = ({ warning, onClos
   // Expiry urgency color
   const expiryColor = daysRemaining < 30 ? '#ef4444' : daysRemaining < 60 ? '#f59e0b' : '#10b981';
 
+  // Get incident details - matching field names from WarningDetailsModal PDF preview
+  const incidentDescription = warning.incidentDescription || warning.description || '';
+  const incidentLocation = warning.incidentLocation || '';
+  const incidentTime = warning.incidentTime || '';
+  const categoryName = warning.categoryName || warning.category || '';
+  const issuedByName = warning.issuedByName || warning.managerName || warning.issuerName || 'Manager';
+
   return (
     <>
       {/* Backdrop */}
@@ -280,20 +292,33 @@ const WarningDetailModal: React.FC<WarningDetailModalProps> = ({ warning, onClos
               </div>
             </div>
 
-            {/* Manager */}
-            {warning.managerName && (
+            {/* Category */}
+            {categoryName && (
               <div>
                 <div className="flex items-center gap-1.5 mb-1">
-                  <User className="w-3.5 h-3.5" style={{ color: 'var(--color-text-secondary)' }} />
+                  <FileText className="w-3.5 h-3.5" style={{ color: 'var(--color-text-secondary)' }} />
                   <div className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-                    Issued By
+                    Category
                   </div>
                 </div>
                 <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                  {warning.managerName}
+                  {categoryName}
                 </div>
               </div>
             )}
+
+            {/* Issued By */}
+            <div>
+              <div className="flex items-center gap-1.5 mb-1">
+                <User className="w-3.5 h-3.5" style={{ color: 'var(--color-text-secondary)' }} />
+                <div className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                  Issued By
+                </div>
+              </div>
+              <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                {issuedByName}
+              </div>
+            </div>
 
             {/* Incident Date */}
             {warning.incidentDate && (
@@ -310,9 +335,9 @@ const WarningDetailModal: React.FC<WarningDetailModalProps> = ({ warning, onClos
                     month: 'long',
                     day: 'numeric'
                   })}
-                  {warning.incidentTime && (
+                  {incidentTime && (
                     <span className="ml-2 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                      at {warning.incidentTime}
+                      at {incidentTime}
                     </span>
                   )}
                 </div>
@@ -320,7 +345,7 @@ const WarningDetailModal: React.FC<WarningDetailModalProps> = ({ warning, onClos
             )}
 
             {/* Incident Location */}
-            {warning.incidentLocation && (
+            {incidentLocation && (
               <div>
                 <div className="flex items-center gap-1.5 mb-1">
                   <Info className="w-3.5 h-3.5" style={{ color: 'var(--color-text-secondary)' }} />
@@ -329,13 +354,13 @@ const WarningDetailModal: React.FC<WarningDetailModalProps> = ({ warning, onClos
                   </div>
                 </div>
                 <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                  {warning.incidentLocation}
+                  {incidentLocation}
                 </div>
               </div>
             )}
 
             {/* Incident Details */}
-            {warning.incidentDescription && (
+            {incidentDescription && (
               <div>
                 <div className="flex items-center gap-1.5 mb-1">
                   <MessageCircle className="w-3.5 h-3.5" style={{ color: 'var(--color-text-secondary)' }} />
@@ -351,7 +376,7 @@ const WarningDetailModal: React.FC<WarningDetailModalProps> = ({ warning, onClos
                     color: 'var(--color-text)'
                   }}
                 >
-                  {warning.incidentDescription}
+                  {incidentDescription}
                 </div>
               </div>
             )}
@@ -428,7 +453,7 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
   const [readingScript, setReadingScript] = useState(false);
   const [showSignatureSection, setShowSignatureSection] = useState(false);
   const [signatures, setSignatures] = useState<SignatureData>(
-    currentSignatures || { manager: null, employee: null }
+    currentSignatures || { manager: null, employee: null, witness: null }
   );
   const [overrideLevel, setOverrideLevel] = useState<string | null>(null);
   const [showOverrideSelector, setShowOverrideSelector] = useState(false);
@@ -482,7 +507,8 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
   };
 
   // Check if all signatures are complete
-  const allSignaturesComplete = !!(signatures.manager && signatures.employee);
+  // Manager is always required, plus either employee OR witness signature
+  const allSignaturesComplete = !!(signatures.manager && (signatures.employee || signatures.witness));
 
   // Handle script reading confirmation
   const handleScriptReadConfirmation = useCallback(() => {
@@ -498,66 +524,28 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
     setSignatures(prev => ({ ...prev, manager: signature }));
   }, []);
 
-  // Helper function to add "WITNESS" watermark to signature
+  // Helper function to add "WITNESS" watermark to SVG signature
   const addWitnessWatermark = useCallback((signatureDataUrl: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('Failed to get canvas context'));
-          return;
-        }
-
-        // Draw the original signature
-        ctx.drawImage(img, 0, 0);
-
-        // Add "WITNESS" watermark - PROMINENT & CLEAR
-        ctx.save();
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(-Math.PI / 6); // Rotate 30 degrees
-
-        // Scale font size based on canvas width (minimum 48px, scales up for larger signatures)
-        const fontSize = Math.max(48, canvas.width / 8);
-        ctx.font = `bold ${fontSize}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // Add text stroke for better visibility
-        ctx.strokeStyle = 'rgba(220, 38, 38, 0.8)'; // Dark red outline at 80% opacity
-        ctx.lineWidth = fontSize / 16; // Scale stroke width with font size
-        ctx.strokeText('WITNESS', 0, 0);
-
-        // Fill text with semi-transparent red
-        ctx.fillStyle = 'rgba(220, 38, 38, 0.55)'; // Semi-transparent red at 55% opacity
-        ctx.fillText('WITNESS', 0, 0);
-
-        ctx.restore();
-
-        // Convert to data URL
-        resolve(canvas.toDataURL('image/png'));
-      };
-      img.onerror = () => reject(new Error('Failed to load signature image'));
-      img.src = signatureDataUrl;
-    });
+    return Promise.resolve(applyWitnessWatermarkToSVG(signatureDataUrl));
   }, []);
 
   const handleEmployeeSignature = useCallback(async (signature: string | null) => {
-    if (signature && signatureType === 'witness') {
-      // Apply watermark if witness signature
-      try {
-        const watermarkedSignature = await addWitnessWatermark(signature);
-        setSignatures(prev => ({ ...prev, employee: watermarkedSignature }));
-      } catch (error) {
-        console.error('Failed to apply witness watermark:', error);
-        // Fall back to original signature if watermarking fails
-        setSignatures(prev => ({ ...prev, employee: signature }));
+    if (signatureType === 'witness') {
+      // Witness signature - apply watermark and save to witness field
+      if (signature) {
+        try {
+          const watermarkedSignature = await addWitnessWatermark(signature);
+          setSignatures(prev => ({ ...prev, witness: watermarkedSignature }));
+        } catch (error) {
+          console.error('Failed to apply witness watermark:', error);
+          // Fall back to original signature if watermarking fails
+          setSignatures(prev => ({ ...prev, witness: signature }));
+        }
+      } else {
+        setSignatures(prev => ({ ...prev, witness: null }));
       }
     } else {
-      // Normal employee signature - no watermark
+      // Normal employee signature - no watermark, save to employee field
       setSignatures(prev => ({ ...prev, employee: signature }));
     }
   }, [signatureType, addWitnessWatermark]);
@@ -565,14 +553,17 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
   // Handle complete signatures and finalize
   const handleCompleteSignatures = useCallback(() => {
     if (!allSignaturesComplete || signaturesFinalized) return;
-    
+
+    const employeeName = selectedEmployee ? `${(selectedEmployee as any).profile?.firstName || 'Unknown'} ${(selectedEmployee as any).profile?.lastName || 'Employee'}` : 'Unknown Employee';
+
     const finalSignatures: SignatureData = {
       ...signatures,
       timestamp: new Date().toISOString(),
       managerName: currentManagerName,
-      employeeName: selectedEmployee ? `${(selectedEmployee as any).profile?.firstName || 'Unknown'} ${(selectedEmployee as any).profile?.lastName || 'Employee'}` : 'Unknown Employee'
+      employeeName: signatures.employee ? employeeName : undefined,
+      witnessName: signatures.witness ? employeeName : undefined
     };
-    
+
     onSignaturesComplete(finalSignatures, true);
   }, [signatures, allSignaturesComplete, signaturesFinalized, currentManagerName, selectedEmployee, onSignaturesComplete]);
 
@@ -588,28 +579,22 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
 
   return (
     <div className="space-y-3">
-      {/* Warning Severity Badge */}
+      {/* Sanction Summary Badge */}
       <div className="flex items-center gap-2">
         <ThemedBadge variant="warning" size="lg" className="font-semibold">
-          ⚠️ {safeText(lraRecommendation?.recommendedLevel)} • {lraRecommendation?.isEscalation ? 'Escalated' : 'First Offense'}
+          ⚠️ {lraRecommendation?.isEscalation ? 'Escalated Action' : 'Recommended Sanction'}
         </ThemedBadge>
       </div>
 
       {/* System Recommendation - Step 1 Style Consistency */}
       <div className="space-y-2">
-        {/* Compact Header with Inline Action - Step 1 Pattern */}
+        {/* Clean Header - Natural Language */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Scale className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
-            <div>
-              <h3 className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>🎯 System Recommendation</h3>
-              <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-                {lraRecommendation?.isEscalation
-                  ? 'Escalation recommended based on history'
-                  : 'Start with ' + safeText(lraRecommendation?.recommendedLevel).toLowerCase()
-                }
-              </p>
-            </div>
+            <h3 className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>
+              {lraRecommendation?.isEscalation ? 'Discipline Level' : 'Severity Assessment'}
+            </h3>
           </div>
           <ThemedButton
             variant="ghost"
@@ -623,11 +608,11 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
           </ThemedButton>
         </div>
 
-        {/* Recommendation Card - Matching Step 1 Card Style */}
+        {/* Recommendation Card */}
         <ThemedCard padding="sm" hover className="border-l-4" style={{ borderLeftColor: 'var(--color-primary)' }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Primary Badge - CLICKABLE to show override */}
+              {/* Action Badge - CLICKABLE to override */}
               <button
                 onClick={() => setShowOverrideSelector(!showOverrideSelector)}
                 className="transition-all hover:opacity-80 active:scale-95"
@@ -635,11 +620,11 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
               >
                 <ThemedBadge variant="primary" size="sm" className="font-semibold cursor-pointer">
                   {overrideLevel
-                    ? (overrideLevel === 'counselling' ? 'Counselling Session' :
-                       overrideLevel === 'verbal' ? 'Verbal Warning' :
-                       overrideLevel === 'first_written' ? 'First Written Warning' :
-                       overrideLevel === 'final_written' ? 'Final Written Warning' : overrideLevel)
-                    : safeText(lraRecommendation?.recommendedLevel)
+                    ? (overrideLevel === 'counselling' ? 'Counselling' :
+                       overrideLevel === 'verbal' ? 'Verbal' :
+                       overrideLevel === 'first_written' ? 'First Written' :
+                       overrideLevel === 'final_written' ? 'Final Written' : overrideLevel)
+                    : (lraRecommendation?.recommendedLevel === 'Counselling Session' ? 'Counselling' : safeText(lraRecommendation?.recommendedLevel))
                   }
                 </ThemedBadge>
               </button>
@@ -652,7 +637,7 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
                 </div>
               )}
 
-              {/* Warning Count Visual - Category Specific - ALSO CLICKABLE */}
+              {/* History Count - CLICKABLE */}
               <button
                 onClick={() => setShowOverrideSelector(!showOverrideSelector)}
                 className="flex items-center gap-1 text-xs hover:opacity-80 active:scale-95 transition-all"
@@ -661,17 +646,17 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
               >
                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--color-primary)' }}></div>
                 <span className="font-medium" style={{ color: 'var(--color-primary)' }}>{lraRecommendation?.categoryWarningCount ?? 0}</span>
-                <span>in category</span>
+                <span>previous</span>
               </button>
             </div>
           </div>
 
-          {/* Friendly Explanation */}
+          {/* Natural Explanation - No Redundancy */}
           <div className="mt-2 pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
             <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
               {lraRecommendation?.isEscalation
-                ? `This employee has ${lraRecommendation.categoryWarningCount ?? 0} previous warning(s) in this category. We're escalating to ${safeText(lraRecommendation.recommendedLevel).toLowerCase()} to follow proper progressive discipline procedures.`
-                : `Since this is a first offense in this category, we recommend starting with ${safeText(lraRecommendation.recommendedLevel).toLowerCase()} rather than a formal written warning. This follows best practice progressive discipline.`
+                ? `Based on ${lraRecommendation.categoryWarningCount ?? 0} previous incident${(lraRecommendation.categoryWarningCount ?? 0) === 1 ? '' : 's'}, escalating to maintain consistent discipline standards.`
+                : 'No prior incidents in this category. Starting with a supportive, corrective approach.'
               }
             </p>
           </div>
@@ -792,7 +777,7 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
                   const labels: Record<string, string> = {
                     'counselling': 'Counselling Session',
                     'verbal': 'Verbal Warning',
-                    'first_written': 'First Written Warning',
+                    'first_written': 'Written Warning',
                     'final_written': 'Final Written Warning'
                   };
                   return (
@@ -810,7 +795,7 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
                 <strong>Override Active:</strong> This warning will be issued as <strong>{
                   overrideLevel === 'counselling' ? 'Counselling Session' :
                   overrideLevel === 'verbal' ? 'Verbal Warning' :
-                  overrideLevel === 'first_written' ? 'First Written Warning' :
+                  overrideLevel === 'first_written' ? 'Written Warning' :
                   overrideLevel === 'final_written' ? 'Final Written Warning' : overrideLevel
                 }</strong> instead of the recommended level. Future warnings will consider this custom escalation path.
               </ThemedAlert>
@@ -861,25 +846,6 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
             </p>
           </div>
         </div>
-      )}
-
-      {/* What Happens Next Callout */}
-      {showSignatureSection && (
-        <ThemedAlert variant="info" className="border-l-4" style={{ borderLeftColor: 'var(--color-info)' }}>
-          <div className="flex items-start gap-3">
-            <Info className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-info)' }} />
-            <div>
-              <h4 className="font-bold text-sm mb-2" style={{ color: 'var(--color-text)' }}>
-                ℹ️ What Happens After Signatures?
-              </h4>
-              <div className="text-xs space-y-1" style={{ color: 'var(--color-text-secondary)' }}>
-                <p>• ✅ Warning is officially recorded in the system</p>
-                <p>• 📧 Employee receives their copy (email/WhatsApp/print)</p>
-                <p>• 🔔 HR is notified automatically</p>
-              </div>
-            </div>
-          </div>
-        </ThemedAlert>
       )}
 
       {/* STRATEGIC LAYOUT: Compact Signature Section */}
@@ -1025,7 +991,7 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
                   className="px-3 py-1.5"
                 >
                   <Send className="w-3 h-3 mr-1" />
-                  Finalize & Save Warning
+                  Upload Signatures & Continue
                 </ThemedButton>
               </div>
 
@@ -1036,7 +1002,7 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
                   className="w-full h-12 text-base font-semibold"
                 >
                   <Send className="w-4 h-4 mr-2" />
-                  Finalize & Save Warning
+                  Upload Signatures & Continue
                 </ThemedButton>
               </div>
             </>
@@ -1059,9 +1025,12 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
                       {warningId && (
                         <p>• Warning <span className="font-mono font-semibold">#{warningId.slice(-8)}</span> created in database</p>
                       )}
-                      <p className="text-xs mt-3 pt-2 border-t" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-tertiary)' }}>
-                        🎯 Click "Next" to set up delivery for HR team
-                      </p>
+                      <div className="flex items-center gap-2 mt-3 pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
+                        <Loader2 className="w-4 h-4 animate-spin" style={{ color: 'var(--color-primary)' }} />
+                        <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                          Advancing to delivery setup...
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>

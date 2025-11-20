@@ -256,7 +256,7 @@ export const UnifiedBookHRMeeting: React.FC<UnifiedBookHRMeetingProps> = ({
 
   // Form validation
   const isFormValid = () => {
-    return selectedEmployee && context.trim().length >= 20 && managerSignature.trim();
+    return selectedEmployee && context.trim().length >= 20;
   };
 
   const handleManagerSignature = (signature: string) => {
@@ -291,9 +291,7 @@ export const UnifiedBookHRMeeting: React.FC<UnifiedBookHRMeetingProps> = ({
         employeeId: selectedEmployee.id,
         employeeName: `${selectedEmployee.firstName} ${selectedEmployee.lastName}`,
         context: context.trim(),
-        managerSignature,
-        ...(employeeConsent && employeeSignature && { employeeSignature }),
-        employeeConsent: employeeConsent || false,
+        employeeConsent: false,
         status: 'pending',
         requestDate: TimeService.getServerTimestamp(),
         createdAt: TimeService.getServerTimestamp(),
@@ -485,104 +483,6 @@ export const UnifiedBookHRMeeting: React.FC<UnifiedBookHRMeetingProps> = ({
                   />
                   <div className="unified-field-hint">
                     {context.length}/1000 characters (minimum 20)
-                  </div>
-                </div>
-
-                {/* Manager Signature Section */}
-                <div className="form-section">
-                  <div className="unified-section-header">
-                    <div className="unified-section-header__icon">
-                      <UserCheck className="w-5 h-5" />
-                    </div>
-                    <div className="unified-section-header__content">
-                      <h3 className="unified-section-header__title">Manager Confirmation</h3>
-                      <p className="unified-section-header__subtitle">Please sign to confirm this meeting request</p>
-                    </div>
-                  </div>
-
-                  <ThemedSignatureCanvas
-                    onSignatureChange={handleManagerSignature}
-                    label="Manager Signature"
-                    role="manager"
-                    required
-                  />
-                </div>
-
-                {/* Employee Signature Section */}
-                <div className="form-section">
-                  <div className="unified-section-header">
-                    <div className="unified-section-header__icon">
-                      <UserX className="w-5 h-5" />
-                    </div>
-                    <div className="unified-section-header__content">
-                      <h3 className="unified-section-header__title">Employee Acknowledgment</h3>
-                      <p className="unified-section-header__subtitle">Optional signature from the employee (can be done later)</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3 p-3 rounded" style={{ backgroundColor: 'var(--color-info-bg)', border: '1px solid var(--color-primary)' }}>
-                      <div className="flex-1">
-                        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                          <strong>Note:</strong> Employee signature is optional. You can proceed without it and have them sign later.
-                        </p>
-                      </div>
-                    </div>
-
-                    {!showEmployeeSignature ? (
-                      <div className="space-y-3">
-                        <p className="font-medium" style={{ color: 'var(--color-text)' }}>
-                          Does the employee want to sign now?
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-3">
-                          <button
-                            onClick={() => handleEmployeeDecision(true)}
-                            className="px-4 py-2 rounded flex items-center justify-center gap-2"
-                            style={{
-                              backgroundColor: 'var(--color-primary)',
-                              color: 'var(--color-text-inverse)',
-                              border: '1px solid var(--color-primary)'
-                            }}
-                          >
-                            <UserCheck className="w-4 h-4" />
-                            Yes, employee will sign now
-                          </button>
-                          <button
-                            onClick={() => handleEmployeeDecision(false)}
-                            className="px-4 py-2 rounded flex items-center justify-center gap-2"
-                            style={{
-                              backgroundColor: 'var(--color-background)',
-                              color: 'var(--color-text-secondary)',
-                              border: '1px solid var(--color-border)'
-                            }}
-                          >
-                            <UserX className="w-4 h-4" />
-                            Skip for now
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <ThemedSignatureCanvas
-                          onSignatureChange={handleEmployeeSignature}
-                          label="Employee Signature"
-                          role="employee"
-                          personName={`${selectedEmployee?.firstName} ${selectedEmployee?.lastName}`}
-                        />
-
-                        <button
-                          onClick={() => setShowEmployeeSignature(false)}
-                          className="px-4 py-2 rounded"
-                          style={{
-                            backgroundColor: 'var(--color-background)',
-                            color: 'var(--color-text-secondary)',
-                            border: '1px solid var(--color-border)'
-                          }}
-                        >
-                          Back to Options
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>

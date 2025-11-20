@@ -15,7 +15,7 @@ import { db } from '../config/firebase';
 import { createBulkNotification } from './RealtimeService';
 
 // 📋 Role-based notification types
-export type UserRole = 'super-user' | 'business-owner' | 'hr-manager' | 'hod-manager' | 'department-manager';
+export type UserRole = 'super-user' | 'executive-management' | 'hr-manager' | 'hod-manager' | 'department-manager';
 
 export interface NotificationRule {
   event: string;
@@ -38,7 +38,7 @@ const NOTIFICATION_RULES: NotificationRule[] = [
   // ===================================
   {
     event: 'warning_needs_delivery',
-    roles: ['hr-manager', 'business-owner'],
+    roles: ['hr-manager', 'executive-management'],
     priority: 'warning',
     title: 'Warning Delivery Required',
     messageTemplate: 'Warning for {{employeeName}} ({{warningLevel}}) needs delivery via {{deliveryMethod}}',
@@ -50,7 +50,7 @@ const NOTIFICATION_RULES: NotificationRule[] = [
   },
   {
     event: 'absence_report_submitted',
-    roles: ['hr-manager', 'business-owner'],
+    roles: ['hr-manager', 'executive-management'],
     priority: 'info',
     title: 'New Absence Report',
     messageTemplate: '{{employeeName}} absence report submitted by {{managerName}} - requires HR review',
@@ -61,7 +61,7 @@ const NOTIFICATION_RULES: NotificationRule[] = [
   },
   {
     event: 'hr_meeting_requested',
-    roles: ['hr-manager', 'business-owner'],
+    roles: ['hr-manager', 'executive-management'],
     priority: 'info',
     title: 'HR Meeting Request',
     messageTemplate: '{{managerName}} requested HR meeting for {{employeeName}} - {{reason}}',
@@ -73,7 +73,7 @@ const NOTIFICATION_RULES: NotificationRule[] = [
   },
   {
     event: 'warning_needs_delivery',
-    roles: ['hr-manager', 'business-owner'],
+    roles: ['hr-manager', 'executive-management'],
     priority: 'high',
     title: 'Warning Needs Delivery',
     messageTemplate: 'New {{warningLevel}} warning for {{employeeName}} requires delivery via {{deliveryMethod}}',
@@ -117,7 +117,7 @@ const NOTIFICATION_RULES: NotificationRule[] = [
   // ===================================
   {
     event: 'high_severity_warning',
-    roles: ['business-owner'],
+    roles: ['executive-management'],
     priority: 'error',
     title: 'High Severity Warning Issued',
     messageTemplate: '{{warningLevel}} warning issued to {{employeeName}} - immediate attention required',
@@ -128,7 +128,7 @@ const NOTIFICATION_RULES: NotificationRule[] = [
   },
   {
     event: 'compliance_deadline',
-    roles: ['business-owner', 'hr-manager'],
+    roles: ['executive-management', 'hr-manager'],
     priority: 'warning',
     title: 'Compliance Deadline Approaching',
     messageTemplate: '{{complianceType}} deadline in {{daysRemaining}} days for {{organizationName}}',
@@ -136,7 +136,7 @@ const NOTIFICATION_RULES: NotificationRule[] = [
   },
   {
     event: 'monthly_report_ready',
-    roles: ['business-owner'],
+    roles: ['executive-management'],
     priority: 'info',
     title: 'Monthly HR Report Available',
     messageTemplate: 'HR disciplinary report for {{monthYear}} is now available for review',
@@ -432,7 +432,7 @@ export class QuickNotifications {
     );
   }
 
-  // Business Owner Notifications
+  // Executive Management Notifications
   static async highSeverityWarning(
     organizationId: string, 
     employeeName: string, 

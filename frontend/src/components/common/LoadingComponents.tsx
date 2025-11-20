@@ -1,8 +1,10 @@
 // frontend/src/components/common/LoadingComponents.tsx
+// 🚀 OPTIMIZED: React.memo for high-traffic loading components
 import React from 'react';
 
 // Spinner Loading Component
-export const LoadingSpinner = ({ size = 'medium', color = '#3b82f6' }: {
+// 🚀 MEMOIZED: Prevents re-renders when props haven't changed
+export const LoadingSpinner = React.memo(({ size = 'medium', color = '#3b82f6' }: {
   size?: 'small' | 'medium' | 'large';
   color?: string;
 }) => {
@@ -22,7 +24,8 @@ export const LoadingSpinner = ({ size = 'medium', color = '#3b82f6' }: {
       animation: 'spin 1s linear infinite'
     }} />
   );
-};
+});
+LoadingSpinner.displayName = 'LoadingSpinner';
 
 // Full Page Loading
 export const PageLoader = ({ message = 'Loading...' }: { message?: string }) => (
@@ -46,7 +49,8 @@ export const PageLoader = ({ message = 'Loading...' }: { message?: string }) => 
 );
 
 // Card Loading Skeleton
-export const CardSkeleton = () => (
+// 🚀 MEMOIZED: Prevents re-renders when props haven't changed
+export const CardSkeleton = React.memo(() => (
   <div className="hr-card skeleton-card">
     <div className="skeleton-header" />
     <div className="skeleton-content">
@@ -55,7 +59,8 @@ export const CardSkeleton = () => (
       <div className="skeleton-line" style={{ width: '60%' }} />
     </div>
   </div>
-);
+));
+CardSkeleton.displayName = 'CardSkeleton';
 
 // Table Loading Skeleton
 export const TableSkeleton = ({ rows = 5 }: { rows?: number }) => (
@@ -86,7 +91,8 @@ export const TableSkeleton = ({ rows = 5 }: { rows?: number }) => (
 );
 
 // Dashboard Stats Skeleton
-export const StatsSkeleton = () => (
+// 🚀 MEMOIZED: Prevents re-renders when props haven't changed
+export const StatsSkeleton = React.memo(() => (
   <div style={{ 
     display: 'grid', 
     gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
@@ -105,7 +111,8 @@ export const StatsSkeleton = () => (
       </div>
     ))}
   </div>
-);
+));
+StatsSkeleton.displayName = 'StatsSkeleton';
 
 // Loading Button
 export const LoadingButton = ({ 

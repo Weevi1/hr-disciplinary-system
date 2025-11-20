@@ -2,12 +2,12 @@
 // 🚀 PROMOTE EMPLOYEE TO MANAGER MODAL
 // Allows HR to promote existing employees to manager roles
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UnifiedModal } from '../common/UnifiedModal';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
 import DepartmentService from '../../services/DepartmentService';
-import { UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, Info, Search } from 'lucide-react';
 import Logger from '../../utils/logger';
 import type { Employee } from '../../types';
 import type { Department } from '../../types/department';
@@ -24,12 +24,15 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
   onPromote
 }) => {
   const { organization } = useOrganization();
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showResults, setShowResults] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'hr-manager' | 'hod-manager'>('hod-manager');
   const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +91,23 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
     loadData();
   }, [organization?.id, isOpen]);
 
+  // Close results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
+    };
+
+    if (showResults) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showResults]);
+
   const handlePromote = async () => {
     if (!selectedEmployeeId) {
       setError('Please select an employee to promote');
@@ -106,9 +126,10 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
 
       // Reset form
       setSelectedEmployeeId('');
+      setSelectedEmployee(null);
+      setSearchTerm('');
       setSelectedRole('hod-manager');
       setSelectedDepartmentIds([]);
-      setSearchTerm('');
 
       onClose();
     } catch (error: any) {
@@ -127,11 +148,24 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
     );
   };
 
-  const filteredEmployees = employees.filter(emp => {
-    // Skip employees with missing profile data
-    if (!emp.profile) return false;
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setShowResults(true);
+    if (selectedEmployee) {
+      setSelectedEmployee(null);
+      setSelectedEmployeeId('');
+    }
+  };
 
-    // If no search term, show all employees
+  const handleSelectEmployee = (emp: Employee) => {
+    setSelectedEmployee(emp);
+    setSelectedEmployeeId(emp.id);
+    setSearchTerm('');
+    setShowResults(false);
+  };
+
+  const filteredEmployees = employees.filter(emp => {
+    if (!emp.profile) return false;
     if (!searchTerm.trim()) return true;
 
     const searchString = `${emp.profile.firstName || ''} ${emp.profile.lastName || ''} ${emp.profile.email || ''} ${emp.profile.employeeNumber || ''}`
@@ -140,17 +174,15 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
     return searchString.includes(searchTerm.toLowerCase());
   });
 
-  const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
-
   return (
     <UnifiedModal
       isOpen={isOpen}
       onClose={onClose}
       title="Promote Employee to Manager"
       subtitle="Select an employee and assign manager role"
-      size="lg"
+      size="sm"
     >
-      <div className="p-6">
+      <div className="p-2.5">
         {loadingData ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -158,192 +190,154 @@ export const PromoteToManagerModal: React.FC<PromoteToManagerModalProps> = ({
         ) : (
           <>
             {/* Employee Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Employee *
-                {searchTerm && (
-                  <span className="ml-2 text-xs text-gray-500">
-                    ({filteredEmployees.length} match{filteredEmployees.length !== 1 ? 'es' : ''})
-                  </span>
-                )}
+            <div className="mb-3 relative">
+              <label className="block text-[11px] font-semibold text-gray-700 mb-1.5 uppercase tracking-wide">
+                Employee <span className="text-red-500">*</span> <span className="font-normal text-gray-400 normal-case text-[10px]">(email required)</span>
               </label>
 
-              {/* Search Input */}
-              <input
-                type="text"
-                placeholder="Search by name, email, or employee number..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                autoComplete="off"
-              />
+              {/* Selected Employee Display */}
+              {selectedEmployee ? (
+                <div className="w-full px-2.5 py-2 text-xs border border-blue-500 bg-blue-50 rounded flex items-center justify-between">
+                  <span className="font-medium text-blue-900">
+                    {selectedEmployee.profile?.firstName} {selectedEmployee.profile?.lastName} ({selectedEmployee.profile?.employeeNumber})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedEmployee(null);
+                      setSelectedEmployeeId('');
+                      setSearchTerm('');
+                    }}
+                    className="text-blue-600 hover:text-blue-800 text-xs underline"
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <div ref={searchContainerRef}>
+                  {/* Search Input */}
+                  <div className="relative">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Type to search employees..."
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                      onFocus={() => setShowResults(true)}
+                      className="w-full pl-8 pr-2.5 py-2 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      autoComplete="off"
+                    />
+                  </div>
 
-              {/* Employee Dropdown */}
-              <select
-                value={selectedEmployeeId}
-                onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                size={Math.min(filteredEmployees.length + 1, 8)}
-              >
-                <option value="">-- Select an employee --</option>
-                {filteredEmployees.map(emp => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.profile?.firstName || 'Unknown'} {emp.profile?.lastName || 'Employee'} ({emp.profile?.employeeNumber || 'N/A'}) - {emp.profile?.department || 'No Department'}
-                  </option>
-                ))}
-              </select>
-
-              {filteredEmployees.length === 0 && searchTerm && (
-                <p className="text-sm text-red-500 mt-2">
-                  No employees found matching "{searchTerm}"
-                </p>
+                  {/* Results List */}
+                  {showResults && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto">
+                      {filteredEmployees.length > 0 ? (
+                        filteredEmployees.map(emp => (
+                          <button
+                            key={emp.id}
+                            type="button"
+                            onClick={() => handleSelectEmployee(emp)}
+                            className="w-full px-2.5 py-2 text-left text-xs hover:bg-blue-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                          >
+                            <div className="font-medium text-gray-900">
+                              {emp.profile?.firstName} {emp.profile?.lastName}
+                            </div>
+                            <div className="text-gray-500">
+                              {emp.profile?.employeeNumber} • {emp.profile?.department || 'No Department'} • {emp.profile?.email}
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-2.5 py-2 text-xs text-gray-500 text-center">
+                          No employees found
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
 
               {employees.length === 0 && !loadingData && (
-                <p className="text-sm text-gray-500 mt-2">
-                  No eligible employees available to promote
-                </p>
+                <div className="mt-1.5 px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded flex items-start gap-1.5">
+                  <Info className="w-3 h-3 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-amber-800">
+                    No eligible employees. All lack email or are already managers.
+                  </p>
+                </div>
               )}
             </div>
 
-            {/* Selected Employee Info */}
-            {selectedEmployee && selectedEmployee.profile && (
-              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <UserPlus className="w-5 h-5 text-blue-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-blue-900">
-                      Selected Employee
-                    </p>
-                    <p className="text-sm text-blue-700 mt-1">
-                      {selectedEmployee.profile.firstName || 'Unknown'} {selectedEmployee.profile.lastName || 'Employee'}
-                    </p>
-                    <p className="text-xs text-blue-600 mt-0.5">
-                      {selectedEmployee.profile.email || 'No Email'} • {selectedEmployee.profile.department || 'No Department'}
-                    </p>
-                  </div>
+            {/* Role & Departments - Minimal */}
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[11px] font-semibold text-gray-700 uppercase tracking-wide">
+                  {selectedRole === 'hod-manager' ? 'Departments' : 'Role'} <span className="font-normal text-gray-400 normal-case text-[10px]">(optional)</span>
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-gray-500">Role:</span>
+                  <label className="flex items-center gap-0.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={selectedRole === 'hod-manager'}
+                      onChange={() => setSelectedRole('hod-manager')}
+                      className="w-2.5 h-2.5 text-purple-600"
+                    />
+                    <span className="text-[10px] text-gray-600">HOD</span>
+                  </label>
+                  <label className="flex items-center gap-0.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={selectedRole === 'hr-manager'}
+                      onChange={() => setSelectedRole('hr-manager')}
+                      className="w-2.5 h-2.5 text-green-600"
+                    />
+                    <span className="text-[10px] text-gray-600">HR</span>
+                  </label>
                 </div>
               </div>
-            )}
 
-            {/* Role Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Manager Role *
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSelectedRole('hod-manager')}
-                  className={`p-4 border-2 rounded-lg transition-all ${
-                    selectedRole === 'hod-manager'
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="font-medium text-gray-900">HOD Manager</div>
-                  <div className="text-xs text-gray-600 mt-1">
-                    Department head with team oversight
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedRole('hr-manager')}
-                  className={`p-4 border-2 rounded-lg transition-all ${
-                    selectedRole === 'hr-manager'
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="font-medium text-gray-900">HR Manager</div>
-                  <div className="text-xs text-gray-600 mt-1">
-                    Full HR access across all departments
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Department Assignment (Optional) */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Assign Departments (Optional)
-              </label>
-              <div className="border border-gray-200 rounded-lg p-3 max-h-40 overflow-y-auto">
-                {departments.length === 0 ? (
-                  <p className="text-sm text-gray-500">No departments available</p>
-                ) : (
-                  <div className="space-y-2">
-                    {departments.map(dept => (
-                      <label key={dept.id} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selectedDepartmentIds.includes(dept.id)}
-                          onChange={() => handleDepartmentToggle(dept.id)}
-                          className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-900">{dept.name}</span>
-                        {dept.description && (
-                          <span className="text-xs text-gray-500">- {dept.description}</span>
-                        )}
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Confirmation Message */}
-            {selectedEmployee && selectedEmployee.profile && (
-              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-green-900">
-                      Ready to Promote
-                    </p>
-                    <p className="text-sm text-green-700 mt-1">
-                      <strong>{selectedEmployee.profile.firstName || 'Unknown'} {selectedEmployee.profile.lastName || 'Employee'}</strong>{' '}
-                      will be promoted to <strong>{selectedRole === 'hr-manager' ? 'HR Manager' : 'HOD Manager'}</strong>
-                      {selectedDepartmentIds.length > 0 && (
-                        <> with access to{' '}
-                          <strong>
-                            {selectedDepartmentIds
-                              .map(id => departments.find(d => d.id === id)?.name)
-                              .filter(Boolean)
-                              .join(', ')}
-                          </strong>
-                        </>
-                      )}
-                      .
-                    </p>
-                  </div>
+              {/* Department Assignment with Checkboxes */}
+              {selectedRole === 'hod-manager' && departments.length > 0 && (
+                <div className="border border-gray-300 rounded p-1.5 max-h-24 overflow-y-auto bg-white">
+                  {departments.map(dept => (
+                    <label key={dept.id} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 px-1.5 py-1 rounded text-xs">
+                      <input
+                        type="checkbox"
+                        checked={selectedDepartmentIds.includes(dept.id)}
+                        onChange={() => handleDepartmentToggle(dept.id)}
+                        className="w-3 h-3 text-purple-600 rounded"
+                      />
+                      <span>{dept.name}</span>
+                    </label>
+                  ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Error Message */}
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
-                  <p className="text-sm text-red-800">{error}</p>
-                </div>
+              <div className="mb-2 px-2.5 py-1.5 bg-red-50 border border-red-200 rounded flex items-start gap-1.5">
+                <AlertCircle className="w-3 h-3 text-red-600 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-red-800">{error}</p>
               </div>
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className="flex gap-2 pt-3 mt-3 border-t">
               <button
                 onClick={onClose}
                 disabled={loading}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="modal-footer__button modal-footer__button--secondary"
+                style={{ flex: '1' }}
               >
                 Cancel
               </button>
               <button
                 onClick={handlePromote}
                 disabled={!selectedEmployeeId || loading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="modal-footer__button modal-footer__button--primary"
+                style={{ flex: '1' }}
               >
                 {loading ? 'Promoting...' : 'Promote to Manager'}
               </button>

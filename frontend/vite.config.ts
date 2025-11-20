@@ -65,7 +65,7 @@ export default defineConfig({
 
           // Split dashboard components by role (reduces initial load)
           'business-owner-dashboard': [
-            './src/components/dashboard/BusinessOwnerDashboardSection'
+            './src/components/dashboard/ExecutiveManagementDashboardSection'
           ],
           'hr-dashboard': [
             './src/components/dashboard/HRDashboardSection'

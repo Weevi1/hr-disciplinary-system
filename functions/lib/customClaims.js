@@ -37,7 +37,7 @@ exports.refreshUserClaims = (0, https_1.onCall)(async (request) => {
         // Check if requesting user has permission to refresh claims for target user
         const requestingUserClaims = await auth.getUser(uid).then(user => user.customClaims);
         const isSuperUser = (requestingUserClaims === null || requestingUserClaims === void 0 ? void 0 : requestingUserClaims.role) === 'super-user';
-        const isBusinessOwner = (requestingUserClaims === null || requestingUserClaims === void 0 ? void 0 : requestingUserClaims.role) === 'business-owner';
+        const isBusinessOwner = (requestingUserClaims === null || requestingUserClaims === void 0 ? void 0 : requestingUserClaims.role) === 'executive-management';
         const isSameUser = uid === userIdToRefresh;
         if (!isSuperUser && !isSameUser && !isBusinessOwner) {
             throw new https_1.HttpsError('permission-denied', 'Insufficient permissions to refresh claims');
@@ -211,7 +211,7 @@ exports.refreshOrganizationUserClaims = (0, https_1.onCall)(async (request) => {
         // Check permissions
         const requestingUserClaims = await auth.getUser(uid).then(user => user.customClaims);
         const isSuperUser = (requestingUserClaims === null || requestingUserClaims === void 0 ? void 0 : requestingUserClaims.role) === 'super-user';
-        const isOrgBusinessOwner = (requestingUserClaims === null || requestingUserClaims === void 0 ? void 0 : requestingUserClaims.role) === 'business-owner' &&
+        const isOrgBusinessOwner = (requestingUserClaims === null || requestingUserClaims === void 0 ? void 0 : requestingUserClaims.role) === 'executive-management' &&
             (requestingUserClaims === null || requestingUserClaims === void 0 ? void 0 : requestingUserClaims.organizationId) === organizationId;
         if (!isSuperUser && !isOrgBusinessOwner) {
             throw new https_1.HttpsError('permission-denied', 'Insufficient permissions');
