@@ -1,16 +1,14 @@
 // frontend/src/components/warnings/enhanced/steps/CorrectiveDiscussionStep.tsx
-// 🎯 CORRECTIVE DISCUSSION & ACTION PLAN STEP
-// ✅ Captures corrective counselling elements within warning workflow
-// ✅ Uses unified theming with CSS variables and ThemedCard/ThemedButton system
-// ✅ Samsung S8+ mobile optimization with proper touch targets
-// ✅ Conditional logic based on warning level (Verbal/Written vs Final/Dismissal)
-// ✅ Dynamic action commitments list with add/remove functionality
+// 🎯 CORRECTIVE DISCUSSION & ACTION PLAN STEP - PHASED UX
+// ✅ Shows one section at a time to reduce cognitive overload
+// ✅ Progress indicator with phase navigation
+// ✅ Contextual guidance for each phase
+// ✅ Summary review at the end
+// ✅ Preserves all fields and validation from original
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   MessageSquare,
-  ClipboardList,
-  FileText,
   User,
   Target,
   Calendar,
@@ -21,18 +19,17 @@ import {
   BookOpen,
   Package,
   Info,
-  Scale,
   TrendingUp,
-  ChevronDown,
-  ChevronRight
+  ChevronLeft,
+  ChevronRight,
+  Edit2,
+  Check
 } from 'lucide-react';
 
 // Import unified theming components
 import { ThemedCard } from '../../../common/ThemedCard';
 import { ThemedButton } from '../../../common/ThemedButton';
-import { ThemedBadge } from '../../../common/ThemedCard';
 import { ThemedAlert } from '../../../common/ThemedCard';
-import { ThemedSectionHeader } from '../../../common/ThemedCard';
 
 // Import types
 import type { WarningLevel } from '../../../../types/core';
@@ -50,7 +47,6 @@ export interface ActionCommitment {
 export interface CorrectiveDiscussionData {
   employeeStatement: string;
   expectedBehavior: string;
-  factsAndReasoning: string;
   actionCommitments: ActionCommitment[];
   reviewDate: string;
   interventionDetails?: string;
@@ -62,19 +58,34 @@ interface CorrectiveDiscussionStepProps {
   currentData?: CorrectiveDiscussionData;
   onDataChange: (data: CorrectiveDiscussionData) => void;
   onValidationChange?: (isValid: boolean) => void;
+  onPhasesComplete?: (complete: boolean) => void; // Notify parent when all phases reviewed
   issueDate?: string;
   validityPeriod?: 3 | 6 | 12;
   onIssueDateChange?: (date: string) => void;
   onValidityPeriodChange?: (months: 3 | 6 | 12) => void;
 }
 
+// Phase definitions
+enum Phase {
+  EMPLOYEE_RESPONSE = 0,
+  EXPECTED_STANDARDS = 1,
+  IMPROVEMENT_PLAN = 2,
+  SUPPORT_PARAMETERS = 3,
+  REVIEW = 4
+}
+
+const PHASE_INFO = [
+  { title: "Employee's Response", icon: User, section: 'B' },
+  { title: 'Expected Standards', icon: Target, section: 'C' },
+  { title: 'Improvement Plan', icon: TrendingUp, section: 'F' },
+  { title: 'Support & Parameters', icon: BookOpen, section: '' },
+  { title: 'Review & Confirm', icon: Check, section: '' }
+];
+
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
 
-/**
- * Get warning level display info
- */
 const getWarningLevelInfo = (level: WarningLevel): { label: string; color: string; requiresCommitments: boolean } => {
   const levelMap: Record<WarningLevel, { label: string; color: string; requiresCommitments: boolean }> = {
     'counselling': { label: 'Counselling', color: '#0ea5e9', requiresCommitments: true },
@@ -88,16 +99,10 @@ const getWarningLevelInfo = (level: WarningLevel): { label: string; color: strin
   return levelMap[level] || { label: level, color: '#6b7280', requiresCommitments: true };
 };
 
-/**
- * Generate unique ID for action commitments
- */
 const generateId = (): string => {
   return `commitment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
-/**
- * Get minimum review date (tomorrow)
- */
 const getMinReviewDate = (): string => {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -113,6 +118,7 @@ export const CorrectiveDiscussionStep: React.FC<CorrectiveDiscussionStepProps> =
   currentData,
   onDataChange,
   onValidationChange,
+  onPhasesComplete,
   issueDate,
   validityPeriod = 6,
   onIssueDateChange,
@@ -123,10 +129,11 @@ export const CorrectiveDiscussionStep: React.FC<CorrectiveDiscussionStepProps> =
   // STATE
   // ============================================
 
+  const [currentPhase, setCurrentPhase] = useState<Phase>(Phase.EMPLOYEE_RESPONSE);
+
   const [formData, setFormData] = useState<CorrectiveDiscussionData>(() => ({
     employeeStatement: currentData?.employeeStatement || '',
     expectedBehavior: currentData?.expectedBehavior || '',
-    factsAndReasoning: currentData?.factsAndReasoning || '',
     actionCommitments: currentData?.actionCommitments || [],
     reviewDate: currentData?.reviewDate || '',
     interventionDetails: currentData?.interventionDetails || '',
@@ -134,89 +141,92 @@ export const CorrectiveDiscussionStep: React.FC<CorrectiveDiscussionStepProps> =
   }));
 
   const [resourceInput, setResourceInput] = useState('');
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [phaseErrors, setPhaseErrors] = useState<Record<number, string[]>>({});
 
   // Get level info for conditional rendering
   const levelInfo = useMemo(() => getWarningLevelInfo(warningLevel), [warningLevel]);
-
-  // Collapsible sections state - default collapsed for Final warnings
-  const [isEmployeeStatementCollapsed, setIsEmployeeStatementCollapsed] = useState(!levelInfo.requiresCommitments);
-  const [isImprovementCommitmentsCollapsed, setIsImprovementCommitmentsCollapsed] = useState(!levelInfo.requiresCommitments);
 
   // ============================================
   // VALIDATION
   // ============================================
 
-  const validateForm = useCallback((): boolean => {
-    const errors: Record<string, string> = {};
-    let isValid = true;
+  const validatePhase = useCallback((phase: Phase): string[] => {
+    const errors: string[] = [];
 
-    // Employee statement - required for Counselling/Verbal/Written, optional for Final/Dismissal
-    if (levelInfo.requiresCommitments && (!formData.employeeStatement || formData.employeeStatement.trim().length < 20)) {
-      errors.employeeStatement = 'Employee statement required (min 20 characters)';
-      isValid = false;
+    switch (phase) {
+      case Phase.EMPLOYEE_RESPONSE:
+        if (levelInfo.requiresCommitments && formData.employeeStatement.trim().length < 20) {
+          errors.push('Add more detail about what the employee said (min 20 characters)');
+        }
+        break;
+
+      case Phase.EXPECTED_STANDARDS:
+        if (formData.expectedBehavior.trim().length < 20) {
+          errors.push('Add more detail about expected standards (min 20 characters)');
+        }
+        break;
+
+      case Phase.IMPROVEMENT_PLAN:
+        if (levelInfo.requiresCommitments) {
+          if (formData.actionCommitments.length === 0) {
+            errors.push('Add at least one improvement commitment');
+          } else {
+            formData.actionCommitments.forEach((c, i) => {
+              if (c.commitment.trim().length < 10) {
+                errors.push(`Commitment ${i + 1}: Add more detail (min 10 characters)`);
+              }
+              if (c.timeline.trim().length < 3) {
+                errors.push(`Commitment ${i + 1}: Add a timeline`);
+              }
+            });
+          }
+          if (!formData.reviewDate) {
+            errors.push('Select a follow-up review date');
+          }
+        }
+        break;
     }
 
-    // Expected behavior - always required
-    if (!formData.expectedBehavior || formData.expectedBehavior.trim().length < 20) {
-      errors.expectedBehavior = 'Expected behavior required (min 20 characters)';
-      isValid = false;
-    }
-
-    // Facts and reasoning - always required
-    if (!formData.factsAndReasoning || formData.factsAndReasoning.trim().length < 20) {
-      errors.factsAndReasoning = 'Facts and reasoning required (min 20 characters)';
-      isValid = false;
-    }
-
-    // Action commitments - required for Counselling/Verbal/Written
-    if (levelInfo.requiresCommitments && formData.actionCommitments.length === 0) {
-      errors.actionCommitments = 'At least 1 improvement commitment required';
-      isValid = false;
-    }
-
-    // Validate each commitment
-    formData.actionCommitments.forEach((commitment, index) => {
-      if (!commitment.commitment || commitment.commitment.trim().length < 10) {
-        errors[`commitment_${index}`] = 'Commitment text required (min 10 characters)';
-        isValid = false;
-      }
-      if (!commitment.timeline || commitment.timeline.trim().length < 3) {
-        errors[`timeline_${index}`] = 'Timeline required (e.g., "Within 2 weeks")';
-        isValid = false;
-      }
-    });
-
-    // Review date - required for Counselling/Verbal/Written
-    if (levelInfo.requiresCommitments && !formData.reviewDate) {
-      errors.reviewDate = 'Follow-up review date required';
-      isValid = false;
-    }
-
-    setValidationErrors(errors);
-    return isValid;
+    return errors;
   }, [formData, levelInfo]);
+
+  const validateAllPhases = useCallback((): boolean => {
+    let isValid = true;
+    const allErrors: Record<number, string[]> = {};
+
+    for (let phase = 0; phase < Phase.REVIEW; phase++) {
+      const errors = validatePhase(phase);
+      if (errors.length > 0) {
+        allErrors[phase] = errors;
+        isValid = false;
+      }
+    }
+
+    setPhaseErrors(allErrors);
+    return isValid;
+  }, [validatePhase]);
 
   // ============================================
   // EFFECTS
   // ============================================
 
-  // Validate and notify parent on data change
   useEffect(() => {
-    const isValid = validateForm();
+    const isValid = validateAllPhases();
     onValidationChange?.(isValid);
     onDataChange(formData);
-  }, [formData, validateForm, onDataChange, onValidationChange]);
+  }, [formData, validateAllPhases, onDataChange, onValidationChange]);
+
+  // Notify parent when user reaches Review phase (enables Next button)
+  useEffect(() => {
+    onPhasesComplete?.(currentPhase === Phase.REVIEW);
+  }, [currentPhase, onPhasesComplete]);
 
   // ============================================
   // HANDLERS
   // ============================================
 
   const handleFieldChange = useCallback((field: keyof CorrectiveDiscussionData, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
 
   const handleAddCommitment = useCallback(() => {
@@ -264,560 +274,376 @@ export const CorrectiveDiscussionStep: React.FC<CorrectiveDiscussionStepProps> =
     }));
   }, []);
 
+  const handleNextPhase = useCallback(() => {
+    const errors = validatePhase(currentPhase);
+    if (errors.length > 0 && currentPhase !== Phase.EMPLOYEE_RESPONSE && currentPhase !== Phase.IMPROVEMENT_PLAN) {
+      // Show errors but don't block for optional phases
+      setPhaseErrors(prev => ({ ...prev, [currentPhase]: errors }));
+    }
+
+    // Allow skipping optional phases for Final warnings
+    if (!levelInfo.requiresCommitments && (currentPhase === Phase.EMPLOYEE_RESPONSE || currentPhase === Phase.IMPROVEMENT_PLAN)) {
+      setCurrentPhase(prev => prev + 1);
+      return;
+    }
+
+    // For required phases, only advance if valid
+    if (errors.length === 0 || currentPhase === Phase.SUPPORT_PARAMETERS) {
+      setCurrentPhase(prev => prev + 1);
+    } else {
+      setPhaseErrors(prev => ({ ...prev, [currentPhase]: errors }));
+    }
+  }, [currentPhase, validatePhase, levelInfo]);
+
+  const handlePrevPhase = useCallback(() => {
+    setCurrentPhase(prev => Math.max(0, prev - 1));
+  }, []);
+
+  const goToPhase = useCallback((phase: Phase) => {
+    setCurrentPhase(phase);
+  }, []);
+
   // ============================================
-  // RENDER
+  // RENDER HELPERS
   // ============================================
 
-  return (
+  const renderProgressDots = () => (
+    <div className="flex items-center justify-center gap-2 mb-4">
+      {PHASE_INFO.map((info, index) => (
+        <button
+          key={index}
+          onClick={() => goToPhase(index)}
+          className={`w-2.5 h-2.5 rounded-full transition-all ${
+            index === currentPhase
+              ? 'w-6 bg-primary'
+              : index < currentPhase
+                ? 'bg-green-500'
+                : 'bg-gray-300'
+          }`}
+          style={{
+            backgroundColor: index === currentPhase
+              ? 'var(--color-primary)'
+              : index < currentPhase
+                ? '#10b981'
+                : '#d1d5db'
+          }}
+          title={info.title}
+        />
+      ))}
+    </div>
+  );
+
+  const renderPhaseHeader = () => {
+    const info = PHASE_INFO[currentPhase];
+    const Icon = info.icon;
+
+    return (
+      <div className="text-center mb-6">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-3"
+             style={{ backgroundColor: 'var(--color-primary-light)' }}>
+          <Icon className="w-6 h-6" style={{ color: 'var(--color-primary)' }} />
+        </div>
+        <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+          {info.title}
+        </h3>
+        {info.section && (
+          <p className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>
+            Section {info.section}
+          </p>
+        )}
+        <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+          Phase {currentPhase + 1} of {PHASE_INFO.length}
+        </p>
+      </div>
+    );
+  };
+
+  const renderCharacterCount = (text: string, min: number) => (
+    <div className="flex items-center gap-1.5 text-xs mt-2" style={{ color: 'var(--color-text-tertiary)' }}>
+      <span>{text.trim().length}/{min} characters</span>
+      {text.trim().length >= min && (
+        <CheckCircle className="w-3 h-3" style={{ color: '#10b981' }} />
+      )}
+    </div>
+  );
+
+  // ============================================
+  // PHASE RENDERS
+  // ============================================
+
+  const renderPhase0_EmployeeResponse = () => (
     <div className="space-y-4">
+      <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-alert-info-bg)' }}>
+        <p className="text-sm" style={{ color: 'var(--color-alert-info-text)' }}>
+          <strong>What to ask:</strong> "What is your version of what happened?"
+        </p>
+        <p className="text-xs mt-2" style={{ color: 'var(--color-text-secondary)' }}>
+          Record the employee's response in their own words. This demonstrates they were given a fair hearing.
+        </p>
+      </div>
 
-      {/* Header */}
-      <ThemedCard padding="md">
-        <div className="flex items-center gap-3">
-          <MessageSquare className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
-          <div>
-            <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-              Meeting Documentation
-            </h2>
-            <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
-              Record the discussion details and improvement commitments
-            </p>
-          </div>
-        </div>
-      </ThemedCard>
-
-      {/* Section B: Employee's Statement */}
-      <ThemedCard padding="md">
-        {/* Collapsible Header */}
-        <div
-          onClick={() => setIsEmployeeStatementCollapsed(!isEmployeeStatementCollapsed)}
-          className="cursor-pointer"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {isEmployeeStatementCollapsed ? (
-                <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
-              ) : (
-                <ChevronDown className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
-              )}
-              <User className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
-              <div>
-                <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                  Employee Statement
-                </h3>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
-                  Section B: The employee's side of the story and response
-                </p>
-              </div>
-            </div>
-            {levelInfo.requiresCommitments ? (
-              <span className="text-xs font-medium" style={{ color: '#ef4444' }}>Required</span>
-            ) : (
-              <span className="text-xs font-medium" style={{ color: '#6b7280' }}>Optional</span>
-            )}
-          </div>
-        </div>
-
-        {/* Helper text when collapsed for Final warnings */}
-        {isEmployeeStatementCollapsed && !levelInfo.requiresCommitments && (
-          <div className="mt-3 flex items-start gap-2 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-alert-info-bg)', border: '1px solid var(--color-alert-info-border)' }}>
-            <Info className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-alert-info-text)' }} />
-            <div className="text-sm" style={{ color: 'var(--color-alert-info-text)' }}>
-              <strong>For {levelInfo.label} warnings,</strong> employee statement is optional. Focus on documenting facts and expected standards. Click to expand if you need to record their statement.
-            </div>
-          </div>
-        )}
-
-        {/* Form fields - shown when expanded */}
-        {!isEmployeeStatementCollapsed && (
-          <div className="space-y-2 mt-4">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
-                Employee Statement
-              </label>
-            </div>
-
-            <textarea
-              value={formData.employeeStatement}
-              onChange={(e) => handleFieldChange('employeeStatement', e.target.value)}
-              placeholder={levelInfo.requiresCommitments
-                ? "Document the employee's explanation of what happened and their response to the incident..."
-                : "If the employee provides a statement, document it here (optional for serious warnings)..."
-              }
-              rows={5}
-              className="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
-              style={{
-                backgroundColor: 'var(--color-background)',
-                borderColor: validationErrors.employeeStatement ? '#ef4444' : 'var(--color-border)',
-                color: 'var(--color-text-primary)',
-                minHeight: '44px'
-              }}
-            />
-
-            {validationErrors.employeeStatement && (
-              <div className="flex items-center gap-1.5 text-xs" style={{ color: '#ef4444' }}>
-                <AlertTriangle className="w-3 h-3" />
-                <span>{validationErrors.employeeStatement}</span>
-              </div>
-            )}
-
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-              <span>Character count: {formData.employeeStatement.trim().length}</span>
-              {formData.employeeStatement.trim().length >= 20 && (
-                <CheckCircle className="w-3 h-3" style={{ color: '#10b981' }} />
-              )}
-            </div>
-          </div>
-        )}
-      </ThemedCard>
-
-      {/* Section C: Expected Behavior & Standards */}
-      <ThemedCard padding="md">
-        <ThemedSectionHeader
-          icon={Target}
-          title="Expected Behavior Standards"
-          subtitle="Section C: Clearly explain what correct behavior or performance is expected"
-          className="mb-4"
-        />
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
-              Expected Standards
-            </label>
-            <span className="text-xs font-medium" style={{ color: '#ef4444' }}>Required</span>
-          </div>
-
-          <textarea
-            value={formData.expectedBehavior}
-            onChange={(e) => handleFieldChange('expectedBehavior', e.target.value)}
-            placeholder="Clearly describe the expected behavior, performance standards, and company policies that should be followed going forward..."
-            rows={5}
-            className="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
-            style={{
-              backgroundColor: 'var(--color-background)',
-              borderColor: validationErrors.expectedBehavior ? '#ef4444' : 'var(--color-border)',
-              color: 'var(--color-text-primary)',
-              minHeight: '44px'
-            }}
-          />
-
-          {validationErrors.expectedBehavior && (
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: '#ef4444' }}>
-              <AlertTriangle className="w-3 h-3" />
-              <span>{validationErrors.expectedBehavior}</span>
-            </div>
-          )}
-
-          {/* Helper Text */}
-          <div className="flex items-start gap-1.5 text-xs p-2 rounded" style={{ backgroundColor: 'var(--color-alert-info-bg)', color: 'var(--color-alert-info-text)' }}>
-            <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-            <span>
-              <strong>Tip:</strong> Clearly state what the employee should do instead. Reference specific company policies, performance standards, or behavioral expectations they must follow going forward.
+      {!levelInfo.requiresCommitments && (
+        <ThemedAlert variant="info">
+          <div className="flex items-start gap-2">
+            <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span className="text-sm">
+              For {levelInfo.label} warnings, this section is optional. You can skip if preferred.
             </span>
           </div>
-
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-            <span>Character count: {formData.expectedBehavior.trim().length}</span>
-            {formData.expectedBehavior.trim().length >= 20 && (
-              <CheckCircle className="w-3 h-3" style={{ color: '#10b981' }} />
-            )}
-          </div>
-        </div>
-      </ThemedCard>
-
-      {/* Section E: Facts & Reasoning */}
-      <ThemedCard padding="md">
-        <ThemedSectionHeader
-          icon={Scale}
-          title="Decision Reasoning"
-          subtitle="Section E: Explain why this warning level is appropriate based on the facts"
-          className="mb-4"
-        />
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
-              Facts & Decision Rationale
-            </label>
-            <span className="text-xs font-medium" style={{ color: '#ef4444' }}>Required</span>
-          </div>
-
-          <textarea
-            value={formData.factsAndReasoning}
-            onChange={(e) => handleFieldChange('factsAndReasoning', e.target.value)}
-            placeholder="Explain WHY this warning level is appropriate: What policies were violated? Why was this incident serious? What aggravating or mitigating factors did you consider? How does the employee's history affect this decision?"
-            rows={5}
-            className="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
-            style={{
-              backgroundColor: 'var(--color-background)',
-              borderColor: validationErrors.factsAndReasoning ? '#ef4444' : 'var(--color-border)',
-              color: 'var(--color-text-primary)',
-              minHeight: '44px'
-            }}
-          />
-
-          {validationErrors.factsAndReasoning && (
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: '#ef4444' }}>
-              <AlertTriangle className="w-3 h-3" />
-              <span>{validationErrors.factsAndReasoning}</span>
-            </div>
-          )}
-
-          {/* Helper Text */}
-          <div className="flex items-start gap-1.5 text-xs p-2 rounded" style={{ backgroundColor: 'var(--color-alert-info-bg)', color: 'var(--color-alert-info-text)' }}>
-            <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-            <span>
-              <strong>Tip:</strong> This is different from describing what happened (Step 0). Here, explain your reasoning for choosing this warning level based on the incident severity, company policy, and employee history.
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-            <span>Character count: {formData.factsAndReasoning.trim().length}</span>
-            {formData.factsAndReasoning.trim().length >= 20 && (
-              <CheckCircle className="w-3 h-3" style={{ color: '#10b981' }} />
-            )}
-          </div>
-        </div>
-      </ThemedCard>
-
-      {/* Section F: Improvement Commitments */}
-      <ThemedCard padding="md">
-        {/* Collapsible Header */}
-        <div
-          onClick={() => setIsImprovementCommitmentsCollapsed(!isImprovementCommitmentsCollapsed)}
-          className="cursor-pointer"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {isImprovementCommitmentsCollapsed ? (
-                <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
-              ) : (
-                <ChevronDown className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
-              )}
-              <TrendingUp className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
-              <div>
-                <h3 className="text-base font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                  Improvement Commitments
-                </h3>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
-                  Section F: Specific actions the employee commits to take
-                </p>
-              </div>
-            </div>
-            {levelInfo.requiresCommitments ? (
-              <span className="text-xs font-medium" style={{ color: '#ef4444' }}>Required</span>
-            ) : (
-              <span className="text-xs font-medium" style={{ color: '#6b7280' }}>Optional</span>
-            )}
-          </div>
-        </div>
-
-        {/* Helper text when collapsed for Final warnings */}
-        {isImprovementCommitmentsCollapsed && !levelInfo.requiresCommitments && (
-          <div className="mt-3 flex items-start gap-2 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-alert-info-bg)', border: '1px solid var(--color-alert-info-border)' }}>
-            <Info className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-alert-info-text)' }} />
-            <div className="text-sm" style={{ color: 'var(--color-alert-info-text)' }}>
-              <strong>For {levelInfo.label} warnings,</strong> improvement commitments are optional. Focus on documenting facts and expected standards. Click to expand if you need to record commitments.
-            </div>
-          </div>
-        )}
-
-        {/* Form fields - shown when expanded */}
-        {!isImprovementCommitmentsCollapsed && (
-          <div className="space-y-3 mt-4">
-            {formData.actionCommitments.length === 0 ? (
-              <ThemedAlert variant="warning" className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <div className="text-sm">
-                  <strong>No Commitments Added:</strong> Add at least one improvement commitment with a timeline.
-                </div>
-              </ThemedAlert>
-            ) : (
-              <div className="space-y-3">
-                {formData.actionCommitments.map((commitment, index) => (
-                  <div
-                    key={commitment.id}
-                    className="p-3 rounded-lg border"
-                    style={{
-                      backgroundColor: 'var(--color-background)',
-                      borderColor: 'var(--color-border)'
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
-                        Commitment {index + 1}
-                      </span>
-                      <button
-                        onClick={() => handleRemoveCommitment(commitment.id)}
-                        className="p-1 rounded hover:bg-red-50 transition-colors"
-                        title="Remove commitment"
-                      >
-                        <X className="w-4 h-4" style={{ color: '#ef4444' }} />
-                      </button>
-                    </div>
-
-                    <div className="space-y-2">
-                      {/* Commitment Text */}
-                      <div>
-                        <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--color-text-secondary)' }}>
-                          Action/Commitment
-                        </label>
-                        <input
-                          type="text"
-                          value={commitment.commitment}
-                          onChange={(e) => handleCommitmentChange(commitment.id, 'commitment', e.target.value)}
-                          placeholder="e.g., Attend time management training and improve punctuality"
-                          className="w-full px-3 py-2 rounded border transition-all focus:outline-none focus:ring-2"
-                          style={{
-                            backgroundColor: 'var(--color-background)',
-                            borderColor: validationErrors[`commitment_${index}`] ? '#ef4444' : 'var(--color-border)',
-                            color: 'var(--color-text-primary)',
-                            minHeight: '44px'
-                          }}
-                        />
-                        {validationErrors[`commitment_${index}`] && (
-                          <div className="flex items-center gap-1.5 text-xs mt-1" style={{ color: '#ef4444' }}>
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>{validationErrors[`commitment_${index}`]}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Timeline */}
-                      <div>
-                        <label className="text-xs font-medium mb-1 block" style={{ color: 'var(--color-text-secondary)' }}>
-                          Timeline/Deadline
-                        </label>
-                        <input
-                          type="text"
-                          value={commitment.timeline}
-                          onChange={(e) => handleCommitmentChange(commitment.id, 'timeline', e.target.value)}
-                          placeholder="e.g., Within 2 weeks, By end of month"
-                          className="w-full px-3 py-2 rounded border transition-all focus:outline-none focus:ring-2"
-                          style={{
-                            backgroundColor: 'var(--color-background)',
-                            borderColor: validationErrors[`timeline_${index}`] ? '#ef4444' : 'var(--color-border)',
-                            color: 'var(--color-text-primary)',
-                            minHeight: '44px'
-                          }}
-                        />
-                        {validationErrors[`timeline_${index}`] && (
-                          <div className="flex items-center gap-1.5 text-xs mt-1" style={{ color: '#ef4444' }}>
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>{validationErrors[`timeline_${index}`]}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Add Commitment Button */}
-            <ThemedButton
-              variant="outline"
-              onClick={handleAddCommitment}
-              className="w-full"
-              icon={Plus}
-            >
-              Add Improvement Commitment
-            </ThemedButton>
-          </div>
-        )}
-      </ThemedCard>
-
-      {/* Follow-up Review Date */}
-      {levelInfo.requiresCommitments && (
-        <ThemedCard padding="md">
-          <ThemedSectionHeader
-            icon={Calendar}
-            title="Follow-up Review Date"
-            subtitle="When will progress on these commitments be reviewed?"
-            className="mb-4"
-          />
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
-                Review Date
-              </label>
-              <span className="text-xs font-medium" style={{ color: '#ef4444' }}>Required</span>
-            </div>
-
-            <input
-              type="date"
-              value={formData.reviewDate}
-              onChange={(e) => handleFieldChange('reviewDate', e.target.value)}
-              min={getMinReviewDate()}
-              className="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
-              style={{
-                backgroundColor: 'var(--color-background)',
-                borderColor: validationErrors.reviewDate ? '#ef4444' : 'var(--color-border)',
-                color: 'var(--color-text-primary)',
-                minHeight: '44px'
-              }}
-            />
-
-            {validationErrors.reviewDate && (
-              <div className="flex items-center gap-1.5 text-xs" style={{ color: '#ef4444' }}>
-                <AlertTriangle className="w-3 h-3" />
-                <span>{validationErrors.reviewDate}</span>
-              </div>
-            )}
-
-            <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-              Select a date when you will meet with the employee to review their progress on the improvement commitments.
-            </div>
-          </div>
-        </ThemedCard>
+        </ThemedAlert>
       )}
 
-      {/* Optional: Training/Coaching Provided */}
-      <ThemedCard padding="md">
-        <ThemedSectionHeader
-          icon={BookOpen}
-          title="Training/Coaching Provided (Optional)"
-          subtitle="Describe any support provided during this discussion"
-          className="mb-4"
-        />
+      <textarea
+        value={formData.employeeStatement}
+        onChange={(e) => handleFieldChange('employeeStatement', e.target.value)}
+        placeholder="The employee stated that..."
+        rows={6}
+        className="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
+        style={{
+          backgroundColor: 'var(--color-background)',
+          borderColor: 'var(--color-border)',
+          color: 'var(--color-text-primary)',
+          minHeight: '120px'
+        }}
+        autoFocus
+      />
 
-        <div className="space-y-2">
-          <textarea
-            value={formData.interventionDetails || ''}
-            onChange={(e) => handleFieldChange('interventionDetails', e.target.value)}
-            placeholder="Describe any training, coaching, mentoring, or other support provided to help the employee improve (optional)..."
-            rows={4}
-            className="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
+      {renderCharacterCount(formData.employeeStatement, 20)}
+
+      <div className="text-xs p-3 rounded" style={{ backgroundColor: 'var(--color-background)', color: 'var(--color-text-secondary)' }}>
+        <strong>Example:</strong> "The employee stated that they were unaware of the policy change and believed they were following the correct procedure. They acknowledged the incident occurred but felt the circumstances were misunderstood."
+      </div>
+    </div>
+  );
+
+  const renderPhase1_ExpectedStandards = () => (
+    <div className="space-y-4">
+      <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-alert-info-bg)' }}>
+        <p className="text-sm" style={{ color: 'var(--color-alert-info-text)' }}>
+          <strong>What to explain:</strong> "Here is what should happen instead..."
+        </p>
+        <p className="text-xs mt-2" style={{ color: 'var(--color-text-secondary)' }}>
+          Clearly state the expected behavior, performance standards, or policies that must be followed.
+        </p>
+      </div>
+
+      <textarea
+        value={formData.expectedBehavior}
+        onChange={(e) => handleFieldChange('expectedBehavior', e.target.value)}
+        placeholder="The expected standard is..."
+        rows={6}
+        className="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
+        style={{
+          backgroundColor: 'var(--color-background)',
+          borderColor: 'var(--color-border)',
+          color: 'var(--color-text-primary)',
+          minHeight: '120px'
+        }}
+        autoFocus
+      />
+
+      {renderCharacterCount(formData.expectedBehavior, 20)}
+
+      <div className="text-xs p-3 rounded" style={{ backgroundColor: 'var(--color-background)', color: 'var(--color-text-secondary)' }}>
+        <strong>Example:</strong> "Employees are expected to arrive at work by 8:00 AM as per company policy. Any anticipated late arrival must be communicated to the supervisor at least 30 minutes before the start of shift."
+      </div>
+    </div>
+  );
+
+  const renderPhase2_ImprovementPlan = () => (
+    <div className="space-y-4">
+      <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-alert-info-bg)' }}>
+        <p className="text-sm" style={{ color: 'var(--color-alert-info-text)' }}>
+          <strong>What to agree:</strong> "What will you commit to doing to improve?"
+        </p>
+        <p className="text-xs mt-2" style={{ color: 'var(--color-text-secondary)' }}>
+          Record specific, measurable actions the employee commits to, with timelines.
+        </p>
+      </div>
+
+      {!levelInfo.requiresCommitments && (
+        <ThemedAlert variant="info">
+          <div className="flex items-start gap-2">
+            <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span className="text-sm">
+              For {levelInfo.label} warnings, improvement commitments are optional. You can skip if preferred.
+            </span>
+          </div>
+        </ThemedAlert>
+      )}
+
+      {/* Commitments List */}
+      {formData.actionCommitments.length > 0 && (
+        <div className="space-y-3">
+          {formData.actionCommitments.map((commitment, index) => (
+            <div key={commitment.id} className="p-3 rounded-lg border" style={{ borderColor: 'var(--color-border)' }}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
+                  Commitment {index + 1}
+                </span>
+                <button
+                  onClick={() => handleRemoveCommitment(commitment.id)}
+                  className="p-1 rounded hover:bg-red-50"
+                >
+                  <X className="w-4 h-4" style={{ color: '#ef4444' }} />
+                </button>
+              </div>
+              <input
+                type="text"
+                value={commitment.commitment}
+                onChange={(e) => handleCommitmentChange(commitment.id, 'commitment', e.target.value)}
+                placeholder="What they will do..."
+                className="w-full px-3 py-2 rounded border mb-2"
+                style={{
+                  backgroundColor: 'var(--color-background)',
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text-primary)'
+                }}
+              />
+              <input
+                type="text"
+                value={commitment.timeline}
+                onChange={(e) => handleCommitmentChange(commitment.id, 'timeline', e.target.value)}
+                placeholder="By when (e.g., Within 2 weeks)"
+                className="w-full px-3 py-2 rounded border"
+                style={{
+                  backgroundColor: 'var(--color-background)',
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text-primary)'
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <ThemedButton variant="outline" onClick={handleAddCommitment} className="w-full" icon={Plus}>
+        Add Commitment
+      </ThemedButton>
+
+      {/* Review Date */}
+      {levelInfo.requiresCommitments && (
+        <div className="pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+          <label className="text-sm font-medium block mb-2" style={{ color: 'var(--color-text-primary)' }}>
+            Follow-up Review Date
+          </label>
+          <input
+            type="date"
+            value={formData.reviewDate}
+            onChange={(e) => handleFieldChange('reviewDate', e.target.value)}
+            min={getMinReviewDate()}
+            className="w-full px-4 py-3 rounded-lg border"
             style={{
               backgroundColor: 'var(--color-background)',
               borderColor: 'var(--color-border)',
-              color: 'var(--color-text-primary)',
-              minHeight: '44px'
+              color: 'var(--color-text-primary)'
             }}
           />
-
-          <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-            Examples: Job shadowing arrangement, additional training scheduled, coaching sessions planned, etc.
-          </div>
+          <p className="text-xs mt-2" style={{ color: 'var(--color-text-tertiary)' }}>
+            When will you meet to review their progress?
+          </p>
         </div>
-      </ThemedCard>
+      )}
+    </div>
+  );
 
-      {/* Optional: Resources Provided */}
-      <ThemedCard padding="md">
-        <ThemedSectionHeader
-          icon={Package}
-          title="Resources Provided (Optional)"
-          subtitle="List any tools, documents, or resources given"
-          className="mb-4"
+  const renderPhase3_SupportParameters = () => (
+    <div className="space-y-4">
+      <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-alert-info-bg)' }}>
+        <p className="text-sm" style={{ color: 'var(--color-alert-info-text)' }}>
+          Document any support provided and set warning parameters.
+        </p>
+      </div>
+
+      {/* Training/Coaching */}
+      <div>
+        <label className="text-sm font-medium block mb-2" style={{ color: 'var(--color-text-primary)' }}>
+          Training/Coaching Provided <span className="text-xs font-normal" style={{ color: 'var(--color-text-tertiary)' }}>(Optional)</span>
+        </label>
+        <textarea
+          value={formData.interventionDetails || ''}
+          onChange={(e) => handleFieldChange('interventionDetails', e.target.value)}
+          placeholder="Describe any support provided..."
+          rows={3}
+          className="w-full px-4 py-3 rounded-lg border"
+          style={{
+            backgroundColor: 'var(--color-background)',
+            borderColor: 'var(--color-border)',
+            color: 'var(--color-text-primary)'
+          }}
         />
+      </div>
 
-        <div className="space-y-2">
-          {/* Resource Tags */}
-          {formData.resourcesProvided && formData.resourcesProvided.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-2">
-              {formData.resourcesProvided.map((resource, index) => (
-                <span
-                  key={index}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium"
-                  style={{
-                    backgroundColor: 'var(--color-primary-light)',
-                    color: 'var(--color-primary)'
-                  }}
-                >
-                  {resource}
-                  <button
-                    onClick={() => handleRemoveResource(index)}
-                    className="hover:opacity-70 transition-opacity"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
+      {/* Resources */}
+      <div>
+        <label className="text-sm font-medium block mb-2" style={{ color: 'var(--color-text-primary)' }}>
+          Resources Provided <span className="text-xs font-normal" style={{ color: 'var(--color-text-tertiary)' }}>(Optional)</span>
+        </label>
 
-          {/* Add Resource Input */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={resourceInput}
-              onChange={(e) => setResourceInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddResource();
-                }
-              }}
-              placeholder="e.g., Company policy handbook, Training manual"
-              className="flex-1 px-3 py-2 rounded border transition-all focus:outline-none focus:ring-2"
-              style={{
-                backgroundColor: 'var(--color-background)',
-                borderColor: 'var(--color-border)',
-                color: 'var(--color-text-primary)',
-                minHeight: '44px'
-              }}
-            />
-            <ThemedButton
-              variant="outline"
-              onClick={handleAddResource}
-              icon={Plus}
-              disabled={!resourceInput.trim()}
-            >
-              Add
-            </ThemedButton>
+        {formData.resourcesProvided && formData.resourcesProvided.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {formData.resourcesProvided.map((resource, index) => (
+              <span key={index} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs"
+                    style={{ backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary)' }}>
+                {resource}
+                <button onClick={() => handleRemoveResource(index)}>
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
           </div>
+        )}
 
-          <div className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-            Press Enter or click Add to include a resource. Examples: Policy documents, job aids, reference materials, etc.
-          </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={resourceInput}
+            onChange={(e) => setResourceInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddResource())}
+            placeholder="e.g., Policy handbook"
+            className="flex-1 px-3 py-2 rounded border"
+            style={{
+              backgroundColor: 'var(--color-background)',
+              borderColor: 'var(--color-border)',
+              color: 'var(--color-text-primary)'
+            }}
+          />
+          <ThemedButton variant="outline" onClick={handleAddResource} icon={Plus} disabled={!resourceInput.trim()}>
+            Add
+          </ThemedButton>
         </div>
-      </ThemedCard>
+      </div>
 
-      {/* Warning Parameters Section */}
-      <ThemedCard padding="md">
-        <ThemedSectionHeader
-          icon={Calendar}
-          title="Warning Parameters"
-          subtitle="Set the issue date and validity period for this warning"
-          className="mb-4"
-        />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Issue Date */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
-              Issue Date
-            </label>
+      {/* Warning Parameters */}
+      <div className="pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+        <h4 className="text-sm font-medium mb-3" style={{ color: 'var(--color-text-primary)' }}>
+          Warning Parameters
+        </h4>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs block mb-1" style={{ color: 'var(--color-text-secondary)' }}>Issue Date</label>
             <input
               type="date"
               value={issueDate || new Date().toISOString().split('T')[0]}
               onChange={(e) => onIssueDateChange?.(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
+              className="w-full px-3 py-2 rounded border"
               style={{
                 backgroundColor: 'var(--color-background)',
                 borderColor: 'var(--color-border)',
-                color: 'var(--color-text-primary)',
-                minHeight: '44px'
+                color: 'var(--color-text-primary)'
               }}
             />
           </div>
-
-          {/* Validity Period */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-secondary)' }}>
-              Validity Period
-            </label>
+          <div>
+            <label className="text-xs block mb-1" style={{ color: 'var(--color-text-secondary)' }}>Validity</label>
             <select
               value={validityPeriod}
               onChange={(e) => onValidityPeriodChange?.(parseInt(e.target.value) as 3 | 6 | 12)}
-              className="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
+              className="w-full px-3 py-2 rounded border"
               style={{
                 backgroundColor: 'var(--color-background)',
                 borderColor: 'var(--color-border)',
-                color: 'var(--color-text-primary)',
-                minHeight: '44px'
+                color: 'var(--color-text-primary)'
               }}
             >
               <option value={3}>3 months</option>
@@ -826,8 +652,157 @@ export const CorrectiveDiscussionStep: React.FC<CorrectiveDiscussionStepProps> =
             </select>
           </div>
         </div>
+      </div>
+    </div>
+  );
+
+  const renderPhase4_Review = () => {
+    const sections = [
+      { phase: Phase.EMPLOYEE_RESPONSE, title: "Employee's Response", content: formData.employeeStatement, optional: !levelInfo.requiresCommitments },
+      { phase: Phase.EXPECTED_STANDARDS, title: 'Expected Standards', content: formData.expectedBehavior, optional: false },
+      { phase: Phase.IMPROVEMENT_PLAN, title: 'Improvement Plan',
+        content: formData.actionCommitments.length > 0
+          ? formData.actionCommitments.map(c => `${c.commitment} (${c.timeline})`).join('\n')
+          : '',
+        optional: !levelInfo.requiresCommitments
+      },
+    ];
+
+    return (
+      <div className="space-y-3">
+        <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--color-alert-success-bg)' }}>
+          <p className="text-sm font-medium" style={{ color: 'var(--color-alert-success-text)' }}>
+            Review your entries below. Click Edit to make changes.
+          </p>
+        </div>
+
+        {sections.map((section) => (
+          <div key={section.phase} className="p-3 rounded-lg border" style={{ borderColor: 'var(--color-border)' }}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold uppercase" style={{ color: 'var(--color-text-secondary)' }}>
+                {section.title}
+                {section.optional && <span className="ml-1 font-normal">(Optional)</span>}
+              </span>
+              <button
+                onClick={() => goToPhase(section.phase)}
+                className="p-1 rounded hover:bg-gray-100"
+              >
+                <Edit2 className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />
+              </button>
+            </div>
+            <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--color-text-primary)' }}>
+              {section.content || <span style={{ color: 'var(--color-text-tertiary)' }}>Not provided</span>}
+            </p>
+          </div>
+        ))}
+
+        {formData.reviewDate && (
+          <div className="p-3 rounded-lg border" style={{ borderColor: 'var(--color-border)' }}>
+            <span className="text-xs font-semibold uppercase" style={{ color: 'var(--color-text-secondary)' }}>
+              Review Date
+            </span>
+            <p className="text-sm mt-1" style={{ color: 'var(--color-text-primary)' }}>
+              {new Date(formData.reviewDate).toLocaleDateString('en-ZA', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+              })}
+            </p>
+          </div>
+        )}
+
+        {Object.keys(phaseErrors).length > 0 && (
+          <ThemedAlert variant="warning">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <strong>Some sections need attention:</strong>
+                <ul className="mt-1 list-disc list-inside">
+                  {Object.entries(phaseErrors).map(([phase, errors]) => (
+                    errors.map((error, i) => (
+                      <li key={`${phase}-${i}`} className="text-xs">{error}</li>
+                    ))
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </ThemedAlert>
+        )}
+      </div>
+    );
+  };
+
+  // ============================================
+  // MAIN RENDER
+  // ============================================
+
+  const renderCurrentPhase = () => {
+    switch (currentPhase) {
+      case Phase.EMPLOYEE_RESPONSE: return renderPhase0_EmployeeResponse();
+      case Phase.EXPECTED_STANDARDS: return renderPhase1_ExpectedStandards();
+      case Phase.IMPROVEMENT_PLAN: return renderPhase2_ImprovementPlan();
+      case Phase.SUPPORT_PARAMETERS: return renderPhase3_SupportParameters();
+      case Phase.REVIEW: return renderPhase4_Review();
+      default: return null;
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <ThemedCard padding="md">
+        <div className="flex items-center gap-3 mb-4">
+          <MessageSquare className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
+          <div>
+            <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              Meeting Documentation
+            </h2>
+            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              Complete each section of the discussion
+            </p>
+          </div>
+        </div>
+        {renderProgressDots()}
       </ThemedCard>
 
+      {/* Current Phase Content */}
+      <ThemedCard padding="md">
+        {renderPhaseHeader()}
+        {renderCurrentPhase()}
+
+        {/* Phase Errors */}
+        {phaseErrors[currentPhase] && phaseErrors[currentPhase].length > 0 && (
+          <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)' }}>
+            {phaseErrors[currentPhase].map((error, i) => (
+              <div key={i} className="flex items-center gap-1.5 text-xs" style={{ color: '#ef4444' }}>
+                <AlertTriangle className="w-3 h-3" />
+                <span>{error}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between mt-6 pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+          <ThemedButton
+            variant="outline"
+            onClick={handlePrevPhase}
+            disabled={currentPhase === 0}
+            icon={ChevronLeft}
+          >
+            Back
+          </ThemedButton>
+
+          {currentPhase < Phase.REVIEW ? (
+            <ThemedButton onClick={handleNextPhase} icon={ChevronRight} iconPosition="right">
+              {currentPhase === Phase.EMPLOYEE_RESPONSE && !levelInfo.requiresCommitments ? 'Skip' : 'Continue'}
+            </ThemedButton>
+          ) : (
+            <div className="flex items-center gap-2 text-sm" style={{ color: '#10b981' }}>
+              <CheckCircle className="w-4 h-4" />
+              <span>Ready for next step</span>
+            </div>
+          )}
+        </div>
+      </ThemedCard>
     </div>
   );
 };

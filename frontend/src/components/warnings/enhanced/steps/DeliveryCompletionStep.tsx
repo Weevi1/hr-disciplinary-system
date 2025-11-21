@@ -70,6 +70,16 @@ import type { UseAudioRecordingReturn } from '../../../../hooks/warnings/useAudi
 // INTERFACES
 // ============================================
 
+// Corrective Discussion data structure
+interface CorrectiveDiscussionData {
+  employeeStatement: string;
+  expectedBehavior: string;
+  actionCommitments: Array<{ id: string; commitment: string; timeline: string }>;
+  reviewDate: string;
+  interventionDetails?: string;
+  resourcesProvided?: string[];
+}
+
 interface DeliveryCompletionStepProps {
   selectedEmployee: any;
   selectedCategory: any;
@@ -83,6 +93,7 @@ interface DeliveryCompletionStepProps {
   onWarningCreated?: (warningId: string) => void;
   warningId?: string; // The warning ID created in step 2
   onFinalizeReady?: (data: { canFinalize: boolean; finalizeHandler: () => void }) => void; // Pass finalize state and handler
+  correctiveDiscussionData?: CorrectiveDiscussionData; // Corrective Discussion fields for PDF sections
 }
 
 interface DeliveryOption {
@@ -130,7 +141,8 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
   onComplete,
   onWarningCreated,
   warningId,
-  onFinalizeReady
+  onFinalizeReady,
+  correctiveDiscussionData
 }) => {
 
   // ============================================
@@ -276,14 +288,21 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
           requirements: lraRecommendation?.legalRequirements || []
         },
 
-        // 🆕 Corrective Discussion Fields (Step 2) - Pass to PDF generator
-        employeeStatement: formData.employeeStatement,
-        expectedBehaviorStandards: formData.expectedBehaviorStandards,
-        factsLeadingToDecision: formData.factsLeadingToDecision,
-        actionSteps: formData.actionSteps,
-        reviewDate: formData.reviewDate,
-        interventionDetails: formData.interventionDetails,
-        resourcesProvided: formData.resourcesProvided
+        // 🆕 Corrective Discussion Fields - Pass to PDF generator
+        employeeStatement: correctiveDiscussionData?.employeeStatement || undefined,
+        expectedBehaviorStandards: correctiveDiscussionData?.expectedBehavior || undefined,
+        // Map actionCommitments to actionSteps format
+        actionSteps: correctiveDiscussionData?.actionCommitments && correctiveDiscussionData.actionCommitments.length > 0
+          ? correctiveDiscussionData.actionCommitments.map(c => ({
+              action: c.commitment,
+              timeline: c.timeline
+            }))
+          : undefined,
+        reviewDate: correctiveDiscussionData?.reviewDate || undefined,
+        interventionDetails: correctiveDiscussionData?.interventionDetails || undefined,
+        resourcesProvided: correctiveDiscussionData?.resourcesProvided && correctiveDiscussionData.resourcesProvided.length > 0
+          ? correctiveDiscussionData.resourcesProvided
+          : undefined
       };
 
       const pdfData = await transformWarningDataForPDF(
@@ -313,7 +332,7 @@ export const DeliveryCompletionStep: React.FC<DeliveryCompletionStepProps> = ({
     } finally {
       setIsGeneratingQR(false);
     }
-  }, [selectedEmployee, selectedCategory, organization, formData, lraRecommendation, signatures, warningId]);
+  }, [selectedEmployee, selectedCategory, organization, formData, lraRecommendation, signatures, warningId, correctiveDiscussionData]);
 
   // ============================================
   // 🔥 ENHANCED WARNING CREATION WITH AUDIO URL FIX
@@ -423,11 +442,18 @@ const handleCreateHRNotification = useCallback(async (blob?: Blob, filename?: st
 
   // Notify parent with finalize state and handler
   useEffect(() => {
+    Logger.debug('🔵 DeliveryCompletionStep - Finalize state update:', {
+      canFinalize: canCompleteDelivery,
+      warningId,
+      selectedDeliveryMethod,
+      isCreatingWarning,
+      deliveryNotificationId
+    });
     onFinalizeReady?.({
       canFinalize: canCompleteDelivery,
       finalizeHandler: handleCreateWarning
     });
-  }, [canCompleteDelivery, handleCreateWarning, onFinalizeReady]);
+  }, [canCompleteDelivery, handleCreateWarning, onFinalizeReady, warningId, selectedDeliveryMethod, isCreatingWarning, deliveryNotificationId]);
 
   // Auto-close wizard after successful warning creation
   useEffect(() => {

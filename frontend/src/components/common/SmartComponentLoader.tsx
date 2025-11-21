@@ -190,8 +190,8 @@ export const EnhancedWrapper: React.FC<EnhancedWrapperProps> = ({
 
 // Pre-configured smart loaders for common components
 export const SmartWarningWizard = createSmartComponent('warning-wizard', {
-  enhanced: lazy(() => import('../warnings/enhanced/EnhancedWarningWizard').then(m => ({ default: m.EnhancedWarningWizard }))),
-  simplified: lazy(() => import('../warnings/enhanced/EnhancedWarningWizard').then(m => ({ default: m.EnhancedWarningWizard }))) // Same as enhanced
+  enhanced: lazy(() => import('../warnings/enhanced/UnifiedWarningWizard').then(m => ({ default: m.UnifiedWarningWizard }))),
+  simplified: lazy(() => import('../warnings/enhanced/UnifiedWarningWizard').then(m => ({ default: m.UnifiedWarningWizard }))) // Same as enhanced
 });
 
 export const SmartEmployeeManagement = createSmartComponent('employee-management', {

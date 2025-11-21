@@ -171,6 +171,13 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
 
   // 🎯 Function to allow manual refreshing from other components
   const refreshOrganization = async () => {
+    // 🔥 CRITICAL: Clear cache first to ensure fresh data is fetched
+    // This is important when pdfSettings or other org data changes externally
+    if (organizationId) {
+      CacheService.clearByPrefix(`org:${organizationId}:`);
+      Logger.debug(`[OrganizationProvider] 🗑️ Cleared cache for organization: ${organizationId}`);
+    }
+
     // Reset loading state for manual refresh
     loadingRef.current = false;
     loadedOrgRef.current = null;

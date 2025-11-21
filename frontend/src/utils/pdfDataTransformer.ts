@@ -216,6 +216,15 @@ export const transformWarningDataForPDF = async (
     pdfSettings = warningData.pdfSettings || organizationData.pdfSettings || undefined;
     if (warningData.pdfSettings) {
       Logger.debug('📋 Using legacy pdfSettings from warning document (old format)');
+    } else if (organizationData.pdfSettings) {
+      Logger.debug('📋 Using pdfSettings from organization:', {
+        hasSettings: true,
+        version: organizationData.pdfSettings.generatorVersion,
+        hasContent: !!organizationData.pdfSettings.content,
+        hasBranding: !!organizationData.pdfSettings.branding
+      });
+    } else {
+      Logger.warn('⚠️ No pdfSettings found in warning or organization data - will use defaults');
     }
   }
 

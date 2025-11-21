@@ -795,11 +795,30 @@ export class PDFGenerationService {
         sections: undefined // Will be populated from customSettings
       };
 
+      // 🔍 DEBUG: Log what customSettings we received
+      console.log('🎨 PDF TEMPLATE DEBUG - customSettings received:', {
+        hasCustomSettings: !!customSettings,
+        customSettingsKeys: customSettings ? Object.keys(customSettings) : 'none',
+        hasSections: !!customSettings?.sections,
+        sectionsCount: customSettings?.sections?.length || 0,
+        sectionIds: customSettings?.sections?.map((s: any) => s.id) || [],
+        generatorVersion: customSettings?.generatorVersion || 'not set'
+      });
+
       const settings = customSettings ? {
         styling: { ...defaultSettings.styling, ...(customSettings.styling || {}) },
         content: { ...defaultSettings.content, ...(customSettings.content || {}) },
         sections: customSettings.sections || defaultSettings.sections
       } : defaultSettings;
+
+      // 🔍 DEBUG: Log the final merged settings
+      console.log('🎨 PDF TEMPLATE DEBUG - final settings:', {
+        usedCustomSettings: !!customSettings,
+        finalSectionCount: settings.sections?.length || 0,
+        finalSectionIds: settings.sections?.map((s: any) => s.id) || [],
+        headerColor: settings.styling.headerBackground,
+        organization: data.organization?.name
+      });
 
       Logger.debug('🎨 v1.2.0: Using dynamic section rendering with', {
         sectionCount: settings.sections?.length || 0,

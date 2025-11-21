@@ -37,8 +37,8 @@ export class CacheService {
 
     // Moderately changing data
     categories: 10 * 60 * 1000,      // 10 minutes
-    organization: 15 * 60 * 1000,    // 15 minutes
-    settings: 15 * 60 * 1000,        // 15 minutes
+    organization: 3 * 60 * 1000,     // 3 minutes (reduced for faster pdfSettings propagation)
+    settings: 3 * 60 * 1000,         // 3 minutes (reduced for faster updates)
 
     // Rarely changing data
     userOrgIndex: 30 * 60 * 1000,    // 30 minutes

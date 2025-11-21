@@ -19,7 +19,7 @@ import {
 
 // 🚀 LAZY LOADED HEAVY COMPONENTS
 const EnhancedWarningWizard = React.lazy(() =>
-  import('../warnings/enhanced/EnhancedWarningWizard').then(m => ({ default: m.EnhancedWarningWizard }))
+  import('../warnings/enhanced/UnifiedWarningWizard').then(m => ({ default: m.UnifiedWarningWizard }))
 );
 const UnifiedBookHRMeeting = React.lazy(() =>
   import('../meetings/UnifiedBookHRMeeting').then(m => ({ default: m.UnifiedBookHRMeeting }))
