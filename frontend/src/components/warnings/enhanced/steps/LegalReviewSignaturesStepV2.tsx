@@ -6,12 +6,15 @@
 // ✅ Improved mobile UX, signature validation, better error handling
 // ✅ Cleaner code structure, proper cleanup
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Scale, FileText, CheckCircle, Users, Clock, Shield,
   Eye, EyeOff, ChevronDown, ChevronUp, Info, Calendar, User,
-  Loader2, RefreshCw, MessageCircle, Volume2, Send, Play, Pause, TrendingUp, X, AlertTriangle
+  Loader2, RefreshCw, MessageCircle, Volume2, Send, Play, Pause, TrendingUp, X, AlertTriangle,
+  Maximize2, ZoomIn, ZoomOut, Download
 } from 'lucide-react';
+import { useOrganization } from '../../../../contexts/OrganizationContext';
+import { transformWarningDataForPDF } from '../../../../utils/pdfDataTransformer';
 import type { EscalationRecommendation } from '../../../../services/WarningService';
 
 // Import unified theming components
@@ -69,6 +72,16 @@ interface WarningCategory {
   description?: string;
 }
 
+// Corrective Discussion data structure
+interface CorrectiveDiscussionData {
+  employeeStatement: string;
+  expectedBehavior: string;
+  actionCommitments: Array<{ id: string; commitment: string; timeline: string }>;
+  reviewDate: string;
+  interventionDetails?: string;
+  resourcesProvided?: string[];
+}
+
 interface LegalReviewSignaturesStepV2Props {
   lraRecommendation: EscalationRecommendation | null;
   selectedEmployee: Employee | undefined;
@@ -82,6 +95,7 @@ interface LegalReviewSignaturesStepV2Props {
   warningId?: string | null;
   audioUploadStatus?: 'recording' | 'stopping' | 'uploading' | 'complete' | null;
   onLevelOverride?: (level: string | null) => void;
+  correctiveDiscussionData?: CorrectiveDiscussionData; // Corrective Discussion fields for PDF sections
 }
 
 const safeText = (value: any, fallback: string = 'Unknown'): string => {
@@ -445,7 +459,8 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
   currentSignatures,
   warningId,
   audioUploadStatus,
-  onLevelOverride
+  onLevelOverride,
+  correctiveDiscussionData
 }) => {
   // State management
   const [showDetails, setShowDetails] = useState(false);
@@ -458,6 +473,19 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
   const [overrideLevel, setOverrideLevel] = useState<string | null>(null);
   const [showOverrideSelector, setShowOverrideSelector] = useState(false);
   const [signatureType, setSignatureType] = useState<'employee' | 'witness'>('employee'); // Employee or Witness signature
+
+  // PDF Preview & Acknowledgment State
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [hasAcknowledged, setHasAcknowledged] = useState(false);
+  const [showFullScreenPdf, setShowFullScreenPdf] = useState(false);
+  const pdfContainerRef = useRef<HTMLDivElement>(null);
+
+  // Get organization context for PDF generation
+  const { organization } = useOrganization();
 
   // Update signatures when currentSignatures prop changes
   useEffect(() => {
@@ -519,10 +547,115 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
     }, 1500);
   }, []);
 
+  // Generate PDF for employee preview
+  const generatePdfPreview = useCallback(async (managerSignature: string) => {
+    if (!organization?.id || isGeneratingPdf) return;
+
+    setIsGeneratingPdf(true);
+    setPdfError(null);
+
+    try {
+      // Dynamically import PDF service to avoid loading it upfront
+      const { PDFGenerationService } = await import('../../../../services/PDFGenerationService');
+
+      // Prepare warning data for PDF
+      const warningData = {
+        id: `preview_${Date.now()}`,
+        organizationId: organization.id,
+        employeeId: selectedEmployee?.id || formData.employeeId,
+        categoryId: selectedCategory?.id || formData.categoryId,
+        level: overrideLevel || lraRecommendation?.suggestedLevel || 'verbal',
+        incidentDate: formData.incidentDate,
+        incidentTime: formData.incidentTime,
+        incidentLocation: formData.incidentLocation,
+        incidentDescription: formData.incidentDescription,
+        issueDate: formData.issueDate || new Date().toISOString().split('T')[0],
+        validityPeriod: formData.validityPeriod || 6,
+        status: 'preview',
+        signatures: {
+          manager: managerSignature,
+          employee: null,
+          witness: null,
+          managerName: currentManagerName
+        },
+        // Include category name for PDF
+        category: selectedCategory?.name || 'General Misconduct',
+        // 🔥 Include corrective discussion data for PDF sections
+        // These fields map to pdfDataTransformer expectations
+        employeeStatement: correctiveDiscussionData?.employeeStatement || undefined,
+        expectedBehaviorStandards: correctiveDiscussionData?.expectedBehavior || undefined,
+        // Map actionCommitments to improvementCommitments/actionSteps format
+        actionSteps: correctiveDiscussionData?.actionCommitments && correctiveDiscussionData.actionCommitments.length > 0
+          ? correctiveDiscussionData.actionCommitments.map(c => ({
+              action: c.commitment,
+              timeline: c.timeline
+            }))
+          : undefined,
+        reviewDate: correctiveDiscussionData?.reviewDate || undefined,
+        interventionDetails: correctiveDiscussionData?.interventionDetails || undefined,
+        resourcesProvided: correctiveDiscussionData?.resourcesProvided && correctiveDiscussionData.resourcesProvided.length > 0
+          ? correctiveDiscussionData.resourcesProvided
+          : undefined,
+        // Include LRA recommendation data for previous warnings section
+        disciplineRecommendation: lraRecommendation
+      };
+
+      // Transform data for PDF generation - pass all 3 required arguments
+      const pdfData = await transformWarningDataForPDF(
+        warningData,
+        selectedEmployee,
+        organization
+      );
+
+      // 🎨 Extract pdfSettings from transformed data for template customization
+      const templateSettings = pdfData.pdfSettings || organization?.pdfSettings;
+
+      // Generate the PDF with template settings
+      // Pass undefined for version (use default), and templateSettings for customization
+      const pdfBlob = await PDFGenerationService.generateWarningPDF(
+        pdfData,
+        undefined, // Use default version
+        templateSettings // Pass organization's template settings
+      );
+
+      // Create URL for preview
+      const url = URL.createObjectURL(pdfBlob);
+      setPdfUrl(url);
+    } catch (error) {
+      console.error('Failed to generate PDF preview:', error);
+      setPdfError(error instanceof Error ? error.message : 'Failed to generate PDF preview');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  }, [organization, selectedEmployee, selectedCategory, formData, overrideLevel, lraRecommendation, currentManagerName, isGeneratingPdf, correctiveDiscussionData]);
+
+  // Cleanup PDF URL on unmount
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [pdfUrl]);
+
   // Handle signature completion from DigitalSignaturePad
   const handleManagerSignature = useCallback((signature: string | null) => {
     setSignatures(prev => ({ ...prev, manager: signature }));
-  }, []);
+
+    // Trigger PDF generation when manager saves signature
+    if (signature) {
+      generatePdfPreview(signature);
+    } else {
+      // Clear PDF preview if signature is cleared
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+        setPdfUrl(null);
+      }
+      setHasScrolledToBottom(false);
+      setHasAcknowledged(false);
+      setScrollProgress(0);
+    }
+  }, [generatePdfPreview, pdfUrl]);
 
   // Helper function to add "WITNESS" watermark to SVG signature
   const addWitnessWatermark = useCallback((signatureDataUrl: string): Promise<string> => {
@@ -579,229 +712,27 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
 
   return (
     <div className="space-y-3">
-      {/* Sanction Summary Badge */}
-      <div className="flex items-center gap-2">
-        <ThemedBadge variant="warning" size="lg" className="font-semibold">
-          ⚠️ {lraRecommendation?.isEscalation ? 'Escalated Action' : 'Recommended Sanction'}
-        </ThemedBadge>
-      </div>
+      {/* Note: Recommendation display moved to Step 1 (CombinedIncidentStepV2) */}
 
-      {/* System Recommendation - Step 1 Style Consistency */}
-      <div className="space-y-2">
-        {/* Clean Header - Natural Language */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Scale className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
-            <h3 className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>
-              {lraRecommendation?.isEscalation ? 'Discipline Level' : 'Severity Assessment'}
-            </h3>
-          </div>
-          <ThemedButton
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowDetails(!showDetails)}
-            className="flex items-center gap-1 text-xs"
-            style={{ color: 'var(--color-text-secondary)' }}
-          >
-            {showDetails ? 'Hide' : 'Details'}
-            {showDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </ThemedButton>
-        </div>
-
-        {/* Recommendation Card */}
-        <ThemedCard padding="sm" hover className="border-l-4" style={{ borderLeftColor: 'var(--color-primary)' }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* Action Badge - CLICKABLE to override */}
-              <button
-                onClick={() => setShowOverrideSelector(!showOverrideSelector)}
-                className="transition-all hover:opacity-80 active:scale-95"
-                disabled={signaturesFinalized}
-              >
-                <ThemedBadge variant="primary" size="sm" className="font-semibold cursor-pointer">
-                  {overrideLevel
-                    ? (overrideLevel === 'counselling' ? 'Counselling' :
-                       overrideLevel === 'verbal' ? 'Verbal' :
-                       overrideLevel === 'first_written' ? 'First Written' :
-                       overrideLevel === 'final_written' ? 'Final Written' : overrideLevel)
-                    : (lraRecommendation?.recommendedLevel === 'Counselling Session' ? 'Counselling' : safeText(lraRecommendation?.recommendedLevel))
-                  }
-                </ThemedBadge>
-              </button>
-
-              {/* Escalation Indicator */}
-              {lraRecommendation?.isEscalation && (
-                <div className="flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" style={{ color: 'var(--color-warning)' }} />
-                  <span className="text-xs font-medium" style={{ color: 'var(--color-warning)' }}>Escalation</span>
-                </div>
-              )}
-
-              {/* History Count - CLICKABLE */}
-              <button
-                onClick={() => setShowOverrideSelector(!showOverrideSelector)}
-                className="flex items-center gap-1 text-xs hover:opacity-80 active:scale-95 transition-all"
-                style={{ color: 'var(--color-text-secondary)' }}
-                disabled={signaturesFinalized}
-              >
-                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--color-primary)' }}></div>
-                <span className="font-medium" style={{ color: 'var(--color-primary)' }}>{lraRecommendation?.categoryWarningCount ?? 0}</span>
-                <span>previous</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Natural Explanation - No Redundancy */}
-          <div className="mt-2 pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
-            <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-              {lraRecommendation?.isEscalation
-                ? `Based on ${lraRecommendation.categoryWarningCount ?? 0} previous incident${(lraRecommendation.categoryWarningCount ?? 0) === 1 ? '' : 's'}, escalating to maintain consistent discipline standards.`
-                : 'No prior incidents in this category. Starting with a supportive, corrective approach.'
+      {/* Show current warning level for context */}
+      {lraRecommendation && (
+        <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          <Scale className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+          <span>
+            Warning Level: <strong style={{ color: 'var(--color-text)' }}>
+              {overrideLevel
+                ? (overrideLevel === 'counselling' ? 'Counselling Session' :
+                   overrideLevel === 'verbal' ? 'Verbal Warning' :
+                   overrideLevel === 'first_written' ? 'Written Warning' :
+                   overrideLevel === 'final_written' ? 'Final Written Warning' : overrideLevel)
+                : lraRecommendation?.recommendedLevel
               }
-            </p>
-          </div>
-        </ThemedCard>
-      </div>
-
-
-      {/* Expandable Details - Step 1 Style */}
-      {showDetails && (
-        <ThemedCard padding="sm" className="border" style={{ backgroundColor: 'var(--color-alert-info-bg)', borderColor: 'var(--color-alert-info-border)' }}>
-          <div className="space-y-3">
-            {/* Analysis Details */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Shield className="w-3 h-3" style={{ color: 'var(--color-info)' }} />
-                <h4 className="font-medium text-xs" style={{ color: 'var(--color-alert-info-text)' }}>Analysis Summary</h4>
-              </div>
-              <p className="text-xs leading-relaxed" style={{ color: 'var(--color-alert-info-text)' }}>
-                {safeText(lraRecommendation?.explanation || lraRecommendation?.reason, 'Progressive discipline assessment completed based on employee warning history and incident severity.')}
-              </p>
-            </div>
-
-            {/* Legal Requirements */}
-            {lraRecommendation?.legalRequirements && lraRecommendation.legalRequirements.length > 0 && (
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Scale className="w-3 h-3" style={{ color: 'var(--color-info)' }} />
-                  <h4 className="font-medium text-xs" style={{ color: 'var(--color-alert-info-text)' }}>Legal Compliance</h4>
-                </div>
-                <div className="space-y-1">
-                  {lraRecommendation.legalRequirements.slice(0, 2).map((requirement, index) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full mt-1.5" style={{ backgroundColor: 'var(--color-info)' }}></div>
-                      <span className="text-xs leading-relaxed" style={{ color: 'var(--color-alert-info-text)' }}>{requirement}</span>
-                    </div>
-                  ))}
-                  {lraRecommendation.legalRequirements.length > 2 && (
-                    <p className="text-xs ml-3.5" style={{ color: 'var(--color-info)' }}>
-                      + {lraRecommendation.legalRequirements.length - 2} more requirements
-                    </p>
-                  )}
-                </div>
-              </div>
+            </strong>
+            {overrideLevel && overrideLevel !== lraRecommendation?.suggestedLevel && (
+              <span className="ml-2 text-xs" style={{ color: 'var(--color-warning)' }}>(Override)</span>
             )}
-
-            {/* Warning History Context - Category Specific - INTERACTIVE */}
-            <div className="rounded-lg p-2 border" style={{ backgroundColor: 'var(--color-card-background)', borderColor: 'var(--color-card-border)' }}>
-              <div className="flex items-center gap-2 mb-1">
-                <Clock className="w-3 h-3" style={{ color: 'var(--color-text-secondary)' }} />
-                <h4 className="font-medium text-xs" style={{ color: 'var(--color-text)' }}>Warning History (This Category)</h4>
-              </div>
-              <div className="text-xs mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-                Employee has <strong>{lraRecommendation?.categoryWarningCount ?? 0}</strong> active warning(s) in this category.
-              </div>
-
-              {/* Interactive Warning List */}
-              {lraRecommendation?.activeWarnings && lraRecommendation.activeWarnings.length > 0 && (
-                <div className="space-y-1 mt-2">
-                  {lraRecommendation.activeWarnings.map((warning: any, index: number) => (
-                    <WarningHistoryItem
-                      key={warning.id || index}
-                      warning={warning}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </ThemedCard>
-      )}
-
-      {/* Override Warning Level - Shows only when clicked */}
-      {showOverrideSelector && (
-        <ThemedCard padding="md" className="border-2" style={{ borderColor: 'var(--color-warning-light)', backgroundColor: 'var(--color-alert-warning-bg)' }}>
-          <div className="space-y-3">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-start gap-2 flex-1">
-                <Info className="w-4 h-4 mt-0.5" style={{ color: 'var(--color-warning)' }} />
-                <div className="flex-1">
-                  <h3 className="font-bold text-sm mb-1" style={{ color: 'var(--color-text)' }}>
-                    ⚖️ Override Recommendation
-                  </h3>
-                  <p className="text-xs leading-relaxed mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-                    The system recommends <strong style={{ color: 'var(--color-text)' }}>{safeText(lraRecommendation?.recommendedLevel)}</strong>.
-                    You may override this to escalate faster or re-issue the same level if circumstances warrant it.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowOverrideSelector(false)}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
-                disabled={signaturesFinalized}
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium mb-2" style={{ color: 'var(--color-text)' }}>
-                Select Warning Level:
-              </label>
-              <select
-                value={overrideLevel || lraRecommendation?.suggestedLevel || ''}
-                onChange={(e) => {
-                  const newLevel = e.target.value === (lraRecommendation?.suggestedLevel || '') ? null : e.target.value;
-                  setOverrideLevel(newLevel);
-                }}
-                className="w-full px-3 py-2 text-sm rounded-lg border-2 transition-colors"
-                style={{
-                  borderColor: overrideLevel ? 'var(--color-warning)' : 'var(--color-border)',
-                  backgroundColor: 'var(--color-background)',
-                  color: 'var(--color-text)'
-                }}
-                disabled={signaturesFinalized}
-              >
-                <option value="">-- Use System Recommendation --</option>
-                {lraRecommendation?.escalationPath?.map((level: string) => {
-                  const labels: Record<string, string> = {
-                    'counselling': 'Counselling Session',
-                    'verbal': 'Verbal Warning',
-                    'first_written': 'Written Warning',
-                    'final_written': 'Final Written Warning'
-                  };
-                  return (
-                    <option key={level} value={level}>
-                      {labels[level] || level}
-                      {level === lraRecommendation.suggestedLevel ? ' (Recommended)' : ''}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            {overrideLevel && (
-              <ThemedAlert variant="warning" className="text-xs">
-                <strong>Override Active:</strong> This warning will be issued as <strong>{
-                  overrideLevel === 'counselling' ? 'Counselling Session' :
-                  overrideLevel === 'verbal' ? 'Verbal Warning' :
-                  overrideLevel === 'first_written' ? 'Written Warning' :
-                  overrideLevel === 'final_written' ? 'Final Written Warning' : overrideLevel
-                }</strong> instead of the recommended level. Future warnings will consider this custom escalation path.
-              </ThemedAlert>
-            )}
-          </div>
-        </ThemedCard>
+          </span>
+        </div>
       )}
 
       {/* Employee Warning Script Section */}
@@ -886,10 +817,214 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
               />
             </div>
 
+            {/* PDF Preview & Employee Acknowledgment Section */}
+            {signatures.manager && !signaturesFinalized && (
+              <div className="rounded-lg p-3 border-2" style={{
+                backgroundColor: 'var(--color-alert-info-bg)',
+                borderColor: hasAcknowledged ? 'var(--color-success)' : 'var(--color-primary)'
+              }}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+                    <span className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                      📄 Employee Document Review
+                    </span>
+                  </div>
+                  {hasAcknowledged && (
+                    <div className="flex items-center gap-1">
+                      <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
+                      <span className="text-xs font-medium" style={{ color: 'var(--color-success)' }}>Reviewed</span>
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-xs mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+                  The employee must review the warning document before signing. This ensures they understand the contents.
+                </p>
+
+                {/* PDF Loading State */}
+                {isGeneratingPdf && (
+                  <div className="flex items-center justify-center gap-3 py-8 rounded-lg border" style={{
+                    backgroundColor: 'var(--color-card-background)',
+                    borderColor: 'var(--color-border-light)'
+                  }}>
+                    <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--color-primary)' }} />
+                    <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                      Generating warning document...
+                    </span>
+                  </div>
+                )}
+
+                {/* PDF Error State */}
+                {pdfError && (
+                  <div className="p-3 rounded-lg border mb-3" style={{
+                    backgroundColor: 'var(--color-alert-error-bg)',
+                    borderColor: 'var(--color-error)'
+                  }}>
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 mt-0.5" style={{ color: 'var(--color-error)' }} />
+                      <div className="flex-1">
+                        <p className="text-xs font-medium" style={{ color: 'var(--color-alert-error-text)' }}>
+                          Failed to generate preview
+                        </p>
+                        <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                          {pdfError}
+                        </p>
+                        <button
+                          onClick={() => signatures.manager && generatePdfPreview(signatures.manager)}
+                          className="flex items-center gap-1 mt-2 text-xs font-medium hover:opacity-80"
+                          style={{ color: 'var(--color-primary)' }}
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          Retry
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* PDF Preview */}
+                {pdfUrl && !isGeneratingPdf && (
+                  <>
+                    {/* PDF Viewer Container */}
+                    <div
+                      ref={pdfContainerRef}
+                      className="relative rounded-lg border overflow-hidden mb-3"
+                      style={{
+                        backgroundColor: 'white',
+                        borderColor: 'var(--color-border)',
+                        height: '280px'
+                      }}
+                    >
+                      <iframe
+                        src={`${pdfUrl}#toolbar=0&navpanes=0`}
+                        className="w-full h-full"
+                        title="Warning Document Preview"
+                        onLoad={() => {
+                          // Mark as scrolled when PDF loads (simple approach)
+                          setTimeout(() => setHasScrolledToBottom(true), 2000);
+                        }}
+                      />
+
+                      {/* Floating Controls */}
+                      <div className="absolute bottom-2 right-2 flex gap-1">
+                        <button
+                          onClick={() => setShowFullScreenPdf(true)}
+                          className="p-2 rounded-lg shadow-lg hover:opacity-90 active:scale-95 transition-all"
+                          style={{ backgroundColor: 'white' }}
+                          title="View Full Screen"
+                        >
+                          <Maximize2 className="w-4 h-4" style={{ color: 'var(--color-text)' }} />
+                        </button>
+                        <a
+                          href={pdfUrl}
+                          download="warning-document.pdf"
+                          className="p-2 rounded-lg shadow-lg hover:opacity-90 active:scale-95 transition-all"
+                          style={{ backgroundColor: 'white' }}
+                          title="Download PDF"
+                        >
+                          <Download className="w-4 h-4" style={{ color: 'var(--color-text)' }} />
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* Scroll Progress Indicator */}
+                    {!hasScrolledToBottom && (
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span style={{ color: 'var(--color-text-secondary)' }}>Review progress</span>
+                          <span style={{ color: 'var(--color-primary)' }}>Please review document</span>
+                        </div>
+                        <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--color-border)' }}>
+                          <div
+                            className="h-full transition-all duration-300"
+                            style={{
+                              backgroundColor: 'var(--color-primary)',
+                              width: hasScrolledToBottom ? '100%' : '30%'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Acknowledgment Checkbox */}
+                    <div
+                      className="p-3 rounded-lg border transition-all"
+                      style={{
+                        backgroundColor: hasAcknowledged ? 'var(--color-alert-success-bg)' : 'var(--color-card-background)',
+                        borderColor: hasAcknowledged ? 'var(--color-success)' : 'var(--color-border-light)',
+                        opacity: hasScrolledToBottom ? 1 : 0.6
+                      }}
+                    >
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={hasAcknowledged}
+                          onChange={(e) => setHasAcknowledged(e.target.checked)}
+                          disabled={!hasScrolledToBottom}
+                          className="w-5 h-5 mt-0.5 rounded flex-shrink-0"
+                          style={{ accentColor: 'var(--color-success)' }}
+                        />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                            I confirm I have reviewed this warning document
+                          </span>
+                          <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                            I understand the nature of the misconduct and my right to representation under the Labour Relations Act.
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Proceed to Signature Button */}
+                    {hasAcknowledged && (
+                      <div className="mt-3 p-2 rounded-lg flex items-center justify-center gap-2" style={{
+                        backgroundColor: 'var(--color-alert-success-bg)'
+                      }}>
+                        <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
+                        <span className="text-sm font-medium" style={{ color: 'var(--color-alert-success-text)' }}>
+                          Employee may now sign below
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Full Screen PDF Modal */}
+            {showFullScreenPdf && pdfUrl && (
+              <>
+                <div
+                  className="fixed inset-0 bg-black/80 z-[9500]"
+                  onClick={() => setShowFullScreenPdf(false)}
+                />
+                <div className="fixed inset-4 z-[9600] flex flex-col rounded-lg overflow-hidden" style={{ backgroundColor: 'white' }}>
+                  <div className="flex items-center justify-between p-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
+                      <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Warning Document</span>
+                    </div>
+                    <button
+                      onClick={() => setShowFullScreenPdf(false)}
+                      className="p-2 rounded-lg hover:bg-gray-100 active:scale-95 transition-all"
+                    >
+                      <X className="w-5 h-5" style={{ color: 'var(--color-text)' }} />
+                    </button>
+                  </div>
+                  <iframe
+                    src={pdfUrl}
+                    className="flex-1 w-full"
+                    title="Warning Document Full View"
+                  />
+                </div>
+              </>
+            )}
+
             {/* Employee Row */}
             <div className="rounded-lg p-2" style={{
               backgroundColor: 'var(--color-alert-success-bg)',
-              opacity: !signatures.manager ? 0.6 : 1
+              opacity: (!signatures.manager || (signatures.manager && !hasAcknowledged && !signaturesFinalized)) ? 0.6 : 1
             }}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
@@ -904,8 +1039,8 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
                 {signatures.employee && <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />}
               </div>
 
-              {/* Manager signature required notice */}
-              {!signatures.manager && !signaturesFinalized && (
+              {/* Signature prerequisites notice */}
+              {!signaturesFinalized && (!signatures.manager || !hasAcknowledged) && (
                 <div className="mb-3 p-2 rounded border" style={{
                   backgroundColor: 'var(--color-alert-warning-bg)',
                   borderColor: 'var(--color-warning)'
@@ -913,7 +1048,10 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4" style={{ color: 'var(--color-warning)' }} />
                     <span className="text-xs font-medium" style={{ color: 'var(--color-alert-warning-text)' }}>
-                      Manager must save their signature first
+                      {!signatures.manager
+                        ? 'Manager must save their signature first'
+                        : 'Employee must review and acknowledge the document above'
+                      }
                     </span>
                   </div>
                 </div>
@@ -965,7 +1103,7 @@ export const LegalReviewSignaturesStepV2: React.FC<LegalReviewSignaturesStepV2Pr
 
               <DigitalSignaturePad
                 onSignatureComplete={handleEmployeeSignature}
-                disabled={signaturesFinalized || !signatures.manager}
+                disabled={signaturesFinalized || !signatures.manager || !hasAcknowledged}
                 label={signatureType === 'employee' ? 'Employee Signature' : 'Witness Signature'}
                 placeholder={signatureType === 'employee' ? 'Employee signature' : 'Witness signature'}
                 initialSignature={signatures.employee}

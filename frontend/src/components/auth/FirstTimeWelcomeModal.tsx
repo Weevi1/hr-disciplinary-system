@@ -55,11 +55,6 @@ interface RoleContent {
 }
 
 const getRoleContent = (role: UserRoleId, hodPermissions?: HODPermissions): RoleContent => {
-  // Debug logging to see what permissions are being passed
-  console.log('🔐 Welcome Modal - Role:', role);
-  console.log('🔐 Welcome Modal - hodPermissions:', hodPermissions);
-  console.log('🔐 Welcome Modal - canReportAbsences:', hodPermissions?.canReportAbsences);
-
   switch (role) {
     case 'super-user':
       return {

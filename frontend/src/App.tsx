@@ -12,7 +12,7 @@ import { ToastProvider } from './components/common/ToastContainer';
 import { ThemeBrandingProvider } from './contexts/ThemeBrandingContext';
 
 // 🚀 LAZY-LOADED COMPONENTS FOR BUNDLE OPTIMIZATION
-const EnhancedWarningWizard = React.lazy(() => import('./components/warnings/enhanced/EnhancedWarningWizard').then(m => ({ default: m.EnhancedWarningWizard })));
+const EnhancedWarningWizard = React.lazy(() => import('./components/warnings/enhanced/UnifiedWarningWizard').then(m => ({ default: m.UnifiedWarningWizard })));
 const EmployeeManagement = React.lazy(() => import('./components/employees/EmployeeManagement').then(m => ({ default: m.EmployeeManagement })));
 const UserManagement = React.lazy(() => import('./components/users/UserManagement').then(m => ({ default: m.UserManagement })));
 

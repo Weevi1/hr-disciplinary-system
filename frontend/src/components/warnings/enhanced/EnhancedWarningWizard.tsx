@@ -238,6 +238,10 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
     timestamp: null
   });
 
+  // 🚀 Track preloading state to avoid duplicate fetches
+  const [isPreloadingWarnings, setIsPreloadingWarnings] = useState(false);
+  const preloadPromiseRef = useRef<Promise<any[]> | null>(null);
+
   // 🆕 Override level from Step 2 (user can override system recommendation)
   const [overrideLevel, setOverrideLevel] = useState<string | null>(null);
 
@@ -245,7 +249,6 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   const [correctiveDiscussionData, setCorrectiveDiscussionData] = useState<{
     employeeStatement: string;
     expectedBehavior: string;
-    factsAndReasoning: string;
     actionCommitments: Array<{ id: string; commitment: string; timeline: string }>;
     reviewDate: string;
     interventionDetails?: string;
@@ -253,12 +256,14 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
   }>({
     employeeStatement: '',
     expectedBehavior: '',
-    factsAndReasoning: '',
     actionCommitments: [],
     reviewDate: '',
     interventionDetails: '',
     resourcesProvided: []
   });
+
+  // 🆕 Track if user has completed all phases in CorrectiveDiscussionStep
+  const [phasesComplete, setPhasesComplete] = useState(false);
 
   // 🔄 Sync override level to formData whenever it changes
   useEffect(() => {
@@ -357,17 +362,20 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
     // 1. Employee is selected
     // 2. Organization ID exists
     // 3. Not already cached for this employee
-    // 4. Not currently on step 2+ (already generated)
+    // 4. Not currently preloading
+    // 5. Not currently on step 2+ (already generated)
     if (
       employeeId &&
       organizationId &&
       preloadedWarnings.employeeId !== employeeId &&
+      !isPreloadingWarnings &&
       currentStep === WizardStep.INCIDENT_DETAILS
     ) {
       Logger.debug('🚀 [ANTICIPATORY] Preloading active warnings for employee:', employeeId);
+      setIsPreloadingWarnings(true);
 
-      // Fetch warnings in background (non-blocking)
-      API.warnings.getActiveWarnings(employeeId, organizationId)
+      // Fetch warnings in background - store promise for awaiting
+      const preloadPromise = API.warnings.getActiveWarnings(employeeId, organizationId)
         .then(warnings => {
           Logger.success(`⚡ [ANTICIPATORY] Preloaded ${warnings.length} active warnings (ready for instant LRA generation)`);
           setPreloadedWarnings({
@@ -375,13 +383,22 @@ const EnhancedWarningWizardComponent: React.FC<EnhancedWarningWizardProps> = ({
             warnings,
             timestamp: Date.now()
           });
+          setIsPreloadingWarnings(false);
+          preloadPromiseRef.current = null;
+          return warnings;
         })
         .catch(error => {
           Logger.warn('⚠️ [ANTICIPATORY] Failed to preload warnings (will fetch on-demand):', error);
+          setIsPreloadingWarnings(false);
+          preloadPromiseRef.current = null;
           // Don't block user - just won't have cache benefit
+          return [];
         });
+
+      // Store promise so LRA generation can await it
+      preloadPromiseRef.current = preloadPromise;
     }
-  }, [formData.employeeId, organizationId, preloadedWarnings.employeeId, currentStep]);
+  }, [formData.employeeId, organizationId, preloadedWarnings.employeeId, currentStep, isPreloadingWarnings]);
 
   // ============================================
   // 🔧 CRITICAL FIX: DEFINE NAVIGATION HANDLERS EARLY
@@ -507,12 +524,13 @@ useEffect(() => {
   // ============================================
   
   const generateLRARecommendation = useCallback(async (employeeId: string, categoryId: string) => {
-    if (!employeeId || !categoryId || !organizationId || !formData.incidentDescription) {
+    // Only employee, category, and organization are required for LRA recommendation
+    // Incident description is optional - recommendation is based on warning history
+    if (!employeeId || !categoryId || !organizationId) {
       const missingData = {
         employeeId: !!employeeId,
         categoryId: !!categoryId,
-        organizationId: !!organizationId,
-        incidentDescription: !!formData.incidentDescription
+        organizationId: !!organizationId
       };
 
       logging.trackError(new Error('Cannot generate LRA - missing data'), missingData);
@@ -522,14 +540,34 @@ useEffect(() => {
     setIsAnalyzing(true);
     logging.trackAPI('generateLRARecommendation', { employeeId, categoryId });
 
-    // 🚨 STEP 1: Fetch active warnings (separate try/catch to handle errors properly)
-    let activeWarnings;
+    // 🚀 OPTIMIZATION: Get warnings from preload cache or wait for preload in progress
+    let activeWarnings: any[];
     try {
-      Logger.debug('🔍 Fetching active warnings for final warning check...');
-      activeWarnings = await API.warnings.getActiveWarnings(employeeId, organizationId);
-      Logger.debug(`✅ Successfully fetched ${activeWarnings.length} active warnings`);
+      // Check if we have preloaded warnings for this employee
+      if (preloadedWarnings.employeeId === employeeId && preloadedWarnings.warnings) {
+        // ⚡ FASTEST: Use already preloaded warnings
+        activeWarnings = preloadedWarnings.warnings;
+        Logger.success(`⚡ [INSTANT] Using ${activeWarnings.length} preloaded warnings - zero wait time!`);
+      } else if (preloadPromiseRef.current && isPreloadingWarnings) {
+        // ⚡ FAST: Wait for preload that's already in progress
+        Logger.debug('🔄 [ANTICIPATORY] Waiting for preload to complete...');
+        activeWarnings = await preloadPromiseRef.current;
+        Logger.success(`⚡ [OPTIMIZED] Preload completed with ${activeWarnings.length} warnings`);
+      } else {
+        // 🔄 FALLBACK: No preload available, fetch directly
+        Logger.debug('🔍 Fetching active warnings (no preload available)...');
+        activeWarnings = await API.warnings.getActiveWarnings(employeeId, organizationId);
+        Logger.debug(`✅ Successfully fetched ${activeWarnings.length} active warnings`);
+
+        // Cache for future use
+        setPreloadedWarnings({
+          employeeId,
+          warnings: activeWarnings,
+          timestamp: Date.now()
+        });
+      }
     } catch (fetchError) {
-      Logger.error('❌ Failed to fetch active warnings:', fetchError);
+      Logger.error('❌ Failed to get active warnings:', fetchError);
       logging.trackError(fetchError as Error, {
         employeeId,
         categoryId,
@@ -584,22 +622,16 @@ useEffect(() => {
     // 🚨 STEP 3: Generate LRA recommendation (only if no final warnings)
     Logger.debug('✅ No final warnings found - proceeding with LRA generation');
     try {
-      // 🚀 ANTICIPATORY LOADING: Check if we have preloaded warnings for this employee
-      const cachedWarnings = preloadedWarnings.employeeId === employeeId
-        ? preloadedWarnings.warnings
-        : null;
+      // 🚀 PERFORMANCE: Pass selectedCategory AND already-fetched warnings to skip ALL queries
+      // We already have activeWarnings from the optimized fetch above - reuse them!
+      Logger.success(`⚡ [OPTIMIZED] Passing ${activeWarnings.length} warnings directly to LRA - zero additional queries!`);
 
-      if (cachedWarnings) {
-        Logger.success(`⚡ [ANTICIPATORY] Using ${cachedWarnings.length} preloaded warnings - near-instant LRA generation!`);
-      }
-
-      // 🚀 PERFORMANCE: Pass selectedCategory AND preloaded warnings to skip queries
       const recommendation = await API.warnings.getEscalationRecommendation(
         employeeId,
         categoryId,
         organization?.id || 'default',
         selectedCategory, // ⚡ Category already loaded in wizard context
-        cachedWarnings || undefined // ⚡⚡ Preloaded warnings if available
+        activeWarnings // ⚡⚡ Already fetched warnings - instant response!
       );
 
       setLraRecommendation(recommendation);
@@ -653,7 +685,81 @@ useEffect(() => {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [organizationId, formData.incidentDescription, selectedCategory, logging, employees, categories]);
+  }, [organizationId, formData.incidentDescription, selectedCategory, logging, employees, categories, preloadedWarnings, isPreloadingWarnings, organization]);
+
+  // ============================================
+  // 🚀 REAL-TIME LRA ANALYSIS: Pre-compute when data available
+  // ============================================
+
+  // Track if LRA generation has been attempted for current form data
+  const lraGenerationAttemptedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Build a key to track the current employee + category combination
+    const formKey = `${formData.employeeId}-${formData.categoryId}`;
+
+    // Trigger real-time LRA analysis when:
+    // 1. On Step 0 (Incident Details)
+    // 2. Employee and category are selected
+    // 3. No existing LRA recommendation
+    // 4. Not currently analyzing
+    // 5. No final warning block
+    // 6. Haven't already attempted for this exact combination
+    if (
+      currentStep === WizardStep.INCIDENT_DETAILS &&
+      formData.employeeId &&
+      formData.categoryId &&
+      !lraRecommendation &&
+      !isAnalyzing &&
+      !hasFinalWarningBlock &&
+      lraGenerationAttemptedRef.current !== formKey
+    ) {
+      // Mark this combination as attempted to prevent duplicate calls
+      lraGenerationAttemptedRef.current = formKey;
+
+      Logger.debug('🚀 [REAL-TIME LRA] Auto-triggering analysis - employee + category selected');
+      Logger.debug('🚀 [REAL-TIME LRA] Data:', {
+        employeeId: formData.employeeId,
+        categoryId: formData.categoryId
+      });
+
+      // Trigger LRA generation in background
+      generateLRARecommendation(formData.employeeId, formData.categoryId);
+    }
+
+    // Reset attempt tracking when employee or category is cleared
+    if (!formData.employeeId || !formData.categoryId) {
+      if (lraGenerationAttemptedRef.current) {
+        lraGenerationAttemptedRef.current = null;
+      }
+    }
+  }, [
+    currentStep,
+    formData.employeeId,
+    formData.categoryId,
+    lraRecommendation,
+    isAnalyzing,
+    hasFinalWarningBlock,
+    generateLRARecommendation
+  ]);
+
+  // Reset LRA when employee or category changes (need fresh analysis)
+  useEffect(() => {
+    // Reset LRA recommendation when employee or category changes
+    // This ensures we get a fresh analysis for the new combination
+    if (lraRecommendation) {
+      const currentKey = `${formData.employeeId}-${formData.categoryId}`;
+      const lraKey = `${lraRecommendation.employeeId || formData.employeeId}-${lraRecommendation.categoryId}`;
+
+      if (currentKey !== lraKey) {
+        Logger.debug('🔄 [REAL-TIME LRA] Resetting recommendation - employee/category changed');
+        setLraRecommendation(null);
+        lraGenerationAttemptedRef.current = null;
+        setHasFinalWarningBlock(false);
+        setFinalWarningBlockData(null);
+      }
+    }
+  }, [formData.employeeId, formData.categoryId, lraRecommendation]);
 
   // ============================================
   // 🔥 FORM DATA UPDATE WITH OPTIMIZED LOGGING
@@ -956,6 +1062,17 @@ useEffect(() => {
         }
 
         // Create warning data (avoiding undefined values)
+        // 🔥 Sanitize signatures to remove undefined values (Firestore doesn't accept undefined)
+        const sanitizedSignatures = {
+          manager: newSignatures.manager || null,
+          employee: newSignatures.employee || null,
+          witness: newSignatures.witness || null,
+          timestamp: newSignatures.timestamp || null,
+          managerName: newSignatures.managerName || null,
+          employeeName: newSignatures.employeeName || null,
+          witnessName: newSignatures.witnessName || null,
+        };
+
         const warningData: any = {
           // Core IDs
           employeeId: selectedEmployee.id,
@@ -989,8 +1106,8 @@ useEffect(() => {
           issueDate: formData.issueDate,
           validityPeriod: formData.validityPeriod,
 
-          // Signature data
-          signatures: newSignatures,
+          // Signature data (sanitized)
+          signatures: sanitizedSignatures,
 
           // 🆕 Corrective Discussion Data (Step 2.5)
           // Section B - Employee's Version/Statement
@@ -1228,14 +1345,17 @@ useEffect(() => {
         logging.trackSuccess('AUTO_ADVANCED_TO_STEP3', { fromStep: currentStep });
 
       } catch (error) {
+        // 🔥 CRITICAL: Log error with full details
+        console.error('❌ ERROR creating warning:', error);
         Logger.error('❌ Error creating warning:', error)
         logging.trackError(error as Error, { context: 'WARNING_CREATION_ON_SIGNATURE_COMPLETE' });
 
-        // ❌ FAILURE: Clear saving state but don't auto-advance
+        // ❌ FAILURE: Clear saving state and allow retry
         setIsSavingWarning(false);
+        setSignaturesFinalized(false); // Allow user to retry
 
-        // Mark step as complete anyway to allow manual progression
-        setCompletedSteps(prev => new Set([...prev, currentStep]));
+        // Show error alert to user
+        alert(`Warning creation failed: ${error instanceof Error ? error.message : 'Unknown error'}. Please try signing again.`);
       }
     }
   }, [currentStep, logging, audioRecording, selectedEmployee, selectedCategory, organization, formData, lraRecommendation, API, user, currentManagerName, overrideLevel, correctiveDiscussionData]);
@@ -1322,14 +1442,15 @@ useEffect(() => {
           return false;
         }
 
-        return true;
+        // Must complete all phases before enabling Next button
+        return phasesComplete;
       }
       case WizardStep.DELIVERY_COMPLETION:
         return true;
       default:
         return false;
     }
-  }, [currentStep, formData, lraRecommendation, isAnalyzing, signatures, signaturesFinalized, correctiveDiscussionData, overrideLevel]);
+  }, [currentStep, formData, lraRecommendation, isAnalyzing, signatures, signaturesFinalized, correctiveDiscussionData, overrideLevel, phasesComplete]);
 
   // ============================================
   // 🔥 FIXED: RENDER STEP CONTENT WITHOUT LOGGING LOOPS
@@ -1417,6 +1538,8 @@ useEffect(() => {
             isAnalyzing={isAnalyzing}
             analysisStep={analysisStep}
             analysisSteps={analysisSteps}
+            overrideLevel={overrideLevel}
+            setOverrideLevel={setOverrideLevel}
           />
         );
 
@@ -1426,6 +1549,7 @@ useEffect(() => {
             warningLevel={overrideLevel || lraRecommendation?.suggestedLevel || 'counselling'}
             currentData={correctiveDiscussionData}
             onDataChange={setCorrectiveDiscussionData}
+            onPhasesComplete={setPhasesComplete}
             issueDate={formData.issueDate}
             validityPeriod={formData.validityPeriod}
             onIssueDateChange={(date) => updateFormData({ issueDate: date })}
@@ -1448,6 +1572,7 @@ useEffect(() => {
             warningId={finalWarningId}
             audioUploadStatus={audioUploadStatus}
             onLevelOverride={setOverrideLevel}
+            correctiveDiscussionData={correctiveDiscussionData}
           />
         );
 
@@ -1466,6 +1591,7 @@ useEffect(() => {
             onWarningCreated={setFinalWarningId}
             warningId={finalWarningId}
             onFinalizeReady={setFinalizeData}
+            correctiveDiscussionData={correctiveDiscussionData}
           />
         );
 
@@ -1508,10 +1634,11 @@ useEffect(() => {
       return { show: false, disabled: true, loading: false, text: '' };
     }
 
-    // 💾 Step 2 (Signatures): HIDE button completely when warning is being saved
-    if (currentStep === WizardStep.LEGAL_REVIEW_SIGNATURES && isSavingWarning) {
+    // 💾 Step 2 (Signatures): HIDE button completely when warning is being saved OR finalized
+    // signaturesFinalized check prevents button flash during auto-advance
+    if (currentStep === WizardStep.LEGAL_REVIEW_SIGNATURES && (isSavingWarning || signaturesFinalized)) {
       return {
-        show: false, // Hide button entirely during save
+        show: false, // Hide button entirely during save/auto-advance
         disabled: true,
         loading: false,
         text: ''

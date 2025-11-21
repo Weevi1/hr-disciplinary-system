@@ -59,7 +59,7 @@ firebase deploy
 **IMPORTANT**: This file is size-limited to maintain context efficiency.
 
 - **Size Limit**: 500 lines maximum (target: 400-470 lines)
-- **Current Size**: 415 lines ✅
+- **Current Size**: 427 lines ✅
 - **Policy**: See `DOCUMENTATION_POLICY.md` for complete maintenance rules
 - **Before Adding Sessions**: Check size with `wc -l CLAUDE.md`
 - **If > 450 lines**: Move previous session to RECENT_UPDATES.md first
@@ -378,18 +378,31 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 - **Console Logging Fixes**: Fixed mysterious numeric logs with descriptive messages
 - **Accessibility Improvements**: Added autocomplete attributes to login form
 
-### Most Recent (Session 48 - 2025-11-18/20)
-- **🎉 SVG SIGNATURE SYSTEM**: Complete rewrite from PNG to SVG - 90%+ storage savings with infinite resolution
-- **🎉 WITNESS SIGNATURE SUPPORT**: Dedicated data model with PDF rendering
-- **🔧 SESSION CONTINUATION FIXES**:
-  - ✅ Fixed EmployeeArchiveModal missing imports (usePreventBodyScroll, useModalDialog, Z_INDEX)
-  - ✅ Fixed FirstTimeWelcomeModal only showing 3 features - removed `.slice(0, 3)` limitation
-  - ✅ Updated "Record Counselling" → "Recognition" with Sparkles icon (feature replacement)
-  - ✅ Deep codebase analysis confirmed no other missing imports (283 files checked)
+### Most Recent (Session 48 - 2025-11-21)
+- **🎉 UNIFIED WARNING WIZARD**: Complete 10-phase wizard replacing old 4-step EnhancedWarningWizard
+  - ✅ Phase 1: Employee Selection
+  - ✅ Phase 2: Category & LRA Recommendation (with clickable warning history)
+  - ✅ Phase 3: Incident Details (auto-fill SA timezone time)
+  - ✅ Phase 4: Employee Response
+  - ✅ Phase 5: Expected Standards
+  - ✅ Phase 6: Improvement Plan
+  - ✅ Phase 7: Review Documentation
+  - ✅ Phase 8: Script & PDF Review (with acknowledgment)
+  - ✅ Phase 9: Signatures (manager → PDF preview → employee views → employee signs)
+  - ✅ Phase 10: Delivery (Email/WhatsApp/Print/QR Code)
+- **Key Features**:
+  - ✅ Compact progress bar (replaced 10-dot indicator)
+  - ✅ SA timezone auto-fill for incident time
+  - ✅ Clickable active warnings with details modal
+  - ✅ PDF preview before employee signature (sees manager signature on doc)
+  - ✅ QR Code delivery with instant PDF generation
+  - ✅ Proper Firestore data structure for API.warnings.create
 - **Files Modified**:
-  - `EmployeeArchiveModal.tsx` - Added missing hook/constant imports
-  - `FirstTimeWelcomeModal.tsx` - Show all features, updated to Recognition
-- **Status**: ✅ Complete - All fixes deployed to production
+  - `UnifiedWarningWizard.tsx` - Complete 10-phase wizard (1600+ lines)
+  - `PhaseProgress.tsx` - Compact progress bar component
+  - `QRCodeDownloadModal.tsx` - QR delivery integration
+- **Build & Deploy**: ✅ Complete
+- **Status**: ✅ Production-ready unified warning wizard
 
 ### Previous Session (Session 47 - 2025-11-10/11)
 - **🎉 SYSTEM-WIDE IMPROVEMENTS FOR INSITU PROJECTS & ALL CLIENTS**: 5 major improvements for legal compliance
@@ -410,6 +423,6 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 ---
 
-*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components with **consistent inline tab UX across all dashboards**, **unified DashboardShell component** powering all 3 main dashboards (HR, Executive Management, HOD), **WCAG AA accessibility compliance**, **versioned PDF generation for legal compliance**, **per-organization PDF template customization**, **1000x storage reduction through centralized template version management**, **fully editable PDF text content with zero hardcoded fallbacks**, **SA-optimized employee CSV import with automatic phone number formatting**, **multi-manager support with array-based employee assignments**, **professional compact welcome modals**, **executive-management role** for inclusive senior leadership, **modern autocomplete employee search**, **seamless auto-advance workflow** in warning wizard with proper loading states, **instant QR code delivery** for warnings, **simplified HR meeting booking** without signature requirements, **all manager roles can submit absence reports and counselling sessions**, **SVG signature system with 90%+ storage savings and infinite resolution**, **complete witness signature support with dedicated data model**, and **professional PDF rendering of all 3 signature types (manager, employee, witness)**.*
+*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components with **consistent inline tab UX across all dashboards**, **unified DashboardShell component** powering all 3 main dashboards (HR, Executive Management, HOD), **WCAG AA accessibility compliance**, **versioned PDF generation for legal compliance**, **per-organization PDF template customization**, **1000x storage reduction through centralized template version management**, **fully editable PDF text content with zero hardcoded fallbacks**, **SA-optimized employee CSV import with automatic phone number formatting**, **multi-manager support with array-based employee assignments**, **professional compact welcome modals**, **executive-management role** for inclusive senior leadership, **modern autocomplete employee search**, **SVG signature system with 90%+ storage savings**, **complete witness signature support**, **PDF preview & acknowledgment** ensuring employees see what they sign, **real-time LRA analysis** for instant step transitions, and **10-phase unified warning wizard** with structured corrective discussion workflow.*
 
-*Last Updated: 2025-11-20 - Session 48: SVG Signatures, Witness Support, Welcome Modal Fixes, Import Cleanup*
+*Last Updated: 2025-11-21 - Session 48: UnifiedWarningWizard 10-phase wizard with PDF preview, QR delivery, clickable warning history*
