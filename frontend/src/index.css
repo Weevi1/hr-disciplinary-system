@@ -2,6 +2,7 @@
 @import "./modal-system.css";
 @import "./warning-wizard-desktop.css";
 @import "./main-layout.css";
+@import "./styles/wizard-animations.css";
 
 /* 🔧 COMPLETE OPTIMIZED CSS - Clean & Organized */
 
@@ -36,6 +37,7 @@
   --color-input-border-focus: #3b82f6;
 
   --color-primary: #3b82f6;
+  --color-primary-rgb: 59, 130, 246;
   --color-primary-hover: #2563eb;
   --color-secondary: #6366f1;
   --color-secondary-hover: #4f46e5;

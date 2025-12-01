@@ -21,6 +21,21 @@ firebase emulators:start
 firebase deploy
 ```
 
+### Firebase CLI Authentication
+Firebase CLI uses **service account authentication** (OAuth login deprecated/broken as of Dec 2024).
+
+**Setup** (already configured in `~/.bashrc`):
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="/home/aiguy/projects/hr-disciplinary-system/hr-disciplinary-system-firebase-adminsdk-fbsvc-e1bb9c1772.json"
+```
+
+**Verify it works**:
+```bash
+firebase projects:list
+```
+
+**⚠️ Security**: The service account JSON file is in `.gitignore` - never commit it.
+
 ### Current System Status
 - **✅ Production**: Online at https://file.fifo.systems (custom domain) and https://hr-disciplinary-system.web.app
 - **✅ Development**: Ubuntu environment at http://localhost:3003/ (dev server running)
@@ -108,6 +123,7 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 - **Never push to remote** unless user explicitly asks
 
 ### **✅ ALWAYS DO**
+- **Follow `AWARD_WINNING_UX_DESIGN_LANGUAGE.md`** for all modals, wizards, and interactive features
 - Use existing patterns and design system
 - Check for similar code in components before adding new code
 - Run lint and typecheck commands after significant changes if available
@@ -161,6 +177,7 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 - `REQUIRED_FIRESTORE_INDEXES.md` - Active operational reference
 
 ### Design & UI
+- **`AWARD_WINNING_UX_DESIGN_LANGUAGE.md`** - **⭐ MASTER REFERENCE** - Award-winning UX patterns, accessibility (WCAG AA/AAA), mobile-first, micro-interactions, data safety, visual progress. **ALL new modals/wizards MUST follow this spec.**
 - `V2_DESIGN_PRINCIPLES.md` - Production-ready visual design language
 - `MODAL_DESIGN_STANDARDS.md` - Gold standard modal design patterns and implementation guidelines
 - `MODAL_AUDIT_REPORT.md` - **Modal system audit** - Comprehensive analysis of all 21+ modals (centering, scrolling, body scroll prevention, z-index) with fix recommendations
@@ -280,9 +297,30 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 ## 🔧 Latest Updates
 
-**For complete change history, see `RECENT_UPDATES.md` (Sessions 20-47) and `SESSION_HISTORY.md` (Sessions 5-19)**
+**For complete change history, see `RECENT_UPDATES.md` (Sessions 20-48) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Session 48 - 2025-11-11)
+### Most Recent (Session 50 - 2025-12-01)
+- **🎉 LRA RECOMMENDATION LOADING SPINNER**: Fixed skeleton loader not showing during category analysis
+  - ✅ Root cause: Duplicate loading logic - outer `WizardSkeleton` wrapper was replacing content with invisible CSS-variable-based skeleton
+  - ✅ Fix: Removed outer conditional, added visible spinner with hardcoded colors inside `renderPhaseContent()`
+  - ✅ Spinner shows when `!lraRecommendation && formData.categoryId` - immediate feedback on category selection
+  - ✅ Cleaned up 60 lines of duplicate code from `onCategorySelect` handler
+- **🎉 SIGNATURE PAD FIXES**:
+  - ✅ Fixed canvas not filling container - now uses parent's `getBoundingClientRect()` with `requestAnimationFrame`
+  - ✅ Fixed signature not drawing - stroke styles now set in `startDrawing()` function
+  - ✅ Added timestamp + initials burn-in: SA datetime and "T. Molefe" format embedded in saved signature image
+- **Code Cleanup**:
+  - ✅ Single source of truth for LRA recommendation loading (via useEffect + `generateLRARecommendation`)
+  - ✅ Simplified `onCategorySelect` to just reset state, let useEffect handle API calls
+- **Files Modified**:
+  - `UnifiedWarningWizard.tsx` - Loading spinner fix, signature pad improvements, code cleanup
+- **Status**: ✅ Complete - Professional loading feedback and signature capture
+
+### Previous (Session 49 - 2025-11-28)
+- **🎉 AWARD-WINNING UX IMPLEMENTATION**: Complete UX overhaul for UnifiedWarningWizard
+- See `RECENT_UPDATES.md` for full details on accessibility, mobile-first, micro-interactions
+
+### Previous (Session 48 - 2025-11-11)
 - **🎉 PDF PROFESSIONAL STANDARD IMPROVEMENTS & MULTILINGUAL ALIGNMENT**: Enhanced warning document quality and wizard-PDF synchronization
 - **PDF Formatting Fixes**:
   - ✅ Enhanced `wrapText()` to handle newlines (`\n`) for proper paragraph/bullet structure
@@ -425,4 +463,4 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components with **consistent inline tab UX across all dashboards**, **unified DashboardShell component** powering all 3 main dashboards (HR, Executive Management, HOD), **WCAG AA accessibility compliance**, **versioned PDF generation for legal compliance**, **per-organization PDF template customization**, **1000x storage reduction through centralized template version management**, **fully editable PDF text content with zero hardcoded fallbacks**, **SA-optimized employee CSV import with automatic phone number formatting**, **multi-manager support with array-based employee assignments**, **professional compact welcome modals**, **executive-management role** for inclusive senior leadership, **modern autocomplete employee search**, **SVG signature system with 90%+ storage savings**, **complete witness signature support**, **PDF preview & acknowledgment** ensuring employees see what they sign, **real-time LRA analysis** for instant step transitions, and **10-phase unified warning wizard** with structured corrective discussion workflow.*
 
-*Last Updated: 2025-11-21 - Session 48: UnifiedWarningWizard 10-phase wizard with PDF preview, QR delivery, clickable warning history*
+*Last Updated: 2025-12-01 - Session 50: LRA loading spinner fix, signature pad canvas fix, timestamp+initials burn-in*
