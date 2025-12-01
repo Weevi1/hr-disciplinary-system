@@ -273,24 +273,23 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
   const updateDuration = useCallback(() => {
     if (!startTimeRef.current) return;
 
-    // Check if recording is still active - if not, clear interval
-    if (!state.isRecording) {
-      if (durationIntervalRef.current) {
-        clearInterval(durationIntervalRef.current);
-        durationIntervalRef.current = null;
-      }
-      return;
-    }
-
     const elapsed = (Date.now() - startTimeRef.current) / 1000;
     const elapsedMs = Date.now() - startTimeRef.current;
 
-    // Update state with new duration
+    // Update state with new duration (using functional update to avoid stale state)
     setState(prev => {
-      if (!prev.isRecording) return prev;
+      // Check if recording is still active - if not, don't update
+      if (!prev.isRecording) {
+        // Clear interval if recording stopped
+        if (durationIntervalRef.current) {
+          clearInterval(durationIntervalRef.current);
+          durationIntervalRef.current = null;
+        }
+        return prev;
+      }
       return { ...prev, duration: elapsed };
     });
-    
+
     // Auto-stop at max duration
     if (elapsedMs >= AUDIO_CONFIG.MAX_DURATION_MS) {
       Logger.debug('🔴 Auto-stopping recording: Max duration reached')
@@ -309,13 +308,13 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
       }, 0);
       return;
     }
-    
+
     // Warning at 4 minutes
     if (elapsedMs >= AUDIO_CONFIG.WARNING_THRESHOLD_MS && !warningShownRef.current) {
       Logger.debug('⚠️ Recording will auto-stop in 1 minute')
       warningShownRef.current = true;
     }
-  }, []); // Remove all dependencies to avoid circular reference
+  }, []); // No dependencies needed - uses refs and functional setState
 
   // ============================================
   // CLEANUP FUNCTION - DEFINED FIRST TO AVOID CIRCULAR DEPS
