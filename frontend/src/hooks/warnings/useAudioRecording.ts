@@ -1,7 +1,7 @@
 import Logger from '../../utils/logger';
 // frontend/src/hooks/warnings/useAudioRecording.ts
 // 🎯 AUDIO RECORDING HOOK FOR WARNING PROCESS
-// ✅ Ultra-efficient 16kbps Opus compression
+// ✅ Speech-optimized 24kbps/16kHz Opus compression
 // ✅ Firebase Storage integration
 // ✅ Auto-stop safety mechanisms
 
@@ -14,17 +14,17 @@ import { storage } from '../../config/firebase';
 // ============================================
 
 const AUDIO_CONFIG = {
-  // Optimal compression settings
+  // Optimal compression settings for speech clarity
   CODEC: 'audio/webm;codecs=opus',
-  BITRATE: 16000, // 16kbps - perfect for speech
-  SAMPLE_RATE: 8000, // 8kHz - phone quality
+  BITRATE: 24000, // 24kbps - clearer speech, industry standard for voice calls
+  SAMPLE_RATE: 16000, // 16kHz - covers full speech spectrum for better consonant clarity
   CHANNELS: 1, // Mono
-  
+
   // Safety limits
   MAX_DURATION_MS: 5 * 60 * 1000, // 5 minutes
-  MAX_SIZE_BYTES: 800 * 1024, // 800KB safety margin
+  MAX_SIZE_BYTES: 1024 * 1024, // 1MB - accommodates improved quality (~900KB for 5 min)
   WARNING_THRESHOLD_MS: 4 * 60 * 1000, // Warn at 4 minutes
-  
+
   // Quality settings
   ECHO_CANCELLATION: true,
   NOISE_SUPPRESSION: true,

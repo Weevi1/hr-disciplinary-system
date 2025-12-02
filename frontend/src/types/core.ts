@@ -272,6 +272,7 @@ export interface Organization {
     enablePhotoCapture: boolean;
     enableWhatsAppDelivery: boolean;
     enablePrintDelivery: boolean;
+    enableAudioRecording: boolean;
   };
 
   // 📄 PDF Template Settings - Per-organization PDF customization

@@ -197,6 +197,12 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
   const { organization } = useOrganization();
   const audioRecording = useAudioRecording();
 
+  // Check if audio recording is enabled for this organization
+  const isAudioEnabled = organization?.customization?.enableAudioRecording ?? true;
+
+  // Helper function to count words in a string
+  const getWordCount = (text: string) => text.trim().split(/\s+/).filter(w => w).length;
+
   // ============================================
   // REFS & ENHANCED HOOKS
   // ============================================
@@ -336,10 +342,10 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
 
       case Phase.EMPLOYEE_RESPONSE:
         if (!levelInfo.requiresCommitments) return true;
-        return employeeStatement.length >= 20;
+        return getWordCount(employeeStatement) >= 6;
 
       case Phase.EXPECTED_STANDARDS:
-        return expectedBehavior.length >= 20;
+        return getWordCount(expectedBehavior) >= 6;
 
       case Phase.IMPROVEMENT_PLAN:
         if (!levelInfo.requiresCommitments) return true;
@@ -443,8 +449,10 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
     }
   }, [formData.employeeId, formData.categoryId, organization?.id]);
 
-  // Start audio recording when microphone permission is granted
+  // Start audio recording when microphone permission is granted (only if audio is enabled)
   useEffect(() => {
+    if (!isAudioEnabled) return; // Skip if audio recording is disabled for this organization
+
     if (microphonePermissionGranted && !audioRecording.isRecording && !showPermissionHandler) {
       // Auto-start recording after permission granted
       Logger.info('Starting audio recording - permission granted');
@@ -452,7 +460,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
         Logger.error('Failed to start audio recording:', err);
       });
     }
-  }, [microphonePermissionGranted, showPermissionHandler, audioRecording.isRecording, audioRecording.startRecording]);
+  }, [isAudioEnabled, microphonePermissionGranted, showPermissionHandler, audioRecording.isRecording, audioRecording.startRecording]);
 
   // ============================================
   // HANDLERS
@@ -490,12 +498,15 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
         return;
       }
 
+      // 🔥 FIX: Look up category directly from categories array to avoid stale state
+      const currentCategory = categories.find(c => c.id === formData.categoryId) || selectedCategory;
+
       // Use correct API method with proper parameters
       const recommendation = await API.warnings.getEscalationRecommendation(
         formData.employeeId,
         formData.categoryId,
         organization.id,
-        selectedCategory, // Pass the category object
+        currentCategory, // Pass the category object (fresh lookup, not stale state)
         activeWarnings // Pass preloaded warnings
       );
 
@@ -510,8 +521,9 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
 
     } catch (error) {
       Logger.error('Failed to generate LRA recommendation:', error);
-      // Provide fallback recommendation with proper structure
-      const categoryEscalationPath = selectedCategory?.escalationPath || ['counselling', 'verbal_warning', 'first_written', 'final_written'];
+      // 🔥 FIX: Look up category directly from categories array for fallback too
+      const fallbackCategory = categories.find(c => c.id === formData.categoryId) || selectedCategory;
+      const categoryEscalationPath = fallbackCategory?.escalationPath || ['counselling', 'verbal_warning', 'first_written', 'final_written'];
       const fallbackRecommendation: any = {
         suggestedLevel: categoryEscalationPath[0] || 'counselling',
         recommendedLevel: categoryEscalationPath[0] === 'counselling' ? 'Counselling Session' :
@@ -521,7 +533,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
         activeWarnings: [],
         escalationPath: categoryEscalationPath,
         isEscalation: false,
-        category: selectedCategory?.name || 'General Misconduct',
+        category: fallbackCategory?.name || 'General Misconduct',
         categoryId: formData.categoryId,
         warningCount: 0
       };
@@ -650,8 +662,8 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
       Logger.success('Warning created with ID:', warningId);
       setFinalWarningId(warningId);
 
-      // Stop and upload audio if recording
-      if (audioRecording.isRecording) {
+      // Stop and upload audio if recording AND audio is enabled
+      if (isAudioEnabled && audioRecording.isRecording) {
         try {
           // Stop recording and get the audio URL
           const localAudioUrl = await audioRecording.stopRecording();
@@ -864,6 +876,10 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
                 // Reset state and trigger analysis via useEffect
                 setLraRecommendation(null);
                 setHasFinalWarningBlock(false);
+                // 🔥 FIX: Update selectedCategory BEFORE formData to avoid race condition
+                // The generateLRARecommendation useEffect uses selectedCategory state
+                const category = categories.find(c => c.id === id);
+                setSelectedCategory(category);
                 setFormData(prev => ({ ...prev, categoryId: id }));
               }}
               lraRecommendation={lraRecommendation}
@@ -890,29 +906,43 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
                       {lraRecommendation.reason}
                     </p>
 
-                    {/* Active warnings on file */}
+                    {/* Active warnings on file - clickable for details */}
                     {lraRecommendation.activeWarnings && lraRecommendation.activeWarnings.length > 0 && (
                       <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--color-border-light)' }}>
                         <p className="text-xs font-medium mb-2" style={{ color: 'var(--color-text-secondary)' }}>
                           Active Warnings ({lraRecommendation.activeWarnings.length}):
                         </p>
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                           {lraRecommendation.activeWarnings.slice(0, 3).map((warning: any, idx: number) => (
                             <button
                               key={idx}
                               onClick={() => setSelectedWarningDetails(warning)}
-                              className="w-full text-left text-xs flex items-center gap-2 p-1.5 rounded hover:bg-gray-100 transition-colors cursor-pointer"
-                              style={{ color: 'var(--color-text-secondary)' }}
+                              className="group w-full text-left text-xs flex items-center gap-2 p-2 rounded-lg border transition-all duration-150 cursor-pointer hover:shadow-sm active:scale-[0.98]"
+                              style={{
+                                backgroundColor: 'var(--color-card-background)',
+                                borderColor: 'var(--color-border)',
+                                color: 'var(--color-text-secondary)'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--color-primary)';
+                                e.currentTarget.style.backgroundColor = 'var(--color-primary-bg)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.borderColor = 'var(--color-border)';
+                                e.currentTarget.style.backgroundColor = 'var(--color-card-background)';
+                              }}
+                              title="Tap to view warning details"
                             >
-                              <AlertTriangle className="w-3 h-3 flex-shrink-0" style={{ color: 'var(--color-warning)' }} />
-                              <span className="hover:underline">
+                              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--color-warning)' }} />
+                              <span className="flex-1 group-hover:text-blue-600 transition-colors">
                                 {getWarningLevelInfo(warning.level || warning.suggestedLevel).label} - {warning.categoryName || warning.category || 'General'}
                                 {warning.issueDate && ` (${new Date(warning.issueDate).toLocaleDateString('en-ZA')})`}
                               </span>
+                              <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all" />
                             </button>
                           ))}
                           {lraRecommendation.activeWarnings.length > 3 && (
-                            <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                            <p className="text-xs pl-2" style={{ color: 'var(--color-text-tertiary)' }}>
                               +{lraRecommendation.activeWarnings.length - 3} more warnings
                             </p>
                           )}
@@ -976,14 +1006,22 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
               rows={6}
               className="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
               style={{
-                backgroundColor: 'var(--color-background)',
-                borderColor: 'var(--color-border)',
+                backgroundColor: getWordCount(employeeStatement) > 0 && getWordCount(employeeStatement) < 6
+                  ? 'var(--color-alert-error-bg)'
+                  : 'var(--color-background)',
+                borderColor: getWordCount(employeeStatement) > 0 && getWordCount(employeeStatement) < 6
+                  ? 'var(--color-alert-error-border)'
+                  : 'var(--color-border)',
                 color: 'var(--color-text-primary)'
               }}
             />
-            <div className="flex items-center justify-between text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-              <span>{employeeStatement.length}/20 characters minimum</span>
-              {employeeStatement.length >= 20 && (
+            <div className="flex items-center justify-between text-xs" style={{
+              color: getWordCount(employeeStatement) > 0 && getWordCount(employeeStatement) < 6
+                ? 'var(--color-error)'
+                : 'var(--color-text-secondary)'
+            }}>
+              <span>{getWordCount(employeeStatement)}/6 words minimum</span>
+              {getWordCount(employeeStatement) >= 6 && (
                 <CheckCircle className="w-4 h-4 text-green-500" />
               )}
             </div>
@@ -1000,14 +1038,22 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
               rows={6}
               className="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
               style={{
-                backgroundColor: 'var(--color-background)',
-                borderColor: 'var(--color-border)',
+                backgroundColor: getWordCount(expectedBehavior) > 0 && getWordCount(expectedBehavior) < 6
+                  ? 'var(--color-alert-error-bg)'
+                  : 'var(--color-background)',
+                borderColor: getWordCount(expectedBehavior) > 0 && getWordCount(expectedBehavior) < 6
+                  ? 'var(--color-alert-error-border)'
+                  : 'var(--color-border)',
                 color: 'var(--color-text-primary)'
               }}
             />
-            <div className="flex items-center justify-between text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-              <span>{expectedBehavior.length}/20 characters minimum</span>
-              {expectedBehavior.length >= 20 && (
+            <div className="flex items-center justify-between text-xs" style={{
+              color: getWordCount(expectedBehavior) > 0 && getWordCount(expectedBehavior) < 6
+                ? 'var(--color-error)'
+                : 'var(--color-text-secondary)'
+            }}>
+              <span>{getWordCount(expectedBehavior)}/6 words minimum</span>
+              {getWordCount(expectedBehavior) >= 6 && (
                 <CheckCircle className="w-4 h-4 text-green-500" />
               )}
             </div>
@@ -1510,8 +1556,8 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
   // MAIN RENDER
   // ============================================
 
-  // Show microphone permission handler first
-  if (showPermissionHandler && !microphonePermissionGranted) {
+  // Show microphone permission handler first (only if audio recording is enabled)
+  if (isAudioEnabled && showPermissionHandler && !microphonePermissionGranted) {
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9000] flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
@@ -1576,8 +1622,8 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
                 >
                   Issue Warning
                 </h2>
-                {/* Recording indicator */}
-                {audioRecording.isRecording && (
+                {/* Recording indicator - only show if audio is enabled */}
+                {isAudioEnabled && audioRecording.isRecording && (
                   <div
                     className="flex items-center gap-2 px-2.5 py-1 rounded-full wizard-recording-indicator"
                     style={{ backgroundColor: 'rgba(239, 68, 68, 0.08)' }}

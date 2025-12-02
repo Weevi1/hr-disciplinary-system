@@ -23,7 +23,8 @@ import {
   Eye,
   EyeOff,
   Plus,
-  GripVertical
+  GripVertical,
+  Mic
 } from 'lucide-react';
 
 import { OrganizationContext } from '../../contexts/OrganizationContext';
@@ -31,6 +32,8 @@ import { useAuth } from '../../auth/AuthContext';
 import { API } from '../../api';
 import { ShardedDataService } from '../../services/ShardedDataService';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 import type { WarningCategory } from '../../services/WarningService';
 import { UNIVERSAL_SA_CATEGORIES } from '../../services/UniversalCategories';
 import { LoadingState } from '../common/LoadingState';
@@ -81,10 +84,17 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
     escalationPath: ['verbal', 'first_written', 'final_written']
   });
 
+  // Audio Recording Toggle State
+  const [audioRecordingEnabled, setAudioRecordingEnabled] = useState(true);
+  const [savingAudioSetting, setSavingAudioSetting] = useState(false);
+
   // Check if user has CRUD access (SuperUser or Reseller)
   const isSuperUser = user?.role?.id === 'super-user';
   const isReseller = user?.role?.id === 'reseller';
+  const isExecutiveManagement = user?.role?.id === 'executive-management';
   const canEdit = allowEdit && (isSuperUser || isReseller);
+  // Only executive management (business owners) can toggle audio settings
+  const canToggleAudioSettings = isExecutiveManagement || isSuperUser;
 
   const loadCategories = async () => {
     if (!organizationId) {
@@ -116,6 +126,37 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
   useEffect(() => {
     loadCategories();
   }, [organizationId]);
+
+  // Load audio recording setting from organization
+  useEffect(() => {
+    if (organization) {
+      setAudioRecordingEnabled(organization.customization?.enableAudioRecording ?? true);
+    }
+  }, [organization]);
+
+  // Handle audio recording toggle
+  const handleAudioToggle = async () => {
+    if (!organizationId || !canToggleAudioSettings) return;
+
+    const newValue = !audioRecordingEnabled;
+    setAudioRecordingEnabled(newValue); // Optimistic update
+    setSavingAudioSetting(true);
+
+    try {
+      // Update organization's customization settings directly
+      const orgRef = doc(db, 'organizations', organizationId);
+      await updateDoc(orgRef, {
+        'customization.enableAudioRecording': newValue,
+        updatedAt: new Date()
+      });
+      Logger.success(`Audio recording ${newValue ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+      setAudioRecordingEnabled(!newValue); // Rollback on error
+      Logger.error('Failed to update audio settings:', error);
+    } finally {
+      setSavingAudioSetting(false);
+    }
+  };
 
   // CRUD Handlers for SuperUser and Reseller
   const handleSaveCategory = async (category: WarningCategory) => {
@@ -407,6 +448,55 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
             </div>
           ) : (
             <div className="space-y-3">
+              {/* Audio Recording Settings - Executive Management Only */}
+              {canToggleAudioSettings && (
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-red-100 rounded-lg">
+                        <Mic className="w-5 h-5 text-red-600" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-900">Audio Recording</h4>
+                        <p className="text-xs text-gray-600">
+                          Record warning discussions for legal compliance
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      role="switch"
+                      aria-checked={audioRecordingEnabled}
+                      aria-label="Toggle audio recording"
+                      disabled={savingAudioSetting}
+                      onClick={handleAudioToggle}
+                      className={`
+                        relative inline-flex h-6 w-11 items-center rounded-full
+                        transition-colors duration-150 ease-in-out
+                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                        ${savingAudioSetting ? 'opacity-50 cursor-wait' : 'cursor-pointer'}
+                        ${audioRecordingEnabled ? 'bg-green-600' : 'bg-gray-300'}
+                      `}
+                    >
+                      <span
+                        className={`
+                          inline-block h-5 w-5 transform rounded-full bg-white shadow-md
+                          transition-transform duration-150 ease-in-out
+                          ${audioRecordingEnabled ? 'translate-x-5' : 'translate-x-0.5'}
+                        `}
+                      />
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-gray-500 mt-2 ml-12">
+                    {audioRecordingEnabled
+                      ? 'Warning discussions will be recorded for quality and dispute resolution.'
+                      : 'Audio recording is disabled. Existing recordings remain accessible.'
+                    }
+                  </p>
+                </div>
+              )}
+
               {/* Security Notice */}
               {!canEdit && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
