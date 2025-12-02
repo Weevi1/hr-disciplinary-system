@@ -3,8 +3,10 @@ import Logger from '../../utils/logger';
 // 🎯 ENHANCED AUDIO PLAYBACK WITH PROPER ERROR HANDLING
 // ✅ Fixed audio status functions and URL handling
 // ✅ Handles missing audio URLs gracefully
+// ✅ Real-time waveform visualization
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { AudioWaveform } from '../audio/AudioWaveform';
 import {
   Play,
   Pause,
@@ -470,33 +472,43 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
               )}
             </button>
 
-            {/* Progress Bar */}
+            {/* Waveform Visualization with Progress Overlay */}
             <div className="flex-1">
-              <div
-                ref={progressRef}
-                className="relative h-2 bg-gray-200 rounded-full cursor-pointer"
-                onClick={(e) => {
-                  if (progressRef.current && state.duration) {
-                    const rect = progressRef.current.getBoundingClientRect();
-                    const percent = (e.clientX - rect.left) / rect.width;
-                    setCurrentTime(percent * state.duration);
-                  }
-                }}
-              >
-                {/* Buffered Progress */}
-                <div
-                  className="absolute top-0 left-0 h-full bg-gray-300 rounded-full"
-                  style={{ width: `${state.buffered}%` }}
+              <div className="relative">
+                {/* Waveform Canvas */}
+                <AudioWaveform
+                  audioElement={audioRef.current}
+                  isPlaying={state.isPlaying}
+                  barCount={32}
+                  height={32}
+                  primaryColor="#3b82f6"
+                  backgroundColor="#e5e7eb"
                 />
-                {/* Current Progress */}
+
+                {/* Clickable progress overlay for seeking */}
                 <div
-                  className="absolute top-0 left-0 h-full bg-blue-600 rounded-full"
-                  style={{
-                    width: state.duration ? `${(state.currentTime / state.duration) * 100}%` : '0%'
+                  ref={progressRef}
+                  className="absolute inset-0 cursor-pointer"
+                  onClick={(e) => {
+                    if (progressRef.current && state.duration) {
+                      const rect = progressRef.current.getBoundingClientRect();
+                      const percent = (e.clientX - rect.left) / rect.width;
+                      setCurrentTime(percent * state.duration);
+                    }
                   }}
-                />
+                >
+                  {/* Progress indicator line */}
+                  <div
+                    className="absolute top-0 bottom-0 w-0.5 bg-blue-600 transition-all"
+                    style={{
+                      left: state.duration
+                        ? `${(state.currentTime / state.duration) * 100}%`
+                        : '0%'
+                    }}
+                  />
+                </div>
               </div>
-              
+
               {/* Time Display */}
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>{formatTime(state.currentTime)}</span>

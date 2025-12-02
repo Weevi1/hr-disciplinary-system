@@ -299,22 +299,44 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 **For complete change history, see `RECENT_UPDATES.md` (Sessions 20-48) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Session 50 - 2025-12-01)
-- **🎉 LRA RECOMMENDATION LOADING SPINNER**: Fixed skeleton loader not showing during category analysis
-  - ✅ Root cause: Duplicate loading logic - outer `WizardSkeleton` wrapper was replacing content with invisible CSS-variable-based skeleton
-  - ✅ Fix: Removed outer conditional, added visible spinner with hardcoded colors inside `renderPhaseContent()`
-  - ✅ Spinner shows when `!lraRecommendation && formData.categoryId` - immediate feedback on category selection
-  - ✅ Cleaned up 60 lines of duplicate code from `onCategorySelect` handler
-- **🎉 SIGNATURE PAD FIXES**:
-  - ✅ Fixed canvas not filling container - now uses parent's `getBoundingClientRect()` with `requestAnimationFrame`
-  - ✅ Fixed signature not drawing - stroke styles now set in `startDrawing()` function
-  - ✅ Added timestamp + initials burn-in: SA datetime and "T. Molefe" format embedded in saved signature image
-- **Code Cleanup**:
-  - ✅ Single source of truth for LRA recommendation loading (via useEffect + `generateLRARecommendation`)
-  - ✅ Simplified `onCategorySelect` to just reset state, let useEffect handle API calls
+### Most Recent (Session 51 - 2025-12-02)
+- **🎉 AUDIO RECORDING ENHANCEMENTS**:
+  - ✅ Organization-level toggle for business owners to enable/disable audio recording
+  - ✅ Toggle in Warning Categories tab (executive-management/super-user only)
+  - ✅ Waveform visualization - Spotify-style animated frequency bars during playback
+  - ✅ Compression optimization - 24kbps/16kHz for clearer speech (was 16kbps/8kHz)
+- **🎉 LRA RECOMMENDATION BUG FIX**:
+  - ✅ Fixed race condition where wrong category name appeared in recommendation
+  - ✅ Root cause: `selectedCategory` state was stale when `generateLRARecommendation` ran
+  - ✅ Fix: Look up category directly from `categories` array using `formData.categoryId`
+- **🎉 WRITING TIPS CLEANUP**:
+  - ✅ Removed redundant static "Tip:" box from Incident Details form
+  - ✅ Removed naive keyword-based Writing Assistance suggestions
+  - ✅ Kept only word count badge (genuinely useful validation)
+- **🎉 CONSISTENT WORD COUNT VALIDATION**:
+  - ✅ All textareas now use 6 words minimum (was 20 characters for some)
+  - ✅ Added `getWordCount()` helper function for clean reuse
+  - ✅ Red border/background when started typing but < 6 words
+  - ✅ Green checkmark when ≥ 6 words
+- **UX Improvements**:
+  - ✅ Welcome modal now appears immediately (removed 2-second delay)
+  - ✅ Active warnings in Phase 2 now visually clickable (card styling, ChevronRight icon)
 - **Files Modified**:
-  - `UnifiedWarningWizard.tsx` - Loading spinner fix, signature pad improvements, code cleanup
-- **Status**: ✅ Complete - Professional loading feedback and signature capture
+  - `UnifiedWarningWizard.tsx` - Audio toggle, LRA fix, word count validation
+  - `IncidentDetailsForm.tsx` - Simplified writing tips, word count only
+  - `OrganizationCategoriesViewer.tsx` - Audio recording toggle UI
+  - `AudioWaveform.tsx` (NEW) - Web Audio API waveform visualization
+  - `AudioPlaybackWidget.tsx` - Integrated waveform component
+  - `useAudioRecording.ts` - Updated compression settings
+  - `core.ts`, `organization.ts` - Added `enableAudioRecording` type
+  - `MainLayout.tsx` - Removed welcome modal delay
+- **Build & Deploy**: ✅ Success
+- **Status**: ✅ Complete - Audio features, validation consistency, UX polish
+
+### Previous (Session 50 - 2025-12-01)
+- **🎉 LRA RECOMMENDATION LOADING SPINNER**: Fixed skeleton loader not showing during category analysis
+- **🎉 SIGNATURE PAD FIXES**: Canvas sizing, stroke styles, timestamp+initials burn-in
+- See `RECENT_UPDATES.md` for full details
 
 ### Previous (Session 49 - 2025-11-28)
 - **🎉 AWARD-WINNING UX IMPLEMENTATION**: Complete UX overhaul for UnifiedWarningWizard
@@ -463,4 +485,4 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components with **consistent inline tab UX across all dashboards**, **unified DashboardShell component** powering all 3 main dashboards (HR, Executive Management, HOD), **WCAG AA accessibility compliance**, **versioned PDF generation for legal compliance**, **per-organization PDF template customization**, **1000x storage reduction through centralized template version management**, **fully editable PDF text content with zero hardcoded fallbacks**, **SA-optimized employee CSV import with automatic phone number formatting**, **multi-manager support with array-based employee assignments**, **professional compact welcome modals**, **executive-management role** for inclusive senior leadership, **modern autocomplete employee search**, **SVG signature system with 90%+ storage savings**, **complete witness signature support**, **PDF preview & acknowledgment** ensuring employees see what they sign, **real-time LRA analysis** for instant step transitions, and **10-phase unified warning wizard** with structured corrective discussion workflow.*
 
-*Last Updated: 2025-12-01 - Session 50: LRA loading spinner fix, signature pad canvas fix, timestamp+initials burn-in*
+*Last Updated: 2025-12-02 - Session 51: Audio recording toggle & waveform, LRA category fix, word count validation consistency*

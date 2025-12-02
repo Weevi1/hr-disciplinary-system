@@ -90,7 +90,6 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
   const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
   const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
   const [hasSeenWelcomeThisSession, setHasSeenWelcomeThisSession] = useState(false);
-  const [deferralTimer, setDeferralTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Ref for user menu dropdown to detect clicks outside
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -112,23 +111,11 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
     };
   }, [userMenuOpen]);
 
-  // 🚀 OPTIMIZED: Defer welcome modal to allow dashboard to load first
+  // Show welcome modal immediately on first login (no delay)
   useEffect(() => {
-    // Clear existing timer
-    if (deferralTimer) clearTimeout(deferralTimer);
-
-    // Show welcome modal AFTER 2 seconds (let dashboard load first)
     if (user && user.hasSeenWelcome !== true && !hasSeenWelcomeThisSession) {
-      const timer = setTimeout(() => {
-        welcomeModal.open(); // 🚀 REFACTORED: Using useModal hook
-      }, 2000); // Wait 2s for dashboard to be visible
-
-      setDeferralTimer(timer);
+      welcomeModal.open();
     }
-
-    return () => {
-      if (deferralTimer) clearTimeout(deferralTimer);
-    };
   }, [user, user?.hasSeenWelcome, hasSeenWelcomeThisSession]);
 
   // Password Reset Handler

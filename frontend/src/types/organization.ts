@@ -296,7 +296,8 @@ export const createOrganizationConfig = (formData: any, sectorId?: string): Orga
     customization: {
       enablePhotoCapture: formData.enablePhotoCapture ?? true,
       enableWhatsAppDelivery: formData.enableWhatsAppDelivery ?? true,
-      enablePrintDelivery: formData.enablePrintDelivery ?? true
+      enablePrintDelivery: formData.enablePrintDelivery ?? true,
+      enableAudioRecording: formData.enableAudioRecording ?? true
     },
     createdAt: now.toISOString(),
     updatedAt: now.toISOString()

@@ -4,26 +4,19 @@
 // ✅ Mobile-first design, accessibility improvements
 // 🔧 REMOVED: Auto-save functionality (was causing date persistence issues)
 
-import React, { useState, useCallback, useMemo } from 'react';
-import { FileText, MapPin, Calendar, Clock, PenTool, Lightbulb, CheckCircle, AlertTriangle } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { FileText, MapPin, Calendar, Clock, PenTool, AlertTriangle } from 'lucide-react';
 import type { EnhancedWarningFormData } from '../../../../../services/WarningService';
 
 // Import unified theming components
 import { ThemedSectionHeader, ThemedFormInput } from '../../../../common/ThemedCard';
 import { CustomDatePicker } from '../../../../common/CustomDatePicker';
-import Logger from '../../../../../utils/logger';
 
 interface IncidentDetailsFormProps {
   formData: EnhancedWarningFormData;
   onFormDataChange: (updates: Partial<EnhancedWarningFormData>) => void;
   disabled?: boolean;
   className?: string;
-}
-
-interface WritingAssistance {
-  wordCount: number;
-  isMinimumMet: boolean;
-  suggestions: string[];
 }
 
 interface ValidationErrors {
@@ -41,7 +34,6 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
   disabled = false,
   className = ""
 }) => {
-  const [showWritingAssistance, setShowWritingAssistance] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -69,32 +61,13 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
   //   }
   // }, []);
 
-  // Writing assistance - word count only (minimum 6 words)
-  const writingAssistance = useMemo((): WritingAssistance => {
-    const description = formData.incidentDescription || '';
-    const words = description.trim().split(/\s+/).filter(word => word.length > 0);
-    const wordCount = words.length;
-    const isMinimumMet = wordCount >= 6;
-
-    const suggestions: string[] = [];
-    if (wordCount < 6) {
-      suggestions.push(`Add ${6 - wordCount} more word${6 - wordCount === 1 ? '' : 's'} for a complete description (minimum 6 words)`);
-    }
-    if (!description.includes('when') && !description.includes('time') && wordCount >= 6) {
-      suggestions.push('Consider adding when the incident occurred');
-    }
-    if (!description.includes('where') && !description.includes('location') && wordCount >= 6) {
-      suggestions.push('Consider specifying where the incident took place');
-    }
-    if (!description.includes('what') && !description.includes('action') && wordCount >= 6) {
-      suggestions.push('Be specific about what actions were observed');
-    }
-    if (!description.includes('witness') && wordCount > 10) {
-      suggestions.push('Were there any witnesses to mention?');
-    }
-
-    return { wordCount, isMinimumMet, suggestions };
-  }, [formData.incidentDescription]);
+  // Word count calculation (minimum 6 words required)
+  const getWordCount = (text: string) => {
+    const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+    return words.length;
+  };
+  const wordCount = getWordCount(formData.incidentDescription || '');
+  const isMinimumMet = wordCount >= 6;
 
   // Real-time validation
   const validateField = useCallback((field: keyof EnhancedWarningFormData, value: any): string | null => {
@@ -201,29 +174,18 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
             <PenTool className="w-3 h-3 inline mr-1" />
             What Happened *
           </label>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setShowWritingAssistance(!showWritingAssistance)}
-              className="flex items-center gap-1 text-xs"
-              style={{ color: 'var(--color-primary)' }}
-            >
-              <Lightbulb className="w-3 h-3" />
-              Writing Tips
-            </button>
-            <div
-              className="text-xs px-1.5 py-0.5 rounded-full"
-              style={{
-                backgroundColor: writingAssistance.isMinimumMet
-                  ? 'var(--color-alert-success-bg)'
-                  : 'var(--color-alert-warning-bg)',
-                color: writingAssistance.isMinimumMet
-                  ? 'var(--color-alert-success-text)'
-                  : 'var(--color-alert-warning-text)'
-              }}
-            >
-              {writingAssistance.wordCount} words
-            </div>
+          <div
+            className="text-xs px-1.5 py-0.5 rounded-full"
+            style={{
+              backgroundColor: isMinimumMet
+                ? 'var(--color-alert-success-bg)'
+                : 'var(--color-alert-warning-bg)',
+              color: isMinimumMet
+                ? 'var(--color-alert-success-text)'
+                : 'var(--color-alert-warning-text)'
+            }}
+          >
+            {wordCount} words
           </div>
         </div>
 
@@ -249,35 +211,6 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
           <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--color-error)' }}>
             <AlertTriangle className="w-3 h-3" />
             {validationErrors.incidentDescription}
-          </div>
-        )}
-
-        {/* Helper Text */}
-        <div className="flex items-start gap-1.5 text-xs p-2 rounded" style={{ backgroundColor: 'var(--color-alert-info-bg)', color: 'var(--color-alert-info-text)' }}>
-          <Lightbulb className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-          <span>
-            <strong>Tip:</strong> Focus on describing what happened during the incident. In the next step, you'll explain why this warning level is appropriate.
-          </span>
-        </div>
-
-        {/* Writing Assistance */}
-        {showWritingAssistance && (
-          <div className="rounded-lg p-4" style={{ backgroundColor: 'var(--color-alert-info-bg)', border: '1px solid var(--color-alert-info-border)' }}>
-            <h4 className="text-sm font-medium mb-2" style={{ color: 'var(--color-alert-info-text)' }}>Writing Assistance</h4>
-            <div className="space-y-2 text-sm" style={{ color: 'var(--color-alert-info-text)' }}>
-              {writingAssistance.suggestions.map((suggestion, index) => (
-                <div key={index} className="flex items-start gap-2">
-                  <Lightbulb className="w-4 h-4 mt-0.5" style={{ color: 'var(--color-alert-info-text)' }} />
-                  <span>{suggestion}</span>
-                </div>
-              ))}
-              {writingAssistance.suggestions.length === 0 && (
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4" style={{ color: 'var(--color-success)' }} />
-                  <span className="text-green-700">Your description looks comprehensive!</span>
-                </div>
-              )}
-            </div>
           </div>
         )}
       </div>
