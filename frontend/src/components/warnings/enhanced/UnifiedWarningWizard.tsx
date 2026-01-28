@@ -398,6 +398,25 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Handle hardware back button (mobile) - show confirmation before exiting
+  useEffect(() => {
+    // Push a history state when wizard opens
+    window.history.pushState({ wizardOpen: true }, '');
+
+    const handlePopState = () => {
+      // User pressed back button (hardware or browser)
+      if (window.confirm('Are you sure you want to exit? Any unsaved progress will be lost.')) {
+        onCancel();
+      } else {
+        // User cancelled - push state back to prevent navigation
+        window.history.pushState({ wizardOpen: true }, '');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [onCancel]);
+
   // Phase transition animation
   useEffect(() => {
     if (currentPhase !== previousPhaseRef.current) {
@@ -1703,6 +1722,16 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
                   showFinalize={currentPhase === Phase.DELIVERY}
                   onFinalize={handleFinalize}
                 />
+
+                {/* Save Warning feedback when button is disabled */}
+                {currentPhase === Phase.SIGNATURES && !isPhaseValid && (
+                  <p className="text-xs text-center mt-2" style={{ color: 'var(--color-error)' }}>
+                    {!signatures.manager ? 'Manager signature required' :
+                     !employeeViewedPDF ? 'Employee must view PDF first' :
+                     !(signatures.employee || signatures.witness) ? 'Employee or witness signature required' :
+                     'Please complete all required steps'}
+                  </p>
+                )}
               </ThemedCard>
             </div>
           </div>
@@ -1889,10 +1918,8 @@ const ReviewRow: React.FC<{
       className="flex-1 text-sm leading-relaxed"
       style={{
         color: 'var(--color-text-primary)',
-        display: '-webkit-box',
-        WebkitLineClamp: 2,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden'
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word'
       }}
     >
       {children}
@@ -1988,16 +2015,17 @@ const SignatureModal: React.FC<{
   const [isDrawing, setIsDrawing] = React.useState(false);
   const [hasDrawn, setHasDrawn] = React.useState(!!initialSignature);
 
-  // Initialize canvas - need to wait for layout to complete
+  // Initialize canvas - use ResizeObserver for reliable sizing
   React.useEffect(() => {
+    const canvas = canvasRef.current;
+    const parent = canvas?.parentElement;
+    if (!canvas || !parent) return;
+
     const initCanvas = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const parent = canvas.parentElement;
-      if (!parent) return;
-
       const rect = parent.getBoundingClientRect();
+
+      // Skip if parent hasn't been laid out yet (height = 0)
+      if (rect.height < 50) return;
 
       // Set canvas size to match parent container
       const dpr = window.devicePixelRatio || 1;
@@ -2027,8 +2055,19 @@ const SignatureModal: React.FC<{
       }
     };
 
-    // Wait for next frame to ensure layout is complete
-    requestAnimationFrame(initCanvas);
+    // Use ResizeObserver for reliable sizing when flex layout completes
+    const observer = new ResizeObserver(() => {
+      initCanvas();
+    });
+    observer.observe(parent);
+
+    // Also run on initial mount after a short delay for mobile
+    const timeout = setTimeout(initCanvas, 100);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(timeout);
+    };
   }, [initialSignature]);
 
   const getCoords = (e: React.TouchEvent | React.MouseEvent) => {
@@ -2180,7 +2219,7 @@ const SignatureModal: React.FC<{
         </p>
         <div
           className="flex-1 rounded-xl border-2 border-dashed relative overflow-hidden"
-          style={{ borderColor: 'var(--color-border)', backgroundColor: '#fafafa' }}
+          style={{ borderColor: 'var(--color-border)', backgroundColor: '#fafafa', minHeight: '200px' }}
         >
           <canvas
             ref={canvasRef}

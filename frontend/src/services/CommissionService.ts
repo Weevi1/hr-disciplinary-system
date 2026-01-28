@@ -28,14 +28,16 @@ import type {
 class CommissionService {
   
   /**
-   * Calculate commission when payment is received from Stripe webhook
+   * Calculate commission when payment is received
+   * Works with any payment method (debit order, EFT, PayFast, etc.)
    */
   async calculateCommission(params: {
     organizationId: string;
     subscriptionId: string;
-    stripeEventId: string;
     grossAmount: number; // What client paid in cents
-    stripeFees: number; // Stripe processing fees in cents
+    paymentFees?: number; // Payment processing fees in cents (default ~2.5%)
+    paymentMethod?: 'debit_order' | 'eft' | 'payfast' | 'manual';
+    paymentReference?: string; // Reference from payment gateway or manual entry
     periodStart: string;
     periodEnd: string;
   }): Promise<Commission> {
@@ -48,17 +50,19 @@ class CommissionService {
         throw new Error('No reseller assigned to organization');
       }
 
-      // Get reseller details  
+      // Get reseller details
       const reseller = await DataService.getReseller(organization.resellerId);
       if (!reseller) {
         throw new Error('Reseller not found');
       }
 
-      const netRevenue = params.grossAmount - params.stripeFees;
-      
-      // Your 50/30/20 split on NET revenue (after Stripe fees)
+      // Default payment fees to ~2.5% if not specified (typical debit order fee)
+      const paymentFees = params.paymentFees ?? Math.round(params.grossAmount * 0.025);
+      const netRevenue = params.grossAmount - paymentFees;
+
+      // 50/30/20 split on NET revenue (after payment fees)
       const commissionAmount = Math.round(netRevenue * 0.50); // 50% to reseller
-      const ownerAmount = Math.round(netRevenue * 0.30);       // 30% to you  
+      const ownerAmount = Math.round(netRevenue * 0.30);       // 30% to you
       const companyAmount = Math.round(netRevenue * 0.20);     // 20% to company
 
       const commission: Commission = {
@@ -66,17 +70,20 @@ class CommissionService {
         resellerId: organization.resellerId,
         organizationId: params.organizationId,
         subscriptionId: params.subscriptionId,
-        
+
         periodStart: params.periodStart,
         periodEnd: params.periodEnd,
-        
+
         clientRevenue: params.grossAmount,
-        stripeFees: params.stripeFees,
+        paymentFees: paymentFees,
         netRevenue: netRevenue,
         commissionAmount: commissionAmount,
         ownerAmount: ownerAmount,
         companyAmount: companyAmount,
-        
+
+        paymentMethod: params.paymentMethod || 'manual',
+        paymentReference: params.paymentReference,
+
         status: 'calculated', // Will become 'pending' after 30 days
 
         createdAt: serverTimestamp(),
@@ -85,12 +92,79 @@ class CommissionService {
 
       // Save commission record
       await setDoc(doc(db, 'commissions', commission.id), commission);
-      
+
       Logger.success('Commission calculated and saved:', commission);
       return commission;
 
     } catch (error) {
       Logger.error('Failed to calculate commission:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Record a manual client payment (for when debit order/EFT is received)
+   * This is used by the admin/superuser to manually enter payments
+   */
+  async recordClientPayment(params: {
+    organizationId: string;
+    amountInCents: number; // Amount received in cents (e.g., R5000 = 500000)
+    paymentDate: string; // ISO date string
+    paymentMethod: 'debit_order' | 'eft' | 'payfast' | 'manual';
+    paymentReference?: string; // Bank reference or transaction ID
+    notes?: string;
+  }): Promise<Commission> {
+    try {
+      Logger.debug('Recording manual client payment...', params);
+
+      // Get organization details
+      const organization = await DataService.getOrganization(params.organizationId);
+      if (!organization) {
+        throw new Error('Organization not found');
+      }
+
+      // Determine payment fees based on method
+      let paymentFees = 0;
+      switch (params.paymentMethod) {
+        case 'debit_order':
+          // Debit orders typically R2-5 flat fee, use R5 (500 cents)
+          paymentFees = 500;
+          break;
+        case 'payfast':
+          // PayFast is ~3.5% + R2
+          paymentFees = Math.round(params.amountInCents * 0.035) + 200;
+          break;
+        case 'eft':
+          // EFT has no fees (direct transfer)
+          paymentFees = 0;
+          break;
+        case 'manual':
+        default:
+          // Default to 2.5% for unknown methods
+          paymentFees = Math.round(params.amountInCents * 0.025);
+          break;
+      }
+
+      // Calculate period (payment date to +1 month)
+      const periodStart = params.paymentDate;
+      const periodEndDate = new Date(params.paymentDate);
+      periodEndDate.setMonth(periodEndDate.getMonth() + 1);
+      const periodEnd = periodEndDate.toISOString().split('T')[0];
+
+      // Use calculateCommission to handle the rest
+      return await this.calculateCommission({
+        organizationId: params.organizationId,
+        subscriptionId: organization.subscriptionId || `manual-${Date.now()}`,
+        grossAmount: params.amountInCents,
+        paymentFees,
+        paymentMethod: params.paymentMethod,
+        paymentReference: params.paymentReference,
+        periodStart,
+        periodEnd
+      });
+
+    } catch (error) {
+      Logger.error('Failed to record client payment:', error);
       throw error;
     }
   }

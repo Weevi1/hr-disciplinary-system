@@ -27,6 +27,7 @@ import { DataService } from '../../services/DataService';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
 import { ResellerManagement } from './ResellerManagement';
 import { AudioCleanupDashboard } from './AudioCleanupDashboard';
+import { FinancialDashboard } from './FinancialDashboard';
 import { OrganizationCategoriesViewer } from '../organization/OrganizationCategoriesViewer';
 import { EnhancedOrganizationWizard } from './EnhancedOrganizationWizard';
 import { PDFTemplateManager } from './PDFTemplateManager';
@@ -426,8 +427,8 @@ export const SuperAdminDashboard = () => {
   // 🖥️ DESKTOP VIEW
   return (
     <div className="space-y-6">
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
+      {/* Metrics Cards - Always 2 columns minimum */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
         <ThemedCard
           padding="sm"
           shadow="md"
@@ -685,19 +686,7 @@ export const SuperAdminDashboard = () => {
         return <AudioCleanupDashboard />;
 
       case 'financial':
-        return (
-          <ThemedCard padding="lg" shadow="md">
-            <div className="text-center py-12">
-              <DollarSign className="w-16 h-16 mx-auto mb-4" style={{ color: 'var(--color-text-tertiary)' }} />
-              <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
-                Financial Dashboard
-              </h3>
-              <p style={{ color: 'var(--color-text-secondary)' }}>
-                Revenue tracking and commission management coming soon
-              </p>
-            </div>
-          </ThemedCard>
-        );
+        return <FinancialDashboard organizations={organizations} />;
 
       default:
         return null;

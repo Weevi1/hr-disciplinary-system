@@ -209,8 +209,8 @@ export const DashboardShell = memo<DashboardShellProps>(({
   // ============================================
   return (
     <div className={className}>
-      {/* 4-Column Metrics Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
+      {/* Metrics Grid - Always 2 columns minimum, 4 on wide screens */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
         {metrics.map((metric) => (
           <ThemedCard
             key={metric.id}
@@ -288,7 +288,7 @@ export const DashboardShell = memo<DashboardShellProps>(({
             if (activeTab !== tab.id) return null;
 
             return (
-              <div key={`content-${tab.id}`} className="hidden lg:block">
+              <div key={`content-${tab.id}`}>
                 {tab.content}
               </div>
             );

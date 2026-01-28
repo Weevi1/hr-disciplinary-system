@@ -34,6 +34,13 @@ export const useOrganization = () => {
   return context;
 };
 
+// 🔧 SAFE VERSION: Returns null instead of throwing when outside provider
+// Use this in components that may render for super-users/resellers who don't have organization context
+export const useOrganizationSafe = () => {
+  const context = useContext(OrganizationContext);
+  return context; // Returns null if not in provider, doesn't throw
+};
+
 // 🎯 Props for the provider component
 interface OrganizationProviderProps {
   children: ReactNode;

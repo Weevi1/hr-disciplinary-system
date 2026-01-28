@@ -127,7 +127,7 @@ export const UnifiedReportAbsence: React.FC<UnifiedReportAbsenceProps> = ({
           firstName: emp.profile?.firstName || emp.firstName || 'Unknown',
           lastName: emp.profile?.lastName || emp.lastName || 'Employee',
           position: emp.profile?.position || emp.employment?.position || 'Unknown Position',
-          department: emp.profile?.department || emp.employment?.department || 'Unknown',
+          department: emp.profile?.department || emp.employment?.department || 'No Department',
           employeeNumber: emp.employeeNumber || emp.profile?.employeeNumber || '',
           ...emp
         }));
@@ -538,19 +538,17 @@ export const UnifiedReportAbsence: React.FC<UnifiedReportAbsenceProps> = ({
                         </button>
                       </div>
 
-                      {/* Mobile Absence Type List */}
+                      {/* Mobile Absence Type List - Compact */}
                       <div className="overflow-y-auto" style={{ maxHeight: '60vh' }}>
                         <div>
                           {ABSENCE_TYPES.map(type => (
                             <button
                               key={type.id}
                               onClick={() => handleAbsenceTypeSelect(type.id)}
-                              className="w-full text-left px-4 py-4 transition-colors flex items-start gap-3"
+                              className="w-full text-left px-4 py-2.5 transition-colors flex items-center gap-2.5"
                               style={{
                                 borderBottom: '1px solid var(--color-border)',
-                                color: 'var(--color-text)',
-                                justifyContent: 'flex-start',
-                                alignItems: 'flex-start'
+                                color: 'var(--color-text)'
                               }}
                               onMouseEnter={(e) => {
                                 e.currentTarget.style.backgroundColor = 'var(--color-primary-light)';
@@ -559,23 +557,23 @@ export const UnifiedReportAbsence: React.FC<UnifiedReportAbsenceProps> = ({
                                 e.currentTarget.style.backgroundColor = 'transparent';
                               }}
                             >
-                              <span className="text-xl flex-shrink-0 mt-0.5">{type.icon}</span>
-                              <div className="min-w-0 flex-1 text-left">
-                                <div className="font-medium text-base text-left" style={{ color: 'var(--color-text)' }}>
-                                  {type.label}
-                                </div>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <div className="text-sm text-left" style={{ color: 'var(--color-text-secondary)' }}>
-                                    {type.description}
-                                  </div>
+                              <span className="text-base flex-shrink-0">{type.icon}</span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>
+                                    {type.label}
+                                  </span>
                                   {type.payrollImpact && (
-                                    <span className="text-xs px-2 py-1 rounded flex-shrink-0" style={{
+                                    <span className="text-xs px-1.5 py-0.5 rounded flex-shrink-0" style={{
                                       backgroundColor: 'var(--color-warning-bg)',
                                       color: 'var(--color-warning)'
                                     }}>
                                       $ Payroll
                                     </span>
                                   )}
+                                </div>
+                                <div className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                                  {type.description}
                                 </div>
                               </div>
                             </button>
@@ -609,6 +607,14 @@ export const UnifiedReportAbsence: React.FC<UnifiedReportAbsenceProps> = ({
                   <div className="unified-field-hint">
                     {reason.length}/500 characters
                   </div>
+                </div>
+
+                {/* Supporting Docs Reminder */}
+                <div className="flex items-start gap-2.5 p-3 rounded-lg" style={{ backgroundColor: '#fffbeb', border: '1px solid #fcd34d' }}>
+                  <FileText className="w-4 h-4 shrink-0 mt-0.5" style={{ color: '#d97706' }} />
+                  <p className="text-xs" style={{ color: '#92400e' }}>
+                    Keep any supporting documents (medical certificates, etc.) and hand them to HR.
+                  </p>
                 </div>
 
                 {/* Payroll impact warning */}
