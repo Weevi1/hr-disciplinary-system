@@ -37,7 +37,7 @@ const WarningsReviewDashboard = React.lazy(() => import('./components/warnings/R
 
 // Keep essential hooks and contexts as direct imports for performance
 import { useMultiRolePermissions } from './hooks/useMultiRolePermissions';
-import { useOrganization } from './contexts/OrganizationContext';
+import { useOrganizationSafe } from './contexts/OrganizationContext';
 
 
 // 🚀 API LAYER FOR DATA LOADING
@@ -127,10 +127,10 @@ const ErrorScreen = ({ error }: { error: string }) => (
 const EnhancedWarningWizardWrapper: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
-  // 🔧 FIX: Skip organization context for resellers and super-users
-  const isOrganizationUser = user?.role !== 'reseller' && user?.role !== 'super-user';
-  const { organization } = isOrganizationUser ? useOrganization() : { organization: null };
+
+  // 🔧 FIX: Use safe hook that returns null for resellers and super-users
+  const orgContext = useOrganizationSafe();
+  const organization = orgContext?.organization || null;
   
   const [employees, setEmployees] = useState([]);
   const [categories, setCategories] = useState([]);

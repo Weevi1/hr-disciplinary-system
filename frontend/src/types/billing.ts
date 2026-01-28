@@ -76,24 +76,28 @@ export interface Commission {
   resellerId: string;
   organizationId: string;
   subscriptionId: string;
-  
+
   // Period this commission covers
   periodStart: string;
   periodEnd: string;
-  
+
   // Financial details
-  clientRevenue: number; // What client paid
-  stripeFees: number; // Stripe processing fees
-  netRevenue: number; // After Stripe fees
+  clientRevenue: number; // What client paid (gross amount in cents)
+  paymentFees: number; // Payment processing fees (debit order, PayFast, etc.) in cents
+  netRevenue: number; // After payment fees
   commissionAmount: number; // 50% of net revenue
-  ownerAmount: number; // 30% of net revenue  
+  ownerAmount: number; // 30% of net revenue
   companyAmount: number; // 20% of net revenue
-  
-  // Payment tracking
+
+  // Payment method tracking
+  paymentMethod?: 'debit_order' | 'eft' | 'payfast' | 'manual';
+  paymentReference?: string; // Reference number from payment
+
+  // Status tracking
   status: 'pending' | 'calculated' | 'paid' | 'failed';
   payoutDate?: string;
-  payoutReference?: string;
-  
+  payoutReference?: string; // EFT reference when commission paid to reseller
+
   createdAt: string;
   updatedAt: string;
 }
@@ -159,7 +163,7 @@ export interface RevenueMetrics {
   
   // Financial breakdown
   totalRevenue: number;
-  stripeFees: number;
+  paymentFees: number; // Total payment processing fees
   resellerCommissions: number;
   ownerIncome: number;
   companyFund: number;

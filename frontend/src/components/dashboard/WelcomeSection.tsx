@@ -5,7 +5,7 @@
 
 import React, { memo } from 'react';
 import { useAuth } from '../../auth/AuthContext';
-import { useOrganization } from '../../contexts/OrganizationContext';
+import { useOrganizationSafe } from '../../contexts/OrganizationContext';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
 import { UserCircle } from 'lucide-react';
 
@@ -30,16 +30,11 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({
 }) => {
   const isDesktop = useBreakpoint(768);
   const { user } = useAuth();
-  
-  // Handle organization context safely - it may not be available for superusers
-  let organization = null;
-  try {
-    organization = useOrganization()?.organization;
-  } catch (error) {
-    // Superuser case - no organization context available
-    organization = null;
-  }
-  
+
+  // 🔧 FIX: Use safe hook that returns null for super-users/resellers instead of throwing
+  const orgContext = useOrganizationSafe();
+  const organization = orgContext?.organization || null;
+
   const { getPrimaryRole } = useMultiRolePermissions();
 
   // --- HELPER FUNCTIONS ---

@@ -346,7 +346,7 @@ export const UnifiedBookHRMeeting: React.FC<UnifiedBookHRMeetingProps> = ({
                   Meeting Request Submitted
                 </h2>
                 <p className="modal-header__subtitle">
-                  HR will be notified and will schedule the meeting
+                  HR will review the request and contact you
                 </p>
               </div>
             </div>
@@ -370,13 +370,13 @@ export const UnifiedBookHRMeeting: React.FC<UnifiedBookHRMeetingProps> = ({
 
                 <p className="mb-6 text-gray-600">
                   Your meeting request for {selectedEmployee?.firstName} {selectedEmployee?.lastName} has been
-                  successfully submitted to HR. They will review the request and schedule the meeting accordingly.
+                  successfully submitted to HR. They will review the request and contact you to schedule the meeting.
                 </p>
 
                 <div className="flex items-start gap-3 p-3 rounded" style={{ backgroundColor: 'var(--color-info-bg)', border: '1px solid var(--color-primary)' }}>
                   <Calendar className="w-5 h-5 shrink-0 mt-0.5" style={{ color: 'var(--color-primary)' }} />
                   <div className="flex-1">
-                    <span className="text-sm" style={{ color: 'var(--color-text)' }}>You will receive notification once the meeting is scheduled</span>
+                    <span className="text-sm" style={{ color: 'var(--color-text)' }}>HR will contact you directly to confirm the meeting details</span>
                   </div>
                 </div>
               </div>
@@ -437,7 +437,7 @@ export const UnifiedBookHRMeeting: React.FC<UnifiedBookHRMeetingProps> = ({
 
         {/* Content */}
         <div className="modal-content">
-          <div className="modal-content__scrollable">
+          <div className="modal-content__scrollable" style={{ maxHeight: 'calc(100vh - 220px)' }}>
             <div className="space-y-4">
               {error && (
                 <div className="flex items-start gap-3 p-3 rounded" style={{ backgroundColor: 'var(--color-error-bg)', border: '1px solid var(--color-error)' }}>

@@ -74,7 +74,7 @@ firebase projects:list
 **IMPORTANT**: This file is size-limited to maintain context efficiency.
 
 - **Size Limit**: 500 lines maximum (target: 400-470 lines)
-- **Current Size**: 427 lines ✅
+- **Current Size**: 469 lines ✅
 - **Policy**: See `DOCUMENTATION_POLICY.md` for complete maintenance rules
 - **Before Adding Sessions**: Check size with `wc -l CLAUDE.md`
 - **If > 450 lines**: Move previous session to RECENT_UPDATES.md first
@@ -200,6 +200,98 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 ## 📋 CURRENT FOCUS / PENDING TASKS
 
+### **🚀 Priority 0: FIFO Business Launch (Session 54 - 2026-01-26)**
+
+**STATUS: COMPANY REGISTERED ✅ — Ready for first client**
+
+#### Company Details
+- **Company Name**: FIFO Solutions (Pty) Ltd
+- **Enterprise Number**: 2026/071559/07
+- **Registration Date**: 2026-01-26
+- **Director**: Riaan Potas (sole director)
+- **Bank**: Capitec Business (selected, awaiting account setup)
+
+#### Pricing Model (Current - Adam's Proposal)
+
+**Commission Split**: 50% Reseller → 30% Owner (Riaan) → 20% File Operations
+
+| Tier | Employees | Annual | Setup | Reseller 50% | Per Emp/Month |
+|------|-----------|--------|-------|--------------|---------------|
+| 1 | 0-20 | R5,000 | R1,000 | R2,500/yr | R41.70 ✅ |
+| 2 | 21-50 | R8,000 | R1,500 | R4,000/yr | R19.05 ⚠️ |
+| 3 | 51-100 | R12,000 | R2,500 | R6,000/yr | R13.33 ⚠️ |
+| 4 | 101-300 | R15,000 | R2,500 | R7,500/yr | R6.25 ❌ |
+| 5 | 301-500 | R20,000 | R2,500 | R10,000/yr | R4.17 ❌ |
+| 6 | 500+ | R25,000 | R2,500 | R12,500/yr | R3.47 ❌ |
+
+#### ⚠️ IMPORTANT: Pricing Review Required
+
+**Analysis (Session 54):** Adam's pricing is fine for Tier 1-2 (market rate) but **leaves significant money on table for Tiers 4-6**. Competitors charge R24-R50/employee/month. A 200-employee company paying R15,000/year (R6.25/emp) is 77% cheaper than Sage HR.
+
+**Recommendation:**
+- Keep Tiers 1-3 for market entry (first 50 clients)
+- After proving model, introduce "2026 pricing" for new customers:
+  - Tier 4: R25,000-R30,000 (not R15,000)
+  - Tier 5: R35,000-R45,000 (not R20,000)
+  - Tier 6: R50,000-R60,000 (not R25,000)
+
+**Revenue Impact:** Same 300 clients with adjusted Tier 4-6 = +R360,000/year more for you.
+
+**Decision:** Discuss with Adam. Option to grandfather early clients at current rates.
+
+#### ✅ Completed
+- ✅ **Company Registered** - FIFO Solutions (Pty) Ltd (2026/071559/07)
+- ✅ **Name Reserved** - Approved 2026-01-12
+- ✅ **Bank Selected** - Capitec Business (low fees, best app)
+- ✅ **Legal Documents** - All ready in `legal/` folder
+- ✅ **Marketing Materials** - Complete sales toolkit in `marketing/` folder
+- ✅ **NotebookLM Content** - 3 videos created, slides & infographic sources ready
+
+#### ⏳ Next Steps (Priority Order)
+1. **Download CIPC docs** - MOI, registration cert (wait for director status to sync)
+2. **Capitec account setup** - They will contact you
+3. **SARS registration** - Tax number needed to invoice clients
+4. **Sign reseller agreement** - Adam ready to go
+5. **Onboard first client** - Adam has leads
+6. **Review pricing with Adam** - Consider raising Tiers 4-6 for future clients
+
+#### 🎯 Go-To-Market Strategy: HR Consultants as Resellers
+
+**Validated approach (Session 54):** Target independent HR consultants/representatives as resellers.
+
+**Why it works:**
+- They manage 10-50 employer clients each
+- They experience the "no documentation" pain weekly (CCMA frustration)
+- They have existing trust relationships (warm intros, not cold sales)
+- File makes their job easier + they earn 50% passive income
+- ~3,000-5,000 independent HR consultants in SA (SABPP data)
+
+**Market size:**
+- 52,000 unfair dismissal cases/year at CCMA
+- 50,000+ target businesses (10-500 employees, formal sector)
+- <1% market penetration needed for R2.5M+ revenue
+
+**Created content for recruiting HR consultant partners:**
+- `hr-consultant-partner-pitch-short.md` - 2-min video source (NotebookLM)
+- `hr-consultant-partner-pitch-long.md` - 7-min deep dive (NotebookLM)
+- `hr-consultant-whatsapp-intro.md` - WhatsApp message templates
+
+**Projection:** 25 resellers × 12 clients each = 300 clients = R2.6M revenue = R780K/year for you
+
+#### Key Folders
+| Folder | Contents |
+|--------|----------|
+| `legal/` | Terms of Service, Privacy Policy, Reseller Agreement |
+| `marketing/sales/` | One-pager, pricing sheet, feature highlights |
+| `marketing/sales/meeting-forms/` | Discovery form, quote calculator, order form, onboarding form, follow-up templates |
+| `marketing/demo/` | Demo script, objection handling |
+| `marketing/onboarding/` | Quick start, admin checklist, HOD training, FAQ |
+| `marketing/audio-sources/` | Product overview, ROI deep-dive, manager training (for NotebookLM) |
+| `marketing/notebooklm-sources/` | Slide deck, infographic, **HR consultant partner pitches** |
+| `marketing/pdf/` | All materials converted to PDF |
+
+---
+
 ### **🔬 Priority 1: Research Unified Warning/Counselling System (Session 48)**
 
 **Context**: Client template shows unified approach - every warning includes corrective counselling sections within the same form.
@@ -297,192 +389,81 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 ## 🔧 Latest Updates
 
-**For complete change history, see `RECENT_UPDATES.md` (Sessions 20-48) and `SESSION_HISTORY.md` (Sessions 5-19)**
+**For complete change history, see `RECENT_UPDATES.md` (Sessions 20-52) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Session 51 - 2025-12-02)
-- **🎉 AUDIO RECORDING ENHANCEMENTS**:
-  - ✅ Organization-level toggle for business owners to enable/disable audio recording
-  - ✅ Toggle in Warning Categories tab (executive-management/super-user only)
-  - ✅ Waveform visualization - Spotify-style animated frequency bars during playback
-  - ✅ Compression optimization - 24kbps/16kHz for clearer speech (was 16kbps/8kHz)
-- **🎉 LRA RECOMMENDATION BUG FIX**:
-  - ✅ Fixed race condition where wrong category name appeared in recommendation
-  - ✅ Root cause: `selectedCategory` state was stale when `generateLRARecommendation` ran
-  - ✅ Fix: Look up category directly from `categories` array using `formData.categoryId`
-- **🎉 WRITING TIPS CLEANUP**:
-  - ✅ Removed redundant static "Tip:" box from Incident Details form
-  - ✅ Removed naive keyword-based Writing Assistance suggestions
-  - ✅ Kept only word count badge (genuinely useful validation)
-- **🎉 CONSISTENT WORD COUNT VALIDATION**:
-  - ✅ All textareas now use 6 words minimum (was 20 characters for some)
-  - ✅ Added `getWordCount()` helper function for clean reuse
-  - ✅ Red border/background when started typing but < 6 words
-  - ✅ Green checkmark when ≥ 6 words
-- **UX Improvements**:
-  - ✅ Welcome modal now appears immediately (removed 2-second delay)
-  - ✅ Active warnings in Phase 2 now visually clickable (card styling, ChevronRight icon)
+### Most Recent (Session 56 - 2026-01-27)
+- **🐛 DASHBOARD TAB CONTENT BUG FIX**: Tab content not rendering on desktop
+  - ✅ Issue: `DashboardShell.tsx` used `hidden lg:block` (≥1024px) but `isDesktop` was ≥768px
+  - ✅ Screens 768-1024px got desktop layout but empty tab content
+  - ✅ Fix: Removed `hidden lg:block` class - content renders via conditional `activeTab === tab.id`
+- **🐛 DASHBOARD METRICS GRID FIX**: Cards stacking vertically instead of 2-column grid
+  - ✅ Issue: Desktop used `grid-cols-1 lg:grid-cols-2` - single column on screens 768-1024px
+  - ✅ Fix: Changed to `grid-cols-2 xl:grid-cols-4` - always 2 columns, 4 on wide screens
+  - ✅ Applied to: DashboardShell, SuperAdminDashboard, ResellerDashboard
+  - ✅ Now consistent with mobile view (which already used `grid-cols-2`)
+- **📋 DEMO MATERIALS CREATED**: Bakery staff CSV for reseller demo
+  - ✅ Created `legal/demo-bakery-staff.csv` with 12 bakery employees
+  - ✅ Positions: Head Baker, Pastry Chef, Store Manager, Cake Decorator, etc.
+  - ✅ Ready for CSV import demo with potential reseller
+- **✅ VERIFIED**: Reseller dashboard and deploy client wizard ready for demo
 - **Files Modified**:
-  - `UnifiedWarningWizard.tsx` - Audio toggle, LRA fix, word count validation
-  - `IncidentDetailsForm.tsx` - Simplified writing tips, word count only
-  - `OrganizationCategoriesViewer.tsx` - Audio recording toggle UI
-  - `AudioWaveform.tsx` (NEW) - Web Audio API waveform visualization
-  - `AudioPlaybackWidget.tsx` - Integrated waveform component
-  - `useAudioRecording.ts` - Updated compression settings
-  - `core.ts`, `organization.ts` - Added `enableAudioRecording` type
-  - `MainLayout.tsx` - Removed welcome modal delay
-- **Build & Deploy**: ✅ Success
-- **Status**: ✅ Complete - Audio features, validation consistency, UX polish
+  - `DashboardShell.tsx` - Tab content fix + metrics grid fix
+  - `SuperAdminDashboard.tsx` - Metrics grid fix
+  - `ResellerDashboard.tsx` - Metrics grid fix
+- **Build & Deploy**: ✅ Success (19.23s build, deployed)
 
-### Previous (Session 50 - 2025-12-01)
-- **🎉 LRA RECOMMENDATION LOADING SPINNER**: Fixed skeleton loader not showing during category analysis
-- **🎉 SIGNATURE PAD FIXES**: Canvas sizing, stroke styles, timestamp+initials burn-in
-- See `RECENT_UPDATES.md` for full details
+### Previous (Session 55 - 2026-01-27)
+- **📄 MARKETING PDF OVERHAUL**: All PDFs reformatted for proper A4 display
+- **⚖️ LEGAL DOCUMENTS**: Created PDFs and fixed company references
+- **🏢 BUSINESS STRUCTURE CLARIFIED**: File by FIFO vs FIFO Solutions
+- **Status**: ✅ All marketing & legal documents ready for business launch
 
-### Previous (Session 49 - 2025-11-28)
-- **🎉 AWARD-WINNING UX IMPLEMENTATION**: Complete UX overhaul for UnifiedWarningWizard
-- See `RECENT_UPDATES.md` for full details on accessibility, mobile-first, micro-interactions
+### Previous (Session 54 - 2026-01-26)
+- **🎉 COMMISSION SYSTEM FIXED**: Removed Stripe dependency, now works with SA payment methods
+- **🎉 FINANCIAL DASHBOARD**: New SuperAdmin tab for recording payments
+- **📝 FIN/FILE INTEGRATION**: Updated Fin's CLAUDE.md
+- **Build & Deploy**: ✅ Success (19.2s build, deployed)
 
-### Previous (Session 48 - 2025-11-11)
-- **🎉 PDF PROFESSIONAL STANDARD IMPROVEMENTS & MULTILINGUAL ALIGNMENT**: Enhanced warning document quality and wizard-PDF synchronization
-- **PDF Formatting Fixes**:
-  - ✅ Enhanced `wrapText()` to handle newlines (`\n`) for proper paragraph/bullet structure
-  - ✅ Fixed orphaned section headers (heading + content now stay together on same page)
-  - ✅ Increased line spacing from 4mm to 5mm for better readability
-  - ✅ Dynamic Consequences box sizing based on content
-- **Professional Document Improvements**:
-  - ✅ Removed redundant intro text from 3 corrective discussion sections
-  - ✅ Reordered sections for logical flow (facts-leading-to-decision moved after employee statement)
-  - ✅ Simplified Review Date section (heading: "FOLLOW-UP REVIEW")
-  - ✅ Streamlined Consequences section with clear, concise language
-  - ✅ Consolidated Employee Rights to 2 subsections (removed "What Happens Next" redundancy)
-  - ✅ Disabled Appeal History section (details not in script)
-- **Wizard-PDF Alignment ("Less is More" Philosophy)**:
-  - ✅ Simplified all 11 SA language warning scripts - removed verbose legal language
-  - ✅ Added missing LRA-compliant representation right: "You may have a fellow employee or shop steward represent you"
-  - ✅ Aligned consequences statement: "Further misconduct will result in additional discipline, including formal hearings, up to ending of service. All unexpired warnings accumulate."
-  - ✅ PDF template now perfectly reflects what's communicated during warning wizard
-- **All 11 South African Languages Updated** (EN, AF, ZU, XH, ST, TS, VE, SS, TN, NR, NS):
-  - ✅ Concise consequences statements
-  - ✅ Representation right added to all languages
-  - ✅ Consistent "ending of service" terminology
-- **Files Modified**: 3 files
-  - `PDFGenerationService.ts` - Text wrapping, orphaned headers, spacing improvements
-  - `PDFTemplateService.ts` - Removed redundancy, reordered sections, simplified language
-  - `MultiLanguageWarningScript.tsx` - Updated all 11 languages with concise scripts
-- **Build & Deploy**: ✅ Success (16.26s)
-- **Status**: ✅ Complete - Warning documents are clearer, more concise, and legally compliant across all 11 SA languages
-
-### Previous Session (Session 47 Part 1 - 2025-11-09)
-- **🎉 CRITICAL FIX: HOD Managers Can Now Submit Absence Reports & Counselling Sessions**
-- **Root Cause**: Firestore security rules only allowed HR managers to write to `organizations/{orgId}/reports` collection
-- **The Fix**:
-  - ✅ Changed Firestore rule from `isHRManager()` to `isManager()` for reports collection
-  - ✅ Now allows all manager types (executive-management, hr-manager, hod-manager, department-manager) to create reports
-  - ✅ Deployed updated Firestore rules to production
-- **Code Cleanup**:
-  - ✅ Removed all debugging console.logs from UnifiedReportAbsence and UnifiedCorrectiveCounselling
-  - ✅ Improved `isFormValid()` to explicitly return boolean with `!!` operator
-- **🎉 READ-ONLY EMPLOYEE MANAGEMENT FOR EXECUTIVE DASHBOARD**:
-  - ✅ Added `readOnly` prop to EmployeeManagement and EmployeeTableBrowser components
-  - ✅ Executive Management dashboard now shows employees in read-only mode (no Edit/Archive buttons)
-  - ✅ HR Manager dashboard retains full CRUD permissions for employee management
-  - ✅ Same user gets different permissions based on which dashboard they're accessing from
+### Previous (Session 52 - 2025-12-10)
+- **🎉 MOBILE UX FIXES**: 9 issues identified from user testing, all resolved
+  - ✅ "Unknown" department → "No Department" in employee selection lists
+  - ✅ Compact absence type list (reduced padding, smaller icons/text)
+  - ✅ Supporting docs reminder added to Report Absence modal
+  - ✅ Book HR Meeting buttons now visible on mobile (max-height constraint)
+  - ✅ HR Meeting success message corrected ("HR will contact you directly")
+  - ✅ Category dropdown no longer auto-focuses keyboard (removed autoFocus)
+  - ✅ Review phase text now expands fully (removed line-clamp truncation)
+  - ✅ Signature pad canvas fixed with ResizeObserver + minHeight
+  - ✅ Save Warning button shows validation feedback when disabled
+  - ✅ Hardware back button shows confirmation dialog instead of exiting app
 - **Files Modified**:
-  - `config/firestore.rules` (line 772) - Security rule fix
-  - `frontend/src/components/absences/UnifiedReportAbsence.tsx` - Cleanup
-  - `frontend/src/components/counselling/UnifiedCorrectiveCounselling.tsx` - Cleanup
-  - `frontend/src/components/employees/EmployeeManagement.tsx` - Added readOnly prop
-  - `frontend/src/components/employees/EmployeeTableBrowser.tsx` - Hide actions when readOnly
-  - `frontend/src/components/dashboard/ExecutiveManagementDashboardSection.tsx` - Pass readOnly={true}
-- **Status**: ✅ Complete - Absence/counselling fixed, executive dashboard now read-only for employees
-- **Deployment**: ✅ Frontend built and deployed, Firestore rules deployed
+  - `UnifiedReportAbsence.tsx` - Department fallback, compact list, docs reminder
+  - `UnifiedBookHRMeeting.tsx` - Buttons visibility, success message
+  - `CategorySelector.tsx` - Removed autoFocus
+  - `UnifiedWarningWizard.tsx` - Text expansion, signature pad, save feedback, back button
+- **Build & Deploy**: ✅ Success (16.82s)
+- **Status**: ✅ Complete - All mobile UX issues resolved
 
-### Previous Recent (Session 45 - 2025-11-06)
-- **🎉 PROMOTE TO MANAGER MODAL REDESIGN**: Complete UX overhaul for compact, modern employee promotion workflow
-- **Modal Simplification**:
-  - ✅ Changed from 'lg' to 'sm' size - significantly smaller footprint
-  - ✅ Removed redundant search input, replaced with dynamic autocomplete search
-  - ✅ Search icon in input, real-time filtered results dropdown
-  - ✅ Selected employee display with "Change" button
-  - ✅ Click-outside to close results
-- **Role Selection Modernization**:
-  - ✅ Removed large button blocks for HOD/HR selection
-  - ✅ Replaced with minimal radio buttons (10px text) on right side of label
-  - ✅ Dramatically reduced visual prominence (was taking up 30% of modal)
-  - ✅ HOD defaults to selected (most common use case)
-- **Department Assignment UX**:
-  - ✅ Changed from multi-select dropdown to checkbox list
-  - ✅ Visible checkboxes for clear multi-selection feedback
-  - ✅ Hover effects on department rows
-  - ✅ Compact spacing (max-h-24, scrollable)
-  - ✅ Only shows when HOD role selected
-- **Typography Hierarchy**:
-  - ✅ Section labels: 11px, uppercase, semibold, tracking-wide
-  - ✅ Required/optional hints: 10px, gray-400
-  - ✅ Role selector: 10px, subtle positioning
-  - ✅ Clear visual hierarchy throughout
-  - ✅ Proper spacing: mb-3 between sections, pt-3 mt-3 for buttons
-- **Button Improvements**:
-  - ✅ Fixed CSS conflict with modal-system.css button styles
-  - ✅ Used modal-footer__button classes to prevent padding override
-  - ✅ Equal width buttons with inline flex: 1 style
-- **Files Modified**:
-  - `frontend/src/components/managers/PromoteToManagerModal.tsx` (complete redesign - 349 lines)
-  - Removed Mail, UserPlus, CheckCircle, X, ChevronDown unused imports
-  - Added Search icon and dynamic filtering logic
-- **Build & Deploy**: ✅ Success - Deployed to production
-- **Status**: ✅ Complete - Professional, compact, modern modal with excellent UX
-
-### Previous Recent (Session 44 - 2025-11-04)
-- **🎉 HOD DASHBOARD MIGRATION TO DASHBOARDSHELL**: Completed dashboard consistency refactoring - all 3 main dashboards now use unified layout
-- **Console Logging Fixes**: Fixed mysterious numeric logs with descriptive messages
-- **Accessibility Improvements**: Added autocomplete attributes to login form
-
-### Most Recent (Session 48 - 2025-11-21)
-- **🎉 UNIFIED WARNING WIZARD**: Complete 10-phase wizard replacing old 4-step EnhancedWarningWizard
-  - ✅ Phase 1: Employee Selection
-  - ✅ Phase 2: Category & LRA Recommendation (with clickable warning history)
-  - ✅ Phase 3: Incident Details (auto-fill SA timezone time)
-  - ✅ Phase 4: Employee Response
-  - ✅ Phase 5: Expected Standards
-  - ✅ Phase 6: Improvement Plan
-  - ✅ Phase 7: Review Documentation
-  - ✅ Phase 8: Script & PDF Review (with acknowledgment)
-  - ✅ Phase 9: Signatures (manager → PDF preview → employee views → employee signs)
-  - ✅ Phase 10: Delivery (Email/WhatsApp/Print/QR Code)
-- **Key Features**:
-  - ✅ Compact progress bar (replaced 10-dot indicator)
-  - ✅ SA timezone auto-fill for incident time
-  - ✅ Clickable active warnings with details modal
-  - ✅ PDF preview before employee signature (sees manager signature on doc)
-  - ✅ QR Code delivery with instant PDF generation
-  - ✅ Proper Firestore data structure for API.warnings.create
-- **Files Modified**:
-  - `UnifiedWarningWizard.tsx` - Complete 10-phase wizard (1600+ lines)
-  - `PhaseProgress.tsx` - Compact progress bar component
-  - `QRCodeDownloadModal.tsx` - QR delivery integration
-- **Build & Deploy**: ✅ Complete
-- **Status**: ✅ Production-ready unified warning wizard
-
-### Previous Session (Session 47 - 2025-11-10/11)
-- **🎉 SYSTEM-WIDE IMPROVEMENTS FOR INSITU PROJECTS & ALL CLIENTS**: 5 major improvements for legal compliance
-- **See RECENT_UPDATES.md for Session 46-47 details**
-
-### Previous Sessions Summary (41-47)
-- **Session 47**: System-wide improvements (ending of service terminology, validity display, code of conduct references)
-- **Session 46**: Warning wizard auto-advance fix, audio metadata, QR code delivery, custom domain setup
-- **Session 45**: Promote to Manager Modal Redesign (compact autocomplete search)
-- **Session 44**: HOD Dashboard migration to DashboardShell
-- **Session 43**: Department management UX improvements
-- **Session 42**: business-owner → executive-management role migration
-- **Session 41**: Welcome modal optimization & deployment performance
+### Previous Sessions (44-54)
+See `RECENT_UPDATES.md` for detailed session history including:
+- Session 54: Commission system fixed, FinancialDashboard
+- Session 52: Mobile UX fixes (9 issues resolved)
+- Session 51: Audio recording, LRA bug fix, word count validation
+- Session 50: LRA loading spinner, signature pad fixes
+- Session 49: Award-winning UX implementation
+- Session 48: Unified 10-phase warning wizard, PDF improvements
+- Session 47: System-wide legal compliance, read-only employee management
+- Session 46: QR code delivery, custom domain setup
+- Session 45: Promote to Manager Modal redesign
+- Session 44: HOD Dashboard migration to DashboardShell
 
 **For complete session history, see:**
-- `RECENT_UPDATES.md` - Sessions 20-48 (current)
+- `RECENT_UPDATES.md` - Sessions 20-56 (current)
 - `SESSION_HISTORY.md` - Sessions 5-19 (archived)
+- `legal/BUSINESS_LAUNCH_TRACKER.md` - Company formation & go-to-market progress
 
 ---
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components with **consistent inline tab UX across all dashboards**, **unified DashboardShell component** powering all 3 main dashboards (HR, Executive Management, HOD), **WCAG AA accessibility compliance**, **versioned PDF generation for legal compliance**, **per-organization PDF template customization**, **1000x storage reduction through centralized template version management**, **fully editable PDF text content with zero hardcoded fallbacks**, **SA-optimized employee CSV import with automatic phone number formatting**, **multi-manager support with array-based employee assignments**, **professional compact welcome modals**, **executive-management role** for inclusive senior leadership, **modern autocomplete employee search**, **SVG signature system with 90%+ storage savings**, **complete witness signature support**, **PDF preview & acknowledgment** ensuring employees see what they sign, **real-time LRA analysis** for instant step transitions, and **10-phase unified warning wizard** with structured corrective discussion workflow.*
 
-*Last Updated: 2025-12-02 - Session 51: Audio recording toggle & waveform, LRA category fix, word count validation consistency*
+*Last Updated: 2026-01-27 - Session 56: Dashboard tab content fix, metrics grid 2-column fix (all dashboards), demo bakery CSV created*

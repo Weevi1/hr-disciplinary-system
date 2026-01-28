@@ -406,8 +406,8 @@ export const ResellerDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-3">
+      {/* Metrics Cards - Always 2 columns minimum */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         <ThemedCard
           padding="sm"
           shadow="md"

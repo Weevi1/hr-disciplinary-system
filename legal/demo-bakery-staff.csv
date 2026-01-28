@@ -1,0 +1,13 @@
+employeeNumber,firstName,lastName,email,phoneNumber,whatsappNumber,position,startDate
+BAK001,Thandi,Molefe,thandi.molefe@sweetrisebakery.co.za,0821234501,0821234501,Head Baker,01/03/2019
+BAK002,Sipho,Nkosi,sipho.nkosi@sweetrisebakery.co.za,0821234502,0821234502,Pastry Chef,15/06/2020
+BAK003,Lindiwe,Dlamini,lindiwe.dlamini@sweetrisebakery.co.za,0821234503,0821234503,Baker,01/09/2021
+BAK004,Johannes,van der Merwe,johannes@sweetrisebakery.co.za,0821234504,0821234504,Assistant Baker,10/01/2022
+BAK005,Nomvula,Zulu,,0821234505,0821234505,Counter Staff,01/04/2022
+BAK006,Precious,Mokoena,,0821234506,0821234506,Counter Staff,15/07/2022
+BAK007,David,Botha,david.botha@sweetrisebakery.co.za,0821234507,0821234507,Delivery Driver,01/02/2023
+BAK008,Themba,Khumalo,,0821234508,0821234508,Delivery Driver,20/03/2023
+BAK009,Sarah,Pieterse,sarah.pieterse@sweetrisebakery.co.za,0821234509,0821234509,Store Manager,01/01/2018
+BAK010,Bongani,Mthembu,,0821234510,0821234510,Kitchen Assistant,01/06/2023
+BAK011,Maria,Fernandes,maria@sweetrisebakery.co.za,0821234511,0821234511,Cake Decorator,15/08/2021
+BAK012,Lerato,Tau,,0821234512,0821234512,Cleaner,01/11/2022

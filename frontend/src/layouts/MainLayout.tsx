@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useModal } from '../hooks/useModal';
 import { globalDeviceCapabilities } from '../utils/deviceDetection';
-import { useOrganization, OrganizationProvider } from '../contexts/OrganizationContext';
+import { useOrganizationSafe, OrganizationProvider } from '../contexts/OrganizationContext';
 import {
   LogOut,
   Users,
@@ -73,10 +73,12 @@ const darkenColor = (color: string, percent: number): string => {
     (G > 255 ? 255 : G < 0 ? 0 : G)).toString(16).slice(1);
 };
 
-// Main component that orchestrates the layout  
+// Main component that orchestrates the layout
 const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: MainLayoutProps) => {
   const { user, logout } = useAuth();
-  const organization = user?.role?.id === 'super-user' || user?.role?.id === 'reseller' ? null : useOrganization()?.organization;
+  // 🔧 FIX: Use safe hook that returns null for super-users/resellers instead of conditionally calling hook
+  const orgContext = useOrganizationSafe();
+  const organization = orgContext?.organization || null;
   const navigate = useNavigate();
 
   // State Management
@@ -597,7 +599,9 @@ export const MainLayout = ({ children, onNavigate, currentView }: MainLayoutProp
   const { user } = useAuth();
 
   // Super users and resellers don't have organizations, so we need to handle this case
-  if (user?.role?.id === 'super-user' || user?.role?.id === 'reseller' || !user?.organizationId) {
+  // 🔧 FIX: Support both 'super-user' and 'superuser' role ID formats
+  const isSuperUser = user?.role?.id === 'super-user' || user?.role?.id === 'superuser';
+  if (isSuperUser || user?.role?.id === 'reseller' || !user?.organizationId) {
     // 🚀 WEEK 4 OPTIMIZATION: Using combined ThemeBrandingProvider (no organization needed)
     return (
       <ThemeBrandingProvider>

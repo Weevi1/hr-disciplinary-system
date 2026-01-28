@@ -79,6 +79,7 @@ export const DashboardRouter: React.FC = () => {
   // 🏆 UNIFIED DASHBOARD ROUTING - This is the key change!
   switch (primaryRole) {
     case 'super-user':
+    case 'superuser': // 🔧 FIX: Support both role ID formats
       // 👑 SUPER USERS: Now use unified WelcomeSection like everyone else
       return (
         <div className="space-y-6">
