@@ -81,8 +81,7 @@ const WARNING_LEVEL_NAMES: Record<WarningLevel, string> = {
   'first_written': 'Written Warning',
   'second_written': 'Second Written Warning',
   'final_written': 'Final Written Warning',
-  'suspension': 'Suspension',
-  'dismissal': 'Ending of Service'
+  'dismissal': 'Contact HR - Serious Offence'
 };
 
 // Industry/Sector options organized by category
@@ -219,7 +218,7 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ category, onUpdate, onR
     onUpdate(updated);
   };
 
-  const availableLevels: WarningLevel[] = ['counselling', 'verbal', 'first_written', 'second_written', 'final_written', 'suspension', 'dismissal'];
+  const availableLevels: WarningLevel[] = ['counselling', 'verbal', 'first_written', 'second_written', 'final_written', 'dismissal'];
 
   return (
     <div className="border border-gray-200 rounded-lg p-4 bg-white">
@@ -464,14 +463,14 @@ const CategoryEditor: React.FC<CategoryEditorProps> = ({ category, onUpdate, onR
                 defaultValue=""
               >
                 <option value="">Add step...</option>
-                {availableLevels.filter(level => level !== 'suspension' && level !== 'dismissal').map(level => (
+                {availableLevels.map(level => (
                   <option key={level} value={level}>
                     {WARNING_LEVEL_NAMES[level]}
                   </option>
                 ))}
               </select>
               <span className="text-xs text-gray-500">
-                Note: Escalation stops at Final Written. No suspension/dismissal steps needed.
+                "Contact HR - Serious Offence" redirects the manager to HR instead of issuing a warning.
               </span>
             </div>
             <p className="text-xs text-gray-500 mt-2">
@@ -498,7 +497,13 @@ interface WizardFormData {
   contactLastName: string;
   contactEmail: string;
   contactPhone: string;
-  
+  email: string;         // Business email (PDF letterhead)
+  phone: string;         // Business phone (PDF letterhead)
+  address: string;       // Business address
+  registrationNumber: string;  // Company registration number
+  vatNumber: string;           // VAT number
+  website: string;             // Company website
+
   // Step 3: Reseller Assignment
   resellerId: string;
   
@@ -576,6 +581,12 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
     contactLastName: '',
     contactEmail: '',
     contactPhone: '',
+    email: '',
+    phone: '',
+    address: '',
+    registrationNumber: '',
+    vatNumber: '',
+    website: '',
 
     // Step 3: Reseller Assignment
     resellerId: '',
@@ -934,6 +945,9 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
         city: formData.city,
         contactEmail: formData.contactEmail,
         contactPhone: formData.contactPhone,
+        email: formData.email || undefined,
+        phone: formData.phone || undefined,
+        address: formData.address || undefined,
         employeeCount: formData.employeeCount,
 
         subscriptionTier: formData.selectedPlan,
@@ -944,7 +958,10 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
           logoUrl: logoUrl,
           primaryColor: formData.primaryColor,
           secondaryColor: formData.secondaryColor,
-          accentColor: formData.accentColor
+          accentColor: formData.accentColor,
+          registrationNumber: formData.registrationNumber || undefined,
+          vatNumber: formData.vatNumber || undefined,
+          website: formData.website || undefined
         },
         
         // Admin user data with predefined password
@@ -1378,6 +1395,74 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
                     onChange={e => updateFormData({ contactPhone: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="+27 (0)11 123 4567"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Business Email</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={e => updateFormData({ email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="info@company.co.za"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Appears on PDF letterhead</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Business Phone</label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={e => updateFormData({ phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="+27 (0)11 123 4567"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Appears on PDF letterhead</p>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Business Address</label>
+                  <textarea
+                    value={formData.address}
+                    onChange={e => updateFormData({ address: e.target.value })}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Full business address"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Registration Number</label>
+                  <input
+                    type="text"
+                    value={formData.registrationNumber}
+                    onChange={e => updateFormData({ registrationNumber: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., 2026/071559/07"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">VAT Number</label>
+                  <input
+                    type="text"
+                    value={formData.vatNumber}
+                    onChange={e => updateFormData({ vatNumber: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., 4020123456"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Website</label>
+                  <input
+                    type="url"
+                    value={formData.website}
+                    onChange={e => updateFormData({ website: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="https://example.co.za"
                   />
                 </div>
               </div>

@@ -283,45 +283,6 @@ export const getSALegalRequirements = (): LegalRequirement[] => [
     ]
   },
   {
-    id: 'suspension_sa',
-    level: 'suspension',
-    category: 'serious_misconduct',
-    requirements: [
-      'Must be for serious misconduct',
-      'Must be precautionary or disciplinary',
-      'Must be with or without pay (specify)',
-      'Must indicate duration',
-      'Must follow proper authorization'
-    ],
-    mandatoryFields: [
-      'employee_name',
-      'employee_number',
-      'suspension_reason',
-      'suspension_type',
-      'suspension_duration',
-      'pay_status',
-      'authorized_by',
-      'date_effective'
-    ],
-    documentation: [
-      'Suspension letter',
-      'Investigation report',
-      'Incident report',
-      'Manager authorization',
-      'HR approval'
-    ],
-    timeframes: {
-      notice: 24, // 24 hours notice for suspension
-      response: 72, // 72 hours to respond
-      appeal: 168 // 7 days to appeal
-    },
-    ccmaGuidelines: [
-      'Suspension must be justified',
-      'Consider operational requirements',
-      'Ensure proper investigation',
-      'Review suspension regularly'
-    ]
-  },
   {
     id: 'dismissal_sa',
     level: 'dismissal',

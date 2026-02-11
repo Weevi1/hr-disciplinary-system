@@ -2,13 +2,12 @@
 // 🏆 ENHANCED WARNING TYPES - Progressive Discipline System
 // ✅ Updated to support audio recordings and metadata
 
-export type WarningLevel = 
-  | 'counselling'     // ← ADD THIS
+export type WarningLevel =
+  | 'counselling'
   | 'verbal'
-  | 'first_written' 
+  | 'first_written'
   | 'second_written'
   | 'final_written'
-  | 'suspension'
   | 'dismissal';
 
 export type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
@@ -138,49 +137,51 @@ export interface Warning {
   trainingProvided?: string[];
 }
 
-// 🎯 NEW: Audio recording data interface
+// 🎯 Audio recording data interface
+// Fields marked optional (?) may not be present on all recordings
 export interface AudioRecordingData {
   // File information
   url?: string; // Firebase Storage download URL
   storageUrl?: string; // Alternative field name for storage URL
   storagePath?: string; // Firebase Storage path
   filename?: string; // Original filename
-  size: number; // File size in bytes
-  duration: number; // Duration in seconds
-  
+  size?: number; // File size in bytes
+  duration?: number; // Duration in seconds
+
   // Recording metadata
   recordingId: string; // Unique recording identifier
-  startTime: Date; // When recording started
-  endTime: Date; // When recording ended
-  recordedBy: string; // User ID who recorded
+  startTime?: Date; // When recording started
+  endTime?: Date; // When recording ended
+  recordedBy?: string; // User ID who recorded
   recordedByName?: string; // User name who recorded
-  
+  recordedAt?: string; // ISO timestamp of recording
+
   // Technical details
-  codec: string; // e.g., 'audio/webm;codecs=opus'
-  bitrate: number; // e.g., 16000 (16kbps)
-  sampleRate: number; // e.g., 8000 (8kHz)
-  channels: number; // e.g., 1 (mono)
-  
+  codec?: string; // e.g., 'audio/webm;codecs=opus'
+  bitrate?: number; // e.g., 24000 (24kbps)
+  sampleRate?: number; // e.g., 16000 (16kHz)
+  channels?: number; // e.g., 1 (mono)
+
   // Process tracking
   uploadedAt?: Date;
-  processingStatus: 'pending' | 'completed' | 'failed' | 'deleted';
+  processingStatus?: 'pending' | 'completed' | 'failed' | 'deleted';
   available?: boolean; // Whether file is currently available
-  
+
   // Legal and compliance
-  consentGiven: boolean; // Whether participants consented to recording
-  retentionPeriod: number; // Months to retain (matches warning validity)
-  autoDeleteDate: Date; // Calculated deletion date
-  
-  // 🎯 NEW: Deletion tracking
+  consentGiven?: boolean; // Whether participants consented to recording
+  retentionPeriod?: number; // Months to retain (matches warning validity)
+  autoDeleteDate?: Date | string; // Calculated deletion date
+
+  // Deletion tracking
   deleted?: boolean; // Whether audio has been deleted
   deletedAt?: Date; // When audio was deleted
   deletedReason?: string; // Reason for deletion ('expired', 'manual', 'compliance')
   deletedBy?: string; // User ID who triggered deletion (for manual deletions)
   originalExpiredDate?: Date; // Original auto-delete date (for audit)
-  
-  // Quality metrics
-  compressionRatio?: number; // Original size vs compressed size
-  qualityScore?: number; // 1-10 quality rating
+
+  // Quality metrics (optional)
+  compressionRatio?: number;
+  qualityScore?: number;
   backgroundNoiseLevel?: 'low' | 'medium' | 'high';
 }
 
@@ -444,8 +445,8 @@ export const createEmptyAudioRecording = (): Partial<AudioRecordingData> => ({
   recordingId: `audio_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
   startTime: new Date(),
   codec: 'audio/webm;codecs=opus',
-  bitrate: 16000,
-  sampleRate: 8000,
+  bitrate: 24000,
+  sampleRate: 16000,
   channels: 1,
   consentGiven: false,
   processingStatus: 'pending'
@@ -457,67 +458,67 @@ export const calculateAudioRetention = (warningValidityPeriod: 3 | 6 | 12): Date
   return now;
 };
 
-export const isAudioExpired = (audioRecording: AudioRecordingData): boolean => {
-  if (!audioRecording.autoDeleteDate) return false;
+export const isAudioExpired = (audioRecording: AudioRecordingData | undefined): boolean => {
+  if (!audioRecording?.autoDeleteDate) return false;
   return new Date() > new Date(audioRecording.autoDeleteDate);
 };
 
-export const isAudioDeleted = (audioRecording: AudioRecordingData): boolean => {
+export const isAudioDeleted = (audioRecording: AudioRecordingData | undefined): boolean => {
+  if (!audioRecording) return false;
   return audioRecording.deleted === true || audioRecording.processingStatus === 'deleted';
 };
 
-export const canPlayAudio = (audioRecording: AudioRecordingData): boolean => {
+export const canPlayAudio = (audioRecording: AudioRecordingData | undefined): boolean => {
+  if (!audioRecording) return false;
   return (
     !isAudioDeleted(audioRecording) &&
-    audioRecording.available === true &&
-    (audioRecording.storageUrl || audioRecording.url) &&
+    !!(audioRecording.storageUrl || audioRecording.url) &&
     audioRecording.processingStatus === 'completed'
   );
 };
 
-export const getAudioStatus = (audioRecording: AudioRecordingData): {
-  status: 'available' | 'expired' | 'deleted' | 'processing' | 'failed';
+export const getAudioStatus = (audioRecording: AudioRecordingData | undefined): {
+  status: 'available' | 'expired' | 'deleted' | 'processing' | 'failed' | 'unavailable';
   message: string;
 } => {
+  if (!audioRecording) {
+    return { status: 'unavailable', message: 'No audio recording available' };
+  }
+
   if (isAudioDeleted(audioRecording)) {
     return {
       status: 'deleted',
-      message: `Audio deleted on ${audioRecording.deletedAt?.toLocaleDateString()} - ${audioRecording.deletedReason || 'Unknown reason'}`
+      message: `Audio deleted${audioRecording.deletedReason ? ` - ${audioRecording.deletedReason}` : ''}`
     };
   }
-  
+
   if (audioRecording.processingStatus === 'failed') {
-    return {
-      status: 'failed',
-      message: 'Audio processing failed'
-    };
+    return { status: 'failed', message: 'Audio processing failed' };
   }
-  
+
   if (audioRecording.processingStatus === 'pending') {
-    return {
-      status: 'processing',
-      message: 'Audio is being processed...'
-    };
+    return { status: 'processing', message: 'Audio is being processed...' };
   }
-  
+
   if (isAudioExpired(audioRecording)) {
     return {
       status: 'expired',
-      message: `Audio expired on ${new Date(audioRecording.autoDeleteDate).toLocaleDateString()} and will be deleted soon`
+      message: audioRecording.autoDeleteDate
+        ? `Audio expired on ${new Date(audioRecording.autoDeleteDate).toLocaleDateString()}`
+        : 'Audio has expired'
     };
   }
-  
+
   if (canPlayAudio(audioRecording)) {
     return {
       status: 'available',
-      message: `Audio available until ${new Date(audioRecording.autoDeleteDate).toLocaleDateString()}`
+      message: audioRecording.autoDeleteDate
+        ? `Audio available until ${new Date(audioRecording.autoDeleteDate).toLocaleDateString()}`
+        : 'Audio available'
     };
   }
-  
-  return {
-    status: 'failed',
-    message: 'Audio status unknown'
-  };
+
+  return { status: 'failed', message: 'Audio status unknown' };
 };
 
 export const formatAudioDuration = (seconds: number): string => {

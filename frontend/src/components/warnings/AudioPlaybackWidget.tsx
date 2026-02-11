@@ -223,11 +223,20 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
     };
 
     const handleLoadedMetadata = () => {
-      setState(prev => ({ 
-        ...prev, 
-        duration: audio.duration || 0,
-        isLoading: false 
+      const dur = audio.duration;
+      setState(prev => ({
+        ...prev,
+        // WebM files often report Infinity until fully buffered
+        duration: (dur && isFinite(dur)) ? dur : 0,
+        isLoading: false
       }));
+    };
+
+    const handleDurationChange = () => {
+      const dur = audio.duration;
+      if (dur && isFinite(dur) && dur > 0) {
+        setState(prev => ({ ...prev, duration: dur }));
+      }
     };
 
     const handleTimeUpdate = () => {
@@ -280,6 +289,7 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
     // Attach event listeners
     audio.addEventListener('loadstart', handleLoadStart);
     audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('durationchange', handleDurationChange);
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('play', handlePlay);
     audio.addEventListener('pause', handlePause);
@@ -294,6 +304,7 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
     return () => {
       audio.removeEventListener('loadstart', handleLoadStart);
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('durationchange', handleDurationChange);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
       audio.removeEventListener('play', handlePlay);
       audio.removeEventListener('pause', handlePause);
@@ -578,15 +589,11 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
                 Recorded
               </p>
               <p className="font-medium">
-                {audioRecording.timestamp
-                  ? new Date(audioRecording.timestamp).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' })
-                  : audioRecording.recordedAt
-                    ? new Date(audioRecording.recordedAt).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' })
-                    : audioRecording.startTime
-                      ? new Date(audioRecording.startTime).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' })
-                      : audioRecording.createdAt
-                        ? new Date(audioRecording.createdAt).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' })
-                        : 'Not available'}
+                {audioRecording.recordedAt
+                  ? new Date(audioRecording.recordedAt).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' })
+                  : audioRecording.startTime
+                    ? new Date(audioRecording.startTime).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' })
+                    : 'Not available'}
               </p>
             </div>
           </div>

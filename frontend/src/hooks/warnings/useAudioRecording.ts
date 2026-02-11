@@ -48,12 +48,9 @@ export interface AudioRecordingState {
 export interface AudioRecordingActions {
   startRecording: () => Promise<void>;
   stopRecording: () => Promise<string | null>;
-  pauseRecording: () => void;
-  resumeRecording: () => void;
   cancelRecording: () => void;
-  forceCleanup: () => void; // NEW: Force immediate cleanup
-  uploadToFirebase: (organizationId: string, warningId: string) => Promise<string | null>;
-  uploadToFirebaseFromUrl: (audioUrl: string, recordingId: string, organizationId: string, warningId: string) => Promise<string | null>;
+  forceCleanup: () => void;
+  uploadToFirebaseFromUrl: (audioUrl: string, recordingId: string, organizationId: string, warningId: string, duration?: number) => Promise<string | null>;
 }
 
 export interface UseAudioRecordingReturn extends AudioRecordingState, AudioRecordingActions {
@@ -243,6 +240,7 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const warningShownRef = useRef<boolean>(false);
   const isStoppingRef = useRef<boolean>(false); // Prevent stop loop on max size
+  const stopResolverRef = useRef<((url: string | null) => void) | null>(null); // For stopRecording() promise
 
   // ============================================
   // UTILITY FUNCTIONS
@@ -478,13 +476,76 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
         }
       };
       
-      // Handle recording stop
+      // Handle recording stop - unified handler that ALWAYS assembles the blob
+      // This fires whether stopped manually (via stopRecording), by auto-stop (duration/size), or by cancel
       mediaRecorder.onstop = () => {
-        Logger.debug('🎤 Recording stopped')
+        Logger.debug('🎤 Recording stopped - assembling audio blob');
+
+        // Stop duration tracking
+        if (durationIntervalRef.current) {
+          clearInterval(durationIntervalRef.current);
+          durationIntervalRef.current = null;
+        }
+
+        // Stop mic tracks
         if (streamRef.current) {
           streamRef.current.getTracks().forEach(track => track.stop());
           streamRef.current = null;
         }
+
+        // Clean up singleton
+        audioSingleton.stopRecording();
+
+        // Assemble blob from collected chunks
+        try {
+          if (audioChunksRef.current.length > 0) {
+            const audioBlob = new Blob(audioChunksRef.current, {
+              type: AUDIO_CONFIG.CODEC
+            });
+            const audioUrl = URL.createObjectURL(audioBlob);
+
+            setState(prev => ({
+              ...prev,
+              isRecording: false,
+              isProcessing: false,
+              audioUrl,
+              size: audioBlob.size
+            }));
+
+            Logger.debug('✅ Audio blob assembled:', formatSize(audioBlob.size));
+
+            // Resolve stopRecording() promise if it's waiting
+            if (stopResolverRef.current) {
+              stopResolverRef.current(audioUrl);
+              stopResolverRef.current = null;
+            }
+          } else {
+            Logger.debug('⚠️ No audio chunks collected');
+            setState(prev => ({
+              ...prev,
+              isRecording: false,
+              isProcessing: false,
+            }));
+            if (stopResolverRef.current) {
+              stopResolverRef.current(null);
+              stopResolverRef.current = null;
+            }
+          }
+        } catch (error) {
+          Logger.error('❌ Error assembling audio blob:', error);
+          setState(prev => ({
+            ...prev,
+            isRecording: false,
+            isProcessing: false,
+            error: 'Failed to process recording'
+          }));
+          if (stopResolverRef.current) {
+            stopResolverRef.current(null);
+            stopResolverRef.current = null;
+          }
+        }
+
+        isStoppingRef.current = false;
       };
       
       // Start recording
@@ -528,105 +589,46 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
 
   const stopRecording = useCallback(async (): Promise<string | null> => {
     try {
-      if (!mediaRecorderRef.current || !state.isRecording) {
-        isStoppingRef.current = false; // Reset flag if already stopped
+      if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') {
+        isStoppingRef.current = false;
         return null;
       }
 
       setState(prev => ({ ...prev, isProcessing: true }));
 
-      // Stop duration tracking
-      if (durationIntervalRef.current) {
-        clearInterval(durationIntervalRef.current);
-        durationIntervalRef.current = null;
-      }
-
+      // Return a promise that resolves when the unified onstop handler fires
       return new Promise<string | null>((resolve) => {
-        const mediaRecorder = mediaRecorderRef.current!;
-
-        mediaRecorder.onstop = () => {
-          try {
-            // Create final audio blob
-            const audioBlob = new Blob(audioChunksRef.current, {
-              type: AUDIO_CONFIG.CODEC
-            });
-            
-            // Create audio URL
-            const audioUrl = URL.createObjectURL(audioBlob);
-            
-            setState(prev => ({
-              ...prev,
-              isRecording: false,
-              isProcessing: false,
-              audioUrl,
-              size: audioBlob.size
-            }));
-            
-            Logger.debug('✅ Recording completed:', {
-              duration: prev => prev.duration,
-              size: formatSize(audioBlob.size),
-              id: prev => prev.recordingId
-            });
-
-            // Reset stopping flag
-            isStoppingRef.current = false;
-
-            resolve(audioUrl);
-
-          } catch (error) {
-            Logger.error('❌ Error processing recording:', error)
-            setState(prev => ({
-              ...prev,
-              isRecording: false,
-              isProcessing: false,
-              error: 'Failed to process recording'
-            }));
-            isStoppingRef.current = false; // Reset flag on error
-            resolve(null);
-          }
-        };
-
-        mediaRecorder.stop();
-        setState(prev => ({ ...prev, isRecording: false }));
+        stopResolverRef.current = resolve;
+        mediaRecorderRef.current!.stop();
       });
 
     } catch (error: any) {
-      Logger.error('❌ Error stopping recording:', error)
+      Logger.error('❌ Error stopping recording:', error);
       setState(prev => ({
         ...prev,
         isRecording: false,
         isProcessing: false,
         error: error.message || 'Failed to stop recording'
       }));
-      isStoppingRef.current = false; // Reset flag on error
+      isStoppingRef.current = false;
       return null;
     }
-  }, [state.isRecording, formatSize]);
-
-  const pauseRecording = useCallback(() => {
-    if (mediaRecorderRef.current && state.isRecording) {
-      mediaRecorderRef.current.pause();
-      if (durationIntervalRef.current) {
-        clearInterval(durationIntervalRef.current);
-        durationIntervalRef.current = null;
-      }
-      Logger.debug('⏸️ Recording paused')
-    }
-  }, [state.isRecording]);
-
-  const resumeRecording = useCallback(() => {
-    if (mediaRecorderRef.current && state.isRecording) {
-      mediaRecorderRef.current.resume();
-      startTimeRef.current = Date.now() - (state.duration * 1000);
-      durationIntervalRef.current = setInterval(updateDuration, 100);
-      Logger.debug('▶️ Recording resumed')
-    }
-  }, [state.isRecording, state.duration, updateDuration]);
+  }, []);
 
   const cancelRecording = useCallback(() => {
     try {
+      // Prevent the onstop handler from assembling a blob we don't want
+      audioChunksRef.current = [];
+
       if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stop();
+        try {
+          if (mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+          }
+        } catch (e) {
+          Logger.debug('MediaRecorder already stopped');
+        }
+        mediaRecorderRef.current = null;
       }
 
       if (streamRef.current) {
@@ -643,8 +645,12 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
         URL.revokeObjectURL(state.audioUrl);
       }
 
-      audioChunksRef.current = [];
       warningShownRef.current = false;
+      isStoppingRef.current = false;
+      stopResolverRef.current = null;
+
+      // Reset singleton state so future recordings aren't blocked
+      audioSingleton.stopAllStreams();
 
       setState({
         isRecording: false,
@@ -656,119 +662,79 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
         recordingId: null
       });
 
-      Logger.debug('🗑️ Recording cancelled')
+      Logger.debug('🗑️ Recording cancelled');
 
     } catch (error) {
-      Logger.error('❌ Error cancelling recording:', error)
+      Logger.error('❌ Error cancelling recording:', error);
     }
   }, [state.audioUrl]);
 
   // ============================================
   // FIREBASE UPLOAD
   // ============================================
-  
-  const uploadToFirebase = useCallback(async (
-    organizationId: string, 
-    warningId: string
-  ): Promise<string | null> => {
-    try {
-      if (!state.audioUrl || !state.recordingId) {
-        throw new Error('No recording available to upload');
-      }
-      
-      setState(prev => ({ ...prev, isProcessing: true }));
-      
-      // Convert audio URL back to blob
-      const response = await fetch(state.audioUrl);
-      const audioBlob = await response.blob();
-      
-      // Create Firebase storage reference
-      const fileName = `${state.recordingId}.webm`;
-      const storagePath = `warnings/${organizationId}/${warningId}/audio/${fileName}`;
-      const storageRef = ref(storage, storagePath);
-      
-      // Upload with metadata
-      const metadata = {
-        contentType: AUDIO_CONFIG.CODEC,
-        customMetadata: {
-          warningId,
-          organizationId,
-          duration: state.duration.toString(),
-          size: state.size.toString(),
-          recordingId: state.recordingId,
-          createdAt: new Date().toISOString()
-        }
-      };
-      
-      Logger.debug('☁️ Uploading audio to Firebase:', storagePath)
-      
-      await uploadBytes(storageRef, audioBlob, metadata);
-      const downloadUrl = await getDownloadURL(storageRef);
-      
-      setState(prev => ({ ...prev, isProcessing: false }));
-      
-      Logger.success(13735)
-      return downloadUrl;
-      
-    } catch (error: any) {
-      Logger.error('❌ Error uploading audio:', error)
-      setState(prev => ({
-        ...prev,
-        isProcessing: false,
-        error: error.message || 'Failed to upload audio'
-      }));
-      return null;
-    }
-  }, [state.audioUrl, state.recordingId, state.duration, state.size]);
 
-  // 🔥 NEW: Upload function that accepts audioUrl directly (for immediate upload after stopRecording)
+  // Upload function that accepts audioUrl directly (for immediate upload after stopRecording)
   const uploadToFirebaseFromUrl = useCallback(async (
     audioUrl: string,
     recordingId: string,
-    organizationId: string, 
-    warningId: string
+    organizationId: string,
+    warningId: string,
+    duration?: number
   ): Promise<string | null> => {
     try {
       if (!audioUrl || !recordingId) {
         throw new Error('No recording data provided for upload');
       }
-      
+
       setState(prev => ({ ...prev, isProcessing: true }));
-      
+
       // Convert audio URL back to blob
       const response = await fetch(audioUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch audio blob: ${response.status} ${response.statusText}`);
+      }
       const audioBlob = await response.blob();
-      
+      if (audioBlob.size === 0) {
+        throw new Error('Audio blob is empty — recording data may have been lost');
+      }
+
       // Create Firebase storage reference
       const fileName = `${recordingId}.webm`;
       const storagePath = `warnings/${organizationId}/${warningId}/audio/${fileName}`;
       const storageRef = ref(storage, storagePath);
-      
-      // Upload with metadata
+
+      // Upload with metadata — use passed duration (captured at stop time) to avoid stale state
       const metadata = {
         contentType: AUDIO_CONFIG.CODEC,
         customMetadata: {
           warningId,
           organizationId,
-          duration: state.duration.toString(),
+          duration: (duration ?? 0).toString(),
           size: audioBlob.size.toString(),
-          recordingId: recordingId,
+          recordingId,
           createdAt: new Date().toISOString()
         }
       };
-      
-      Logger.debug('☁️ Uploading audio to Firebase from URL:', storagePath)
-      
+
+      Logger.debug('☁️ Uploading audio to Firebase from URL:', storagePath);
+
       await uploadBytes(storageRef, audioBlob, metadata);
       const downloadUrl = await getDownloadURL(storageRef);
-      
+
+      // Revoke blob URL to free memory now that it's uploaded to Firebase
+      try {
+        URL.revokeObjectURL(audioUrl);
+      } catch (e) {
+        // Blob URL may already be revoked
+      }
+
       setState(prev => ({ ...prev, isProcessing: false }));
-      
-      Logger.success(15712)
+
+      Logger.debug('✅ Audio uploaded to Firebase:', storagePath);
       return downloadUrl;
-      
+
     } catch (error: any) {
-      Logger.error('❌ Error uploading audio from URL:', error)
+      Logger.error('❌ Error uploading audio from URL:', error);
       setState(prev => ({
         ...prev,
         isProcessing: false,
@@ -776,7 +742,7 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
       }));
       return null;
     }
-  }, [state.duration]);
+  }, []); // No state dependencies — all values passed as parameters
 
   // ============================================
   // CLEANUP
@@ -840,11 +806,8 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
     // Actions
     startRecording,
     stopRecording,
-    pauseRecording,
-    resumeRecording,
     cancelRecording,
     forceCleanup,
-    uploadToFirebase,
     uploadToFirebaseFromUrl,
 
     // Utilities

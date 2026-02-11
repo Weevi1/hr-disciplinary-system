@@ -194,18 +194,13 @@ export interface WarningCategory {
   examples: string[];
   defaultValidityPeriod: 3 | 6 | 12;
   isActive: boolean;
+  expectedStandardsTemplate?: string; // Pre-populated text for Expected Standards phase
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface AudioRecordingData {
-  id: string;
-  url: string;
-  duration: number;
-  format: string;
-  size: number;
-  timestamp: Date;
-}
+// Re-export from canonical type definition to avoid dual definitions
+export type { AudioRecordingData } from '../types/warning';
 
 export interface EmployeeWithContext {
   id: string;
@@ -487,23 +482,32 @@ export class WarningService {
       
       // Check if HR intervention is required
       const requiresHRIntervention = suggestedLevel === 'hr_intervention';
-      const finalLevel = requiresHRIntervention ? 'final_written' : suggestedLevel as WarningLevel;
-      
+      const isDismissalLevel = suggestedLevel === 'dismissal';
+      const finalLevel = requiresHRIntervention ? 'final_written'
+                       : isDismissalLevel ? 'dismissal' as WarningLevel
+                       : suggestedLevel as WarningLevel;
+
       // Build comprehensive recommendation
       const recommendation: EscalationRecommendation = {
         // Core recommendation
         suggestedLevel: finalLevel,
-        recommendedLevel: requiresHRIntervention ? 'HR INTERVENTION REQUIRED' : getLevelLabel(finalLevel),
+        recommendedLevel: requiresHRIntervention ? 'HR INTERVENTION REQUIRED'
+                        : isDismissalLevel ? 'DISMISSAL — HR MUST HANDLE'
+                        : getLevelLabel(finalLevel),
         reason: requiresHRIntervention
           ? this.generateHRInterventionReason(categorySpecificWarnings, categoryForRecommendation)
+          : isDismissalLevel
+          ? `This offense requires immediate HR involvement. The employee's disciplinary history and the severity of this category indicate that dismissal proceedings may be appropriate. This must be handled by HR through a formal process.`
           : this.generateEscalationReason(categorySpecificWarnings, finalLevel, categoryForRecommendation),
-        
+
         // HR Intervention System
-        requiresHRIntervention,
+        requiresHRIntervention: requiresHRIntervention || isDismissalLevel,
         interventionReason: requiresHRIntervention
           ? `Employee has active final written warning for ${categoryForRecommendation?.name || 'this category'}. Next offense requires manual HR decision through dedicated intervention module.`
+          : isDismissalLevel
+          ? `This offense requires immediate HR involvement. The employee's disciplinary history and the severity of this category indicate that dismissal proceedings may be appropriate. This must be handled by HR through a formal process.`
           : undefined,
-        interventionLevel: requiresHRIntervention ? 'urgent' : undefined,
+        interventionLevel: (requiresHRIntervention || isDismissalLevel) ? 'urgent' : undefined,
         
         // Context - 🔥 FIXED: Use simplified summaries to avoid Firestore size limits
         activeWarnings: this.simplifyWarnings(categorySpecificWarnings),
@@ -552,10 +556,17 @@ export class WarningService {
     }
 
     // Check if employee already has final written warning
+    // Only trigger hr_intervention if the path has no step after final_written
+    // (paths with 'dismissal' after 'final_written' should traverse naturally)
     const hasFinalWritten = activeWarnings.some(warning => warning.level === 'final_written');
     if (hasFinalWritten) {
-      Logger.warn('🚨 [HR INTERVENTION] Employee has final written warning - HR intervention required')
-      return 'hr_intervention' as any; // Signal for HR intervention
+      const finalIndex = escalationPath.indexOf('final_written');
+      const hasNextStep = finalIndex >= 0 && finalIndex < escalationPath.length - 1;
+      if (!hasNextStep) {
+        Logger.warn('🚨 [HR INTERVENTION] Employee has final written warning - HR intervention required')
+        return 'hr_intervention' as any; // Signal for HR intervention
+      }
+      // Path has a step after final_written (e.g. dismissal) — fall through to traversal
     }
 
     // 🆕 Find highest level in active warnings (respects overridden levels)
@@ -584,11 +595,11 @@ export class WarningService {
     const currentIndex = escalationPath.indexOf(highestCurrentLevel);
     const nextIndex = currentIndex + 1;
     
-    // If we're at or beyond the last step in path, cap at final_written
+    // If we're at or beyond the last step in path, return the last level
     if (nextIndex >= escalationPath.length) {
-      const finalLevel = 'final_written';
-      Logger.debug('⚠️ [ESCALATION] Capping at final written warning:', finalLevel)
-      return finalLevel;
+      const lastLevel = escalationPath[escalationPath.length - 1];
+      Logger.debug('⚠️ [ESCALATION] At end of escalation path, returning:', lastLevel)
+      return lastLevel;
     }
     
     const nextLevel = escalationPath[nextIndex];

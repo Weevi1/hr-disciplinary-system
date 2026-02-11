@@ -92,6 +92,7 @@ interface CategoryCustomization {
   customDescription?: string;
   customEscalationPath?: WarningLevel[];
   customExamples?: string[];
+  customExpectedStandardsTemplate?: string; // Pre-populated text for Expected Standards phase
   isDisabled?: boolean;
   isCustomCategory?: boolean; // True for completely new categories
   customSeverity?: 'low' | 'medium' | 'high' | 'critical';
@@ -214,6 +215,7 @@ export class DataService {
           examples: customization?.customExamples || universalCat.commonExamples,
           defaultValidityPeriod: universalCat.defaultValidityPeriod,
           isActive: true,
+          expectedStandardsTemplate: customization?.customExpectedStandardsTemplate || undefined,
           createdAt: customization?.createdAt || new Date(),
           updatedAt: customization?.updatedAt || new Date()
         };
@@ -235,6 +237,7 @@ export class DataService {
           examples: customCat.customExamples || [],
           defaultValidityPeriod: 6,
           isActive: true,
+          expectedStandardsTemplate: customCat.customExpectedStandardsTemplate || undefined,
           createdAt: customCat.createdAt,
           updatedAt: customCat.updatedAt
         };
@@ -368,12 +371,13 @@ export class DataService {
       escalationPath: WarningLevel[];
       examples?: string[];
       severity?: 'low' | 'medium' | 'high' | 'critical';
+      expectedStandardsTemplate?: string;
     }
   ): Promise<string> {
     try {
       const categoryId = `custom-${Date.now()}`;
       const categoryRef = doc(db, 'organizations', organizationId, 'categories', categoryId);
-      
+
       const customCategoryData: CategoryCustomization = {
         id: categoryId,
         organizationId,
@@ -382,6 +386,7 @@ export class DataService {
         customDescription: categoryData.description,
         customEscalationPath: categoryData.escalationPath,
         customExamples: categoryData.examples || [],
+        customExpectedStandardsTemplate: categoryData.expectedStandardsTemplate || '',
         customSeverity: categoryData.severity || 'medium',
         isCustomCategory: true,
         isDisabled: false,

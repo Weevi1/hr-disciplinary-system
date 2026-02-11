@@ -11,6 +11,7 @@ import Logger from '../utils/logger';
 
 import { globalDeviceCapabilities, getPerformanceLimits } from '../utils/deviceDetection';
 import { PDFPlaceholderService } from './PDFPlaceholderService';
+import { getLevelLabel } from './UniversalCategories';
 import type { PDFSectionConfig } from '../types/core';
 import { convertSVGToPNG, isSignatureSVG } from '../utils/signatureSVG';
 
@@ -210,7 +211,7 @@ export class PDFGenerationService {
 
     try {
       // Convert SVG to PNG using canvas rendering
-      const pngSignature = await convertSVGToPNG(signature, 400, 200);
+      const pngSignature = await convertSVGToPNG(signature, 600, 300);
       return pngSignature;
     } catch (error) {
       Logger.error('Failed to convert SVG signature to PNG for PDF:', error);
@@ -851,7 +852,22 @@ export class PDFGenerationService {
 
       // 1. Organization Header
       Logger.debug('🏢 Adding organization header...');
-      currentY = this.addOrganizationHeader(doc, data.organization, currentY, pageWidth, margin);
+      // Pre-process logo: fetch, resize to PDF-friendly dimensions, convert to PNG data URL
+      const rawLogoUrl = data.organization?.branding?.logo;
+      let processedLogo: string | undefined;
+      if (rawLogoUrl) {
+        try {
+          processedLogo = await this.prepareLogoForPDF(rawLogoUrl);
+          Logger.debug('✅ Logo pre-processed for PDF embedding');
+        } catch (error) {
+          Logger.warn('⚠️ Failed to pre-process logo, will skip:', error);
+        }
+      }
+      currentY = this.addOrganizationHeader(doc, data.organization, currentY, pageWidth, margin, {
+        headerLayout: settings.content?.headerLayout || 'banner',
+        logoMaxHeight: settings.content?.logoMaxHeight || 20,
+        processedLogo,
+      });
 
       // 2. Document Title
       Logger.debug('📝 Adding document title...');
@@ -1057,12 +1073,18 @@ export class PDFGenerationService {
 
       // 11. Footer
       Logger.debug('🦶 Adding document footer...');
-      this.addDocumentFooter(doc, data, pageWidth);
+      this.addDocumentFooter(doc, data, pageWidth, {
+        footerText: settings.content.footerText,
+        showPageNumbers: settings.content.showPageNumbers,
+      });
 
       // 12. Security watermark
       if (settings.content.showWatermark) {
         Logger.debug('🛡️ Adding security watermark...');
-        this.addSecurityWatermark(doc, pageWidth);
+        this.addSecurityWatermark(doc, pageWidth, {
+          watermarkText: settings.content.watermarkText,
+          watermarkOpacity: settings.content.watermarkOpacity,
+        });
       }
 
       // 13. "OVERTURNED" watermark if applicable
@@ -1096,59 +1118,340 @@ export class PDFGenerationService {
   // ============================================
 
   /**
-   * Organization Header with Branding
+   * Pre-process a logo URL into a PNG data URL sized for PDF embedding.
+   * Handles remote URLs, data URLs, and any image format the browser supports.
+   * Returns a PNG data URL that jsPDF can reliably render.
+   */
+  private static async prepareLogoForPDF(
+    logoSrc: string,
+    maxWidth = 800,
+    maxHeight = 400
+  ): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('Canvas not supported')); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => reject(new Error('Failed to load logo image'));
+      img.src = logoSrc;
+    });
+  }
+
+  /**
+   * Add logo to PDF preserving aspect ratio within max bounds.
+   * Returns actual rendered { width, height } in mm.
+   */
+  private static addLogoWithAspectRatio(
+    doc: any,
+    logo: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    maxHeight: number
+  ): { width: number; height: number } {
+    const imgProps = doc.getImageProperties(logo);
+    const imgWidth = imgProps.width;
+    const imgHeight = imgProps.height;
+    const aspectRatio = imgWidth / imgHeight;
+
+    let finalWidth = maxWidth;
+    let finalHeight = maxWidth / aspectRatio;
+
+    if (finalHeight > maxHeight) {
+      finalHeight = maxHeight;
+      finalWidth = maxHeight * aspectRatio;
+    }
+
+    doc.addImage(logo, 'PNG', x, y, finalWidth, finalHeight);
+    return { width: finalWidth, height: finalHeight };
+  }
+
+  /**
+   * Organization Header with Branding — supports 3 configurable layouts.
+   *
+   * When called without headerSettings (v1.0.0 / v1.1.0 frozen callers),
+   * defaults to 'banner' layout to preserve backward compatibility.
    */
   private static addOrganizationHeader(
-    doc: any, 
-    organization: WarningPDFData['organization'], 
-    startY: number, 
-    pageWidth: number, 
-    margin: number
+    doc: any,
+    organization: WarningPDFData['organization'],
+    startY: number,
+    pageWidth: number,
+    margin: number,
+    headerSettings?: {
+      headerLayout?: 'stacked' | 'classic' | 'banner';
+      logoMaxHeight?: number;
+      processedLogo?: string; // Pre-processed PNG data URL ready for jsPDF
+    }
   ): number {
+    const layout = headerSettings?.headerLayout || 'banner';
+    const logoMaxHeight = headerSettings?.logoMaxHeight || 20;
     const headerColor = this.parseColor(organization.branding?.colors?.primary) || { r: 59, g: 130, b: 246 };
-    
-    // Header background
-    doc.setFillColor(headerColor.r, headerColor.g, headerColor.b);
-    doc.rect(0, 0, pageWidth, 35, 'F');
-    
-    let logoWidth = 0;
-    // Add organization logo if available
+    const companyName = organization.branding?.companyName || organization.name || 'Organization Name';
+    const contentWidth = pageWidth - margin * 2;
+
+    // Use pre-processed logo (PNG data URL) if available
+    if (headerSettings?.processedLogo) {
+      organization = {
+        ...organization,
+        branding: { ...organization.branding, logo: headerSettings.processedLogo }
+      };
+    }
+
+    // Build contact details — collapse multi-line addresses into single line
+    const details: string[] = [];
+    if (organization.address) {
+      // Replace newlines/carriage returns with ", " for compact single-line display
+      const flatAddress = organization.address.replace(/[\r\n]+/g, ', ').replace(/,\s*,/g, ',').trim();
+      if (flatAddress) details.push(flatAddress);
+    }
+    if (organization.phone) details.push(`Tel: ${organization.phone}`);
+    if (organization.email) details.push(`Email: ${organization.email}`);
+    if (organization.branding?.website) details.push(organization.branding.website);
+    const detailsLine = details.join(' | ');
+    const regLine = organization.registrationNumber ? `Registration: ${organization.registrationNumber}` : '';
+
+    if (layout === 'stacked') {
+      return this.addStackedHeader(doc, organization, companyName, detailsLine, regLine, headerColor, startY, pageWidth, margin, contentWidth, logoMaxHeight);
+    } else if (layout === 'classic') {
+      return this.addClassicHeader(doc, organization, companyName, detailsLine, regLine, headerColor, startY, pageWidth, margin, contentWidth, logoMaxHeight);
+    } else {
+      return this.addBannerHeader(doc, organization, companyName, detailsLine, regLine, headerColor, startY, pageWidth, margin, contentWidth, logoMaxHeight);
+    }
+  }
+
+  /**
+   * Layout A: "Stacked" — logo centered above name, white background, colored divider
+   */
+  private static addStackedHeader(
+    doc: any,
+    organization: WarningPDFData['organization'],
+    companyName: string,
+    detailsLine: string,
+    regLine: string,
+    headerColor: { r: number; g: number; b: number },
+    startY: number,
+    pageWidth: number,
+    margin: number,
+    contentWidth: number,
+    logoMaxHeight: number
+  ): number {
+    let currentY = startY;
+    const centerX = pageWidth / 2;
+
+    // Logo: centered, aspect-ratio aware
     if (organization.branding?.logo) {
       try {
-        const logoHeight = 20;
-        logoWidth = 30; // Approximate width
-        doc.addImage(organization.branding.logo, 'PNG', margin, 7, logoWidth, logoHeight);
-        Logger.debug('Added organization logo to PDF header');
+        const maxLogoWidth = contentWidth * 0.4; // Max 40% of content width
+        const imgProps = doc.getImageProperties(organization.branding.logo);
+        const aspectRatio = imgProps.width / imgProps.height;
+
+        let finalWidth = maxLogoWidth;
+        let finalHeight = maxLogoWidth / aspectRatio;
+        if (finalHeight > logoMaxHeight) {
+          finalHeight = logoMaxHeight;
+          finalWidth = logoMaxHeight * aspectRatio;
+        }
+
+        const logoX = centerX - finalWidth / 2;
+        doc.addImage(organization.branding.logo, 'PNG', logoX, currentY, finalWidth, finalHeight);
+        currentY += finalHeight + 4;
       } catch (error) {
-        Logger.warn('Failed to add organization logo to PDF:', error);
-        logoWidth = 0; // Reset if logo fails
+        Logger.warn('Failed to add organization logo to stacked header:', error);
       }
     }
-    
-    // Company name (positioned after logo if present)
+
+    // Company name — centered, brand color
+    doc.setTextColor(headerColor.r, headerColor.g, headerColor.b);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(companyName, centerX, currentY, { align: 'center' });
+    currentY += 6;
+
+    // Contact details — centered, gray, with word-wrap for long lines
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    const lineHeight = 4; // mm per line
+    if (detailsLine) {
+      const wrappedDetails = doc.splitTextToSize(detailsLine, contentWidth);
+      doc.text(wrappedDetails, centerX, currentY, { align: 'center' });
+      currentY += wrappedDetails.length * lineHeight;
+    }
+    if (regLine) {
+      doc.text(regLine, centerX, currentY, { align: 'center' });
+      currentY += lineHeight;
+    }
+
+    // Colored divider line (1mm)
+    currentY += 2;
+    doc.setDrawColor(headerColor.r, headerColor.g, headerColor.b);
+    doc.setLineWidth(1);
+    doc.line(margin, currentY, pageWidth - margin, currentY);
+    currentY += 5;
+
+    doc.setTextColor(0, 0, 0);
+    return currentY;
+  }
+
+  /**
+   * Layout B: "Classic Letterhead" — logo left, text right, colored divider
+   */
+  private static addClassicHeader(
+    doc: any,
+    organization: WarningPDFData['organization'],
+    companyName: string,
+    detailsLine: string,
+    regLine: string,
+    headerColor: { r: number; g: number; b: number },
+    startY: number,
+    pageWidth: number,
+    margin: number,
+    contentWidth: number,
+    logoMaxHeight: number
+  ): number {
+    let logoEndX = margin;
+    let logoHeight = 0;
+
+    // Logo: left-aligned, aspect-ratio aware
+    if (organization.branding?.logo) {
+      try {
+        const maxLogoWidth = contentWidth * 0.25; // Max 25% of content width
+        const dims = this.addLogoWithAspectRatio(
+          doc, organization.branding.logo,
+          margin, startY,
+          maxLogoWidth, logoMaxHeight
+        );
+        logoEndX = margin + dims.width + 6; // 6mm gap between logo and text
+        logoHeight = dims.height;
+      } catch (error) {
+        Logger.warn('Failed to add organization logo to classic header:', error);
+      }
+    }
+
+    // Text block — right of logo
+    let textY = startY + 5;
+
+    doc.setTextColor(headerColor.r, headerColor.g, headerColor.b);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(companyName, logoEndX, textY);
+    textY += 6;
+
+    doc.setTextColor(80, 80, 80);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    const textAreaWidth = pageWidth - margin - logoEndX; // available width for text
+    if (detailsLine) {
+      const wrappedDetails = doc.splitTextToSize(detailsLine, textAreaWidth);
+      doc.text(wrappedDetails, logoEndX, textY);
+      textY += wrappedDetails.length * 4;
+    }
+    if (regLine) {
+      doc.text(regLine, logoEndX, textY);
+      textY += 4;
+    }
+
+    // Dynamic height = max(logo height, text block height) + padding
+    const textBlockHeight = textY - startY;
+    let currentY = startY + Math.max(logoHeight, textBlockHeight) + 3;
+
+    // Colored divider line (1mm)
+    doc.setDrawColor(headerColor.r, headerColor.g, headerColor.b);
+    doc.setLineWidth(1);
+    doc.line(margin, currentY, pageWidth - margin, currentY);
+    currentY += 5;
+
+    doc.setTextColor(0, 0, 0);
+    return currentY;
+  }
+
+  /**
+   * Layout C: "Banner" — colored background band (matches original/frozen behavior)
+   */
+  private static addBannerHeader(
+    doc: any,
+    organization: WarningPDFData['organization'],
+    companyName: string,
+    detailsLine: string,
+    regLine: string,
+    headerColor: { r: number; g: number; b: number },
+    startY: number,
+    pageWidth: number,
+    margin: number,
+    _contentWidth: number,
+    logoMaxHeight: number
+  ): number {
+    // Calculate band height dynamically based on content
+    const bandPadding = 5; // mm padding top & bottom
+    const nameY = bandPadding + 10; // company name baseline
+    let detailY = nameY + 8; // details start below name
+    const detailLineHeight = 4;
+
+    // Pre-calculate detail line count for band height
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const detailMaxWidth = pageWidth - margin * 2;
+    const wrappedDetails = detailsLine ? doc.splitTextToSize(detailsLine, detailMaxWidth) : [];
+    const detailLines = wrappedDetails.length || 0;
+
+    let bandHeight = detailY + (detailLines * detailLineHeight);
+    if (regLine) bandHeight += detailLineHeight;
+    bandHeight += bandPadding; // bottom padding
+
+    // Colored background band
+    doc.setFillColor(headerColor.r, headerColor.g, headerColor.b);
+    doc.rect(0, 0, pageWidth, bandHeight, 'F');
+
+    let logoWidth = 0;
+    if (organization.branding?.logo) {
+      try {
+        const maxLogoWidth = 40;
+        const logoY = bandPadding + 2;
+        const dims = this.addLogoWithAspectRatio(
+          doc, organization.branding.logo,
+          margin, logoY,
+          maxLogoWidth, Math.min(logoMaxHeight, 20)
+        );
+        logoWidth = dims.width;
+      } catch (error) {
+        Logger.warn('Failed to add organization logo to banner header:', error);
+        logoWidth = 0;
+      }
+    }
+
+    // Company name — white text on colored band
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
-    const companyName = organization.branding?.companyName || organization.name || 'Organization Name';
-    doc.text(companyName, margin + logoWidth + (logoWidth > 0 ? 10 : 0), 15);
-    
-    // Company details
+    doc.text(companyName, margin + logoWidth + (logoWidth > 0 ? 10 : 0), nameY);
+
+    // Details — white text, word-wrapped
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    const details = [];
-    if (organization.address) details.push(organization.address);
-    if (organization.phone) details.push(`Tel: ${organization.phone}`);
-    if (organization.email) details.push(`Email: ${organization.email}`);
-    
-    if (details.length > 0) {
-      doc.text(details.join(' | '), margin, 25);
+    if (wrappedDetails.length > 0) {
+      doc.text(wrappedDetails, margin, detailY);
+      detailY += wrappedDetails.length * detailLineHeight;
     }
-    
-    if (organization.registrationNumber) {
-      doc.text(`Registration: ${organization.registrationNumber}`, margin, 30);
+    if (regLine) {
+      doc.text(regLine, margin, detailY);
     }
-    
-    return 45;
+
+    doc.setTextColor(0, 0, 0);
+    return bandHeight + 10; // 10mm gap below band
   }
   
   /**
@@ -1168,13 +1471,14 @@ export class PDFGenerationService {
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    
+
     const title = this.getWarningLevelTitle(data.warningLevel);
     const titleWidth = doc.getTextWidth(title);
     const titleX = (pageWidth - titleWidth) / 2;
 
+    startY += 4; // Breathing room above title (18pt text ascends ~5mm from baseline)
     doc.text(title, titleX, startY);
-    startY += 6; // Move down for validity period
+    startY += 4; // Tighter gap below title to underline
 
     // ✨ VALIDITY PERIOD DISPLAY - Prominent display below title
     if (data.validityPeriod && data.expiryDate) {
@@ -2079,8 +2383,8 @@ export class PDFGenerationService {
     let clauseText: string;
 
     // Determine clause wording based on warning level
-    // Suspension and dismissal are terminal actions - no auto-satisfaction
-    if (warningLevel === 'suspension' || warningLevel === 'dismissal') {
+    // Dismissal is a terminal action - no auto-satisfaction
+    if (warningLevel === 'dismissal') {
       // No clause for terminal actions
       return startY + 18;
     } else if (warningLevel === 'final_written') {
@@ -2719,73 +3023,88 @@ export class PDFGenerationService {
   /**
    * Document Footer - Multi-page aware
    */
-  private static addDocumentFooter(doc: any, data: WarningPDFData, pageWidth: number): void {
+  private static addDocumentFooter(
+    doc: any, data: WarningPDFData, pageWidth: number,
+    footerSettings?: { footerText?: string; showPageNumbers?: boolean }
+  ): void {
     const pageHeight = doc.internal.pageSize.height;
     const totalPages = doc.getNumberOfPages();
-    
+
+    // Use custom footer text or default
+    const customFooterText = footerSettings?.footerText || '';
+    const showPageNumbers = footerSettings?.showPageNumbers !== false; // default true
+
     // Add footer to each page
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
-      
+
       // Footer line
       doc.setDrawColor(180, 180, 180);
       doc.setLineWidth(0.3);
       doc.line(20, pageHeight - 25, pageWidth - 20, pageHeight - 25);
-      
+
       // Footer text
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(120, 120, 120);
-      
-      const footerText = 'This document has been generated electronically and constitutes an official warning as per LRA Section 188.';
-      const footerWidth = doc.getTextWidth(footerText);
-      const footerX = (pageWidth - footerWidth) / 2;
-      doc.text(footerText, footerX, pageHeight - 20);
-      
-      // Confidentiality notice
-      const confText = 'CONFIDENTIAL DOCUMENT - For authorized personnel only';
+
+      const legalText = 'This document has been generated electronically and constitutes an official warning as per LRA Section 188.';
+      const legalWidth = doc.getTextWidth(legalText);
+      const legalX = (pageWidth - legalWidth) / 2;
+      doc.text(legalText, legalX, pageHeight - 20);
+
+      // Confidentiality notice (custom or default)
+      const confText = customFooterText || 'CONFIDENTIAL DOCUMENT - For authorized personnel only';
       const confWidth = doc.getTextWidth(confText);
       const confX = (pageWidth - confWidth) / 2;
       doc.text(confText, confX, pageHeight - 15);
 
-      // Page number (centered)
-      const pageText = `Page ${i} of ${totalPages}`;
-      const pageWidth_text = doc.getTextWidth(pageText);
-      const pageX = (pageWidth - pageWidth_text) / 2;
-      doc.text(pageText, pageX, pageHeight - 10);
+      // Page number (centered) — conditional
+      if (showPageNumbers) {
+        const pageText = `Page ${i} of ${totalPages}`;
+        const pageWidth_text = doc.getTextWidth(pageText);
+        const pageX = (pageWidth - pageWidth_text) / 2;
+        doc.text(pageText, pageX, pageHeight - 10);
+      }
     }
   }
   
   /**
    * Security Watermark - Multi-page aware
    */
-  private static addSecurityWatermark(doc: any, pageWidth: number): void {
+  private static addSecurityWatermark(
+    doc: any, pageWidth: number,
+    watermarkSettings?: { watermarkText?: string; watermarkOpacity?: number }
+  ): void {
     const pageHeight = doc.internal.pageSize.height;
     const totalPages = doc.getNumberOfPages();
-    
+
+    const wmText = watermarkSettings?.watermarkText || 'OFFICIAL WARNING';
+    const wmOpacity = watermarkSettings?.watermarkOpacity || 0.1;
+
     // Add watermark to each page
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
-      
+
       // Save graphics state
       doc.saveGraphicsState();
-      
+
       // Set transparency
-      doc.setGState(new doc.GState({ opacity: 0.1 }));
-      
+      doc.setGState(new doc.GState({ opacity: wmOpacity }));
+
       // Watermark text
       doc.setTextColor(150, 150, 150);
       doc.setFontSize(40);
       doc.setFont('helvetica', 'bold');
-      
+
       const centerX = pageWidth / 2;
       const centerY = pageHeight / 2;
-      
-      doc.text('OFFICIAL WARNING', centerX, centerY, {
+
+      doc.text(wmText, centerX, centerY, {
         angle: 45,
         align: 'center'
       });
-      
+
       // Restore graphics state
       doc.restoreGraphicsState();
     }
@@ -3390,19 +3709,9 @@ export class PDFGenerationService {
    * Get warning level display name
    */
   private static getWarningLevelDisplay(level: string): string {
-    const levelMap: Record<string, string> = {
-      'counselling': 'Counselling Session',
-      'verbal': 'Verbal Warning',
-      'first_written': 'Written Warning',
-      'second_written': 'Second Written Warning',
-      'final_written': 'Final Written Warning',
-      'suspension': 'Suspension',
-      'dismissal': 'Ending of Service'
-    };
-    
-    return levelMap[level] || level.replace('_', ' ').toUpperCase();
+    return getLevelLabel(level);
   }
-  
+
   /**
    * Get warning level document title
    */
@@ -3413,8 +3722,7 @@ export class PDFGenerationService {
       'first_written': 'WRITTEN WARNING',
       'second_written': 'SECOND WRITTEN WARNING',
       'final_written': 'FINAL WRITTEN WARNING',
-      'suspension': 'SUSPENSION NOTICE',
-      'dismissal': 'ENDING OF SERVICE NOTICE'
+      'dismissal': 'CONTACT HR - SERIOUS OFFENCE'
     };
 
     return titleMap[level] || 'WARNING NOTICE';

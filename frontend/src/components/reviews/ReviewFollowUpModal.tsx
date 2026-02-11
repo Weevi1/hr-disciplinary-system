@@ -19,6 +19,7 @@ import { ThemedCard, ThemedBadge, ThemedAlert } from '../common/ThemedCard';
 import { ThemedButton } from '../common/ThemedButton';
 import type { WarningWithReview } from '../../hooks/useReviewFollowUps';
 import { useAuth } from '../../auth/AuthContext';
+import { getLevelLabel } from '../../services/UniversalCategories';
 
 interface ReviewFollowUpModalProps {
   isOpen: boolean;
@@ -92,19 +93,6 @@ export const ReviewFollowUpModal: React.FC<ReviewFollowUpModalProps> = ({
       month: 'short',
       day: 'numeric'
     });
-  };
-
-  const getLevelLabel = (level: string) => {
-    const labels: Record<string, string> = {
-      counselling: 'Counselling',
-      verbal: 'Verbal Warning',
-      first_written: 'Written Warning',
-      second_written: 'Second Written Warning',
-      final_written: 'Final Warning',
-      suspension: 'Suspension',
-      dismissal: 'Ending of Service'
-    };
-    return labels[level] || level;
   };
 
   return (

@@ -226,7 +226,6 @@ export class DeliveryNotificationService {
   private static determinePriority(warningLevel: string): 'normal' | 'high' | 'urgent' {
     switch (warningLevel.toLowerCase()) {
       case 'dismissal':
-      case 'suspension':
         return 'urgent';
       case 'final_written':
       case 'final written warning':

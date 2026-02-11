@@ -114,12 +114,15 @@ export const ThemeBrandingProvider: React.FC<ThemeBrandingProviderProps> = ({ ch
   }, []);
 
   // Get the appropriate theme colors based on current theme selection
+  // When an organization has branding colors, always apply them (no manual toggle needed)
   const getThemeColors = useCallback((themeName: ThemeName): ThemeColors => {
     switch (themeName) {
       case 'dark':
         return darkTheme;
       case 'branded':
-        // Use organization colors if available, otherwise fall back to light theme
+      case 'light':
+      default:
+        // Auto-apply org branding when available
         if (organization?.branding) {
           const { primaryColor, secondaryColor, accentColor } = organization.branding;
           return generateBrandedTheme(
@@ -128,9 +131,6 @@ export const ThemeBrandingProvider: React.FC<ThemeBrandingProviderProps> = ({ ch
             accentColor || '#10b981'
           );
         }
-        return lightTheme;
-      case 'light':
-      default:
         return lightTheme;
     }
   }, [organization]);
@@ -213,6 +213,46 @@ export const ThemeBrandingProvider: React.FC<ThemeBrandingProviderProps> = ({ ch
       root.style.setProperty('--brand-primary-light', adjustBrightness(colors.primaryColor, 40));
       root.style.setProperty('--brand-secondary-hover', adjustBrightness(colors.secondaryColor, -10));
       root.style.setProperty('--brand-accent-hover', adjustBrightness(colors.accentColor, -10));
+
+      // Dashboard theme CSS variables
+      const dashTheme = organization?.dashboardTheme;
+      const setOrRemove = (prop: string, value: string | undefined) => {
+        if (value) root.style.setProperty(prop, value);
+        else root.style.removeProperty(prop);
+      };
+
+      setOrRemove('--dash-btn-issue-warning', dashTheme?.actionButtons?.issueWarning);
+      setOrRemove('--dash-btn-hr-meeting', dashTheme?.actionButtons?.hrMeeting);
+      setOrRemove('--dash-btn-report-absence', dashTheme?.actionButtons?.reportAbsence);
+      setOrRemove('--dash-btn-recognition', dashTheme?.actionButtons?.recognition);
+
+      const shapeMap: Record<string, string> = { flat: '0px', rounded: '12px', pill: '9999px' };
+      setOrRemove('--dash-btn-radius', shapeMap[dashTheme?.buttonShape || 'rounded']);
+
+      setOrRemove('--dash-greeting-start', dashTheme?.greetingBanner?.gradientStart);
+      setOrRemove('--dash-greeting-end', dashTheme?.greetingBanner?.gradientEnd);
+      setOrRemove('--dash-page-bg', dashTheme?.pageBackground);
+      setOrRemove('--dash-topbar-bg', dashTheme?.topBar?.background);
+      setOrRemove('--dash-topbar-text', dashTheme?.topBar?.textColor);
+      setOrRemove('--dash-card-team-members', dashTheme?.navCards?.teamMembers);
+      setOrRemove('--dash-card-general', dashTheme?.navCards?.general);
+
+      const fontMap: Record<string, string> = {
+        'Inter': "'Inter', system-ui, sans-serif",
+        'Poppins': "'Poppins', system-ui, sans-serif",
+        'Roboto': "'Roboto', system-ui, sans-serif",
+        'Open Sans': "'Open Sans', system-ui, sans-serif",
+        'Nunito': "'Nunito', system-ui, sans-serif",
+        'Montserrat': "'Montserrat', system-ui, sans-serif",
+        'Lato': "'Lato', system-ui, sans-serif",
+        'Merriweather': "'Merriweather', Georgia, serif",
+        'Playfair Display': "'Playfair Display', Georgia, serif",
+        'Raleway': "'Raleway', system-ui, sans-serif",
+        'Quicksand': "'Quicksand', system-ui, sans-serif",
+        'Oswald': "'Oswald', system-ui, sans-serif",
+        'Space Grotesk': "'Space Grotesk', system-ui, sans-serif",
+      };
+      setOrRemove('--dash-font-family', dashTheme?.fontFamily ? fontMap[dashTheme.fontFamily] : undefined);
     };
 
     const getBrandedButtonClass = (type: 'primary' | 'secondary' | 'accent'): string => {
@@ -267,6 +307,22 @@ export const ThemeBrandingProvider: React.FC<ThemeBrandingProviderProps> = ({ ch
   useEffect(() => {
     brandingValue.applyBrandingStyles();
   }, [brandingValue]);
+
+  // Load Google Fonts for custom dashboard font
+  useEffect(() => {
+    const font = organization?.dashboardTheme?.fontFamily;
+    if (font && font !== 'Inter') {
+      const linkId = 'dash-theme-font';
+      let link = document.getElementById(linkId) as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.id = linkId;
+        link.rel = 'stylesheet';
+        document.head.appendChild(link);
+      }
+      link.href = `https://fonts.googleapis.com/css2?family=${font.replace(' ', '+')}:wght@400;500;600;700&display=swap`;
+    }
+  }, [organization?.dashboardTheme?.fontFamily]);
 
   // ============================================
   // CONTEXT VALUE

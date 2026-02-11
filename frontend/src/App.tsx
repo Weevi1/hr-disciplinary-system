@@ -35,6 +35,9 @@ const HRMeetingReview = React.lazy(() => import('./components/meetings/HRMeeting
 // 🔔 LAZY-LOADED WARNINGS REVIEW
 const WarningsReviewDashboard = React.lazy(() => import('./components/warnings/ReviewDashboard'));
 
+// 🔗 PUBLIC: Employee Response Page (no auth required)
+const EmployeeResponsePage = React.lazy(() => import('./pages/EmployeeResponsePage'));
+
 // Keep essential hooks and contexts as direct imports for performance
 import { useMultiRolePermissions } from './hooks/useMultiRolePermissions';
 import { useOrganizationSafe } from './contexts/OrganizationContext';
@@ -299,6 +302,13 @@ const AppRoutes: React.FC = () => {
         <LoginForm />
       } />
       
+      {/* 🔗 PUBLIC: Employee response page (no auth required) */}
+      <Route path="/respond/:token" element={
+        <Suspense fallback={<ComponentLoader text="Loading..." />}>
+          <EmployeeResponsePage />
+        </Suspense>
+      } />
+
       {/* 🎯 All protected routes live inside ProtectedLayout */}
       {/* This ensures OrganizationProvider is available for all child routes */}
       <Route element={<ProtectedLayout />}>

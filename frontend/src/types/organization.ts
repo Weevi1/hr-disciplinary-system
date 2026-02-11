@@ -174,6 +174,7 @@ export interface WarningCategory {
   isActive: boolean;
   saLegalType?: SALegalType;
   type?: string;
+  expectedStandardsTemplate?: string; // Pre-populated text for Expected Standards phase
   createdAt?: string;
   updatedAt?: string;
   sectorId?: string;

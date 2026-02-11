@@ -14,7 +14,8 @@ export type WarningLevel =
   | 'verbal'           // Verbal warning
   | 'first_written'    // First written warning
   | 'second_written'   // Second written warning
-  | 'final_written';   // Final written warning (system stops here)
+  | 'final_written'    // Final written warning
+  | 'dismissal';       // Dismissal - redirects to HR (never processed through app)
 
 export type CategorySeverity = 'minor' | 'serious' | 'gross_misconduct';
 
@@ -346,7 +347,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     lraSection: 'Section 188(1)(b) - Misconduct',
     schedule8Reference: 'Schedule 8, Item 1 - Misconduct procedures',
     
-    escalationPath: ['first_written', 'final_written'],
+    escalationPath: ['first_written', 'final_written', 'dismissal'],
     escalationRationale: 'Dishonesty and theft break fundamental trust required for employment. Minor dishonesty may warrant progressive discipline, but serious theft or fraud often justifies immediate dismissal after investigation.',
     
     commonExamples: [
@@ -461,7 +462,7 @@ export const UNIVERSAL_SA_CATEGORIES: UniversalCategory[] = [
     lraSection: 'Section 188(1)(b) - Misconduct',
     schedule8Reference: 'Schedule 8, Item 1 - Misconduct procedures',
     
-    escalationPath: ['final_written'],
+    escalationPath: ['final_written', 'dismissal'],
     escalationRationale: 'Harassment and discrimination create legal liability and hostile work environments. While investigation is required, proven cases often warrant immediate serious action.',
     
     commonExamples: [
@@ -573,23 +574,28 @@ export function getAllEscalationPaths(): { [categoryId: string]: WarningLevel[] 
  * Validate escalation path structure
  */
 export function validateEscalationPath(path: WarningLevel[]): boolean {
-  const validLevels: WarningLevel[] = ['counselling', 'verbal', 'first_written', 'second_written', 'final_written'];
+  const validLevels: WarningLevel[] = ['counselling', 'verbal', 'first_written', 'second_written', 'final_written', 'dismissal'];
+  const lastLevel = path[path.length - 1];
 
   return path.every(level => validLevels.includes(level)) &&
          path.length >= 1 &&
-         path[path.length - 1] === 'final_written';
+         (lastLevel === 'final_written' || lastLevel === 'dismissal');
 }
 
 /**
  * Get human-readable level labels
  */
-export function getLevelLabel(level: WarningLevel): string {
-  const labels: Record<WarningLevel, string> = {
+export function getLevelLabel(level: WarningLevel | string): string {
+  const labels: Record<string, string> = {
     counselling: 'Counselling Session',
     verbal: 'Verbal Warning',
     first_written: 'Written Warning',
     second_written: 'Second Written Warning',
-    final_written: 'Final Written Warning'
+    final_written: 'Final Written Warning',
+    dismissal: 'Contact HR - Serious Offence',
+    // Legacy level names (old data in Firestore)
+    written: 'Written Warning',
+    final: 'Final Written Warning'
   };
 
   return labels[level] || level;

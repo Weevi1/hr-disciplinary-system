@@ -118,8 +118,8 @@ export function isSignaturePNG(signature: string): boolean {
  */
 export async function convertSVGToPNG(
   svgDataURL: string,
-  width: number = 400,
-  height: number = 200
+  width: number = 600,
+  height: number = 300
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     // Create image element

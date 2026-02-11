@@ -26,7 +26,10 @@ import {
   Gavel,
   Shield,
   TrendingDown,
-  RefreshCw
+  RefreshCw,
+  Paperclip,
+  Image,
+  Download,
 } from 'lucide-react';
 
 interface AppealReviewModalProps {
@@ -48,6 +51,18 @@ interface AppealReviewModalProps {
       requestedOutcome: string;
       submittedBy: string;
       submittedDate: any;
+      evidenceItems?: Array<{
+        id: string;
+        type: 'photo' | 'document';
+        url?: string;
+        thumbnail?: string;
+        description: string;
+        metadata?: {
+          filename?: string;
+          fileSize?: number;
+          mimeType?: string;
+        };
+      }>;
     };
   };
   onDecisionSubmit: (decisionData: {
@@ -301,6 +316,45 @@ export const AppealReviewModal: React.FC<AppealReviewModalProps> = ({
                   <span>Submitted: {formatDate(warning.appealDetails.submittedDate)}</span>
                   <span>By: {warning.appealDetails.submittedBy}</span>
                 </div>
+
+                {/* Appeal Evidence */}
+                {warning.appealDetails.evidenceItems && warning.appealDetails.evidenceItems.length > 0 && (
+                  <div className="mt-4">
+                    <span className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                      <Paperclip className="w-4 h-4" />
+                      Supporting Evidence ({warning.appealDetails.evidenceItems.length} file{warning.appealDetails.evidenceItems.length !== 1 ? 's' : ''})
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {warning.appealDetails.evidenceItems.map((item) => (
+                        <a
+                          key={item.id}
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow group"
+                        >
+                          {item.type === 'photo' && item.thumbnail ? (
+                            <img src={item.thumbnail} alt={item.description} className="w-full h-20 object-cover" />
+                          ) : (
+                            <div className="w-full h-20 flex items-center justify-center bg-gray-50">
+                              {item.type === 'photo' ? (
+                                <Image className="w-8 h-8 text-gray-400" />
+                              ) : (
+                                <FileText className="w-8 h-8 text-gray-400" />
+                              )}
+                            </div>
+                          )}
+                          <div className="px-2 py-1.5 flex items-center justify-between">
+                            <p className="text-xs text-gray-700 truncate flex-1">
+                              {item.metadata?.filename || item.description}
+                            </p>
+                            <Download className="w-3 h-3 text-gray-400 group-hover:text-blue-600 flex-shrink-0 ml-1" />
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

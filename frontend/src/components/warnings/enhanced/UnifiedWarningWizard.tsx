@@ -4,11 +4,12 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { updateDoc, doc } from 'firebase/firestore';
-import { db } from '../../../config/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../../config/firebase';
 import {
   User, FileText, Tag, MessageSquare, Target, TrendingUp,
-  CheckCircle, FileSearch, PenTool, Send, AlertTriangle, X, Scale, Eye,
-  ChevronRight
+  CheckCircle, FileSearch, PenTool, Send, AlertTriangle, AlertCircle, X, Scale, Eye,
+  ChevronRight, Info, Paperclip
 } from 'lucide-react';
 import Logger from '../../../utils/logger';
 
@@ -34,12 +35,14 @@ import { EmployeeSelector } from './steps/components/EmployeeSelector';
 import { CategorySelector } from './steps/components/CategorySelector';
 import { IncidentDetailsForm } from './steps/components/IncidentDetailsForm';
 import { MultiLanguageWarningScript } from './steps/components/MultiLanguageWarningScript';
-import { DigitalSignaturePad } from './steps/DigitalSignaturePad';
 import { PDFPreviewModal } from './PDFPreviewModal';
 import { QRCodeDownloadModal } from '../modals/QRCodeDownloadModal';
 
 // SVG signature utilities
 import { applyWitnessWatermarkToSVG } from '../../../utils/signatureSVG';
+
+// Signature pad modal
+import { SignaturePadModal } from '../../common/SignaturePadModal';
 
 // Themed components
 import { ThemedCard } from '../../common/ThemedCard';
@@ -59,6 +62,7 @@ import type {
   WarningCategory,
   EnhancedWarningFormData
 } from '@/services/WarningService';
+import type { EvidenceItem } from '@/types/warning';
 
 // PDF services
 import { PDF_GENERATOR_VERSION } from '@/services/PDFGenerationService';
@@ -131,6 +135,7 @@ interface UnifiedWarningWizardProps {
   preSelectedEmployeeId?: string;
   preSelectedCategoryId?: string;
   isFullScreen?: boolean;
+  preloadedWarnings?: any[]; // Optional: Preloaded warnings from dashboard, used to skip Cloud Function call for employee history
 }
 
 // ============================================
@@ -172,8 +177,7 @@ const getWarningLevelInfo = (level: string) => {
     'first_written': { label: 'Written', color: '#f97316', requiresCommitments: true },
     'second_written': { label: 'Second Written', color: '#f97316', requiresCommitments: true },
     'final_written': { label: 'Final Written', color: '#ef4444', requiresCommitments: false },
-    'suspension': { label: 'Suspension', color: '#dc2626', requiresCommitments: false },
-    'dismissal': { label: 'Ending of Service', color: '#991b1b', requiresCommitments: false }
+    'dismissal': { label: 'Contact HR - Serious Offence', color: '#dc2626', requiresCommitments: false }
   };
   return levelMap[level] || { label: level, color: '#6b7280', requiresCommitments: true };
 };
@@ -191,7 +195,8 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
   onCancel,
   preSelectedEmployeeId,
   preSelectedCategoryId,
-  isFullScreen
+  isFullScreen,
+  preloadedWarnings
 }) => {
   const { user } = useAuth();
   const { organization } = useOrganization();
@@ -230,6 +235,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [transitionDirection, setTransitionDirection] = useState<'next' | 'prev'>('next');
   const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
+  const [audioUploadWarning, setAudioUploadWarning] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   // Form data - use South African timezone for dates/times
@@ -254,7 +260,9 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [overrideLevel, setOverrideLevel] = useState<string | null>(null);
   const [warningHistory, setWarningHistory] = useState<any[]>([]);
+  const warningHistoryLoaded = useRef(false); // Tracks if prefetch completed (even if result is empty)
   const [hasFinalWarningBlock, setHasFinalWarningBlock] = useState(false);
+  const [hasDismissalRedirect, setHasDismissalRedirect] = useState(false);
 
   // Corrective discussion
   const [employeeStatement, setEmployeeStatement] = useState('');
@@ -263,6 +271,9 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
   const [reviewDate, setReviewDate] = useState('');
   const [interventionDetails, setInterventionDetails] = useState('');
   const [resourcesProvided, setResourcesProvided] = useState<string[]>([]);
+
+  // Evidence files (collected locally, uploaded after warning save)
+  const [pendingEvidenceItems, setPendingEvidenceItems] = useState<EvidenceItem[]>([]);
 
   // Signatures
   const [signatures, setSignatures] = useState<SignatureData>({
@@ -337,7 +348,8 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
         return !!(
           formData.categoryId &&
           !isAnalyzing &&
-          !hasFinalWarningBlock
+          !hasFinalWarningBlock &&
+          !hasDismissalRedirect
         );
 
       case Phase.EMPLOYEE_RESPONSE:
@@ -437,26 +449,53 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
     }
   }, [currentPhase, isMobile]);
 
-  // Load employee when selected
+  // Load employee when selected — prefetch warning history immediately
   useEffect(() => {
     if (formData.employeeId) {
       const employee = employees.find(e => e.id === formData.employeeId);
       setSelectedEmployee(employee);
 
-      // Load warning history
+      // Reset prefetch flag for new employee
+      warningHistoryLoaded.current = false;
+      setWarningHistory([]);
+
+      // Prefetch warning history so it's ready before category selection
       if (employee && organization?.id) {
-        API.warnings.getActiveWarnings(employee.id, organization.id)
-          .then(warnings => setWarningHistory(warnings))
-          .catch(err => Logger.error('Failed to load warning history:', err));
+        // 🚀 OPTIMIZATION: Use preloaded warnings from dashboard when available
+        if (preloadedWarnings) {
+          const employeeWarnings = preloadedWarnings.filter(
+            (w: any) => w.employeeId === employee.id && w.isActive !== false && w.status !== 'expired' && w.status !== 'overturned'
+          );
+          setWarningHistory(employeeWarnings);
+          warningHistoryLoaded.current = true;
+          Logger.debug('[Wizard] Warning history from preloaded data:', employeeWarnings.length, 'active warnings');
+        } else {
+          // Fallback: Call Cloud Function when preloaded data not available
+          Logger.debug('[Wizard] Prefetching warning history for', employee.id);
+          API.warnings.getActiveWarnings(employee.id, organization.id)
+            .then(warnings => {
+              setWarningHistory(warnings);
+              warningHistoryLoaded.current = true;
+              Logger.debug('[Wizard] Warning history prefetched:', warnings.length, 'active warnings');
+            })
+            .catch(err => {
+              warningHistoryLoaded.current = true; // Mark loaded even on error so we don't block LRA
+              Logger.error('Failed to prefetch warning history:', err);
+            });
+        }
       }
     }
-  }, [formData.employeeId, employees, organization?.id]);
+  }, [formData.employeeId, employees, organization?.id, preloadedWarnings]);
 
   // Load category when selected
   useEffect(() => {
     if (formData.categoryId) {
       const category = categories.find(c => c.id === formData.categoryId);
       setSelectedCategory(category);
+      // Pre-populate expected standards if empty
+      if (category?.expectedStandardsTemplate && !expectedBehavior) {
+        setExpectedBehavior(category.expectedStandardsTemplate);
+      }
     }
   }, [formData.categoryId, categories]);
 
@@ -490,15 +529,21 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
 
     setIsAnalyzing(true);
     const startTime = Date.now();
-    const MIN_LOADING_TIME = 800; // Minimum time to show skeleton (ms)
+    const MIN_LOADING_TIME = 300; // Brief flash so user sees analysis happened
 
     try {
-      // Fetch active warnings
-      const activeWarnings = warningHistory.length > 0
+      // Use prefetched warnings if available, otherwise fetch now
+      const activeWarnings = warningHistoryLoaded.current
         ? warningHistory
         : await API.warnings.getActiveWarnings(formData.employeeId, organization.id);
 
       // Check for final warnings in same category - block if found
+      // BUT only if the category's escalation path doesn't have a step after final_written (e.g. dismissal)
+      const currentCategoryForCheck = categories.find(c => c.id === formData.categoryId) || selectedCategory;
+      const categoryPath = currentCategoryForCheck?.escalationPath || [];
+      const finalWrittenIdx = categoryPath.indexOf('final_written');
+      const pathHasStepAfterFinal = finalWrittenIdx >= 0 && finalWrittenIdx < categoryPath.length - 1;
+
       const hasFinalWarningForCategory = activeWarnings.some(warning =>
         (warning.level === 'final_written' ||
          warning.level === 'Final Written Warning' ||
@@ -506,7 +551,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
         warning.categoryId === formData.categoryId
       );
 
-      if (hasFinalWarningForCategory) {
+      if (hasFinalWarningForCategory && !pathHasStepAfterFinal) {
         setHasFinalWarningBlock(true);
         // Ensure minimum loading time
         const elapsed = Date.now() - startTime;
@@ -536,6 +581,14 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
       }
 
       setLraRecommendation(recommendation);
+
+      // Check if dismissal level — redirect to HR instead of proceeding
+      if (recommendation.suggestedLevel === 'dismissal') {
+        setHasDismissalRedirect(true);
+        setIsAnalyzing(false);
+        return;
+      }
+
       setFormData(prev => ({ ...prev, level: recommendation.suggestedLevel }));
 
     } catch (error) {
@@ -543,8 +596,27 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
       // 🔥 FIX: Look up category directly from categories array for fallback too
       const fallbackCategory = categories.find(c => c.id === formData.categoryId) || selectedCategory;
       const categoryEscalationPath = fallbackCategory?.escalationPath || ['counselling', 'verbal_warning', 'first_written', 'final_written'];
+      // Check if fallback path starts with dismissal (e.g. category with ['dismissal'] only)
+      const fallbackFirstLevel = categoryEscalationPath[0] || 'counselling';
+      if (fallbackFirstLevel === 'dismissal') {
+        const dismissalRecommendation: any = {
+          suggestedLevel: 'dismissal',
+          recommendedLevel: 'DISMISSAL — HR MUST HANDLE',
+          reason: 'This offense requires immediate HR involvement.',
+          activeWarnings: [],
+          escalationPath: categoryEscalationPath,
+          isEscalation: false,
+          category: fallbackCategory?.name || 'General Misconduct',
+          categoryId: formData.categoryId,
+          warningCount: 0
+        };
+        setLraRecommendation(dismissalRecommendation);
+        setHasDismissalRedirect(true);
+        setIsAnalyzing(false);
+        return;
+      }
       const fallbackRecommendation: any = {
-        suggestedLevel: categoryEscalationPath[0] || 'counselling',
+        suggestedLevel: fallbackFirstLevel,
         recommendedLevel: categoryEscalationPath[0] === 'counselling' ? 'Counselling Session' :
                          categoryEscalationPath[0] === 'verbal_warning' ? 'Verbal Warning' :
                          'Counselling Session',
@@ -622,6 +694,21 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
     Logger.info('Saving warning...', { employeeId: formData.employeeId, categoryId: formData.categoryId });
     setIsSaving(true);
     try {
+      // Save template version snapshot (logo + layout settings) for reproducible reprints
+      let pdfTemplateVersion: string | undefined;
+      if (organization?.pdfSettings && user?.uid) {
+        try {
+          pdfTemplateVersion = await PDFTemplateVersionService.ensureTemplateVersionExists(
+            organization.id,
+            organization.pdfSettings,
+            user.uid
+          );
+          Logger.success(`✅ PDF template version ${pdfTemplateVersion} saved/verified`);
+        } catch (error) {
+          Logger.error('❌ Failed to save PDF template version:', error);
+        }
+      }
+
       // Build warning data - must match EnhancedWarningFormData structure
       const warningData = {
         organizationId: organization.id,
@@ -668,8 +755,22 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
         disciplineRecommendation: lraRecommendation,
         wasOverridden: !!overrideLevel,
         originalRecommendedLevel: lraRecommendation?.suggestedLevel,
+        // Evidence count (files uploaded after save)
+        evidenceCount: pendingEvidenceItems.length,
         // Version tracking
         pdfGeneratorVersion: PDF_GENERATOR_VERSION,
+        ...(pdfTemplateVersion ? { pdfTemplateVersion } : {}),
+        // Organization header snapshot — frozen at creation for identical reprints
+        organizationSnapshot: {
+          companyName: organization.branding?.companyName || organization.name,
+          address: organization.address || null,
+          phone: organization.phone || null,
+          email: organization.email || null,
+          registrationNumber: organization.branding?.registrationNumber || null,
+          website: organization.branding?.website || null,
+          primaryColor: organization.branding?.primaryColor || '#3b82f6',
+          logoUrl: organization.branding?.logo || null,
+        },
         status: 'issued',
         createdAt: new Date(),
         createdBy: user?.uid
@@ -682,38 +783,119 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
       setFinalWarningId(warningId);
 
       // Stop and upload audio if recording AND audio is enabled
+      let audioUploadFailed = false;
       if (isAudioEnabled && audioRecording.isRecording) {
         try {
-          // Stop recording and get the audio URL
+          // Capture recordingId before stopping (won't change)
+          const recordingId = audioRecording.recordingId;
+
+          // Stop recording — returns blob URL. Duration/size are set by the onstop handler.
           const localAudioUrl = await audioRecording.stopRecording();
 
-          if (localAudioUrl && warningId) {
-            // Upload audio to Firebase Storage using the hook's method
-            const firebaseAudioUrl = await audioRecording.uploadToFirebase(
+          // Capture duration/size AFTER stop completes (onstop handler has updated state)
+          const finalDuration = audioRecording.duration || 0;
+          const finalSize = audioRecording.size || 0;
+
+          if (localAudioUrl && recordingId && warningId) {
+            const firebaseAudioUrl = await audioRecording.uploadToFirebaseFromUrl(
+              localAudioUrl,
+              recordingId,
               organization.id,
-              warningId
+              warningId,
+              finalDuration
             );
 
+            // Calculate auto-delete date in UTC to avoid timezone off-by-one
+            const autoDeleteDate = new Date();
+            autoDeleteDate.setUTCMonth(autoDeleteDate.getUTCMonth() + (formData.validityPeriod || 12));
+
+            const warningRef = doc(db, 'organizations', organization.id, 'warnings', warningId);
+
             if (firebaseAudioUrl) {
-              // Update warning with audio URL and metadata
-              const warningRef = doc(db, 'organizations', organization.id, 'warnings', warningId);
               await updateDoc(warningRef, {
-                audioRecordingUrl: firebaseAudioUrl,
-                audioMetadata: {
+                audioRecording: {
+                  recordingId,
+                  storageUrl: firebaseAudioUrl,
+                  url: firebaseAudioUrl,
+                  duration: finalDuration,
+                  size: finalSize,
+                  codec: 'audio/webm;codecs=opus',
+                  bitrate: 24000,
+                  sampleRate: 16000,
+                  channels: 1,
                   recordedBy: user?.uid,
                   recordedByName: currentManagerName,
                   recordedAt: new Date().toISOString(),
-                  duration: audioRecording.duration || 0
+                  uploadedAt: new Date().toISOString(),
+                  consentGiven: true,
+                  available: true,
+                  processingStatus: 'completed',
+                  retentionPeriod: formData.validityPeriod || 12,
+                  autoDeleteDate: autoDeleteDate.toISOString()
                 }
               });
-
-              Logger.success('Audio uploaded successfully:', firebaseAudioUrl);
+              Logger.debug('✅ Audio uploaded and saved to warning:', warningId);
+            } else {
+              audioUploadFailed = true;
+              await updateDoc(warningRef, {
+                audioRecording: {
+                  recordingId,
+                  processingStatus: 'failed',
+                  recordedBy: user?.uid,
+                  recordedByName: currentManagerName,
+                  recordedAt: new Date().toISOString(),
+                  consentGiven: true
+                }
+              });
+              Logger.error('Audio upload returned null — marked as failed on warning:', warningId);
             }
           }
         } catch (audioError) {
+          audioUploadFailed = true;
           Logger.error('Failed to upload audio recording:', audioError);
           // Continue even if audio upload fails - the warning is still saved
         }
+      }
+
+      // Upload evidence files if any were collected during the wizard
+      if (pendingEvidenceItems.length > 0 && warningId) {
+        try {
+          const uploadedItems: any[] = [];
+          for (const item of pendingEvidenceItems) {
+            if (item.file) {
+              const extension = item.file.name.split('.').pop() || 'file';
+              const fileName = `${item.id}.${extension}`;
+              const storagePath = `warnings/${organization.id}/${warningId}/evidence/${fileName}`;
+              const storageRef = ref(storage, storagePath);
+              await uploadBytes(storageRef, item.file, {
+                contentType: item.metadata?.mimeType || item.file.type
+              });
+              const downloadUrl = await getDownloadURL(storageRef);
+              uploadedItems.push({
+                id: item.id,
+                type: item.type,
+                url: downloadUrl,
+                description: item.description,
+                capturedAt: item.capturedAt instanceof Date ? item.capturedAt.toISOString() : item.capturedAt,
+                captureMethod: item.captureMethod,
+                metadata: item.metadata
+              });
+            }
+          }
+          if (uploadedItems.length > 0) {
+            const warningRef = doc(db, 'organizations', organization.id, 'warnings', warningId);
+            await updateDoc(warningRef, { evidenceItems: uploadedItems });
+            Logger.success('Evidence uploaded:', uploadedItems.length, 'files');
+          }
+        } catch (evidenceError) {
+          Logger.error('Failed to upload evidence:', evidenceError);
+          // Continue - warning is still saved
+        }
+      }
+
+      // Track audio upload failure for user feedback
+      if (audioUploadFailed) {
+        setAudioUploadWarning(true);
       }
 
       // Mark phase complete and advance
@@ -882,6 +1064,9 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
           <IncidentDetailsForm
             formData={formData}
             onFormDataChange={(updates) => setFormData(prev => ({ ...prev, ...updates }))}
+            evidenceItems={pendingEvidenceItems}
+            onEvidenceAdd={(item) => setPendingEvidenceItems(prev => [...prev, item])}
+            onEvidenceRemove={(id) => setPendingEvidenceItems(prev => prev.filter(i => i.id !== id))}
           />
         );
 
@@ -895,11 +1080,16 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
                 // Reset state and trigger analysis via useEffect
                 setLraRecommendation(null);
                 setHasFinalWarningBlock(false);
+                setHasDismissalRedirect(false);
                 // 🔥 FIX: Update selectedCategory BEFORE formData to avoid race condition
                 // The generateLRARecommendation useEffect uses selectedCategory state
                 const category = categories.find(c => c.id === id);
                 setSelectedCategory(category);
                 setFormData(prev => ({ ...prev, categoryId: id }));
+                // Pre-populate expected standards template if available and field is empty
+                if (category?.expectedStandardsTemplate && !expectedBehavior) {
+                  setExpectedBehavior(category.expectedStandardsTemplate);
+                }
               }}
               lraRecommendation={lraRecommendation}
             />
@@ -913,7 +1103,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
               </div>
             )}
 
-            {lraRecommendation && (
+            {lraRecommendation && !hasDismissalRedirect && (
               <ThemedCard padding="md" className="border-l-4" style={{ borderLeftColor: 'var(--color-primary)' }}>
                 <div className="flex items-start gap-3">
                   <Scale className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-primary)' }} />
@@ -1007,6 +1197,55 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
                 </div>
               </ThemedAlert>
             )}
+
+            {hasDismissalRedirect && (
+              <div className="rounded-xl border-2 p-5 space-y-4"
+                style={{
+                  borderColor: '#dc2626',
+                  backgroundColor: 'rgba(220, 38, 38, 0.05)'
+                }}>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: '#dc2626' }}>
+                    <AlertTriangle className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg" style={{ color: '#dc2626' }}>
+                      Serious Matter — Immediate HR Involvement Required
+                    </h3>
+                    <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+                      This cannot be handled through the warning system
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg p-4 space-y-3"
+                  style={{ backgroundColor: 'var(--color-surface-secondary)' }}>
+                  <p className="font-semibold text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                    What you must do:
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold text-sm mt-0.5" style={{ color: '#dc2626' }}>1.</span>
+                      <p className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                        <strong>Take the employee to HR immediately</strong> to report this incident.
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold text-sm mt-0.5" style={{ color: '#dc2626' }}>2.</span>
+                      <p className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                        If the employee <strong>refuses or is unable to accompany you</strong>, report the incident to HR yourself immediately.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                  Based on the severity of this offense and the employee's disciplinary history,
+                  this matter may require formal dismissal proceedings which must be conducted by HR.
+                </p>
+              </div>
+            )}
           </div>
         );
 
@@ -1050,6 +1289,13 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
       case Phase.EXPECTED_STANDARDS:
         return (
           <div className="space-y-4">
+            {selectedCategory?.expectedStandardsTemplate && expectedBehavior === selectedCategory.expectedStandardsTemplate && (
+              <div className="flex items-center gap-1 text-xs px-2 py-1 rounded-full w-fit"
+                style={{ backgroundColor: 'var(--color-alert-info-bg)', color: 'var(--color-alert-info-text)' }}>
+                <Info className="w-3 h-3" />
+                Pre-filled from category template — edit as needed
+              </div>
+            )}
             <textarea
               value={expectedBehavior}
               onChange={(e) => setExpectedBehavior(e.target.value)}
@@ -1257,6 +1503,18 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
               >
                 {formData.incidentDate} at {formData.incidentTime} • {formData.incidentLocation}
               </ReviewRow>
+
+              {pendingEvidenceItems.length > 0 && (
+                <ReviewRow
+                  label="Evidence"
+                  onClick={() => goToPhase(Phase.INCIDENT_DETAILS)}
+                >
+                  <span className="flex items-center gap-1">
+                    <Paperclip className="w-3 h-3" />
+                    {pendingEvidenceItems.length} file{pendingEvidenceItems.length !== 1 ? 's' : ''} attached
+                  </span>
+                </ReviewRow>
+              )}
 
               {levelInfo.requiresCommitments && (
                 <>
@@ -1472,7 +1730,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
 
             {/* Signature Modal */}
             {activeSignatureModal && (
-              <SignatureModal
+              <SignaturePadModal
                 title={
                   activeSignatureModal === 'manager'
                     ? 'Manager Signature'
@@ -1519,6 +1777,15 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
                 <span>Warning saved successfully! ID: {finalWarningId}</span>
               </div>
             </ThemedAlert>
+
+            {audioUploadWarning && (
+              <ThemedAlert variant="warning">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5" />
+                  <span>Audio recording failed to upload. The warning was saved without audio.</span>
+                </div>
+              </ThemedAlert>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               {['email', 'whatsapp', 'printed', 'qr'].map((method) => (
@@ -1679,7 +1946,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
           {/* Scrollable content area */}
           <div
             ref={contentContainerRef}
-            className="flex-1 overflow-y-auto"
+            className="flex-1 overflow-y-auto min-h-0"
           >
             <div className="enhanced-warning-wizard-container p-4">
               {/* Phase content with transition animation */}
@@ -2002,264 +2269,5 @@ const SignatureSlot: React.FC<{
     </div>
   </button>
 );
-
-// Full-screen signature modal
-const SignatureModal: React.FC<{
-  title: string;
-  signerName: string;
-  onSave: (signature: string) => void;
-  onClose: () => void;
-  initialSignature?: string | null;
-}> = ({ title, signerName, onSave, onClose, initialSignature }) => {
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = React.useState(false);
-  const [hasDrawn, setHasDrawn] = React.useState(!!initialSignature);
-
-  // Initialize canvas - use ResizeObserver for reliable sizing
-  React.useEffect(() => {
-    const canvas = canvasRef.current;
-    const parent = canvas?.parentElement;
-    if (!canvas || !parent) return;
-
-    const initCanvas = () => {
-      const rect = parent.getBoundingClientRect();
-
-      // Skip if parent hasn't been laid out yet (height = 0)
-      if (rect.height < 50) return;
-
-      // Set canvas size to match parent container
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
-      canvas.style.width = `${rect.width}px`;
-      canvas.style.height = `${rect.height}px`;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      ctx.scale(dpr, dpr);
-
-      // Style
-      ctx.strokeStyle = '#1e40af';
-      ctx.lineWidth = 2;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      // Load initial signature if exists
-      if (initialSignature) {
-        const img = new Image();
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0, rect.width, rect.height);
-        };
-        img.src = initialSignature;
-      }
-    };
-
-    // Use ResizeObserver for reliable sizing when flex layout completes
-    const observer = new ResizeObserver(() => {
-      initCanvas();
-    });
-    observer.observe(parent);
-
-    // Also run on initial mount after a short delay for mobile
-    const timeout = setTimeout(initCanvas, 100);
-
-    return () => {
-      observer.disconnect();
-      clearTimeout(timeout);
-    };
-  }, [initialSignature]);
-
-  const getCoords = (e: React.TouchEvent | React.MouseEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-
-    const rect = canvas.getBoundingClientRect();
-    if ('touches' in e) {
-      return {
-        x: e.touches[0].clientX - rect.left,
-        y: e.touches[0].clientY - rect.top
-      };
-    }
-    return {
-      x: (e as React.MouseEvent).clientX - rect.left,
-      y: (e as React.MouseEvent).clientY - rect.top
-    };
-  };
-
-  const startDrawing = (e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault();
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!ctx || !canvas) return;
-
-    // Ensure styles are set
-    ctx.strokeStyle = '#1e40af';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    setIsDrawing(true);
-    setHasDrawn(true);
-    const { x, y } = getCoords(e);
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-  };
-
-  const draw = (e: React.TouchEvent | React.MouseEvent) => {
-    if (!isDrawing) return;
-    e.preventDefault();
-
-    const ctx = canvasRef.current?.getContext('2d');
-    if (!ctx) return;
-
-    const { x, y } = getCoords(e);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
-
-  const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
-
-    const rect = canvas.getBoundingClientRect();
-    ctx.clearRect(0, 0, rect.width, rect.height);
-    setHasDrawn(false);
-  };
-
-  // Helper to get initials and surname from full name
-  const getInitialsAndSurname = (fullName: string): string => {
-    if (!fullName || fullName.trim() === '') return '';
-    const nameParts = fullName.trim().split(/\s+/);
-    if (nameParts.length === 0) return '';
-    if (nameParts.length === 1) return nameParts[0];
-    const initials = nameParts.slice(0, -1).map(part => part.charAt(0).toUpperCase() + '.').join(' ');
-    const surname = nameParts[nameParts.length - 1];
-    return `${initials} ${surname}`;
-  };
-
-  const saveSignature = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx || !hasDrawn) return;
-
-    // Get SA timestamp
-    const now = new Date();
-    const saTimestamp = new Intl.DateTimeFormat('en-ZA', {
-      timeZone: 'Africa/Johannesburg',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }).format(now);
-
-    // Get initials and surname
-    const initialsAndSurname = getInitialsAndSurname(signerName);
-
-    // Burn timestamp and name into canvas
-    const rect = canvas.getBoundingClientRect();
-    const padding = 8;
-    const fontSize = 10;
-    const lineSpacing = 2;
-
-    ctx.save();
-    ctx.font = `${fontSize}px Arial, sans-serif`;
-    ctx.fillStyle = '#64748b';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'bottom';
-
-    let yPosition = rect.height - padding;
-    ctx.fillText(saTimestamp, rect.width - padding, yPosition);
-
-    if (initialsAndSurname) {
-      yPosition -= (fontSize + lineSpacing);
-      ctx.fillText(initialsAndSurname, rect.width - padding, yPosition);
-    }
-
-    ctx.restore();
-
-    const dataUrl = canvas.toDataURL('image/png');
-    onSave(dataUrl);
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-[9500] flex flex-col"
-      style={{ backgroundColor: 'white' }}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--color-border-light)' }}>
-        <div>
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            {title}
-          </h3>
-          <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            {signerName}
-          </p>
-        </div>
-        <button
-          onClick={onClose}
-          className="p-2 rounded-lg hover:bg-gray-100"
-        >
-          <X className="w-5 h-5 text-gray-500" />
-        </button>
-      </div>
-
-      {/* Canvas area */}
-      <div className="flex-1 p-4 flex flex-col">
-        <p className="text-xs text-center mb-2" style={{ color: 'var(--color-text-secondary)' }}>
-          Sign in the box below
-        </p>
-        <div
-          className="flex-1 rounded-xl border-2 border-dashed relative overflow-hidden"
-          style={{ borderColor: 'var(--color-border)', backgroundColor: '#fafafa', minHeight: '200px' }}
-        >
-          <canvas
-            ref={canvasRef}
-            className="absolute inset-0 w-full h-full touch-none"
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
-            onTouchStart={startDrawing}
-            onTouchMove={draw}
-            onTouchEnd={stopDrawing}
-          />
-          {!hasDrawn && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <p className="text-gray-300 text-lg">Draw your signature here</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Footer actions */}
-      <div className="p-4 border-t flex gap-3" style={{ borderColor: 'var(--color-border-light)' }}>
-        <button
-          onClick={clearCanvas}
-          className="flex-1 py-3 px-4 rounded-xl border text-sm font-medium transition-colors hover:bg-gray-50"
-          style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}
-        >
-          Clear
-        </button>
-        <button
-          onClick={saveSignature}
-          disabled={!hasDrawn}
-          className="flex-1 py-3 px-4 rounded-xl text-sm font-medium text-white transition-colors disabled:opacity-50"
-          style={{ backgroundColor: hasDrawn ? 'var(--color-primary)' : 'var(--color-border)' }}
-        >
-          Save Signature
-        </button>
-      </div>
-    </div>
-  );
-};
 
 export default UnifiedWarningWizard;

@@ -22,6 +22,19 @@ service firebase.storage {
         && request.resource.size < 10 * 1024 * 1024; // 10MB limit for PDFs
     }
     
+    // Allow authenticated users to upload appeal evidence
+    match /appeals/{organizationId}/{warningId}/{file} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.resource.size < 5 * 1024 * 1024; // 5MB limit
+    }
+
+    // Public read for employee response evidence (uploaded via Cloud Function)
+    match /response-evidence/{organizationId}/{warningId}/{file} {
+      allow read: if true; // Public - accessed via response links
+      // Write handled by Cloud Function admin SDK (no client writes)
+    }
+
     // Allow authenticated users for other files
     match /{allPaths=**} {
       allow read, write: if request.auth != null;

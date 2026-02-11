@@ -32,6 +32,7 @@ import {
 import type { Warning } from '../../types/warning';
 import { transformWarningDataForPDF } from '../../../utils/pdfDataTransformer';
 import { useOrganization } from '../../../contexts/OrganizationContext';
+import { getLevelLabel } from '../../../services/UniversalCategories';
 
 // ============================================
 // INTERFACES
@@ -349,7 +350,7 @@ export const PDFViewerModal: React.FC<PDFViewerModalProps> = ({
   const getWarningTitle = (): string => {
     if (!isValidWarning) return 'Warning Document';
     const level = safeWarning.level || 'verbal';
-    return `${level.replace('_', ' ').toUpperCase()} WARNING - ${employeeName}`;
+    return `${getLevelLabel(level).toUpperCase()} - ${employeeName}`;
   };
 
   const getWarningSubtitle = (): string => {

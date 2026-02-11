@@ -15,14 +15,13 @@ export type DeliveryMethod = 'email' | 'whatsapp' | 'printed';
 export type DeliveryStatus = 'pending' | 'delivered' | 'failed';
 
 // 🔧 ENHANCED: Added 'counselling' as first level in progressive discipline
-export type WarningLevel = 
+export type WarningLevel =
   | 'counselling'      // ✅ ADDED: Entry level for minor issues
   | 'verbal'           // Verbal warning
   | 'first_written'    // First written warning
   | 'second_written'   // Second written warning
   | 'final_written'    // Final written warning
-  | 'suspension'       // Suspension with/without pay
-  | 'dismissal';       // Termination
+  | 'dismissal';       // Contact HR - Serious Offence (never processed through app)
 
 export type WarningStatus = 'issued' | 'delivered' | 'acknowledged';
 export type ContractType = 'permanent' | 'contract' | 'temporary';
@@ -190,6 +189,7 @@ export interface PDFTemplateSettings {
     showLogo: boolean;               // Display company logo in header?
     logoPosition: 'top-left' | 'top-center' | 'top-right';
     logoMaxHeight: number;           // Logo max height in mm (10-30)
+    headerLayout: 'stacked' | 'classic' | 'banner'; // PDF header layout style
 
     // Section Visibility (Enable/Disable sections)
     enabledSections: string[];       // e.g., ['employee-info', 'incident', 'rights', 'signatures']
@@ -237,12 +237,66 @@ export interface PDFTemplateSettings {
   betaFeatures: boolean;             // Enable experimental features?
 }
 
+// Dashboard theming — per-organization visual customization of the dashboard UI
+export interface DashboardThemeSettings {
+  actionButtons?: {
+    issueWarning?: string;    // hex color, fallback: --color-warning
+    hrMeeting?: string;       // hex color, fallback: --color-accent
+    reportAbsence?: string;   // hex color, fallback: --color-error
+    recognition?: string;     // hex color, fallback: #10b981
+  };
+  buttonShape?: 'flat' | 'rounded' | 'pill';
+  greetingBanner?: {
+    gradientStart?: string;
+    gradientEnd?: string;
+  };
+  topBar?: {
+    background?: string;      // hex color for header/nav bar background
+    textColor?: string;       // hex color for header text (for contrast)
+  };
+  navCards?: {
+    teamMembers?: string;   // hex color for Team Members card background
+    general?: string;       // hex color for all other navigation cards
+  };
+  pageBackground?: string;
+  fontFamily?: 'Inter' | 'Poppins' | 'Roboto' | 'Open Sans' | 'Nunito' | 'Montserrat' | 'Lato' | 'Merriweather' | 'Playfair Display' | 'Raleway' | 'Quicksand' | 'Oswald' | 'Space Grotesk';
+  // HR Dashboard metric card color overrides
+  hrDashboard?: {
+    metricColors?: {
+      absenceReports?: string;
+      meetingRequests?: string;
+      activeWarnings?: string;
+      reviewFollowups?: string;
+      totalEmployees?: string;
+    };
+  };
+  // Executive Dashboard metric card color overrides
+  executiveDashboard?: {
+    metricColors?: {
+      totalEmployees?: string;
+      activeWarnings?: string;
+      highPriority?: string;
+      departments?: string;
+    };
+  };
+}
+
 export interface Organization {
   id: string;
   name: string;
   industry: IndustryType;
   sectorId?: string;
   sectorName?: string;
+
+  // Business contact details (appear on PDF letterhead/header)
+  email?: string;     // Official business email (e.g., info@company.co.za)
+  phone?: string;     // Official business phone
+  address?: string;   // Business address
+
+  // Admin/account owner contact (separate from business details)
+  contactEmail?: string;
+  contactPhone?: string;
+
   branding: {
     logo: string | null;
     primaryColor: string;    // Main brand color - buttons, headers, key UI elements
@@ -250,6 +304,10 @@ export interface Organization {
     accentColor: string;     // Accent color - badges, highlights, notifications
     companyName: string;
     domain: string;
+    registrationNumber?: string;  // e.g., "2026/071559/07"
+    vatNumber?: string;           // VAT number
+    website?: string;             // e.g., "https://freshmart.co.za"
+    tagline?: string;             // Company slogan
   };
   settings: {
     timezone: string;
@@ -277,6 +335,9 @@ export interface Organization {
 
   // 📄 PDF Template Settings - Per-organization PDF customization
   pdfSettings?: PDFTemplateSettings;
+
+  // 🎨 Dashboard Theme Settings - Per-organization dashboard visual customization
+  dashboardTheme?: DashboardThemeSettings;
 
   createdAt?: string;
   updatedAt?: string;

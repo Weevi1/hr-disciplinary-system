@@ -1,13 +1,28 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import fs from 'fs'
+
+// Generate build version once so it's consistent across define + marker file
+const BUILD_VERSION = Date.now().toString();
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'write-build-version',
+      closeBundle() {
+        // Write marker file for post-deploy script to read
+        fs.writeFileSync(path.resolve(__dirname, 'dist/.build-version'), BUILD_VERSION);
+      }
+    }
+  ],
   define: {
     // Ensure NODE_ENV is properly set for Logger dead code elimination
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production')
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+    // Build version for cache-busting and forced app updates
+    '__BUILD_VERSION__': JSON.stringify(BUILD_VERSION)
   },
   resolve: {
     alias: {

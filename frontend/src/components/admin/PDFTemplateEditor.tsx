@@ -384,58 +384,104 @@ export const PDFTemplateEditor: React.FC<PDFTemplateEditorProps> = ({ settings, 
         />
       </Panel>
 
-      {/* 6. Watermark Panel */}
-      <Panel id="watermark" title="Watermark" icon={Shield}>
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="showWatermark"
-              checked={settings.content.showWatermark}
-              onChange={(e) => updateSetting('content.showWatermark', e.target.checked)}
-              className="w-4 h-4 cursor-pointer"
-            />
-            <label htmlFor="showWatermark" className="text-sm cursor-pointer" style={{ color: 'var(--color-text)' }}>
-              Enable watermark
-            </label>
+      {/* 6. Footer & Watermark Panel */}
+      <Panel id="watermark" title="Footer & Watermark" icon={Shield}>
+        <div className="space-y-6">
+          {/* Footer Settings */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+              Footer
+            </h4>
+
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                Confidentiality Notice
+              </label>
+              <input
+                type="text"
+                value={settings.content.footerText}
+                onChange={(e) => updateSetting('content.footerText', e.target.value)}
+                className="w-full px-3 py-2 rounded border"
+                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                placeholder="CONFIDENTIAL DOCUMENT - For authorized personnel only"
+              />
+              <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                Appears on every page below the LRA compliance line
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="showPageNumbers"
+                checked={settings.content.showPageNumbers}
+                onChange={(e) => updateSetting('content.showPageNumbers', e.target.checked)}
+                className="w-4 h-4 cursor-pointer"
+              />
+              <label htmlFor="showPageNumbers" className="text-sm cursor-pointer" style={{ color: 'var(--color-text)' }}>
+                Show page numbers
+              </label>
+            </div>
           </div>
 
-          {settings.content.showWatermark && (
-            <>
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
-                  Watermark Text
-                </label>
-                <input
-                  type="text"
-                  value={settings.content.watermarkText}
-                  onChange={(e) => updateSetting('content.watermarkText', e.target.value)}
-                  className="w-full px-3 py-2 rounded border"
-                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
-                  placeholder="CONFIDENTIAL"
-                />
-              </div>
+          {/* Divider */}
+          <div className="border-t" style={{ borderColor: 'var(--color-border)' }} />
 
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
-                  Opacity: {Math.round(settings.content.watermarkOpacity * 100)}%
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={settings.content.watermarkOpacity}
-                  onChange={(e) => updateSetting('content.watermarkOpacity', parseFloat(e.target.value))}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                  <span>0%</span>
-                  <span>100%</span>
+          {/* Watermark Settings */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+              Watermark
+            </h4>
+
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="showWatermark"
+                checked={settings.content.showWatermark}
+                onChange={(e) => updateSetting('content.showWatermark', e.target.checked)}
+                className="w-4 h-4 cursor-pointer"
+              />
+              <label htmlFor="showWatermark" className="text-sm cursor-pointer" style={{ color: 'var(--color-text)' }}>
+                Enable watermark
+              </label>
+            </div>
+
+            {settings.content.showWatermark && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                    Watermark Text
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.content.watermarkText}
+                    onChange={(e) => updateSetting('content.watermarkText', e.target.value)}
+                    className="w-full px-3 py-2 rounded border"
+                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                    placeholder="CONFIDENTIAL"
+                  />
                 </div>
-              </div>
-            </>
-          )}
+
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-text)' }}>
+                    Opacity: {Math.round(settings.content.watermarkOpacity * 100)}%
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="30"
+                    value={Math.round(settings.content.watermarkOpacity * 100)}
+                    onChange={(e) => updateSetting('content.watermarkOpacity', Number(e.target.value) / 100)}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                    <span>1%</span>
+                    <span>30%</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </Panel>
 

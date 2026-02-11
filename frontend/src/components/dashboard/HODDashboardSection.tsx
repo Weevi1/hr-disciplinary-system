@@ -11,9 +11,7 @@ import {
   UserX,
   Users,
   Calendar,
-  Mic,
   ChevronRight,
-  Shield,
   Award
 } from 'lucide-react';
 
@@ -41,8 +39,8 @@ import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
 import { useDashboardData } from '../../hooks/dashboard/useDashboardData';
-import { ThemedCard } from '../common/ThemedCard';
 import { QuotesSection } from './QuotesSection';
+import { API } from '../../api';
 import Logger from '../../utils/logger';
 
 const LoadingSkeleton = () => (
@@ -67,6 +65,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
   const {
     categories: contextCategories,
     employees: dashboardEmployees,
+    warnings: dashboardWarnings,
     followUps: dueFollowUps,
     loading: dashboardLoading,
     isReady,
@@ -113,158 +112,258 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
       return;
     }
 
-    // 🔍 DEBUG: Log category state
-    Logger.debug('🎯 Issue Warning clicked:', {
-      contextCategories: contextCategories?.length || 0,
-      orgContextCategories: orgContextCategories?.length || 0,
-      finalCategories: categories.length,
-      categoriesList: categories.map((c: any) => c.name || c.title)
-    });
-
     if (categories.length === 0) {
       alert('No warning categories found. Please contact your system administrator.');
       return;
     }
+
+    // 🚀 Quick staleness check — single doc read, near-instant
+    if (organization?.id) {
+      const isStale = await API.warnings.isWarningsDataStale(organization.id);
+      if (isStale) {
+        Logger.debug('🔄 Warnings data stale — refreshing before opening wizard');
+        refreshData();
+      }
+    }
+
     setShowWarningWizard(true);
-  }, [canCreateWarnings, isReady, employees.length, categories.length, dashboardLoading, contextCategories, orgContextCategories, categories]);
+  }, [canCreateWarnings, isReady, employees.length, categories.length, dashboardLoading, organization?.id, refreshData]);
 
   return (
     <>
       <div className={`space-y-4 ${className}`}>
         {/* Quick Action Buttons - 2x2 Grid */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           {hodPermissions.canIssueWarnings && canCreateWarnings() && (
-            <ThemedCard
-              hover
-              padding="sm"
-              className="cursor-pointer transition-all duration-200 active:scale-95"
+            <button
+              type="button"
               onClick={handleIssueWarning}
+              className="relative overflow-hidden transition-all duration-200 active:scale-[0.97] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white/30"
               style={{
-                background: 'linear-gradient(135deg, var(--color-warning), var(--color-warning))',
-                color: 'var(--color-text-inverse)',
-                minHeight: '90px'
+                backgroundColor: 'var(--dash-btn-issue-warning, var(--color-warning))',
+                color: 'white',
+                borderRadius: 'var(--dash-btn-radius, 12px)',
+                minHeight: '100px',
+                border: 'none',
+                cursor: 'pointer',
+                width: '100%'
               }}
             >
-              <div className="flex flex-col items-center justify-center gap-1.5 text-center h-full py-2">
-                <div className="flex items-center gap-1">
+              <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent" style={{ borderRadius: 'inherit' }} />
+              <div className="relative flex flex-col items-center justify-center gap-2 px-3 py-4">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
                   <AlertTriangle className="w-5 h-5" />
-                  <Mic className="w-3.5 h-3.5 opacity-80" />
                 </div>
-                <span className="font-semibold text-xs leading-tight">Issue Warning</span>
+                <span className="font-semibold text-sm leading-tight">Issue Warning</span>
               </div>
-            </ThemedCard>
+            </button>
           )}
 
           {hodPermissions.canBookHRMeetings && (
-            <ThemedCard
-              hover
-              padding="sm"
-              className="cursor-pointer transition-all duration-200 active:scale-95"
+            <button
+              type="button"
               onClick={() => setShowBookHRMeeting(true)}
+              className="relative overflow-hidden transition-all duration-200 active:scale-[0.97] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white/30"
               style={{
-                background: 'linear-gradient(135deg, var(--color-accent), var(--color-accent))',
-                color: 'var(--color-text-inverse)',
-                minHeight: '90px'
+                backgroundColor: 'var(--dash-btn-hr-meeting, var(--color-accent))',
+                color: 'white',
+                borderRadius: 'var(--dash-btn-radius, 12px)',
+                minHeight: '100px',
+                border: 'none',
+                cursor: 'pointer',
+                width: '100%'
               }}
             >
-              <div className="flex flex-col items-center justify-center gap-1.5 text-center h-full py-2">
-                <MessageCircle className="w-5 h-5" />
-                <span className="font-semibold text-xs leading-tight">HR Meeting</span>
+              <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent" style={{ borderRadius: 'inherit' }} />
+              <div className="relative flex flex-col items-center justify-center gap-2 px-3 py-4">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <MessageCircle className="w-5 h-5" />
+                </div>
+                <span className="font-semibold text-sm leading-tight">HR Meeting</span>
               </div>
-            </ThemedCard>
+            </button>
           )}
 
           {hodPermissions.canReportAbsences && (
-            <ThemedCard
-              hover
-              padding="sm"
-              className="cursor-pointer transition-all duration-200 active:scale-95"
+            <button
+              type="button"
               onClick={() => setShowReportAbsence(true)}
+              className="relative overflow-hidden transition-all duration-200 active:scale-[0.97] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white/30"
               style={{
-                background: 'linear-gradient(135deg, var(--color-error), var(--color-error))',
-                color: 'var(--color-text-inverse)',
-                minHeight: '90px'
+                backgroundColor: 'var(--dash-btn-report-absence, var(--color-error))',
+                color: 'white',
+                borderRadius: 'var(--dash-btn-radius, 12px)',
+                minHeight: '100px',
+                border: 'none',
+                cursor: 'pointer',
+                width: '100%'
               }}
             >
-              <div className="flex flex-col items-center justify-center gap-1.5 text-center h-full py-2">
-                <UserX className="w-5 h-5" />
-                <span className="font-semibold text-xs leading-tight">Report Absence</span>
+              <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent" style={{ borderRadius: 'inherit' }} />
+              <div className="relative flex flex-col items-center justify-center gap-2 px-3 py-4">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <UserX className="w-5 h-5" />
+                </div>
+                <span className="font-semibold text-sm leading-tight">Report Absence</span>
               </div>
-            </ThemedCard>
+            </button>
           )}
 
-          {/* Recognition Entry Button */}
-          <ThemedCard
-            hover
-            padding="sm"
-            className="cursor-pointer transition-all duration-200 active:scale-95"
+          <button
+            type="button"
             onClick={() => setShowRecognitionEntry(true)}
+            className="relative overflow-hidden transition-all duration-200 active:scale-[0.97] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white/30"
             style={{
-              background: 'linear-gradient(135deg, #10b981, #059669)',
+              backgroundColor: 'var(--dash-btn-recognition, #10b981)',
               color: 'white',
-              minHeight: '90px'
+              borderRadius: 'var(--dash-btn-radius, 12px)',
+              minHeight: '100px',
+              border: 'none',
+              cursor: 'pointer',
+              width: '100%'
             }}
           >
-            <div className="flex flex-col items-center justify-center gap-1 text-center h-full py-2">
-              <Award className="w-5 h-5" />
-              <span className="font-semibold text-xs leading-tight">Recognition</span>
-              <span className="text-[10px] opacity-75 font-medium mt-0.5 px-2 py-0.5 bg-white/20 rounded">
-                Under Development
-              </span>
+            <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent" style={{ borderRadius: 'inherit' }} />
+            <div className="relative flex flex-col items-center justify-center gap-2 px-3 py-4">
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                <Award className="w-5 h-5" />
+              </div>
+              <span className="font-semibold text-sm leading-tight">Recognition</span>
             </div>
-          </ThemedCard>
+          </button>
         </div>
 
         {/* Navigation Cards */}
         <div className="space-y-3">
           {/* Team Members */}
-          <ThemedCard
-            hover
-            padding="md"
-            className="cursor-pointer transition-all duration-200 active:scale-95"
+          <button
+            type="button"
             onClick={() => setShowEmployeeManagement(true)}
+            className="w-full text-left transition-all duration-200 active:scale-[0.98] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2"
+            style={{
+              backgroundColor: 'var(--dash-card-team-members, var(--color-card-background))',
+              borderRadius: 'var(--dash-btn-radius, 12px)',
+              border: 'none',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              padding: '14px 16px',
+              cursor: 'pointer'
+            }}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
+              <div
+                className="flex-shrink-0 flex items-center justify-center"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(rgba(255,255,255,0.88), rgba(255,255,255,0.88)), var(--color-primary)'
+                }}
+              >
                 <Users className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
-                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Team Members</span>
               </div>
-              <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>Team Members</span>
+                  <span
+                    className="flex-shrink-0"
+                    style={{
+                      backgroundColor: 'var(--color-primary)',
+                      color: 'white',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '2px 8px',
+                      borderRadius: '10px',
+                      lineHeight: '1.4'
+                    }}
+                  >
+                    {employees.length}
+                  </span>
+                </div>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+                  View and manage your team
+                </p>
+              </div>
+              <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--color-text-tertiary)' }} />
             </div>
-          </ThemedCard>
+          </button>
 
           {/* Follow-ups */}
           {followUpCounts.total > 0 && (
-            <ThemedCard
-              hover
-              padding="md"
-              className="cursor-pointer transition-all duration-200 active:scale-95"
+            <button
+              type="button"
+              className="w-full text-left transition-all duration-200 active:scale-[0.98] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2"
+              style={{
+                backgroundColor: 'var(--dash-card-general, var(--color-card-background))',
+                borderRadius: 'var(--dash-btn-radius, 12px)',
+                border: 'none',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                padding: '14px 16px',
+                cursor: 'pointer'
+              }}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Calendar className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
-                  <span className="font-semibold" style={{ color: 'var(--color-text)' }}>Follow-ups</span>
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex-shrink-0 flex items-center justify-center"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '10px',
+                    background: `linear-gradient(rgba(255,255,255,0.88), rgba(255,255,255,0.88)), ${followUpCounts.overdue > 0 ? 'var(--color-error)' : 'var(--color-info)'}`
+                  }}
+                >
+                  <Calendar className="w-5 h-5" style={{ color: followUpCounts.overdue > 0 ? 'var(--color-error)' : 'var(--color-info)' }} />
                 </div>
-                <div className="flex items-center gap-2">
-                  {followUpCounts.overdue > 0 && (
-                    <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 font-medium">
-                      {followUpCounts.overdue}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>Follow-ups</span>
+                    <span
+                      className="flex-shrink-0"
+                      style={{
+                        backgroundColor: followUpCounts.overdue > 0 ? 'var(--color-error)' : 'var(--color-info)',
+                        color: 'white',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                        lineHeight: '1.4'
+                      }}
+                    >
+                      {followUpCounts.total}
                     </span>
-                  )}
-                  <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
+                    {followUpCounts.overdue > 0 && (
+                      <span
+                        className="flex-shrink-0"
+                        style={{
+                          backgroundColor: 'rgba(239,68,68,0.1)',
+                          color: 'var(--color-error)',
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          padding: '2px 8px',
+                          borderRadius: '10px',
+                          lineHeight: '1.4'
+                        }}
+                      >
+                        {followUpCounts.overdue} overdue
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+                    Scheduled check-ins due
+                  </p>
                 </div>
+                <ChevronRight className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--color-text-tertiary)' }} />
               </div>
-            </ThemedCard>
+            </button>
           )}
         </div>
 
-        {/* Daily Inspiration */}
-        <QuotesSection />
-
         {/* Final Warnings Watch List */}
         <React.Suspense fallback={null}>
-          <FinalWarningsWatchList employees={employees} />
+          <FinalWarningsWatchList employees={employees} warnings={dashboardWarnings} />
         </React.Suspense>
+
+        {/* Daily Inspiration - Always last */}
+        <QuotesSection />
       </div>
 
       {/* Modals */}
@@ -276,6 +375,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
             categories={categories}
             currentManagerName={currentManagerName}
             organizationName={organizationName}
+            preloadedWarnings={dashboardWarnings}
             onComplete={() => { setShowWarningWizard(false); refreshData(); }}
             onCancel={() => setShowWarningWizard(false)}
           />

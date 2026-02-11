@@ -56,7 +56,7 @@ import type {
   WarningLevel,
   CategorySeverity 
 } from '../../services/UniversalCategories';
-import { UNIVERSAL_SA_CATEGORIES } from '../../services/UniversalCategories';
+import { UNIVERSAL_SA_CATEGORIES, getLevelLabel } from '../../services/UniversalCategories';
 
 // Import warning category types
 import type { WarningCategory } from '../../services/WarningService';
@@ -227,14 +227,15 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
   });
   
   // Form state for new custom category
-  const [newCustomCategory, setNewCustomCategory] = useState<Partial<CustomCategory>>({
+  const [newCustomCategory, setNewCustomCategory] = useState<Partial<CustomCategory> & { expectedStandardsTemplate?: string }>({
     name: '',
     description: '',
     severity: 'serious',
     icon: '📋',
     escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
     examples: [],
-    isActive: true
+    isActive: true,
+    expectedStandardsTemplate: '',
   });
   
   // ============================================
@@ -469,7 +470,8 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
         escalationPath: newCustomCategory.escalationPath || ['verbal', 'first_written', 'final_written'],
         examples: newCustomCategory.examples || [],
         severity: newCustomCategory.severity === 'minor' ? 'low' :
-                 newCustomCategory.severity === 'serious' ? 'medium' : 'high'
+                 newCustomCategory.severity === 'serious' ? 'medium' : 'high',
+        expectedStandardsTemplate: newCustomCategory.expectedStandardsTemplate || '',
       };
       
       await DataService.createCustomCategory(organizationId!, categoryData);
@@ -483,7 +485,8 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
         icon: '📋',
         escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
         examples: [],
-        isActive: true
+        isActive: true,
+        expectedStandardsTemplate: '',
       });
       setShowAddCustom(false);
       setSuccess('Custom category created successfully');
@@ -562,7 +565,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
   };
   
   const formatEscalationPath = (path: WarningLevel[]) => {
-    return path.map(level => level.replace('_', ' ')).join(' → ');
+    return path.map(level => getLevelLabel(level)).join(' → ');
   };
   
   const getCategoryUsage = (categoryId: string) => {
@@ -1166,6 +1169,42 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
                   />
                 </div>
 
+                {/* Expected Standards Template */}
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    color: '#374151',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Expected Standards Template
+                    <span style={{ color: '#9ca3af', fontWeight: '400', marginLeft: '0.25rem' }}>(optional)</span>
+                  </label>
+                  <textarea
+                    value={newCustomCategory.expectedStandardsTemplate || ''}
+                    onChange={(e) => setNewCustomCategory(prev => ({ ...prev, expectedStandardsTemplate: e.target.value }))}
+                    placeholder="e.g., Employees are expected to arrive at work by the scheduled start time and notify their manager before shift start if unable to attend."
+                    rows={3}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                      resize: 'vertical'
+                    }}
+                  />
+                  <p style={{
+                    fontSize: '0.75rem',
+                    color: '#6b7280',
+                    marginTop: '0.25rem',
+                    margin: '0.25rem 0 0 0'
+                  }}>
+                    This text will pre-fill the "Expected Standards" section when issuing a warning in this category.
+                  </p>
+                </div>
+
                 {/* Severity */}
                 <div>
                   <label style={{
@@ -1213,7 +1252,8 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
                       icon: '📋',
                       escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
                       examples: [],
-                      isActive: true
+                      isActive: true,
+                      expectedStandardsTemplate: '',
                     });
                   }}
                   style={{

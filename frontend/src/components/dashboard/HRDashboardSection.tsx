@@ -134,7 +134,6 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
       if (!organization?.id) return;
       try {
         const depts = await DepartmentService.getDepartments(organization.id);
-        console.log('🔄 Department count updated:', depts.length);
         setDepartmentCount(depts.length);
       } catch (error) {
         console.error('Failed to fetch departments:', error);
@@ -161,20 +160,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
     };
 
     fetchAllSetupData();
-
-    // Also set up interval to refresh every 5 seconds when on Urgent Tasks tab
-    let interval: NodeJS.Timeout | null = null;
-    if (activeView === 'urgent') {
-      interval = setInterval(() => {
-        fetchDepartments();
-        fetchSkippedTasks();
-      }, 5000);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [organization?.id, activeView]); // Re-fetch when switching views (to catch changes)
+  }, [organization?.id]); // Fetch once when organization loads
 
   // Handler to skip a setup task
   const handleSkipSetupTask = useCallback(async (taskType: 'departments' | 'employees') => {
@@ -271,6 +257,9 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
   // ============================================
 
   // Metrics configuration
+  // HR metric card color overrides from org dashboard theme
+  const hrColors = organization?.dashboardTheme?.hrDashboard?.metricColors;
+
   const dashboardMetrics: MetricCard[] = useMemo(() => [
     {
       id: 'absence-reports',
@@ -279,6 +268,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
       subtext: `${hrReportsCount.absenceReports.total} total`,
       icon: UserX,
       color: 'error',
+      customColor: hrColors?.absenceReports,
       onClick: () => navigate('/hr/absence-reports'),
       loading: hrCountsLoading
     },
@@ -289,6 +279,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
       subtext: `${hrReportsCount.hrMeetings.total} total`,
       icon: MessageCircle,
       color: 'accent',
+      customColor: hrColors?.meetingRequests,
       onClick: () => navigate('/hr/meeting-requests'),
       loading: hrCountsLoading
     },
@@ -299,6 +290,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
       subtext: `${warningStats.undelivered} undelivered`,
       icon: Shield,
       color: 'warning',
+      customColor: hrColors?.activeWarnings,
       onClick: () => setActiveView('warnings')
     },
     {
@@ -308,6 +300,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
       subtext: `${reviewStats.overdue} overdue`,
       icon: Clock,
       color: reviewStats.overdue > 0 ? 'error' : 'accent',
+      customColor: hrColors?.reviewFollowups,
       onClick: () => setActiveView('review-followups'),
       loading: reviewsLoading
     },
@@ -318,6 +311,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
       subtext: `${employeeStats.activeEmployees} active`,
       icon: Users,
       color: 'success',
+      customColor: hrColors?.totalEmployees,
       onClick: () => setActiveView('employees')
     }
   ], [
@@ -327,7 +321,8 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
     reviewStats,
     reviewsLoading,
     employeeStats,
-    navigate
+    navigate,
+    hrColors
   ]);
 
   // 🎯 SETUP STATUS - Check if organization needs initial setup
@@ -343,19 +338,6 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
     }) || [];
 
     const needsEmployees = regularEmployees.length === 0 && !skippedSetupTasks.employees;
-
-    // Debug logging
-    console.log('🔍 Setup Status Check:', {
-      departmentCount,
-      needsDepartments,
-      skippedDepartments: skippedSetupTasks.departments,
-      totalEmployees: employees?.length || 0,
-      regularEmployees: regularEmployees.length,
-      needsEmployees,
-      skippedEmployees: skippedSetupTasks.employees,
-      filteredOut: employees?.filter(emp => emp.metadata?.source === 'user_creation' || emp.metadata?.linkedUserId)
-        .map(e => ({ name: `${e.profile?.firstName} ${e.profile?.lastName}`, position: e.employment?.position }))
-    });
 
     return {
       needsDepartments,
@@ -705,6 +687,8 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
                 onViewDetails={(warning) => { setSelectedWarning(warning); setShowWarningDetails(true); }}
                 onCloseDetails={() => { setSelectedWarning(null); setShowWarningDetails(false); }}
                 onWarningUpdated={refreshData}
+                initialWarnings={warnings}
+                initialWarningsLoading={dashboardLoading.warnings}
               />
             </React.Suspense>
           </div>
@@ -786,7 +770,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
         error={dashboardError || hrCountsError}
         bottomSection={
           <React.Suspense fallback={<LoadingSkeleton />}>
-            <FinalWarningsWatchList employees={employees} />
+            <FinalWarningsWatchList employees={employees} warnings={warnings} />
           </React.Suspense>
         }
         className={className}

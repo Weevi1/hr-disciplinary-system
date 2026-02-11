@@ -169,6 +169,10 @@ export class PDFTemplateVersionService {
    * Called during warning creation to guarantee the template version
    * is saved before storing the reference in the warning.
    *
+   * NOTE: Logo URL is NOT stored here — it's captured per-warning in
+   * organizationSnapshot instead, because logo changes independently
+   * of template version and this method skips if version already exists.
+   *
    * @returns The version string that was saved
    */
   static async ensureTemplateVersionExists(

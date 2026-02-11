@@ -14,14 +14,13 @@ interface WarningsStats {
   activeWarnings: number;
   expiredWarnings: number;
   pendingReview: number;
-  highRisk: number; // final_written, suspension, dismissal
+  highRisk: number; // final_written, dismissal
   expiringSoon: number; // expire within 30 days
   byLevel: {
     verbal: number;
     first_written: number;
     second_written: number;
     final_written: number;
-    suspension: number;
     dismissal: number;
   };
   byStatus: {
@@ -57,7 +56,6 @@ const initialStats: WarningsStats = {
     first_written: 0,
     second_written: 0,
     final_written: 0,
-    suspension: 0,
     dismissal: 0
   },
   byStatus: {
@@ -116,7 +114,6 @@ const loadWarningsStats = async () => {
         first_written: 0,
         second_written: 0,
         final_written: 0,
-        suspension: 0,
         dismissal: 0
       },
       byStatus: {
@@ -147,7 +144,7 @@ const loadWarningsStats = async () => {
       }
 
       // High risk (serious warnings)
-      if (['final_written', 'suspension', 'dismissal'].includes(warning.level)) {
+      if (['final_written', 'dismissal'].includes(warning.level)) {
         calculatedStats.highRisk++;
       }
 

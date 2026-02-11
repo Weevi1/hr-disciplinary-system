@@ -12,13 +12,16 @@ import { Z_INDEX } from '../../../constants/zIndex';
 import {
   X, AlertTriangle, Clock, CheckCircle, Eye, Shield, Scale, Building,
   Calendar, User, MapPin, FileText, Download, Share2,
-  ChevronDown, ChevronUp, MessageSquare, Headphones, 
-  FileSignature, Badge, ExternalLink
+  ChevronDown, ChevronUp, MessageSquare, Headphones,
+  FileSignature, Badge, ExternalLink, Link, Copy, Loader2,
 } from 'lucide-react';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../../../config/firebase';
 import { AudioPlaybackWidget } from '../AudioPlaybackWidget';
 import { PDFPreviewModal } from '../enhanced/PDFPreviewModal';
 import { SignatureDisplay } from '../SignatureDisplay';
 import { useOrganization } from '../../../contexts/OrganizationContext';
+import { getLevelLabel } from '../../../services/UniversalCategories';
 
 // ============================================
 // INTERFACES & TYPES
@@ -212,6 +215,11 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
     subtitle?: string;
   } | null>(null);
   
+  // Response link state
+  const [responseLink, setResponseLink] = useState<string | null>(null);
+  const [responseLinkLoading, setResponseLinkLoading] = useState(false);
+  const [responseLinkCopied, setResponseLinkCopied] = useState(false);
+
   // HR Appeal functionality state
   const [showAppealDialog, setShowAppealDialog] = useState(false);
   const [appealOutcome, setAppealOutcome] = useState<'upheld' | 'overturned' | 'modified' | null>(null);
@@ -309,6 +317,8 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
       setShowSignatureModal(false);
       setShowAudioModal(false);
       setSelectedSignature(null);
+      setResponseLink(null);
+      setResponseLinkCopied(false);
     }, 300);
   }, [onClose]);
 
@@ -364,6 +374,43 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
   const handlePreviewPDF = useCallback(() => {
     setShowPDFPreview(true);
   }, []);
+
+  const handleGenerateResponseLink = useCallback(async () => {
+    if (!warningData?.id || !organization?.id) return;
+    setResponseLinkLoading(true);
+    try {
+      const generateToken = httpsCallable(functions, 'generateResponseToken');
+      const result = await generateToken({
+        warningId: warningData.id,
+        organizationId: organization.id,
+      });
+      const data = result.data as { responseUrl: string };
+      setResponseLink(data.responseUrl);
+    } catch (error) {
+      Logger.error('Failed to generate response link:', error);
+    } finally {
+      setResponseLinkLoading(false);
+    }
+  }, [warningData?.id, organization?.id]);
+
+  const handleCopyResponseLink = useCallback(async () => {
+    if (!responseLink) return;
+    try {
+      await navigator.clipboard.writeText(responseLink);
+      setResponseLinkCopied(true);
+      setTimeout(() => setResponseLinkCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = responseLink;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setResponseLinkCopied(true);
+      setTimeout(() => setResponseLinkCopied(false), 2000);
+    }
+  }, [responseLink]);
 
   const handlePrintAppealReport = useCallback(async () => {
     if (!warningData) return;
@@ -489,8 +536,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
       first_written: { text: 'Written', intensity: 2 },
       second_written: { text: 'Second Written', intensity: 3 },
       final_written: { text: 'Final Written', intensity: 4 },
-      suspension: { text: 'Suspension', intensity: 5 },
-      dismissal: { text: 'Dismissal', intensity: 6 }
+      dismissal: { text: 'Contact HR - Serious Offence', intensity: 5 }
     };
 
     const config = levelConfig[level as keyof typeof levelConfig] || levelConfig.verbal;
@@ -666,12 +712,19 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
             color: 'purple',
             action: handlePlayAudio
           },
-          { 
-            label: 'View Signatures', 
-            icon: FileSignature, 
-            available: warningData.hasSignatures, 
+          {
+            label: 'View Signatures',
+            icon: FileSignature,
+            available: warningData.hasSignatures,
             color: 'emerald',
             action: handleViewSignatures
+          },
+          {
+            label: 'Response Link',
+            icon: Link,
+            available: true,
+            color: 'amber',
+            action: handleGenerateResponseLink,
           }
         ].map((action) => (
           <button
@@ -680,17 +733,57 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
             onClick={action.available ? action.action : undefined}
             className={`
               p-4 rounded-2xl border transition-all duration-300
-              ${action.available 
-                ? `bg-${action.color}-50 border-${action.color}-200 hover:bg-${action.color}-100 hover:scale-105 text-${action.color}-700` 
+              ${action.available
+                ? `bg-${action.color}-50 border-${action.color}-200 hover:bg-${action.color}-100 hover:scale-105 text-${action.color}-700`
                 : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
               }
             `}
           >
-            <action.icon className="w-5 h-5 mx-auto mb-2" />
+            {action.label === 'Response Link' && responseLinkLoading ? (
+              <Loader2 className="w-5 h-5 mx-auto mb-2 animate-spin" />
+            ) : (
+              <action.icon className="w-5 h-5 mx-auto mb-2" />
+            )}
             <div className="text-sm font-medium">{action.label}</div>
           </button>
         ))}
       </div>
+
+      {/* Response Link Display */}
+      {responseLink && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Link className="w-4 h-4 text-amber-600" />
+            <span className="text-sm font-semibold text-amber-900">Employee Response Link</span>
+          </div>
+          <p className="text-xs text-amber-700 mb-3">
+            Send this link to the employee via WhatsApp or email. They can respond or appeal without needing to log in.
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={responseLink}
+              readOnly
+              className="flex-1 px-3 py-2 text-xs bg-white border border-amber-300 rounded-lg text-gray-800 font-mono"
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+            />
+            <button
+              onClick={handleCopyResponseLink}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                responseLinkCopied
+                  ? 'bg-green-600 text-white'
+                  : 'bg-amber-600 hover:bg-amber-700 text-white'
+              }`}
+            >
+              {responseLinkCopied ? (
+                <><CheckCircle className="w-4 h-4" /> Copied</>
+              ) : (
+                <><Copy className="w-4 h-4" /> Copy</>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -751,10 +844,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
                 warningData.level === 'dismissal' ? 'bg-red-200 text-red-900' : 
                 'bg-gray-100 text-gray-800'
               }`}>
-                {warningData.level === 'verbal' ? 'Verbal Warning' :
-                 warningData.level === 'written' ? 'Written Warning' :
-                 warningData.level === 'final' ? 'Final Warning' :
-                 warningData.level === 'dismissal' ? 'Dismissal' : 'Warning'}
+                {getLevelLabel(warningData.level) || 'Warning'}
               </span>
               
               <button
@@ -981,10 +1071,60 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
                       Print Appeal Report
                     </button>
                   )}
+
+                  {/* Response Link */}
+                  <button
+                    onClick={handleGenerateResponseLink}
+                    disabled={responseLinkLoading}
+                    className="flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors text-sm font-medium disabled:opacity-50"
+                  >
+                    {responseLinkLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Link className="w-4 h-4" />
+                    )}
+                    Response Link
+                  </button>
                 </div>
 
                 {/* Reject/Approve buttons removed - not applicable for issued warnings */}
               </div>
+
+              {/* Response Link Display */}
+              {responseLink && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Link className="w-4 h-4 text-amber-600" />
+                    <span className="text-sm font-semibold text-amber-900">Employee Response Link</span>
+                  </div>
+                  <p className="text-xs text-amber-700 mb-3">
+                    Send this link to the employee via WhatsApp or email. They can respond or appeal without needing to log in.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={responseLink}
+                      readOnly
+                      className="flex-1 px-3 py-2 text-xs bg-white border border-amber-300 rounded-lg text-gray-800 font-mono"
+                      onClick={(e) => (e.target as HTMLInputElement).select()}
+                    />
+                    <button
+                      onClick={handleCopyResponseLink}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        responseLinkCopied
+                          ? 'bg-green-600 text-white'
+                          : 'bg-amber-600 hover:bg-amber-700 text-white'
+                      }`}
+                    >
+                      {responseLinkCopied ? (
+                        <><CheckCircle className="w-4 h-4" /> Copied</>
+                      ) : (
+                        <><Copy className="w-4 h-4" /> Copy</>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1008,8 +1148,8 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
               </button>
             </div>
             <div className="p-6">
-              <AudioPlaybackWidget 
-                audioData={warningData.audioRecording}
+              <AudioPlaybackWidget
+                audioRecording={warningData.audioRecording}
                 compact={false}
               />
             </div>

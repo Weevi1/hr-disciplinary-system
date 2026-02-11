@@ -10,6 +10,7 @@ import Logger from '../../../../utils/logger';
 interface MicrophonePermissionHandlerProps {
   onPermissionGranted: () => void;
   onPermissionDenied: () => void;
+  onSkip?: () => void;
   organizationName: string;
   managerName: string;
 }
@@ -27,6 +28,7 @@ const globalPermissionState = {
 export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerProps> = ({
   onPermissionGranted,
   onPermissionDenied,
+  onSkip,
   organizationName,
   managerName
 }) => {
@@ -41,8 +43,24 @@ export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerPr
     globalPermissionState.errorCallbacks.push(onPermissionDenied);
 
     if (globalPermissionState.isGranted) {
-      setPermissionState('granted');
-      setTimeout(onPermissionGranted, 100); // Slight delay for UI
+      // Verify permission is still granted (user may have revoked it)
+      navigator.permissions?.query?.({ name: 'microphone' as PermissionName })
+        .then(status => {
+          if (status.state === 'denied') {
+            // Permission was revoked since last check - reset
+            globalPermissionState.isGranted = false;
+            globalPermissionState.isRequesting = false;
+            requestMicrophonePermission();
+          } else {
+            setPermissionState('granted');
+            setTimeout(onPermissionGranted, 100);
+          }
+        })
+        .catch(() => {
+          // Permissions API not available - trust the cached state
+          setPermissionState('granted');
+          setTimeout(onPermissionGranted, 100);
+        });
       return;
     }
 
@@ -97,7 +115,7 @@ export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerPr
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1,
-          sampleRate: 8000,
+          sampleRate: 16000,
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true
@@ -239,6 +257,14 @@ export const MicrophonePermissionHandler: React.FC<MicrophonePermissionHandlerPr
               >
                 Try Again
               </button>
+              {onSkip && (
+                <button
+                  onClick={onSkip}
+                  className="w-full text-gray-600 px-4 py-2 rounded-md hover:bg-gray-100 transition-colors text-sm"
+                >
+                  Continue without audio
+                </button>
+              )}
             </div>
           )}
 

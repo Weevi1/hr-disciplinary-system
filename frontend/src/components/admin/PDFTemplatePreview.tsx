@@ -50,11 +50,12 @@ export const PDFTemplatePreview: React.FC<PDFTemplatePreviewProps> = ({
       // 🚀 LAZY LOAD: Import PDFGenerationService dynamically when needed
       const { PDFGenerationService } = await import('../../services/PDFGenerationService');
 
-      // 🎨 TEMPLATE PREVIEW: Pass the settings being previewed to see how they affect the PDF
+      // 🎨 TEMPLATE PREVIEW: Pass undefined version to use current PDF_GENERATOR_VERSION,
+      // not settings.generatorVersion which is the template revision counter (e.g., 1.3.0)
       const pdfBlob = await PDFGenerationService.generateWarningPDF(
         sampleData,
-        settings.generatorVersion,
-        settings  // Pass the template settings being previewed
+        undefined,  // Use current code version (PDF_GENERATOR_VERSION)
+        settings     // Pass the template settings being previewed
       );
 
       // Create new blob URL and update state
@@ -330,7 +331,7 @@ function generateSampleWarningData(
     warningId: 'PREVIEW_SAMPLE',
     organizationId: organization.id,
     status: 'issued',
-    pdfGeneratorVersion: settings.generatorVersion,
+    // pdfGeneratorVersion intentionally omitted — preview uses current code version
     pdfSettings: settings,  // Include the template settings being previewed
 
     // Manager information
@@ -360,8 +361,19 @@ function generateSampleWarningData(
     incidentTime: '08:45',
     incidentLocation: 'Production Floor A',
 
-    // Organization branding
-    organization: organization,
+    // Organization branding — map Organization type shape to PDF generator's expected shape
+    organization: {
+      ...organization,
+      registrationNumber: organization.branding?.registrationNumber,
+      branding: {
+        ...organization.branding,
+        colors: {
+          primary: organization.branding?.primaryColor,
+          secondary: organization.branding?.secondaryColor,
+          accent: (organization.branding as any)?.accentColor,
+        },
+      },
+    },
 
     // Signatures (sample)
     signatures: {

@@ -15,7 +15,7 @@ import { ShardedDataService } from '../services/ShardedDataService';
 import { DatabaseShardingService } from '../services/DatabaseShardingService';
 import { WarningService } from '../services/WarningService';
 import CacheService from '../services/CacheService';
-import { where, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { where, doc, updateDoc, getDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import * as UniversalCategories from '../services/UniversalCategories';
 import { NestedDataService } from '../services/NestedDataService';
@@ -211,6 +211,7 @@ export const warnings = {
         ...(warningData.disciplineRecommendation && { disciplineRecommendation: removeUndefinedValues(warningData.disciplineRecommendation) }),
         ...(warningData.pdfGeneratorVersion && { pdfGeneratorVersion: warningData.pdfGeneratorVersion }),
         ...(warningData.pdfTemplateVersion && { pdfTemplateVersion: warningData.pdfTemplateVersion }),
+        ...(warningData.organizationSnapshot && { organizationSnapshot: warningData.organizationSnapshot }),
 
         // 🆕 Corrective Discussion Data (Unified Warning/Counselling System - Session 48)
         ...(warningData.employeeStatement && { employeeStatement: warningData.employeeStatement }),
@@ -223,12 +224,8 @@ export const warnings = {
         ...(warningData.interventionDetails && { interventionDetails: warningData.interventionDetails }),
         ...(warningData.resourcesProvided && { resourcesProvided: warningData.resourcesProvided }),
 
-        // MANDATORY: Audio recording is required for every warning
-        audioRecording: warningData.audioRecording || {
-          status: 'required',
-          processingStatus: 'pending',
-          error: 'Audio recording not provided'
-        },
+        // Audio recording — populated after warning creation if recording was active
+        ...(warningData.audioRecording ? { audioRecording: warningData.audioRecording } : {}),
         deliveryMethod: warningData.deliveryMethod || 'email',
 
         // Audit fields
@@ -275,6 +272,15 @@ export const warnings = {
             Logger.warn(`⚠️ [DUAL-WRITE] Failed to save to nested structure:`, error);
           }
         }
+      }
+
+      // 🚀 Bump warningsVersion on org doc so other sessions detect staleness
+      try {
+        await updateDoc(doc(db, 'organizations', warningData.organizationId), {
+          warningsVersion: increment(1)
+        });
+      } catch (e) {
+        Logger.warn('Failed to bump warningsVersion:', e);
       }
 
       return warningId;
@@ -331,6 +337,14 @@ export const warnings = {
             Logger.warn(`⚠️ [DUAL-WRITE] Failed to update nested structure:`, error);
           }
         }
+      }
+      // 🚀 Bump warningsVersion so other sessions detect staleness
+      try {
+        await updateDoc(doc(db, 'organizations', orgId), {
+          warningsVersion: increment(1)
+        });
+      } catch (e) {
+        Logger.warn('Failed to bump warningsVersion:', e);
       }
     } catch (error) {
       handleError('warnings.update', error);
@@ -407,6 +421,27 @@ export const warnings = {
       return await WarningService.getActiveWarnings(employeeId, organizationId);
     } catch (error) {
       handleError('warnings.getActiveWarnings', error);
+    }
+  },
+
+  /**
+   * Check if cached warnings are stale by comparing warningsVersion on org doc.
+   * Returns true if data has changed since last cache, false if fresh.
+   * Single doc read (~1KB), near-instant.
+   */
+  async isWarningsDataStale(organizationId: string): Promise<boolean> {
+    try {
+      const orgDoc = await getDoc(doc(db, 'organizations', organizationId));
+      const currentVersion = orgDoc.data()?.warningsVersion || 0;
+      const cachedVersion = CacheService.get(CacheService.generateOrgKey(organizationId, 'warningsVersion'));
+      const isStale = cachedVersion !== null && currentVersion !== cachedVersion;
+      if (isStale) {
+        Logger.debug(`⚠️ [STALE] Warnings data changed (cached: ${cachedVersion}, current: ${currentVersion})`);
+      }
+      return isStale;
+    } catch (error) {
+      Logger.warn('Failed to check warnings staleness:', error);
+      return false; // On error, assume fresh to avoid blocking
     }
   },
 

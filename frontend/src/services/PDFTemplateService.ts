@@ -168,6 +168,7 @@ export class PDFTemplateService {
         showLogo: true,
         logoPosition: 'top-left',
         logoMaxHeight: 20,
+        headerLayout: 'stacked',
         enabledSections: [
           'employee-info',
           'incident',

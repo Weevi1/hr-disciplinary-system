@@ -7,6 +7,9 @@ import React, { useState, useCallback } from 'react';
 import { usePreventBodyScroll } from '../../../hooks/usePreventBodyScroll';
 import { useModalDialog } from '../../../hooks/useFocusTrap';
 import { Z_INDEX } from '../../../constants/zIndex';
+import { EvidenceUploader } from '../../common/EvidenceUploader';
+import { getLevelLabel } from '../../../services/UniversalCategories';
+import type { EvidenceItem } from '../../../types/warning';
 import {
   X,
   FileText,
@@ -21,6 +24,7 @@ import {
 interface AppealModalProps {
   isOpen: boolean;
   onClose: () => void;
+  organizationId?: string;
   warning: {
     id: string;
     employeeName: string;
@@ -34,6 +38,7 @@ interface AppealModalProps {
     grounds: string;
     additionalDetails: string;
     requestedOutcome: string;
+    evidenceItems?: EvidenceItem[];
   }) => Promise<void>;
 }
 
@@ -74,12 +79,14 @@ const APPEAL_GROUNDS = [
 export const AppealModal: React.FC<AppealModalProps> = ({
   isOpen,
   onClose,
+  organizationId,
   warning,
   onAppealSubmit
 }) => {
   const [selectedGrounds, setSelectedGrounds] = useState('');
   const [additionalDetails, setAdditionalDetails] = useState('');
   const [requestedOutcome, setRequestedOutcome] = useState('');
+  const [evidenceItems, setEvidenceItems] = useState<EvidenceItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -126,7 +133,8 @@ export const AppealModal: React.FC<AppealModalProps> = ({
         warningId: warning.id,
         grounds: selectedGrounds,
         additionalDetails: additionalDetails.trim(),
-        requestedOutcome: requestedOutcome.trim()
+        requestedOutcome: requestedOutcome.trim(),
+        evidenceItems: evidenceItems.length > 0 ? evidenceItems : undefined,
       });
       
       // Modal will close from parent component after successful submission
@@ -135,7 +143,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedGrounds, additionalDetails, requestedOutcome, onAppealSubmit, warning.id]);
+  }, [selectedGrounds, additionalDetails, requestedOutcome, evidenceItems, onAppealSubmit, warning.id]);
 
   if (!isOpen) return null;
 
@@ -190,7 +198,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
               </div>
               <div>
                 <span className="text-gray-600">Warning Level:</span>
-                <div className="font-medium capitalize">{warning.level.replace('_', ' ')}</div>
+                <div className="font-medium">{getLevelLabel(warning.level)}</div>
               </div>
               <div>
                 <span className="text-gray-600">Category:</span>
@@ -286,6 +294,18 @@ export const AppealModal: React.FC<AppealModalProps> = ({
                 placeholder="E.g., 'Remove warning from my record', 'Reduce warning level', 'Replace with verbal counselling', etc."
               />
             </div>
+
+            {/* Evidence Upload */}
+            {organizationId && (
+              <EvidenceUploader
+                items={evidenceItems}
+                onAdd={(item) => setEvidenceItems(prev => [...prev, item])}
+                onRemove={(itemId) => setEvidenceItems(prev => prev.filter(i => i.id !== itemId))}
+                organizationId={organizationId}
+                warningId={warning.id}
+                disabled={isSubmitting}
+              />
+            )}
           </div>
 
           {/* Error Display */}

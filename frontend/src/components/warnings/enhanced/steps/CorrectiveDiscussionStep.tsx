@@ -93,8 +93,7 @@ const getWarningLevelInfo = (level: WarningLevel): { label: string; color: strin
     'first_written': { label: 'Written', color: '#f97316', requiresCommitments: true },
     'second_written': { label: 'Second Written', color: '#f97316', requiresCommitments: true },
     'final_written': { label: 'Final Written', color: '#ef4444', requiresCommitments: false },
-    'suspension': { label: 'Suspension', color: '#dc2626', requiresCommitments: false },
-    'dismissal': { label: 'Ending of Service', color: '#991b1b', requiresCommitments: false }
+    'dismissal': { label: 'Contact HR - Serious Offence', color: '#dc2626', requiresCommitments: false }
   };
   return levelMap[level] || { label: level, color: '#6b7280', requiresCommitments: true };
 };

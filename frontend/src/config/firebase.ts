@@ -5,7 +5,7 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
-import { getAnalytics } from 'firebase/analytics';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 
 // Your Firebase configuration
 const firebaseConfig = {
@@ -26,7 +26,7 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app, 'us-central1'); // Most functions are in us-central1
-export const analytics = getAnalytics(app);
+export const analytics = isSupported().then(yes => yes ? getAnalytics(app) : null);
 
 // Configure Firestore settings to prevent offline issues
 import { enableNetwork, connectFirestoreEmulator } from 'firebase/firestore';
