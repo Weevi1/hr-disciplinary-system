@@ -41,6 +41,16 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({
 
   // 🎨 Returns themed background style for role-based gradients
   const getRoleGradientStyle = () => {
+    // Dashboard theme override — if org set custom greeting banner colors, use them
+    const dashTheme = organization?.dashboardTheme;
+    if (dashTheme?.greetingBanner?.gradientStart) {
+      const start = dashTheme.greetingBanner.gradientStart;
+      const end = dashTheme.greetingBanner.gradientEnd || start;
+      return {
+        background: `linear-gradient(135deg, ${start}, ${end})`
+      };
+    }
+
     const primaryRole = getPrimaryRole();
 
     // Use CSS variables for theme-aware gradients
@@ -80,7 +90,8 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({
           style={{
             ...getRoleGradientStyle(),
             color: 'var(--color-text-inverse)',
-            overflow: 'visible'
+            overflow: 'visible',
+            border: 'none'
           }}
         >
             {/* Subtle background elements */}
@@ -124,45 +135,49 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({
 
       ) : (
 
-        // --- 📱 MOBILE "GREETING CARD" WIDGET (Ultra-compact mobile-optimized) ---
-        <ThemedCard
-          padding="none"
-          shadow="lg"
+        // --- 📱 MOBILE "GREETING CARD" WIDGET ---
+        <div
           className="relative"
           style={{
             ...getRoleGradientStyle(),
-            color: 'var(--color-text-inverse)',
-            overflow: 'visible'
+            color: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.12)'
           }}
         >
-          {/* Minimal background decorative elements for mobile */}
-          <div className="absolute top-0 right-0 w-20 h-20 rounded-full -translate-y-10 translate-x-10" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}></div>
+          {/* Decorative circles — clipped so they don't bleed outside the card */}
+          <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none" aria-hidden>
+            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
+            <div className="absolute -bottom-4 -left-4 w-16 h-16 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }} />
+          </div>
 
-          <div className="relative z-10 p-3 space-y-2">
+          <div className="relative z-10 px-4 py-4 space-y-3">
 
             {/* Greeting & role badge */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs leading-none" style={{ opacity: 0.85 }}>Good {getTimePeriod()},</p>
-                <h1 className="text-lg font-bold leading-tight mt-0.5">{user?.firstName}! 👋</h1>
+                <p className="text-sm leading-none" style={{ opacity: 0.9 }}>Good {getTimePeriod()},</p>
+                <h1 className="text-xl font-bold leading-tight mt-1">{user?.firstName}! 👋</h1>
               </div>
 
-              {/* Compact role pill */}
-              <ThemedBadge
-                variant="primary"
-                size="sm"
-                className="inline-block"
+              {/* Role pill — pure inline, no ThemedBadge */}
+              <span
+                className="flex-shrink-0"
                 style={{
-                  backgroundColor: 'rgba(255,255,255,0.15)',
-                  color: 'var(--color-text-inverse)',
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  color: 'white',
                   backdropFilter: 'blur(4px)',
-                  fontSize: '9px',
-                  padding: '2px 5px',
-                  lineHeight: '1'
+                  fontSize: '10px',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontWeight: 600,
+                  letterSpacing: '0.5px',
+                  textTransform: 'uppercase',
+                  lineHeight: '1.2'
                 }}
               >
-                <span className="font-bold tracking-wider uppercase">{getRoleDisplayName()}</span>
-              </ThemedBadge>
+                {getRoleDisplayName()}
+              </span>
             </div>
 
             {/* Role selector below greeting */}
@@ -173,7 +188,7 @@ export const WelcomeSection = memo<WelcomeSectionProps>(({
               />
             )}
           </div>
-        </ThemedCard>
+        </div>
       )}
     </div>
   );

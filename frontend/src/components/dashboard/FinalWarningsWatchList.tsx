@@ -5,21 +5,22 @@
 // ✅ Mobile-optimized collapsible design
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { AlertTriangle, ChevronDown } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Shield } from 'lucide-react';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { API } from '../../api';
 import { NestedDataService } from '../../services/NestedDataService';
 import { useNestedStructure, useCollectionGroup, useIndexes } from '../../config/features';
-import { ThemedCard, ThemedBadge, ThemedAlert } from '../common/ThemedCard';
 import Logger from '../../utils/logger';
 
 interface FinalWarningsWatchListProps {
   employees?: any[]; // Optional: If provided, filters to only these employees (for HOD). If not provided, shows all (for HR/Executive Management)
+  warnings?: any[]; // Optional: Preloaded warnings from useDashboardData. Skips independent fetch when provided.
   className?: string;
 }
 
 export const FinalWarningsWatchList: React.FC<FinalWarningsWatchListProps> = ({
   employees,
+  warnings: preloadedWarnings,
   className = ''
 }) => {
   const { organization } = useOrganization();
@@ -34,7 +35,10 @@ export const FinalWarningsWatchList: React.FC<FinalWarningsWatchListProps> = ({
     try {
       let warnings;
 
-      if (useNestedStructure() && useIndexes()) {
+      // 🚀 OPTIMIZATION: Use preloaded warnings from useDashboardData when available
+      if (preloadedWarnings && preloadedWarnings.length > 0) {
+        warnings = preloadedWarnings;
+      } else if (useNestedStructure() && useIndexes()) {
         // Use index collection for fast final warnings lookup
         const indexEntries = await NestedDataService.getActiveWarningsIndex(organization.id, 100);
         warnings = indexEntries
@@ -54,9 +58,12 @@ export const FinalWarningsWatchList: React.FC<FinalWarningsWatchListProps> = ({
           { pageSize: 100, orderField: 'issueDate', orderDirection: 'desc' }
         );
         warnings = result.warnings;
-      } else {
-        // Use original flat structure
+      } else if (!preloadedWarnings) {
+        // Fallback: Use original flat structure fetch only if no preloaded data
         warnings = await API.warnings.getAll(organization.id);
+      } else {
+        // preloadedWarnings was provided but empty — no warnings exist
+        warnings = [];
       }
 
       // Filter for final written warnings
@@ -68,12 +75,14 @@ export const FinalWarningsWatchList: React.FC<FinalWarningsWatchListProps> = ({
         finalWarnings = finalWarnings.filter((warning: any) => managedEmployeeIds.has(warning.employeeId));
       }
 
-      // Get employee details
-      const allEmployees = await API.employees.getAll(organization.id);
+      // 🚀 OPTIMIZATION: Use employees prop for employee details when available, skip independent fetch
+      const allEmployees = employees && employees.length > 0
+        ? employees
+        : await API.employees.getAll(organization.id);
 
       // Map each warning to include employee info
       const warningsWithEmployeeInfo = finalWarnings.map((warning: any) => {
-        const employee = allEmployees.find(emp => emp.id === warning.employeeId);
+        const employee = allEmployees.find((emp: any) => emp.id === warning.employeeId);
         return {
           ...warning,
           employeeName: employee?.name || `${employee?.profile?.firstName || ''} ${employee?.profile?.lastName || ''}`.trim() || 'Unknown',
@@ -92,9 +101,9 @@ export const FinalWarningsWatchList: React.FC<FinalWarningsWatchListProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [organization?.id, employees]);
+  }, [organization?.id, employees, preloadedWarnings]);
 
-  // Fetch final warning employees when component mounts or dependencies change
+  // Fetch/process final warning employees when component mounts or data changes
   useEffect(() => {
     if (organization?.id) {
       fetchFinalWarningEmployees();
@@ -109,39 +118,95 @@ export const FinalWarningsWatchList: React.FC<FinalWarningsWatchListProps> = ({
   // Loading state
   if (loading) {
     return (
-      <ThemedCard padding="md" className={className}>
-        <div className="flex items-center gap-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2" style={{ borderColor: 'var(--color-primary)' }}></div>
-          <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Loading final warnings watch list...</span>
+      <div
+        className={className}
+        style={{
+          backgroundColor: 'var(--color-card-background)',
+          borderRadius: '16px',
+          border: '1px solid var(--color-border)',
+          padding: '16px'
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2" style={{ borderColor: 'var(--color-error)' }} />
+          <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>Loading watch list...</span>
         </div>
-      </ThemedCard>
+      </div>
     );
   }
 
   return (
-    <ThemedAlert variant="error" className={`border-2 ${className}`}>
+    <div
+      className={className}
+      style={{
+        backgroundColor: 'var(--dash-card-general, var(--color-card-background))',
+        borderRadius: '16px',
+        border: 'none',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+        overflow: 'hidden'
+      }}
+    >
       {/* Collapsible Header */}
-      <div
-        className="flex items-center justify-between cursor-pointer"
+      <button
+        type="button"
         onClick={() => setExpanded(!expanded)}
+        className="w-full text-left transition-colors"
+        style={{
+          padding: '14px 16px',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          borderBottom: expanded ? '1px solid var(--color-border)' : 'none'
+        }}
       >
-        <h4 className="text-sm font-semibold flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4" />
-          Final Warnings Watch List ({finalWarningEmployees.length})
-          <ThemedBadge variant="error" size="sm" className="animate-pulse hidden sm:inline-block">
-            MONITOR CLOSELY
-          </ThemedBadge>
-        </h4>
-        <ChevronDown
-          className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
-          style={{ color: 'var(--color-alert-error-text)' }}
-        />
-      </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className="flex-shrink-0 flex items-center justify-center"
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                backgroundColor: 'rgba(239,68,68,0.1)'
+              }}
+            >
+              <Shield className="w-5 h-5" style={{ color: '#ef4444' }} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>
+                  Final Warnings Watch List
+                </span>
+                <span
+                  style={{
+                    backgroundColor: '#ef4444',
+                    color: 'white',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                    lineHeight: '1.4'
+                  }}
+                >
+                  {finalWarningEmployees.length}
+                </span>
+              </div>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+                Employees requiring close monitoring
+              </p>
+            </div>
+          </div>
+          <ChevronDown
+            className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+            style={{ color: 'var(--color-text-tertiary)' }}
+          />
+        </div>
+      </button>
 
       {/* Expandable Content */}
       {expanded && (
-        <>
-          <div className="space-y-1.5 mt-3">
+        <div style={{ padding: '12px 16px 16px' }}>
+          <div className="space-y-2">
             {finalWarningEmployees.map((warning) => {
               // Handle Firestore Timestamp or Date object conversion for issue date
               let issueDate;
@@ -171,37 +236,68 @@ export const FinalWarningsWatchList: React.FC<FinalWarningsWatchListProps> = ({
                 (expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
               );
 
+              const isUrgent = daysUntilExpiry <= 30;
+
               return (
-                <ThemedCard
+                <div
                   key={warning.id || `${warning.employeeId}-${warning.categoryId || warning.category}-${issueDate.getTime()}`}
-                  padding="md"
-                  className="border-2"
-                  style={{ borderColor: 'var(--color-alert-error-border)' }}
+                  style={{
+                    backgroundColor: 'rgba(239,68,68,0.04)',
+                    borderRadius: '10px',
+                    padding: '12px',
+                    borderLeft: '3px solid #ef4444'
+                  }}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="font-medium" style={{ color: 'var(--color-alert-error-text)' }}>
-                        {warning.employeeName}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>
+                          {warning.employeeName}
+                        </span>
+                        {isUrgent && (
+                          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#ef4444' }} />
+                        )}
                       </div>
-                      <div className="text-xs" style={{ color: 'var(--color-alert-error-text)', opacity: 0.8 }}>
-                        {warning.category} • {daysSince} days ago
-                      </div>
-                      <div className="text-xs mt-1" style={{ color: 'var(--color-alert-error-text)' }}>
-                        ⚠️ Next offense requires HR intervention • Expires in {daysUntilExpiry} days
+                      <div className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                        {warning.category} · Issued {daysSince} days ago
                       </div>
                     </div>
+                    <span
+                      className="flex-shrink-0"
+                      style={{
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        padding: '3px 8px',
+                        borderRadius: '8px',
+                        backgroundColor: isUrgent ? 'rgba(239,68,68,0.12)' : 'rgba(0,0,0,0.05)',
+                        color: isUrgent ? '#ef4444' : 'var(--color-text-secondary)',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {daysUntilExpiry > 0 ? `${daysUntilExpiry}d left` : 'Expired'}
+                    </span>
                   </div>
-                </ThemedCard>
+                </div>
               );
             })}
           </div>
-          <ThemedCard padding="sm" className="mt-3" style={{ backgroundColor: 'var(--color-alert-error-bg)', opacity: 0.7 }}>
-            <div className="text-xs" style={{ color: 'var(--color-alert-error-text)' }}>
-              💡 <strong>Tip:</strong> Monitor these employees closely. Any new offenses will trigger urgent HR intervention alerts.
-            </div>
-          </ThemedCard>
-        </>
+
+          {/* Tip */}
+          <div
+            className="flex items-start gap-2 mt-3"
+            style={{
+              padding: '10px 12px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(239,68,68,0.04)'
+            }}
+          >
+            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-text-tertiary)' }} />
+            <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              Any new offenses by these employees will require formal HR intervention.
+            </span>
+          </div>
+        </div>
       )}
-    </ThemedAlert>
+    </div>
   );
 };

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.manualReviewCheckAll = exports.testReviewFollowUp = exports.checkDueReviewsDaily = exports.getActiveWarningsServerSide = exports.getServerTime = exports.getApiVersionInfo = exports.initializeSuperUser = exports.getSuperUserInfo = exports.manageSuperUser = exports.updateUserPermissions = exports.refreshOrganizationUserClaims = exports.getUserClaims = exports.refreshUserClaims = exports.createPortalSession = exports.processMonthlyCommissions = exports.stripeWebhook = exports.createCheckoutSession = exports.previewAudioCleanup = exports.getGlobalAudioStats = exports.getCleanupStats = exports.manualAudioCleanup = exports.cleanupExpiredAudio = exports.createOrganizationUser = exports.createResellerUser = exports.resetUserPassword = exports.createOrganizationUsers = exports.createOrganizationAdmin = exports.cleanupExpiredTokens = exports.revokeTemporaryToken = exports.validateTemporaryToken = exports.downloadTempFile = exports.generateTemporaryDownloadLink = void 0;
+exports.cleanupExpiredResponseTokens = exports.revokeResponseToken = exports.uploadResponseEvidence = exports.submitEmployeeAppeal = exports.submitEmployeeResponse = exports.getWarningPDFForResponse = exports.getWarningForResponse = exports.generateResponseToken = exports.notifyHROnAppeal = exports.manualReviewCheckAll = exports.testReviewFollowUp = exports.checkDueReviewsDaily = exports.getActiveWarningsServerSide = exports.getServerTime = exports.getApiVersionInfo = exports.initializeSuperUser = exports.getSuperUserInfo = exports.manageSuperUser = exports.updateUserPermissions = exports.refreshOrganizationUserClaims = exports.getUserClaims = exports.refreshUserClaims = exports.createPortalSession = exports.processMonthlyCommissions = exports.stripeWebhook = exports.createCheckoutSession = exports.previewAudioCleanup = exports.getGlobalAudioStats = exports.getCleanupStats = exports.manualAudioCleanup = exports.cleanupExpiredAudio = exports.createOrganizationUser = exports.createResellerUser = exports.resetUserPassword = exports.createOrganizationUsers = exports.createOrganizationAdmin = exports.cleanupExpiredTokens = exports.revokeTemporaryToken = exports.validateTemporaryToken = exports.downloadTempFile = exports.generateTemporaryDownloadLink = void 0;
 // functions/src/index.ts
 // Main Firebase Functions entry point
 const userCreationService_1 = require("./Auth/userCreationService");
@@ -56,4 +56,17 @@ const reviewFollowUpCron_1 = require("./reviewFollowUpCron");
 Object.defineProperty(exports, "checkDueReviewsDaily", { enumerable: true, get: function () { return reviewFollowUpCron_1.checkDueReviewsDaily; } });
 Object.defineProperty(exports, "testReviewFollowUp", { enumerable: true, get: function () { return reviewFollowUpCron_1.testReviewFollowUp; } });
 Object.defineProperty(exports, "manualReviewCheckAll", { enumerable: true, get: function () { return reviewFollowUpCron_1.manualReviewCheckAll; } });
+// 📧 ADD HR NOTIFICATION ON APPEAL
+const notifyHROnAppeal_1 = require("./notifyHROnAppeal");
+Object.defineProperty(exports, "notifyHROnAppeal", { enumerable: true, get: function () { return notifyHROnAppeal_1.notifyHROnAppeal; } });
+// 🔗 ADD EMPLOYEE RESPONSE SYSTEM
+const employeeResponse_1 = require("./employeeResponse");
+Object.defineProperty(exports, "generateResponseToken", { enumerable: true, get: function () { return employeeResponse_1.generateResponseToken; } });
+Object.defineProperty(exports, "getWarningForResponse", { enumerable: true, get: function () { return employeeResponse_1.getWarningForResponse; } });
+Object.defineProperty(exports, "getWarningPDFForResponse", { enumerable: true, get: function () { return employeeResponse_1.getWarningPDFForResponse; } });
+Object.defineProperty(exports, "submitEmployeeResponse", { enumerable: true, get: function () { return employeeResponse_1.submitEmployeeResponse; } });
+Object.defineProperty(exports, "submitEmployeeAppeal", { enumerable: true, get: function () { return employeeResponse_1.submitEmployeeAppeal; } });
+Object.defineProperty(exports, "uploadResponseEvidence", { enumerable: true, get: function () { return employeeResponse_1.uploadResponseEvidence; } });
+Object.defineProperty(exports, "revokeResponseToken", { enumerable: true, get: function () { return employeeResponse_1.revokeResponseToken; } });
+Object.defineProperty(exports, "cleanupExpiredResponseTokens", { enumerable: true, get: function () { return employeeResponse_1.cleanupExpiredResponseTokens; } });
 //# sourceMappingURL=index.js.map

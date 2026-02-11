@@ -43,8 +43,9 @@ export const QuotesSection = memo<QuotesSectionProps>(({ className = '' }) => {
           shadow="sm"
           className={className}
           style={{
+            backgroundColor: 'transparent',
             background: 'linear-gradient(to right, var(--color-background-secondary), var(--color-card-background))',
-            border: '1px solid var(--color-border)'
+            border: 'none'
           }}
         >
           <div className="flex items-center justify-between">
@@ -133,78 +134,135 @@ export const QuotesSection = memo<QuotesSectionProps>(({ className = '' }) => {
 
       ) : (
 
-        // --- 📱 MOBILE "INSPIRATION CARD" VIEW (Ultra-Compact) ---
-        <ThemedCard
-          padding="sm"
-          shadow="md"
+        // --- 📱 MOBILE "INSPIRATION CARD" VIEW ---
+        <div
+          className="relative overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg, var(--color-card-background), var(--color-background-secondary))',
-            backdropFilter: 'blur(10px)'
+            backgroundColor: 'var(--dash-card-general, var(--color-card-background))',
+            borderRadius: '16px',
+            border: 'none',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            padding: '16px'
           }}
         >
-          {/* Compact Header with Title and Essential Controls */}
-          <div className="flex items-center justify-between mb-1.5">
-            <h3 className="text-sm font-semibold flex items-center gap-1.5" style={{ color: 'var(--color-text)' }}>
-              <Newspaper className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
-              Daily Inspiration
-            </h3>
-            <div className="flex items-center gap-1">
-              <ThemedButton
-                variant="ghost"
-                size="sm"
-                onClick={() => toggleFavorite(currentQuote.id)}
-                aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-                style={{
-                  color: isFavorite ? 'var(--color-error)' : 'var(--color-text-tertiary)',
-                  backgroundColor: isFavorite ? 'var(--color-alert-error-bg)' : 'transparent',
-                  padding: '4px'
-                }}
-              >
-                <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'fill-current' : ''}`} />
-              </ThemedButton>
-              <div className="scale-75">
-                <ThemeSelector />
-              </div>
-            </div>
+          {/* Decorative large quote mark */}
+          <div
+            className="absolute select-none pointer-events-none"
+            style={{
+              top: '-4px',
+              right: '12px',
+              fontSize: '72px',
+              fontFamily: 'Georgia, serif',
+              color: 'var(--color-primary)',
+              opacity: 0.06,
+              lineHeight: 1
+            }}
+          >
+            "
           </div>
 
-          {/* Compact Quote Content */}
-          <blockquote className="mb-1.5 italic text-sm leading-tight" style={{ color: 'var(--color-text-secondary)' }}>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div
+                className="flex items-center justify-center"
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '8px',
+                  background: 'linear-gradient(rgba(255,255,255,0.88), rgba(255,255,255,0.88)), var(--color-primary)'
+                }}
+              >
+                <Newspaper className="w-3.5 h-3.5" style={{ color: 'var(--color-primary)' }} />
+              </div>
+              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)', letterSpacing: '0.5px' }}>
+                Daily Inspiration
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleFavorite(currentQuote.id)}
+              aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              className="transition-colors"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                color: isFavorite ? '#ef4444' : 'var(--color-text-tertiary)'
+              }}
+            >
+              <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+            </button>
+          </div>
+
+          {/* Quote Text */}
+          <blockquote
+            className="relative"
+            style={{
+              color: 'var(--color-text)',
+              fontSize: '14px',
+              lineHeight: '1.5',
+              fontStyle: 'italic',
+              marginBottom: '12px'
+            }}
+          >
             "{currentQuote.text}"
           </blockquote>
 
-          {/* Compact Footer with Author and Controls */}
+          {/* Footer: Author + Controls */}
           <div className="flex items-center justify-between">
+            <cite
+              className="not-italic"
+              style={{
+                color: 'var(--color-primary)',
+                fontSize: '12px',
+                fontWeight: 600
+              }}
+            >
+              — {currentQuote.author}
+            </cite>
+
             <div className="flex items-center gap-1">
-              <ThemedButton
-                variant="ghost"
-                size="sm"
+              <button
+                type="button"
                 onClick={previousQuote}
                 aria-label="Previous quote"
-                style={{ padding: '4px' }}
+                className="transition-colors"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '6px',
+                  borderRadius: '6px',
+                  color: 'var(--color-text-tertiary)',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
               >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </ThemedButton>
-              <ThemedButton
-                variant="ghost"
-                size="sm"
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
                 onClick={nextQuote}
                 aria-label="Next quote"
-                style={{ padding: '4px' }}
+                className="transition-colors"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '6px',
+                  borderRadius: '6px',
+                  color: 'var(--color-text-tertiary)',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
               >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </ThemedButton>
-            </div>
-            <div className="flex items-center gap-2">
-              <cite className="text-xs font-medium not-italic" style={{ color: 'var(--color-primary)' }}>
-                — {currentQuote.author}
-              </cite>
-              <ThemedBadge variant="primary" size="sm" className="capitalize text-xs">
-                {currentQuote.category}
-              </ThemedBadge>
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
-        </ThemedCard>
+        </div>
       )}
     </div>
   );

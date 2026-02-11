@@ -22,6 +22,7 @@ export interface MetricCard {
   subtext?: string;
   icon: LucideIcon;
   color: 'success' | 'warning' | 'error' | 'primary' | 'accent' | 'info';
+  customColor?: string;  // hex override from org dashboard theme
   onClick?: () => void;
   loading?: boolean;
 }
@@ -107,11 +108,12 @@ export const DashboardShell = memo<DashboardShellProps>(({
               onClick={metric.onClick}
               className={`${metric.onClick ? 'cursor-pointer' : ''} transition-all duration-200 active:scale-95`}
               style={{
-                background: GRADIENT_COLORS[metric.color],
+                background: metric.customColor || GRADIENT_COLORS[metric.color],
                 color: 'var(--color-text-inverse)',
                 minHeight: '80px',
                 willChange: 'transform',
-                opacity: metric.loading ? 0.7 : 1
+                opacity: metric.loading ? 0.7 : 1,
+                borderRadius: 'var(--dash-btn-radius, 12px)'
               }}
             >
               <div className="flex flex-col items-center gap-1.5 py-1">
@@ -144,7 +146,7 @@ export const DashboardShell = memo<DashboardShellProps>(({
               hover
               onClick={() => onTabChange(tab.id)}
               className="cursor-pointer transition-all duration-200 active:scale-95"
-              style={{ minHeight: '64px', willChange: 'transform' }}
+              style={{ minHeight: '64px', willChange: 'transform', backgroundColor: 'var(--dash-card-general)', border: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -220,11 +222,12 @@ export const DashboardShell = memo<DashboardShellProps>(({
             onClick={metric.onClick}
             className={`${metric.onClick ? 'cursor-pointer' : ''} transition-all duration-200 active:scale-95`}
             style={{
-              background: GRADIENT_COLORS[metric.color],
+              background: metric.customColor || GRADIENT_COLORS[metric.color],
               color: 'var(--color-text-inverse)',
               minHeight: '80px',
               willChange: 'transform',
-              opacity: metric.loading ? 0.7 : 1
+              opacity: metric.loading ? 0.7 : 1,
+              borderRadius: 'var(--dash-btn-radius, 12px)'
             }}
           >
             <div className="flex items-center gap-3">
@@ -257,7 +260,7 @@ export const DashboardShell = memo<DashboardShellProps>(({
       )}
 
       {/* Tab Navigation System */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+      <div className="rounded-lg shadow-sm" style={{ backgroundColor: 'var(--dash-card-general, var(--color-card-background))', border: '1px solid var(--color-border, #e5e7eb)' }}>
         <div className="border-b border-gray-200">
           <nav className="flex space-x-6 px-4">
             {tabs.map((tab) => (

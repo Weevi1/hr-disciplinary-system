@@ -20,7 +20,9 @@ import { API } from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { NestedDataService } from '../../services/NestedDataService';
 import { useNestedStructure, useCollectionGroup } from '../../config/features';
+import CacheService from '../../services/CacheService';
 import type { Warning } from '../../types/warning';
+import { getLevelLabel } from '../../services/UniversalCategories';
 
 // Import the working modal
 import WarningDetailsModal from './modals/WarningDetailsModal';
@@ -49,6 +51,9 @@ interface WarningsReviewProps {
   onCloseDetails?: () => void;
   // Callback when warning is updated (e.g., delivery completed)
   onWarningUpdated?: () => void;
+  // 🚀 OPTIMIZATION: Accept pre-fetched warnings from parent to avoid duplicate Firestore reads
+  initialWarnings?: Warning[];
+  initialWarningsLoading?: boolean;
 }
 
 // 🔧 SAFE RENDERING HELPER - Prevents React Error #31
@@ -108,6 +113,8 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
   onViewDetails: externalOnViewDetails,
   onCloseDetails: externalOnCloseDetails,
   onWarningUpdated,
+  initialWarnings,
+  initialWarningsLoading,
 }) => {
   const { user, organization } = useAuth();
   const organizationId = propOrganizationId || organization?.id;
@@ -156,55 +163,8 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
 
   const itemsPerPage = 10;
 
-  // Load warnings
-// Add this to your WarningsReviewDashboard.tsx file
-// Replace your existing loadWarnings function with this debug version:
-
-// Replace your loadWarnings function in WarningsReviewDashboard.tsx with this fixed version:
-
-// Add this to your WarningsReviewDashboard.tsx - replace the existing loadWarnings function:
-
-// Replace your loadWarnings function with this security-safe version:
-
-const loadWarnings = useCallback(async () => {
-  if (!organizationId) {
-    Logger.warn('No organization ID available for loading warnings')
-    setLoading(false);
-    return;
-  }
-
-  try {
-    setLoading(true);
-    setError(null);
-
-    let data: Warning[];
-
-    if (useNestedStructure()) {
-      // Use nested structure with collection group queries
-      Logger.debug('🔄 Loading warnings via NestedDataService for org:', organizationId)
-
-      if (useCollectionGroup()) {
-        // Use collection group query for organization-wide warnings
-        const result = await NestedDataService.getOrganizationWarnings(
-          organizationId,
-          { /* filters */ },
-          { pageSize: 500, orderField: 'issueDate', orderDirection: 'desc' }
-        );
-        data = result.warnings;
-        Logger.debug(`📁 [NESTED] Loaded ${data.length} warnings via collection group`);
-      } else {
-        // Fallback to flat structure
-        Logger.debug('📋 [FALLBACK] Collection group disabled, using flat structure');
-        data = await API.warnings.getAll(organizationId);
-      }
-    } else {
-      // Use original flat structure
-      Logger.debug('🔄 Loading warnings via API layer for org:', organizationId)
-      data = await API.warnings.getAll(organizationId);
-      Logger.debug(`🔍 [DEBUG] Loaded ${data.length} warnings with IDs:`, data.map(w => `${w.employeeName}: id="${w.id}"`));
-    }
-
-    // Split warnings into active and archived
+  // 🚀 OPTIMIZED: Process raw warnings into active/archived splits
+  const processWarnings = useCallback((data: Warning[]) => {
     const activeWarnings = data.filter(warning =>
       !warning.isArchived &&
       warning.status !== 'expired' &&
@@ -215,7 +175,6 @@ const loadWarnings = useCallback(async () => {
       warning.status === 'expired' || warning.status === 'overturned'
     );
 
-    // Sort by creation date (newest first)
     const sortedWarnings = activeWarnings.sort((a, b) =>
       new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
     );
@@ -224,31 +183,78 @@ const loadWarnings = useCallback(async () => {
       new Date(b.appealDecisionDate || b.updatedAt || 0).getTime() - new Date(a.appealDecisionDate || a.updatedAt || 0).getTime()
     );
 
-    Logger.debug(`🔍 [DEBUG] After filtering/sorting, ${sortedWarnings.length} active warnings, ${sortedArchived.length} archived with IDs:`, sortedWarnings.map(w => `${w.employeeName}: id="${w.id}"`));
-
     setWarnings(sortedWarnings);
     setFilteredWarnings(sortedWarnings);
     setArchivedWarnings(sortedArchived);
 
-    Logger.success(`📊 Loaded ${sortedWarnings.length} active warnings, ${sortedArchived.length} archived (${useNestedStructure() ? 'NESTED' : 'SHARDED'} structure)`);
+    Logger.debug(`📊 Processed ${sortedWarnings.length} active, ${sortedArchived.length} archived warnings`);
+  }, []);
 
-  } catch (error) {
-    Logger.error('❌ Failed to load warnings:', error)
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    setError(`Failed to load warnings: ${errorMessage}`);
-  } finally {
-    setLoading(false);
-  }
-}, [organizationId]);
+  // 🚀 OPTIMIZED: Use CacheService to prevent duplicate Firestore reads
+  const loadWarnings = useCallback(async (forceRefresh = false) => {
+    if (!organizationId) {
+      Logger.warn('No organization ID available for loading warnings');
+      setLoading(false);
+      return;
+    }
 
-  // Load warnings on mount
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Clear cache on force refresh (after mutations like delivery, appeal, archive)
+      if (forceRefresh) {
+        CacheService.delete(CacheService.generateOrgKey(organizationId, 'warnings'));
+      }
+
+      let data: Warning[];
+
+      if (useNestedStructure() && useCollectionGroup()) {
+        Logger.debug('🔄 Loading warnings via NestedDataService for org:', organizationId);
+        const result = await NestedDataService.getOrganizationWarnings(
+          organizationId,
+          {},
+          { pageSize: 500, orderField: 'issueDate', orderDirection: 'desc' }
+        );
+        data = result.warnings;
+      } else {
+        // 🚀 Use CacheService - deduplicates with useDashboardData's fetch
+        data = await CacheService.getOrFetch(
+          CacheService.generateOrgKey(organizationId, 'warnings'),
+          () => API.warnings.getAll(organizationId)
+        ) as Warning[];
+        data = Array.isArray(data) ? data : [];
+      }
+
+      Logger.debug(`🔄 [ReviewDashboard] Got ${data.length} warnings (via CacheService)`);
+      processWarnings(data);
+
+    } catch (error) {
+      Logger.error('❌ Failed to load warnings:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setError(`Failed to load warnings: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
+  }, [organizationId, processWarnings]);
+
+  // 🚀 OPTIMIZED: Use parent's cached warnings if available, otherwise fetch
   useEffect(() => {
-    if (organizationId) {
+    if (initialWarnings !== undefined) {
+      // Parent provided warnings prop (even if empty array = org has 0 warnings)
+      Logger.debug(`🚀 [ReviewDashboard] Using ${initialWarnings.length} parent-provided warnings (0 Firestore reads)`);
+      processWarnings(initialWarnings);
+      setLoading(false);
+    } else if (initialWarningsLoading) {
+      // Parent is still loading - wait for data to arrive via prop update
+      setLoading(true);
+    } else if (organizationId) {
+      // Standalone usage (no parent data) - fetch via CacheService
       loadWarnings();
     } else {
       setLoading(false);
     }
-  }, [organizationId, loadWarnings]);
+  }, [organizationId, initialWarnings, initialWarningsLoading, loadWarnings, processWarnings]);
 
   // Filter and search
   useEffect(() => {
@@ -354,6 +360,7 @@ const loadWarnings = useCallback(async () => {
     grounds: string;
     additionalDetails: string;
     requestedOutcome: string;
+    evidenceItems?: any[];
   }) => {
     try {
       setLoading(true);
@@ -370,22 +377,41 @@ const loadWarnings = useCallback(async () => {
       Logger.debug(`📝 Submitting appeal for warning: ${appealData.warningId}`)
 
       // Submit appeal with complete legal documentation
+      const appealDetailsPayload: any = {
+        grounds: appealData.grounds,
+        details: appealData.additionalDetails,
+        requestedOutcome: appealData.requestedOutcome,
+        submittedAt: new Date(),
+        submittedBy: user?.email || 'Employee',
+      };
+      if (appealData.evidenceItems && appealData.evidenceItems.length > 0) {
+        // Strip File objects before saving to Firestore (not serializable)
+        appealDetailsPayload.evidenceItems = appealData.evidenceItems.map(item => ({
+          id: item.id,
+          type: item.type,
+          url: item.url,
+          thumbnail: item.thumbnail,
+          description: item.description,
+          capturedAt: item.capturedAt,
+          captureMethod: item.captureMethod,
+          metadata: item.metadata ? {
+            filename: item.metadata.filename,
+            fileSize: item.metadata.fileSize,
+            mimeType: item.metadata.mimeType,
+          } : undefined,
+        }));
+      }
+
       await API.warnings.update(appealData.warningId, {
         appealSubmitted: true,
         appealDate: new Date(),
         status: 'appealed',
-        appealDetails: {
-          grounds: appealData.grounds,
-          details: appealData.additionalDetails,
-          requestedOutcome: appealData.requestedOutcome,
-          submittedAt: new Date(),
-          submittedBy: user?.email || 'Employee'
-        }
+        appealDetails: appealDetailsPayload,
       }, organizationId);
 
       // Don't archive yet - wait until appeal is resolved
       Logger.success(`Legal appeal submitted for warning ${appealData.warningId}`)
-      await loadWarnings(); // Refresh the list
+      await loadWarnings(true); // Force refresh after mutation
       
       // 🚀 REFACTORED: Using useModal hook (auto-clears data)
       appealModal.close();
@@ -414,7 +440,7 @@ const loadWarnings = useCallback(async () => {
       }, organizationId);
       
       Logger.success(`Appeal ${outcome} for warning ${warningId}`)
-      await loadWarnings(); // Refresh the list
+      await loadWarnings(true); // Force refresh after mutation
     } catch (error) {
       Logger.error('Failed to process appeal:', error)
       setError('Failed to process appeal');
@@ -478,7 +504,7 @@ const loadWarnings = useCallback(async () => {
       }
 
       // Refresh warnings list
-      await loadWarnings();
+      await loadWarnings(true); // Force refresh after mutation
 
       Logger.success('Appeal decision recorded successfully')
 
@@ -504,7 +530,7 @@ const loadWarnings = useCallback(async () => {
         setLoading(true);
         await API.warnings.archive(warningId, organizationId, 'manual');
         Logger.success('Warning archived successfully')
-        await loadWarnings(); // Refresh the list
+        await loadWarnings(true); // Force refresh after mutation
       }
     } catch (error) {
       Logger.error('Failed to archive warning:', error)
@@ -1055,16 +1081,7 @@ const loadWarnings = useCallback(async () => {
                       warning.level === 'dismissal' ? 'bg-red-100 text-red-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {warning.level === 'counselling' ? 'Counselling' :
-                       warning.level === 'verbal' ? 'Verbal' :
-                       warning.level === 'first_written' ? 'Written' :
-                       warning.level === 'second_written' ? 'Second Written' :
-                       warning.level === 'final_written' ? 'Final Written' :
-                       // Legacy support
-                       warning.level === 'written' ? 'Written' :
-                       warning.level === 'final' ? 'Final' :
-                       warning.level === 'dismissal' ? 'Dismissal' :
-                       safeRenderText(warning.level, 'Unknown')}
+                      {getLevelLabel(warning.level) || safeRenderText(warning.level, 'Unknown')}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-900">
@@ -1327,7 +1344,7 @@ const loadWarnings = useCallback(async () => {
               }, organization?.id);
 
               // Refresh warnings list
-              await loadWarnings();
+              await loadWarnings(true); // Force refresh after mutation
 
               // Notify parent component to refresh its metrics
               onWarningUpdated?.();
@@ -1376,7 +1393,7 @@ const loadWarnings = useCallback(async () => {
               });
 
               // Refresh warnings list
-              await loadWarnings();
+              await loadWarnings(true); // Force refresh after mutation
 
               // Close modal
               setShowProofOfDelivery(false);
@@ -1396,6 +1413,7 @@ const loadWarnings = useCallback(async () => {
         <AppealModal
           isOpen={appealModal.isOpen}
           onClose={appealModal.close}
+          organizationId={organizationId}
           warning={{
             id: appealModal.data.id,
             employeeName: appealModal.data.employeeName,

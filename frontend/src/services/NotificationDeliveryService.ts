@@ -334,7 +334,6 @@ export class NotificationDeliveryService {
     if (warningLevel) {
       switch (warningLevel.toLowerCase()) {
         case 'dismissal':
-        case 'suspension':
           return 'error';
         case 'final_written':
         case 'final written warning':

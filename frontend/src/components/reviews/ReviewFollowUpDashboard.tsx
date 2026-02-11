@@ -18,6 +18,7 @@ import { ThemedCard, ThemedBadge, ThemedAlert } from '../common/ThemedCard';
 import { ThemedButton } from '../common/ThemedButton';
 import ThemedTabNavigation from '../common/ThemedTabNavigation';
 import { ReviewFollowUpModal } from './ReviewFollowUpModal';
+import { getLevelLabel } from '../../services/UniversalCategories';
 
 const LoadingSkeleton = () => (
   <div className="animate-pulse space-y-4">
@@ -162,19 +163,6 @@ export const ReviewFollowUpDashboard: React.FC = () => {
       month: 'short',
       day: 'numeric'
     });
-  };
-
-  const getLevelLabel = (level: string) => {
-    const labels: Record<string, string> = {
-      counselling: 'Counselling',
-      verbal: 'Verbal Warning',
-      first_written: 'Written Warning',
-      second_written: 'Second Written Warning',
-      final_written: 'Final Warning',
-      suspension: 'Suspension',
-      dismissal: 'Ending of Service'
-    };
-    return labels[level] || level;
   };
 
   const getStatusBadge = (warning: WarningWithReview) => {

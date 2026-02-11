@@ -5,6 +5,7 @@
 // ✅ Graceful handling of missing data
 
 import type { WarningPDFData } from './PDFGenerationService';
+import { getLevelLabel } from './UniversalCategories';
 
 /**
  * 🔄 PLACEHOLDER REPLACEMENT SERVICE
@@ -151,17 +152,7 @@ export class PDFPlaceholderService {
    * Format warning level for display
    */
   private static formatWarningLevel(level: string): string {
-    const levelMap: Record<string, string> = {
-      'counselling': 'Counselling Session',
-      'verbal': 'Verbal Warning',
-      'first_written': 'Written Warning',
-      'second_written': 'Second Written Warning',
-      'final_written': 'Final Written Warning',
-      'suspension': 'Suspension',
-      'dismissal': 'Ending of Service'
-    };
-
-    return levelMap[level] || level;
+    return getLevelLabel(level);
   }
 
   /**
@@ -173,8 +164,7 @@ export class PDFPlaceholderService {
       'verbal': 'Written Warning',
       'first_written': 'Second Written Warning',
       'second_written': 'Final Written Warning',
-      'final_written': 'Suspension or Ending of Service',
-      'suspension': 'Ending of Service',
+      'final_written': 'Contact HR - Serious Offence',
       'dismissal': 'Termination of Employment'
     };
 

@@ -37,6 +37,7 @@ firebase projects:list
 **⚠️ Security**: The service account JSON file is in `.gitignore` - never commit it.
 
 ### Current System Status
+- **✅ Landing Page**: `frontend/public/landing.html` — dark-themed marketing page served at `/` via Firebase rewrite. Tailwind CDN, no build step. Login/trial CTAs link to `/login`. Has its own CSP header in `firebase.json`.
 - **✅ Production**: Online at https://file.fifo.systems (custom domain) and https://hr-disciplinary-system.web.app
 - **✅ Development**: Ubuntu environment at http://localhost:3003/ (dev server running)
 - **✅ Enterprise Ready**: A-grade security, production monitoring, 2,700+ org scalability
@@ -74,7 +75,7 @@ firebase projects:list
 **IMPORTANT**: This file is size-limited to maintain context efficiency.
 
 - **Size Limit**: 500 lines maximum (target: 400-470 lines)
-- **Current Size**: 469 lines ✅
+- **Current Size**: 463 lines ✅
 - **Policy**: See `DOCUMENTATION_POLICY.md` for complete maintenance rules
 - **Before Adding Sessions**: Check size with `wc -l CLAUDE.md`
 - **If > 450 lines**: Move previous session to RECENT_UPDATES.md first
@@ -330,48 +331,13 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 ### **🔜 Testing & Validation Tasks**
 
-**✅ Priority 1: Deploy Functions** - COMPLETED
-- ✅ Redeployed Firebase Functions - all 25/25 functions deployed successfully after cleanup
-- ✅ Removed `setCustomClaimsOnSignIn` function
-- ✅ No GCIP upgrade errors
+**✅ Completed**: Deploy Functions, Enhanced User Creation, Bulk Employee-Manager Assignment, Print & Hand Delivery
 
-**✅ Priority 2: Test Enhanced User Creation** - COMPLETED
-- ✅ Business owners can promote existing employees to HR/Department manager roles
-- ✅ Business owners can create new managers with automatic employee records
-- ✅ Email verification during employee promotion works correctly
-
-**Priority 3: Test Historical Warning Entry**
-- 60-day countdown displays correctly for HR managers
-- First access timestamp recorded properly
-- Urgency indicators work (amber → orange → red progression)
-- Button hides after 60 days
-
-**Priority 4: Test Employee Management Fixes**
-- HOD managers can view their team members (no "No Employees Found" error)
-- HR managers can edit employee records created during manager promotion
-- Optional chaining handles missing profile data gracefully
-
-**Priority 5: Test Department System**
-- Real-time employee count updates when employees added/removed
-- Department management works on Business Owner Dashboard tabs
-- Default departments (Operations, Admin) created for new organizations
-
-**✅ Priority 6: Test Bulk Employee-Manager Assignment** - COMPLETED (Feature Verified)
-- ✅ Checkbox column appears in Employee Table Browser
-- ✅ Select all checkbox toggles all employees on page
-- ✅ Bulk actions bar appears when employees selected
-- ✅ "Assign to Manager" button visible for HR role only
-- ✅ Modal opens with manager dropdown and confirmation
-- ✅ Multiple employees assigned to manager successfully
-- ✅ Employee list refreshes after assignment
-
-**✅ Priority 7: Test Print & Hand Delivery Workflow** - COMPLETED (Session 19)
-- ✅ On-demand PDF generation works for warnings without existing PDF URLs
-- ✅ Employee data structure transformation (nested → flat) successful
-- ✅ Field mapping corrections (level, issueDate, incidentDate) working
-- ✅ Simplified workflow (Steps 2 & 3) streamlined for better UX
-- ✅ Dashboard counter refresh mechanism working correctly
-- ✅ Status updates propagate to HR Dashboard in real-time
+**Pending**:
+- Test Historical Warning Entry (60-day countdown, urgency indicators)
+- Test Employee Management Fixes (HOD team view, employee edit after promotion)
+- Test Department System (real-time counts, default departments)
+- **Test Employee Response Link Flow** (generate → view PDF → submit → HR email notification)
 
 ---
 
@@ -391,79 +357,145 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 **For complete change history, see `RECENT_UPDATES.md` (Sessions 20-52) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Session 56 - 2026-01-27)
-- **🐛 DASHBOARD TAB CONTENT BUG FIX**: Tab content not rendering on desktop
-  - ✅ Issue: `DashboardShell.tsx` used `hidden lg:block` (≥1024px) but `isDesktop` was ≥768px
-  - ✅ Screens 768-1024px got desktop layout but empty tab content
-  - ✅ Fix: Removed `hidden lg:block` class - content renders via conditional `activeTab === tab.id`
-- **🐛 DASHBOARD METRICS GRID FIX**: Cards stacking vertically instead of 2-column grid
-  - ✅ Issue: Desktop used `grid-cols-1 lg:grid-cols-2` - single column on screens 768-1024px
-  - ✅ Fix: Changed to `grid-cols-2 xl:grid-cols-4` - always 2 columns, 4 on wide screens
-  - ✅ Applied to: DashboardShell, SuperAdminDashboard, ResellerDashboard
-  - ✅ Now consistent with mobile view (which already used `grid-cols-2`)
-- **📋 DEMO MATERIALS CREATED**: Bakery staff CSV for reseller demo
-  - ✅ Created `legal/demo-bakery-staff.csv` with 12 bakery employees
-  - ✅ Positions: Head Baker, Pastry Chef, Store Manager, Cake Decorator, etc.
-  - ✅ Ready for CSV import demo with potential reseller
-- **✅ VERIFIED**: Reseller dashboard and deploy client wizard ready for demo
-- **Files Modified**:
-  - `DashboardShell.tsx` - Tab content fix + metrics grid fix
-  - `SuperAdminDashboard.tsx` - Metrics grid fix
-  - `ResellerDashboard.tsx` - Metrics grid fix
-- **Build & Deploy**: ✅ Success (19.23s build, deployed)
+### Most Recent (Session 62 - 2026-02-11)
+- **✅ Multi-Dashboard Theming** — Reseller Branding & CI tab now supports theming all 3 dashboard views (Manager, HR, Executive) with per-view metric card color overrides and live previews
+- **✅ Extended `DashboardThemeSettings`** — Added `hrDashboard.metricColors` (5 fields) and `executiveDashboard.metricColors` (4 fields) to `core.ts` type. All optional, no migration needed
+- **✅ `DashboardShell` `customColor`** — `MetricCard` interface gains `customColor?: string` prop, used as override over semantic `GRADIENT_COLORS` in both mobile and desktop rendering
+- **✅ HR & Executive Dashboards Wired** — Both `HRDashboardSection` and `ExecutiveManagementDashboardSection` read org theme and pass `customColor` on each metric card
+- **✅ `DashboardPreviewPanels.tsx`** (NEW) — Extracted shared `PhoneFrame`, `PhoneTopBar`, `QuotesCard` + 3 mini previews + 3 phone-frame previews for Manager, HR, Executive
+- **✅ Branding Tab Restructured** — Shared settings (greeting, top bar, background, font, button shape) always visible; view switcher pills for Manager/HR/Executive with per-view controls and inline+full previews
+- **Files**: `core.ts`, `DashboardShell.tsx`, `HRDashboardSection.tsx`, `ExecutiveManagementDashboardSection.tsx`, `DashboardPreviewPanels.tsx` (new), `ClientOrganizationManager.tsx`
 
-### Previous (Session 55 - 2026-01-27)
-- **📄 MARKETING PDF OVERHAUL**: All PDFs reformatted for proper A4 display
-- **⚖️ LEGAL DOCUMENTS**: Created PDFs and fixed company references
-- **🏢 BUSINESS STRUCTURE CLARIFIED**: File by FIFO vs FIFO Solutions
-- **Status**: ✅ All marketing & legal documents ready for business launch
-
-### Previous (Session 54 - 2026-01-26)
-- **🎉 COMMISSION SYSTEM FIXED**: Removed Stripe dependency, now works with SA payment methods
-- **🎉 FINANCIAL DASHBOARD**: New SuperAdmin tab for recording payments
-- **📝 FIN/FILE INTEGRATION**: Updated Fin's CLAUDE.md
-- **Build & Deploy**: ✅ Success (19.2s build, deployed)
-
-### Previous (Session 52 - 2025-12-10)
-- **🎉 MOBILE UX FIXES**: 9 issues identified from user testing, all resolved
-  - ✅ "Unknown" department → "No Department" in employee selection lists
-  - ✅ Compact absence type list (reduced padding, smaller icons/text)
-  - ✅ Supporting docs reminder added to Report Absence modal
-  - ✅ Book HR Meeting buttons now visible on mobile (max-height constraint)
-  - ✅ HR Meeting success message corrected ("HR will contact you directly")
-  - ✅ Category dropdown no longer auto-focuses keyboard (removed autoFocus)
-  - ✅ Review phase text now expands fully (removed line-clamp truncation)
-  - ✅ Signature pad canvas fixed with ResizeObserver + minHeight
-  - ✅ Save Warning button shows validation feedback when disabled
-  - ✅ Hardware back button shows confirmation dialog instead of exiting app
-- **Files Modified**:
-  - `UnifiedReportAbsence.tsx` - Department fallback, compact list, docs reminder
-  - `UnifiedBookHRMeeting.tsx` - Buttons visibility, success message
-  - `CategorySelector.tsx` - Removed autoFocus
-  - `UnifiedWarningWizard.tsx` - Text expansion, signature pad, save feedback, back button
-- **Build & Deploy**: ✅ Success (16.82s)
-- **Status**: ✅ Complete - All mobile UX issues resolved
-
-### Previous Sessions (44-54)
-See `RECENT_UPDATES.md` for detailed session history including:
-- Session 54: Commission system fixed, FinancialDashboard
-- Session 52: Mobile UX fixes (9 issues resolved)
-- Session 51: Audio recording, LRA bug fix, word count validation
-- Session 50: LRA loading spinner, signature pad fixes
-- Session 49: Award-winning UX implementation
-- Session 48: Unified 10-phase warning wizard, PDF improvements
-- Session 47: System-wide legal compliance, read-only employee management
-- Session 46: QR code delivery, custom domain setup
-- Session 45: Promote to Manager Modal redesign
-- Session 44: HOD Dashboard migration to DashboardShell
+### Previous Sessions (52-61)
+See `RECENT_UPDATES.md` for detailed session history including Sessions 57-61.
 
 **For complete session history, see:**
-- `RECENT_UPDATES.md` - Sessions 20-56 (current)
+- `RECENT_UPDATES.md` - Sessions 20-62 (current)
 - `SESSION_HISTORY.md` - Sessions 5-19 (archived)
 - `legal/BUSINESS_LAUNCH_TRACKER.md` - Company formation & go-to-market progress
 
 ---
 
-*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ organization scalability, complete progressive enhancement for 2012-2025 device compatibility, **unified professional design system** across all components with **consistent inline tab UX across all dashboards**, **unified DashboardShell component** powering all 3 main dashboards (HR, Executive Management, HOD), **WCAG AA accessibility compliance**, **versioned PDF generation for legal compliance**, **per-organization PDF template customization**, **1000x storage reduction through centralized template version management**, **fully editable PDF text content with zero hardcoded fallbacks**, **SA-optimized employee CSV import with automatic phone number formatting**, **multi-manager support with array-based employee assignments**, **professional compact welcome modals**, **executive-management role** for inclusive senior leadership, **modern autocomplete employee search**, **SVG signature system with 90%+ storage savings**, **complete witness signature support**, **PDF preview & acknowledgment** ensuring employees see what they sign, **real-time LRA analysis** for instant step transitions, and **10-phase unified warning wizard** with structured corrective discussion workflow.*
+*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ org scalability, progressive enhancement for 2012-2025 devices, **unified design system**, **DashboardShell** across all dashboards, **WCAG AA compliance**, **versioned PDF generation**, **per-org PDF templates**, **SVG signatures**, **10-phase unified warning wizard**, **link-based employee response/appeal system** with token auth and PDF viewing, **HR email notifications via SendGrid**, **evidence upload on appeals**, **per-organization multi-dashboard theming** (Manager, HR, Executive views with per-view metric card colors), **optimized warning data loading with staleness detection**, and **session guard with auto-logout + forced app updates**.*
 
-*Last Updated: 2026-01-27 - Session 56: Dashboard tab content fix, metrics grid 2-column fix (all dashboards), demo bakery CSV created*
+*Last Updated: 2026-02-11 - Session 62: Multi-dashboard theming in Branding & CI tab — extended DashboardThemeSettings type, DashboardShell customColor prop, HR/Executive dashboards wired, DashboardPreviewPanels component, branding tab restructured with view switcher pills.*
+
+---
+
+## FIFO Ops Integration
+
+This project reports to **FIFO Ops** (ops.fifo.systems) for centralized task and context tracking across all FIFO Solutions projects.
+
+### Reading from Ops
+At session start, check `/home/aiguy/projects/fifo-ops/FIFO_OPS_STATE.md` for current business priorities and cross-project context.
+
+### Writing to Ops
+When working in this project, if you identify:
+- Tasks that should be tracked in the central Ops dashboard
+- Issues requiring Riaan's attention across projects
+- Cross-project dependencies or blockers
+- Important decisions or context other projects should know about
+
+**Add them to the Outbox section below.** FIFO Ops will process these during its sync.
+
+---
+
+## Inbox from FIFO Ops
+> Last updated: 2026-02-02
+
+### ✅ COMPLETED: Appeal & Employee Response Enhancements (Session 57 - 2026-02-02)
+
+All 3 gaps identified by HR practitioner feedback have been implemented and deployed:
+
+- **✅ Gap 1: Link-Based Employee Response & Appeal** — `file.fifo.systems/respond/{token}`, 8 Cloud Functions, public page with response/appeal tabs, evidence upload, PDF viewing
+- **✅ Gap 2: Evidence Upload on Appeals** — `EvidenceUploader` component in `AppealModal`, thumbnails in `AppealReviewModal`, Firebase Storage rules
+- **✅ Gap 3: HR Email Notification** — `notifyHROnAppeal` Firestore trigger, SendGrid emails from `file@fifo.systems`
+- **✅ Bonus: PDF Viewing** — Employees can view/print warning PDF from response link via signed URL
+
+### Email Architecture Decision (2026-01-29)
+All FIFO products use the same email setup:
+- **Sending (automated)**: SendGrid, domain-verified for fifo.systems. This project should send from `file@fifo.systems`.
+- **Receiving**: Cloudflare Email Routing (free) -- all @fifo.systems addresses forward to Riaan's Gmail.
+- **Sending (personal)**: Riaan sends from `riaan@fifo.systems` via Gmail "Send as" aliases.
+- **No email hosting needed.** No Google Workspace. No monthly cost.
+- When implementing email features, use SendGrid API with sender address `file@fifo.systems`.
+
+### Remaining HR Practitioner Feedback (from Adam's colleague, 2 Feb)
+
+Gaps 1-3 are done. These 2 remain from the same feedback session:
+
+#### Gap 4: Manager Evidence Upload During Warning Creation — ✅ ALREADY IMPLEMENTED
+**Session 62 Investigation:** Evidence upload IS wired in `UnifiedWarningWizard` (the active wizard). Ops' report was based on `EnhancedWarningWizard` (legacy, unused). Needs end-to-end testing only.
+- `frontend/src/components/common/EvidenceUploader.tsx` -- already built, just import and render
+- `frontend/src/types/warning.ts` line 342 -- `evidenceItems: EvidenceItem[]` already in form data type
+- Ensure evidence is saved to Firestore with the warning and rendered in the review/PDF steps
+
+#### Gap 5: Pre-Populated Expected Behavior Standards from Warning Categories
+**Problem:** Phase 4 (EXPECTED_STANDARDS) is an empty textarea every time. Manager types from scratch. The `WarningCategory` type has no field for standard templates. This causes inconsistency, wasted time, and compliance risk.
+
+**Fix (Riaan's idea):** Add an `expectedStandardsTemplate` field to `WarningCategory`. Configure it on the **same admin screen where warning categories are managed** -- since categories are already custom per organisation, the expected standards template belongs right there alongside the category name, severity, and escalation path.
+
+**Implementation:**
+1. Add `expectedStandardsTemplate?: string` field to `WarningCategory` type in `frontend/src/types/core.ts`
+2. Add a textarea for "Default Expected Standards" on the warning category admin/edit screen (wherever categories are configured)
+3. In the warning wizard, when a category is selected (Phase 1 `onCategorySelect` handler in `UnifiedWarningWizard.tsx` ~line 894), populate `expectedBehavior` state from `category.expectedStandardsTemplate` if it exists
+4. Manager can still edit the pre-filled text for the specific warning -- it's a starting point, not locked
+5. Update Firestore schema for `warningCategories` collection to include the new field
+
+**UX:** When a company sets up their categories (e.g. "Late Attendance"), they also write the expected standard template (e.g. "Employees must report for duty at their scheduled start time and notify their manager before shift start if unable to attend"). This gets auto-filled into every warning in that category. Manager can tweak per incident.
+
+### Gap 4: RESOLVED — Ops investigated wrong wizard (Session 62)
+> Investigated 2026-02-11
+
+**Ops' report was based on `EnhancedWarningWizard` + `CombinedIncidentStepV2` (legacy code, NOT used in production).** The active wizard `UnifiedWarningWizard` has evidence fully wired:
+- `pendingEvidenceItems` state (line 276)
+- All 3 evidence props passed to `IncidentDetailsForm` in Phase 2 (lines 1028-1037)
+- Post-save batch upload to Firebase Storage (lines 827-860)
+- Firestore persistence of `evidenceItems` array on warning document
+- UI file count badge (lines 1423-1430)
+
+**Status:** Needs end-to-end testing only (attach file → complete warning → verify in Storage/Firestore).
+
+### Gap 5: Confirmed working — just needs testing
+> Updated by FIFO Ops, 2026-02-09
+
+Ops code review confirmed Gap 5 IS fully implemented: type definitions, DataService merge logic, admin UI textarea, auto-population in `UnifiedWarningWizard.tsx` on category select, info badge. Just needs end-to-end testing with real category data.
+
+### Active Tasks for This Project
+- [HIGH] Schedule 4-5 demo calls with HR professionals for File by FIFO (Riaan is handling outreach)
+- [DONE - NEEDS TESTING] Manager evidence upload in warning wizard (Gap 4) ✅ Was already working in UnifiedWarningWizard — Ops checked legacy code
+- [DONE - NEEDS TESTING] Pre-populated expected standards from warning categories (Gap 5) ✅ Confirmed working
+- [DONE] ~~Implement link-based employee response/appeal system (Gap 1)~~ ✅ Session 57
+- [DONE] ~~Add evidence upload to AppealModal (Gap 2)~~ ✅ Session 57
+- [DONE] ~~Add HR email notification on appeal submission (Gap 3)~~ ✅ Session 57
+- [MEDIUM] Draft WhatsApp outreach message for File by FIFO
+- [MEDIUM] Test complete response link flow end-to-end (generate link → view PDF → submit response → HR notification)
+
+### Context
+- No paying clients yet. 0 MRR.
+- Riaan approached his network but they're slow to respond.
+- Product is production-ready and polished -- just needs clients.
+- Real HR practitioner feedback received (via Adam's colleague) -- see gaps above.
+- Insitu Construction (Michelle Pedersen) is the closest to first client -- needs onsite visit to onboard.
+
+---
+
+## Outbox for FIFO Ops
+
+<!--
+Add notes for FIFO Ops here. Format:
+- [DATE] [PROJECT: file] [PRIORITY: low/medium/high] Description
+
+Items will be processed and removed by FIFO Ops sync.
+-->
+
+<!-- Processed by FIFO Ops on 2026-02-02:
+- All 5 HR practitioner feedback gaps COMPLETED (Sessions 57-58)
+- Gap 1: link-based response, Gap 2: evidence on appeals, Gap 3: HR email notification
+- Gap 4: manager evidence in wizard, Gap 5: expected standards templates
+- SendGrid API key configured for file@fifo.systems — domain verification to be confirmed
+- End-to-end testing needed: Riaan should test response link flow with a real warning
+-->
+
+<!-- Processed by FIFO Ops on 2026-02-11: Gap 4 correction acknowledged. Ops investigated legacy wizard by mistake. Active wizard (UnifiedWarningWizard) has evidence fully wired. Both gaps confirmed done. -->
+

@@ -1,7 +1,8 @@
 // frontend/src/components/audio/AudioWaveform.tsx
-// Real-time animated frequency bars visualization using Web Audio API
+// Animated waveform visualization for audio playback
+// Uses simple CSS-driven animation (no Web Audio API / no CORS issues)
 
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 
 interface AudioWaveformProps {
   audioElement: HTMLAudioElement | null;
@@ -27,7 +28,6 @@ const drawRoundedRect = (
     ctx.roundRect(x, y, width, height, radius);
     ctx.fill();
   } else {
-    // Fallback for older browsers
     ctx.beginPath();
     ctx.moveTo(x + radius, y);
     ctx.lineTo(x + width - radius, y);
@@ -43,6 +43,21 @@ const drawRoundedRect = (
   }
 };
 
+// Generate a stable pseudo-random waveform pattern for each bar
+const generateWaveformPattern = (barCount: number): number[] => {
+  const pattern: number[] = [];
+  for (let i = 0; i < barCount; i++) {
+    // Create a natural-looking waveform shape (higher in middle, varied)
+    const center = barCount / 2;
+    const distFromCenter = Math.abs(i - center) / center;
+    const base = 0.3 + 0.5 * (1 - distFromCenter * distFromCenter);
+    // Add pseudo-random variation using sine waves
+    const variation = 0.2 * Math.sin(i * 2.7) + 0.15 * Math.sin(i * 4.3) + 0.1 * Math.sin(i * 7.1);
+    pattern.push(Math.max(0.15, Math.min(1, base + variation)));
+  }
+  return pattern;
+};
+
 export const AudioWaveform: React.FC<AudioWaveformProps> = ({
   audioElement,
   isPlaying,
@@ -53,14 +68,11 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
   className = ''
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const animationRef = useRef<number | null>(null);
-  const connectedElementRef = useRef<HTMLAudioElement | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const patternRef = useRef<number[]>(generateWaveformPattern(barCount));
+  const timeRef = useRef<number>(0);
 
-  // Draw idle state (minimal gray bars)
+  // Draw idle state (minimal gray dots)
   const drawIdle = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
@@ -73,7 +85,7 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
 
     for (let i = 0; i < barCount; i++) {
       const x = i * (barWidth + gap);
-      const barHeight = 4; // Minimal height when idle
+      const barHeight = 4;
       const y = (canvas.height - barHeight) / 2;
 
       ctx.fillStyle = backgroundColor;
@@ -81,28 +93,30 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
     }
   }, [barCount, backgroundColor]);
 
-  // Animation loop for active playback
-  const draw = useCallback(() => {
-    if (!analyserRef.current || !canvasRef.current) return;
-
+  // Animated playback visualization
+  const drawAnimated = useCallback(() => {
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const ctx = canvas?.getContext('2d');
+    if (!ctx || !canvas) return;
 
-    const bufferLength = analyserRef.current.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    analyserRef.current.getByteFrequencyData(dataArray);
+    timeRef.current += 0.06;
+    const t = timeRef.current;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const barWidth = (canvas.width / barCount) * 0.7;
     const gap = (canvas.width / barCount) * 0.3;
+    const pattern = patternRef.current;
 
     for (let i = 0; i < barCount; i++) {
-      // Map bar index to frequency data index
-      const dataIndex = Math.floor((i / barCount) * bufferLength);
-      const barHeight = Math.max(4, (dataArray[dataIndex] / 255) * canvas.height);
+      // Combine the static pattern with time-based animation
+      const wave1 = 0.3 * Math.sin(t * 2.5 + i * 0.4);
+      const wave2 = 0.2 * Math.sin(t * 3.8 + i * 0.7);
+      const wave3 = 0.1 * Math.sin(t * 5.2 + i * 1.1);
+      const animated = pattern[i] + wave1 + wave2 + wave3;
+      const normalised = Math.max(0.1, Math.min(1, animated));
 
+      const barHeight = Math.max(4, normalised * canvas.height * 0.85);
       const x = i * (barWidth + gap);
       const y = (canvas.height - barHeight) / 2;
 
@@ -111,45 +125,20 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
     }
 
     if (isPlaying) {
-      animationRef.current = requestAnimationFrame(draw);
+      animationRef.current = requestAnimationFrame(drawAnimated);
     }
   }, [isPlaying, barCount, primaryColor]);
 
-  // Initialize Web Audio API when audio element is available
+  // Handle play/pause state changes
   useEffect(() => {
-    // Skip if no audio element or already connected to this element
-    if (!audioElement || connectedElementRef.current === audioElement) return;
-
-    try {
-      // Create AudioContext (handle vendor prefixes)
-      if (!audioContextRef.current) {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContextClass) {
-          console.warn('Web Audio API not supported');
-          return;
-        }
-        audioContextRef.current = new AudioContextClass();
+    if (isPlaying) {
+      drawAnimated();
+    } else {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
       }
-
-      const audioContext = audioContextRef.current;
-
-      // Create analyser node
-      analyserRef.current = audioContext.createAnalyser();
-      analyserRef.current.fftSize = 256;
-      analyserRef.current.smoothingTimeConstant = 0.8;
-
-      // Create source from audio element (only once per element)
-      sourceRef.current = audioContext.createMediaElementSource(audioElement);
-      sourceRef.current.connect(analyserRef.current);
-      analyserRef.current.connect(audioContext.destination);
-
-      connectedElementRef.current = audioElement;
-      setIsReady(true);
-    } catch (error) {
-      // This can happen if the audio element is already connected to another context
-      console.warn('Could not connect audio to analyser:', error);
-      // Still mark as connected to prevent retry loops
-      connectedElementRef.current = audioElement;
+      drawIdle();
     }
 
     return () => {
@@ -158,30 +147,7 @@ export const AudioWaveform: React.FC<AudioWaveformProps> = ({
         animationRef.current = null;
       }
     };
-  }, [audioElement]);
-
-  // Handle play/pause state changes
-  useEffect(() => {
-    if (!analyserRef.current) {
-      // No analyser available, just draw idle state
-      drawIdle();
-      return;
-    }
-
-    // Resume AudioContext if suspended (browser autoplay policy)
-    if (isPlaying && audioContextRef.current?.state === 'suspended') {
-      audioContextRef.current.resume();
-    }
-
-    if (isPlaying) {
-      draw();
-    } else {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-      drawIdle();
-    }
-  }, [isPlaying, draw, drawIdle]);
+  }, [isPlaying, drawAnimated, drawIdle]);
 
   // Initial draw on mount
   useEffect(() => {

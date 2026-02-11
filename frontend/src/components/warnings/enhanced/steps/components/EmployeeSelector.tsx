@@ -130,105 +130,118 @@ export const EmployeeSelector: React.FC<EmployeeSelectorProps> = ({
         }
       />
 
-      {/* Employee Selector Dropdown */}
-      <div className="relative">
-        <div className="space-y-2">
-          {/* Search/Selected Employee Display - Themed */}
-          <ThemedCard
-            hover
-            padding="sm"
-            className={`cursor-pointer transition-all min-h-[48px] ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-            style={{
-              borderWidth: '1px',
-              borderColor: isOpen ? 'var(--color-primary)' : 'var(--color-border)',
-              boxShadow: isOpen ? '0 0 0 2px var(--color-primary-light)' : undefined
-            }}
-            onClick={handleOpenSelector}
-          >
-            {selectedEmployee ? (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center"
-                       style={{ backgroundColor: 'var(--color-primary-light)' }}>
-                    <span className="font-semibold text-xs" style={{ color: 'var(--color-primary)' }}>
-                      {getEmployeeProp(selectedEmployee, 'firstName').charAt(0)}{getEmployeeProp(selectedEmployee, 'lastName').charAt(0)}
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
-                      {getEmployeeProp(selectedEmployee, 'firstName')} {getEmployeeProp(selectedEmployee, 'lastName')}
-                    </div>
-                    <div className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
-                      {getEmployeeProp(selectedEmployee, 'position')} • {getEmployeeProp(selectedEmployee, 'department')}
-                    </div>
-                  </div>
-                </div>
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
-                  style={{ color: 'var(--color-text-tertiary)' }}
-                />
-              </div>
-            ) : (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4" style={{ color: 'var(--color-text-tertiary)' }} />
-                  <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-                    Select an employee...
+      {/* Employee Selector - Desktop: inline list, Mobile: full-screen modal */}
+      <div>
+        {/* Selected Employee Display / Toggle */}
+        <ThemedCard
+          hover
+          padding="sm"
+          className={`cursor-pointer transition-all min-h-[48px] ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          style={{
+            borderWidth: '1px',
+            borderColor: isOpen ? 'var(--color-primary)' : 'var(--color-border)',
+            boxShadow: isOpen ? '0 0 0 2px var(--color-primary-light)' : undefined
+          }}
+          onClick={handleOpenSelector}
+        >
+          {selectedEmployee ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center"
+                     style={{ backgroundColor: 'var(--color-primary-light)' }}>
+                  <span className="font-semibold text-xs" style={{ color: 'var(--color-primary)' }}>
+                    {getEmployeeProp(selectedEmployee, 'firstName').charAt(0)}{getEmployeeProp(selectedEmployee, 'lastName').charAt(0)}
                   </span>
                 </div>
-                <ChevronDown
-                  className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                  style={{ color: 'var(--color-text-tertiary)' }}
-                />
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
+                    {getEmployeeProp(selectedEmployee, 'firstName')} {getEmployeeProp(selectedEmployee, 'lastName')}
+                  </div>
+                  <div className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
+                    {getEmployeeProp(selectedEmployee, 'position')} • {getEmployeeProp(selectedEmployee, 'department')}
+                  </div>
+                </div>
               </div>
-            )}
-          </ThemedCard>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`}
+                style={{ color: 'var(--color-text-tertiary)' }}
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4" style={{ color: 'var(--color-text-tertiary)' }} />
+                <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                  Select an employee...
+                </span>
+              </div>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                style={{ color: 'var(--color-text-tertiary)' }}
+              />
+            </div>
+          )}
+        </ThemedCard>
 
-          {/* Dropdown Content */}
-          {isOpen && (
-            <div className="fixed top-20 left-4 right-4 z-[10001] bg-white border border-gray-300 rounded-lg shadow-lg max-h-80 overflow-hidden md:absolute md:top-full md:left-0 md:right-0">
-              {/* Search Input */}
-              <div className="p-3 border-b border-gray-200">
+        {/* Desktop: Inline list rendered within wizard scroll flow */}
+        {isOpen && (
+          <div className="mt-2 border border-gray-200 rounded-lg bg-white overflow-hidden">
+            {/* Search Input */}
+            <div className="p-3 border-b border-gray-200">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search employees..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                  autoFocus
+                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
                 />
               </div>
-
-              {/* Employee List */}
-              <div className="max-h-60 overflow-y-auto">
-                {filteredEmployees.length > 0 ? (
-                  <div className="py-2">
-                    {filteredEmployees.map(employee => {
-                      const riskLevel = getRiskLevel(employee);
-                      const warningsSummary = getWarningsSummary(employee);
-
-                      return (
-                        <button
-                          key={employee.id}
-                          onClick={() => handleEmployeeSelect(employee.id)}
-                          className="w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="font-medium text-gray-900 text-sm">
-                            {getEmployeeProp(employee, 'firstName')} {getEmployeeProp(employee, 'lastName')} - {getEmployeeProp(employee, 'position')}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="px-4 py-8 text-center text-gray-500">
-                    <User className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                    <p>No employees found matching "{searchTerm}"</p>
-                  </div>
-                )}
-              </div>
             </div>
-          )}
-        </div>
+
+            {/* Employee List - scrollable with max height */}
+            <div className="max-h-56 overflow-y-auto">
+              {filteredEmployees.length > 0 ? (
+                <div className="py-1">
+                  {filteredEmployees.map(employee => (
+                    <button
+                      key={employee.id}
+                      onClick={() => handleEmployeeSelect(employee.id)}
+                      className={`w-full text-left px-3 py-2.5 transition-colors border-b border-gray-50 last:border-b-0 ${
+                        employee.id === selectedEmployeeId
+                          ? 'bg-blue-50 text-blue-900'
+                          : 'hover:bg-gray-50 text-gray-900'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 bg-gray-100 text-gray-600">
+                          <span className="font-medium text-xs">
+                            {getEmployeeProp(employee, 'firstName').charAt(0)}{getEmployeeProp(employee, 'lastName').charAt(0)}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm truncate">
+                            {getEmployeeProp(employee, 'firstName')} {getEmployeeProp(employee, 'lastName')}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {getEmployeeProp(employee, 'position')} {getEmployeeProp(employee, 'department') ? `• ${getEmployeeProp(employee, 'department')}` : ''}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="px-4 py-6 text-center text-gray-500">
+                  <User className="w-6 h-6 mx-auto mb-1.5 text-gray-400" />
+                  <p className="text-sm">No employees found matching "{searchTerm}"</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Mobile Modal for Employee Selection */}

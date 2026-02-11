@@ -261,8 +261,28 @@ export const transformWarningDataForPDF = async (
     incidentTime: warningData.incidentTime || '09:00',
     incidentLocation: warningData.incidentLocation || '',
 
-    // Organization branding
-    organization: organizationData,
+    // Organization branding — overlay frozen snapshot (if available) for identical reprints.
+    // Old warnings without a snapshot fall back to live org data.
+    organization: warningData.organizationSnapshot
+      ? {
+          ...organizationData,
+          name: warningData.organizationSnapshot.companyName || organizationData.name,
+          address: warningData.organizationSnapshot.address || organizationData.address,
+          phone: warningData.organizationSnapshot.phone || organizationData.phone,
+          email: warningData.organizationSnapshot.email || organizationData.email,
+          registrationNumber: warningData.organizationSnapshot.registrationNumber || organizationData.registrationNumber,
+          branding: {
+            ...organizationData.branding,
+            companyName: warningData.organizationSnapshot.companyName || organizationData.branding?.companyName,
+            website: warningData.organizationSnapshot.website || organizationData.branding?.website,
+            logo: warningData.organizationSnapshot.logoUrl || organizationData.branding?.logo,
+            colors: {
+              ...organizationData.branding?.colors,
+              primary: warningData.organizationSnapshot.primaryColor || organizationData.branding?.colors?.primary || organizationData.branding?.primaryColor,
+            },
+          },
+        }
+      : organizationData,
 
     // Signatures
     signatures: warningData.signatures || {},

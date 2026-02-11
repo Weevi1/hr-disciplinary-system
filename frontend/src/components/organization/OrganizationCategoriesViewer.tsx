@@ -35,7 +35,7 @@ import { DatabaseShardingService } from '../../services/DatabaseShardingService'
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { WarningCategory } from '../../services/WarningService';
-import { UNIVERSAL_SA_CATEGORIES } from '../../services/UniversalCategories';
+import { UNIVERSAL_SA_CATEGORIES, getLevelLabel } from '../../services/UniversalCategories';
 import { LoadingState } from '../common/LoadingState';
 import Logger from '../../utils/logger';
 
@@ -175,6 +175,7 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
         icon: category.icon,
         isActive: category.isActive,
         escalationPath: category.escalationPath,
+        expectedStandardsTemplate: category.expectedStandardsTemplate || '',
         updatedAt: new Date()
       };
 
@@ -279,7 +280,8 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
         icon: newCategory.icon || '📋',
         isActive: newCategory.isActive !== false,
         isDefault: false,
-        escalationPath: newCategory.escalationPath || ['verbal', 'first_written', 'final_written']
+        escalationPath: newCategory.escalationPath || ['verbal', 'first_written', 'final_written'],
+        expectedStandardsTemplate: newCategory.expectedStandardsTemplate || ''
       };
 
       // Use ShardedDataService which properly invalidates cache
@@ -339,7 +341,7 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
 
   const formatEscalationPath = (path?: string[]) => {
     if (!path || path.length === 0) return 'No escalation path defined';
-    return path.map(level => level.replace('_', ' ')).join(' → ');
+    return path.map(level => getLevelLabel(level)).join(' → ');
   };
 
   // Content to be rendered (either in modal or inline)
@@ -584,8 +586,7 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                         <option value="first_written">Written Warning</option>
                         <option value="second_written">Second Written Warning</option>
                         <option value="final_written">Final Written Warning</option>
-                        <option value="suspension">Suspension</option>
-                        <option value="dismissal">Ending of Service</option>
+                        <option value="dismissal">Contact HR - Serious Offence</option>
                       </select>
                     </div>
 
@@ -597,6 +598,21 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                         onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
                         placeholder="Brief description of this category..."
                         rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    {/* Expected Standards Template */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Default Expected Standards</label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        This text auto-fills the "Expected Standards" step when a manager issues a warning in this category. They can still edit it per incident.
+                      </p>
+                      <textarea
+                        value={newCategory.expectedStandardsTemplate || ''}
+                        onChange={(e) => setNewCategory({ ...newCategory, expectedStandardsTemplate: e.target.value })}
+                        placeholder="e.g., Employees must report for duty at their scheduled start time and notify their manager before shift start if unable to attend."
+                        rows={3}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
@@ -709,7 +725,7 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                                     }`}
                                   >
                                     <GripVertical className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-                                    <span className="capitalize">{level.replace('_', ' ')}</span>
+                                    <span>{getLevelLabel(level)}</span>
                                     <button
                                       type="button"
                                       onClick={(e) => {
@@ -743,8 +759,7 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                           { value: 'first_written', label: 'Written' },
                           { value: 'second_written', label: 'Second Written' },
                           { value: 'final_written', label: 'Final Written' },
-                          { value: 'suspension', label: 'Suspension' },
-                          { value: 'dismissal', label: 'Ending of Service' }
+                          { value: 'dismissal', label: 'Contact HR - Serious Offence' }
                         ].map((levelOption) => (
                           <button
                             key={levelOption.value}
@@ -831,8 +846,7 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                         <option value="first_written">Written Warning</option>
                         <option value="second_written">Second Written Warning</option>
                         <option value="final_written">Final Written Warning</option>
-                        <option value="suspension">Suspension</option>
-                        <option value="dismissal">Ending of Service</option>
+                        <option value="dismissal">Contact HR - Serious Offence</option>
                       </select>
                     </div>
 
@@ -844,6 +858,21 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                         onChange={(e) => setEditingCategory({ ...editingCategory, description: e.target.value })}
                         placeholder="Brief description of this category..."
                         rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    {/* Expected Standards Template */}
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Default Expected Standards</label>
+                      <p className="text-xs text-gray-500 mb-2">
+                        This text auto-fills the "Expected Standards" step when a manager issues a warning in this category. They can still edit it per incident.
+                      </p>
+                      <textarea
+                        value={editingCategory.expectedStandardsTemplate || ''}
+                        onChange={(e) => setEditingCategory({ ...editingCategory, expectedStandardsTemplate: e.target.value })}
+                        placeholder="e.g., Employees must report for duty at their scheduled start time and notify their manager before shift start if unable to attend."
+                        rows={3}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
@@ -956,7 +985,7 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                                     }`}
                                   >
                                     <GripVertical className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-                                    <span className="capitalize">{level.replace('_', ' ')}</span>
+                                    <span>{getLevelLabel(level)}</span>
                                     <button
                                       type="button"
                                       onClick={(e) => {
@@ -990,8 +1019,7 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                           { value: 'first_written', label: 'Written' },
                           { value: 'second_written', label: 'Second Written' },
                           { value: 'final_written', label: 'Final Written' },
-                          { value: 'suspension', label: 'Suspension' },
-                          { value: 'dismissal', label: 'Ending of Service' }
+                          { value: 'dismissal', label: 'Contact HR - Serious Offence' }
                         ].map((levelOption) => (
                           <button
                             key={levelOption.value}
@@ -1173,8 +1201,8 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                                         <span className="w-4 h-4 bg-blue-500 text-white text-[10px] rounded-full flex items-center justify-center font-semibold flex-shrink-0">
                                           {index + 1}
                                         </span>
-                                        <span className="font-medium capitalize">
-                                          {level.replace('_', ' ')}
+                                        <span className="font-medium">
+                                          {getLevelLabel(level)}
                                         </span>
                                       </div>
                                     ))}
@@ -1201,6 +1229,14 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                                       {category.severity?.replace('_', ' ') || 'Not specified'}
                                     </span>
                                   </div>
+                                  {category.expectedStandardsTemplate && (
+                                    <div>
+                                      <span className="font-medium text-gray-700">Expected Standards:</span>
+                                      <p className="text-gray-600 mt-1 text-xs bg-gray-50 rounded p-2 whitespace-pre-wrap">
+                                        {category.expectedStandardsTemplate}
+                                      </p>
+                                    </div>
+                                  )}
                                   {category.examples && category.examples.length > 0 && (
                                     <div>
                                       <span className="font-medium text-gray-700">Examples:</span>
@@ -1444,10 +1480,9 @@ export const OrganizationCategoriesViewer: React.FC<OrganizationCategoriesViewer
                                         fontSize: '0.625rem',
                                         fontWeight: 500,
                                         borderRadius: '0.25rem',
-                                        textTransform: 'capitalize'
                                       }}
                                     >
-                                      {level.replace('_', ' ')}
+                                      {getLevelLabel(level)}
                                     </span>
                                     {index < template.escalationPath!.length - 1 && (
                                       <ChevronRight className="w-3 h-3 text-gray-400" />

@@ -60,6 +60,21 @@ import {
   manualReviewCheckAll
 } from './reviewFollowUpCron';
 
+// 📧 ADD HR NOTIFICATION ON APPEAL
+import { notifyHROnAppeal } from './notifyHROnAppeal';
+
+// 🔗 ADD EMPLOYEE RESPONSE SYSTEM
+import {
+  generateResponseToken,
+  getWarningForResponse,
+  getWarningPDFForResponse,
+  submitEmployeeResponse,
+  submitEmployeeAppeal,
+  uploadResponseEvidence,
+  revokeResponseToken,
+  cleanupExpiredResponseTokens
+} from './employeeResponse';
+
 // Export all cloud functions
 export {
   // User/Auth functions
@@ -105,5 +120,18 @@ export {
   // Review follow-up cron functions
   checkDueReviewsDaily,
   testReviewFollowUp,
-  manualReviewCheckAll
+  manualReviewCheckAll,
+
+  // Email notification functions
+  notifyHROnAppeal,
+
+  // Employee response system
+  generateResponseToken,
+  getWarningForResponse,
+  getWarningPDFForResponse,
+  submitEmployeeResponse,
+  submitEmployeeAppeal,
+  uploadResponseEvidence,
+  revokeResponseToken,
+  cleanupExpiredResponseTokens
 };

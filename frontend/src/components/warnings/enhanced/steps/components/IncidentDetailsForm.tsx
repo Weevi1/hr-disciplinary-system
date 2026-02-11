@@ -7,16 +7,22 @@
 import React, { useState, useCallback } from 'react';
 import { FileText, MapPin, Calendar, Clock, PenTool, AlertTriangle } from 'lucide-react';
 import type { EnhancedWarningFormData } from '../../../../../services/WarningService';
+import type { EvidenceItem } from '../../../../../types/warning';
 
 // Import unified theming components
 import { ThemedSectionHeader, ThemedFormInput } from '../../../../common/ThemedCard';
 import { CustomDatePicker } from '../../../../common/CustomDatePicker';
+import { EvidenceUploader } from '../../../../common/EvidenceUploader';
 
 interface IncidentDetailsFormProps {
   formData: EnhancedWarningFormData;
   onFormDataChange: (updates: Partial<EnhancedWarningFormData>) => void;
   disabled?: boolean;
   className?: string;
+  // Evidence upload (deferred mode - files uploaded after warning save)
+  evidenceItems?: EvidenceItem[];
+  onEvidenceAdd?: (item: EvidenceItem) => void;
+  onEvidenceRemove?: (itemId: string) => void;
 }
 
 interface ValidationErrors {
@@ -32,7 +38,10 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
   formData,
   onFormDataChange,
   disabled = false,
-  className = ""
+  className = "",
+  evidenceItems,
+  onEvidenceAdd,
+  onEvidenceRemove,
 }) => {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -214,6 +223,22 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
           </div>
         )}
       </div>
+
+      {/* Supporting Evidence (deferred upload) */}
+      {onEvidenceAdd && onEvidenceRemove && (
+        <EvidenceUploader
+          items={evidenceItems || []}
+          onAdd={onEvidenceAdd}
+          onRemove={onEvidenceRemove}
+          organizationId=""
+          deferUpload
+          compact
+          maxItems={5}
+          maxFileSize={5 * 1024 * 1024}
+          disabled={disabled}
+          hintText="Attach photos of policy violations, incident reports, witness statements, or other supporting documents. Max 5MB per file."
+        />
+      )}
     </div>
   );
 };

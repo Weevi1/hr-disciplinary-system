@@ -6,7 +6,239 @@ Latest session updates and recent changes to the HR Disciplinary System.
 
 ---
 
-## 🎯 LATEST SESSION (2025-11-18 - Session 48)
+## Session 62 (2026-02-11) — Multi-Dashboard Theming in Branding & CI Tab
+
+### **✅ Multi-Dashboard Theming**
+- Extended `DashboardThemeSettings` type in `core.ts` with `hrDashboard?.metricColors` (5 fields: absenceReports, meetingRequests, activeWarnings, reviewFollowups, totalEmployees) and `executiveDashboard?.metricColors` (4 fields: totalEmployees, activeWarnings, highPriority, departments). All optional — no migration needed
+- Added `customColor?: string` to `MetricCard` interface in `DashboardShell.tsx` — used as override over semantic `GRADIENT_COLORS` in both mobile and desktop metric card rendering
+- `HRDashboardSection` and `ExecutiveManagementDashboardSection` now read `organization?.dashboardTheme?.hrDashboard/executiveDashboard?.metricColors` and pass `customColor` on each metric card
+
+### **✅ DashboardPreviewPanels Component (NEW)**
+- Created `frontend/src/components/reseller/DashboardPreviewPanels.tsx`
+- Extracted shared components: `PhoneFrame` (iPhone-style chrome), `PhoneTopBar` (org branding + greeting), `QuotesCard`
+- 3 inline mini previews: `ManagerMiniPreview`, `HRMiniPreview`, `ExecutiveMiniPreview`
+- 3 full phone-frame modal previews: `ManagerPhonePreview`, `HRPhonePreview`, `ExecutivePhonePreview`
+
+### **✅ Branding Tab Restructured**
+- `ClientOrganizationManager.tsx` Dashboard Appearance section reorganized:
+  - **Shared Settings** (always visible): Greeting Banner Gradient, Top Navigation Bar, Page Background, Font Family, Button Shape
+  - **View Switcher Pills**: Manager / HOD | HR | Executive — 3-button segmented control
+  - **Per-view controls**: Manager (action buttons + nav cards), HR (5 metric card colors), Executive (4 metric card colors)
+  - Each view has inline mini preview + "Preview Full Dashboard" phone-frame modal button
+- State: `dashPreviewView` (manager/hr/executive), `showDashPreview` changed from boolean to union type
+
+### Files Changed
+- `frontend/src/types/core.ts` — Extended `DashboardThemeSettings`
+- `frontend/src/components/dashboard/DashboardShell.tsx` — `customColor` on `MetricCard`
+- `frontend/src/components/dashboard/HRDashboardSection.tsx` — Wired HR colors
+- `frontend/src/components/dashboard/ExecutiveManagementDashboardSection.tsx` — Wired Executive colors
+- `frontend/src/components/reseller/DashboardPreviewPanels.tsx` — **NEW** preview components
+- `frontend/src/components/reseller/ClientOrganizationManager.tsx` — Reworked branding tab UI
+
+---
+
+## Session 61 (2026-02-10) — Dashboard Warning Data Optimization + Staleness Detection
+
+### **✅ Warning Data Loading Optimization**
+- Added `'warnings'` to HOD and `executive_management` role requirements in `useDashboardData.ts` — warnings now loaded once per dashboard via cached `API.warnings.getAll(orgId)` call
+- `FinalWarningsWatchList` accepts optional `warnings` and uses preloaded data when provided, skipping independent `API.warnings.getAll()` + `API.employees.getAll()` fetches
+- All 3 dashboards (HOD, HR, Business Owner) pass preloaded `warnings` prop to `FinalWarningsWatchList`
+
+### **✅ Wizard Preloaded Warnings**
+- `UnifiedWarningWizard` accepts `preloadedWarnings` prop, filters client-side for selected employee's history instead of calling `getActiveWarnings` Cloud Function
+- LRA recommendation uses preloaded warnings + provided category → `⚡⚡ FASTEST PATH` with zero Firestore queries
+- Reduced LRA minimum loading skeleton from 800ms to 300ms (data is now instant client-side)
+
+### **✅ Staleness Detection (warningsVersion)**
+- `warningsVersion` counter on org document, atomically incremented (`increment(1)`) on `API.warnings.create()` and `API.warnings.update()`
+- Version snapshot stored in `CacheService` (TTL: 600s) when warnings are first fetched
+- On "Issue Warning" click: single `getDoc` on org doc compares `warningsVersion` with cached version
+- Fresh data → open wizard instantly. Stale data → `refreshData()` before opening wizard
+- Zero overhead when data is fresh (99% of the time), only re-fetches when another session created/modified warnings
+
+### **API Calls Eliminated**
+| Dashboard | Before | After |
+|-----------|--------|-------|
+| HOD | `getAll` warnings (FinalWarningsWatchList) + `getAll` employees (FinalWarningsWatchList) + `getActiveWarnings` Cloud Function (wizard) | 1x `getAll` in useDashboardData (cached) |
+| HR | `getAll` warnings (useDashboardData) + `getAll` warnings (FinalWarningsWatchList, duplicate) + `getAll` employees (FinalWarningsWatchList) | 1x `getAll` in useDashboardData (cached) |
+| Business Owner | `getAll` warnings (FinalWarningsWatchList) + `getAll` employees (FinalWarningsWatchList) | 1x `getAll` in useDashboardData (cached) |
+
+### **✅ Session Guard (Inactivity Auto-Logout + Forced App Updates)**
+- `useSessionGuard` hook in `MainLayout` — tracks `touchstart`, `click`, `scroll`, `keydown`, `mousemove`
+- **Inactivity timeout**: 10 minutes → `firebase.auth().signOut()` → redirect to login
+- **Version check on login**: reads `system/appVersion` Firestore doc, compares with `__BUILD_VERSION__` baked into bundle
+- **Version check on `visibilitychange`**: when mobile tab comes back from background, checks both inactivity AND version
+- **Build system**: Vite `define` injects `__BUILD_VERSION__` (timestamp), `closeBundle` plugin writes `.build-version` marker file
+- **Post-deploy script**: `scripts/post-deploy.js` reads marker file, writes version to Firestore `system/appVersion`
+- **Deploy flow**: `npm run build` → `firebase deploy` → `node scripts/post-deploy.js`
+
+### **Files Modified**
+- `frontend/src/hooks/dashboard/useDashboardData.ts` — role requirements + warningsVersion snapshot
+- `frontend/src/components/dashboard/FinalWarningsWatchList.tsx` — accept preloaded warnings prop
+- `frontend/src/components/dashboard/HODDashboardSection.tsx` — pass warnings to FinalWarningsWatchList + wizard, staleness check
+- `frontend/src/components/dashboard/HRDashboardSection.tsx` — pass warnings to FinalWarningsWatchList
+- `frontend/src/components/dashboard/ExecutiveManagementDashboardSection.tsx` — pass warnings to FinalWarningsWatchList
+- `frontend/src/components/warnings/enhanced/UnifiedWarningWizard.tsx` — preloadedWarnings prop, client-side filtering
+- `frontend/src/api/index.ts` — warningsVersion bump on create/update, `isWarningsDataStale()` method
+- `frontend/src/hooks/useSessionGuard.ts` — **NEW** inactivity + version check hook
+- `frontend/src/layouts/MainLayout.tsx` — wired useSessionGuard
+- `frontend/vite.config.ts` — `__BUILD_VERSION__` define + `.build-version` marker plugin
+- `frontend/src/vite-env.d.ts` — `__BUILD_VERSION__` type declaration
+- `scripts/post-deploy.js` — **NEW** post-deploy Firestore version sync
+
+---
+
+## Session 60 (2026-02-10) — Per-Organization Dashboard Theming + Mobile UX Polish
+
+### **✅ Dashboard Theming System (Reseller-Configurable)**
+- Added `DashboardThemeSettings` type to `core.ts` with fields: `actionButtons` (4 colors), `buttonShape` (flat/rounded/pill), `greetingBanner` (gradient start/end), `pageBackground`, `fontFamily`, `navCards` (teamMembers + general)
+- CSS variable injection in `ThemeBrandingContext.tsx` using `setOrRemove` pattern (remove property when falsy so `var(--x, fallback)` works)
+- Google Fonts dynamic loading for Poppins/Roboto/Open Sans/Nunito
+- Full "Dashboard Appearance" section in `ClientOrganizationManager.tsx` Branding & CI tab with live preview + phone-frame preview
+- Button shape picker, color pickers for all action buttons, greeting banner gradient, page background, font selector, nav card colors
+
+### **✅ Dashboard Section Redesign (Team Members, Quotes, Final Warnings)**
+- Replaced ThemedCard/ThemedBadge/ThemedButton with semantic elements + inline styles
+- Icon medallions using background layering: `linear-gradient(rgba(255,255,255,0.88), ...), var(--color-primary)` (avoids container opacity affecting children)
+- QuotesSection mobile: decorative 72px serif quote mark, clean prev/next nav
+- FinalWarningsWatchList: Shield icon medallion, collapsible header, red left accent borders
+- All sections consume `--dash-card-general` / `--dash-card-team-members` CSS vars
+- Removed white border lines: `border: 'none'` + `boxShadow: '0 1px 3px rgba(0,0,0,0.08)'`
+- QuotesSection renders last on all dashboards (mobile + desktop)
+
+### **✅ MainLayout Mobile Header Polish**
+- Removed `border-b`, added subtle box-shadow
+- Frosted glass effect: `backdropFilter: blur(12px)`
+- Avatar: enlarged to `w-8 h-8`, branded gradient background, `rounded-full` on mobile
+- Touch targets: 44x44px minimum (Apple HIG/Material Design)
+- Org name: `truncate` + `min-w-0` for overflow handling
+- Replaced JS hover handlers with CSS `hover:opacity-90`
+
+### **✅ Refresh App Button**
+- Added "Refresh App" with `RefreshCw` icon to user dropdown (between Reset Password and Sign out)
+- `window.location.reload()` — forces re-fetch of `index.html`, picks up new content-hashed bundles
+
+### **✅ Firebase Analytics Fix**
+- Wrapped `getAnalytics(app)` with `isSupported()` guard in `firebase.ts` to prevent IndexedDB warnings
+
+### **Files Modified**
+- `types/core.ts`, `ThemeBrandingContext.tsx`, `HODDashboardSection.tsx`, `WelcomeSection.tsx`, `DashboardShell.tsx`, `QuotesSection.tsx`, `FinalWarningsWatchList.tsx`, `ClientOrganizationManager.tsx`, `MainLayout.tsx`, `BusinessDashboard.tsx`, `firebase.ts`
+
+---
+
+## Session 59 (2026-02-09) — SignaturePadModal Redesign + Response Link + CORS Fix
+
+### **✅ Purpose-Built SignaturePadModal (Created + Redesigned)**
+
+**Initial implementation**: Replaced inline `SignatureModal` (~260 lines) in `UnifiedWarningWizard.tsx` with new dedicated component featuring SVG export via stroke tracking, DPI-aware canvas, `usePreventBodyScroll`, `useFocusTrap`, native touch listeners, consistent dark slate strokes (`#1e293b`).
+
+**Root cause of persistent canvas sizing bug**: CSS rules in `modal-system.css` (lines 1714-1756) target `.enhanced-warning-wizard-container canvas` with `!important` overrides (`width: 100% !important; height: 60px !important`). Since SignaturePadModal rendered inside the wizard's DOM tree, these descendant selectors overrode all inline canvas dimension styles, stretching it visually while the internal buffer stayed tiny (only top ~10% was drawable).
+
+**Final fix (3-layer approach)**:
+1. **React Portal** — `createPortal(content, document.body)` renders modal directly on `<body>`, outside `.enhanced-warning-wizard-container`. No parent CSS descendant selectors can match.
+2. **Zero className** — All elements use inline `style` props only. No Tailwind classes anywhere in the modal. No external stylesheet rules can target these elements.
+3. **Viewport-based sizing** — `useLayoutEffect` synchronously computes canvas dimensions from `window.innerHeight` minus measured header/footer `offsetHeight`. No flex layout dependency, no ResizeObserver, no timing issues.
+
+**Visual guides**: Dotted signing zone rectangle, solid baseline at 72% height, "x" start mark, "sign above the line" hint text — helps users position signature for optimal PDF rendering.
+
+**Files**: Created `frontend/src/components/common/SignaturePadModal.tsx`, modified `UnifiedWarningWizard.tsx` (removed ~260 line inline SignatureModal + orphaned DigitalSignaturePad import), `signatureSVG.ts` (600x300 default), `PDFGenerationService.ts` (600x300 explicit)
+
+### **✅ Response Link Button in WarningDetailsModal**
+- Added Response Link button to the ACTUAL rendered action buttons section (was in dead code — `renderOverviewContent()` function never called)
+- Added copy-to-clipboard response link display panel
+
+### **✅ Cloud Functions CORS/Auth Fix**
+- Added `invoker: 'public'` to all 5 public `onRequest` functions in `functions/src/employeeResponse.ts`
+- Firebase Cloud Functions v2 (backed by Cloud Run) defaults to requiring authentication — `invoker: 'public'` enables unauthenticated access for the employee response/appeal pages
+
+### **✅ Appeal Flow Comparison**
+- Compared `AppealModal.tsx` (HR dashboard, authenticated) vs `EmployeeResponsePage.tsx` (public link, token-based)
+- Confirmed alignment: same grounds, same fields, same Firestore schema, same notification triggers. No gaps.
+
+---
+
+## Session 58 (2026-02-03) — Gap 4 + Gap 5 Implementation
+
+- **⏳ Gap 4: Manager Evidence Upload in Warning Wizard** — `EvidenceUploader` with `deferUpload` mode wired into Phase 2 (Incident Details). Files collected locally during wizard, uploaded to `warnings/{orgId}/{warningId}/evidence/` after save. **DEPLOYED - NEEDS TESTING**
+- **⏳ Gap 5: Expected Standards Template on Categories** — `expectedStandardsTemplate` field added to `WarningCategory` type, `CategoryCustomization` (DataService), and Category Management admin form. Auto-populates Phase 4 textarea on category selection (only if empty). **DEPLOYED - NEEDS TESTING**
+- **Files Modified**: `EvidenceUploader.tsx` (deferUpload prop), `IncidentDetailsForm.tsx` (evidence UI), `UnifiedWarningWizard.tsx` (state, upload, review), `WarningService.ts` + `organization.ts` (type), `DataService.ts` (merge + create), `CategoryManagement.tsx` (form field)
+
+---
+
+## Session 57 (2026-02-02) — Appeal & Employee Response System + PDF Viewing
+
+### **✅ COMPLETED: All 3 HR Practitioner Feedback Gaps (Gaps 1-3) + PDF Enhancement**
+
+**Context**: Real HR practitioner (via Adam's colleague) reviewed File and identified 3 gaps in the appeal/response system. All implemented and deployed to production.
+
+#### Gap 3: HR Email Notification on Appeal Submission
+- ✅ Created `functions/src/email/sendgridService.ts` — SendGrid wrapper using native `fetch` (Node 20)
+- ✅ Created `functions/src/email/templates.ts` — HTML email templates with inline styles
+- ✅ Created `functions/src/notifyHROnAppeal.ts` — Firestore trigger on `organizations/{orgId}/warnings/{warningId}`
+- ✅ Fires when `appealSubmitted` flips to `true`, emails all HR managers + executive-management
+- ✅ Includes employee name, warning level/category, appeal grounds, 5-working-day deadline
+- ✅ Sender: `file@fifo.systems` via SendGrid API
+
+#### Gap 2: Evidence Upload on Appeals
+- ✅ Created `frontend/src/components/common/EvidenceUploader.tsx` — Reusable upload component
+- ✅ Modified `AppealModal.tsx` — Added `organizationId` prop, `evidenceItems` state, `EvidenceUploader`
+- ✅ Modified `ReviewDashboard.tsx` — Strips `File` objects before Firestore save, passes `organizationId`
+- ✅ Modified `AppealReviewModal.tsx` — Evidence display section with thumbnails and download links
+- ✅ Updated `config/storage.rules` — Rules for `appeals/` and `response-evidence/` paths
+- ✅ Max 5 files, 5MB each, images + PDF + DOC/DOCX, mobile camera capture
+
+#### Gap 1: Link-Based Employee Response & Appeal
+- ✅ Created `functions/src/employeeResponse.ts` — 8 Cloud Functions:
+  - `generateResponseToken` (onCall, authenticated) — 64-char hex token, 30-day expiry
+  - `getWarningForResponse` (onRequest, public) — Validates token, returns warning summary + pdfAvailable
+  - `getWarningPDFForResponse` (onRequest, public) — Returns signed URL for warning PDF (1hr expiry)
+  - `submitEmployeeResponse` (onRequest, public) — Saves employee statement, notifies HR
+  - `submitEmployeeAppeal` (onRequest, public) — Saves appeal data, triggers Firestore notification
+  - `uploadResponseEvidence` (onRequest, public, 512MiB) — Base64 file upload via Cloud Function
+  - `revokeResponseToken` (onCall, authenticated) — Revokes token
+  - `cleanupExpiredResponseTokens` (onSchedule, daily 2AM SAST) — Deletes expired tokens + files
+- ✅ Created `frontend/src/pages/EmployeeResponsePage.tsx` — Public response page at `/respond/:token`
+  - Warning summary card with "View Warning Document" PDF button
+  - Two tabs: Respond (written statement) and Appeal (legal grounds + evidence)
+  - Deadline indicator with color urgency (green → amber → red)
+  - Branded header/footer, mobile-first, no auth required
+- ✅ Created `frontend/src/components/public/PublicEvidenceUploader.tsx` — Uploads via Cloud Function
+- ✅ Modified `frontend/src/App.tsx` — Added lazy-loaded route `/respond/:token` outside ProtectedLayout
+- ✅ Modified `WarningDetailsModal.tsx` — Added "Response Link" quick action button (amber themed)
+- ✅ Security: token-based auth, rate limiting (20 views/hr), input sanitization, CORS, one-shot submissions
+
+#### PDF Viewing on Response Page
+- ✅ Added `getWarningPDFForResponse` Cloud Function — Admin SDK generates signed URL for Storage PDF
+- ✅ `getWarningForResponse` now returns `pdfAvailable` flag by checking actual warning document
+- ✅ "View Warning Document" button on public page — employee can view/print warning PDF before responding
+
+#### Deployment Notes
+- ✅ All functions deployed (had to work around Cloud Run CPU quota + Firestore API intermittent network issue)
+- ✅ `notifyHROnAppeal` required delete+recreate (was incorrectly created as HTTPS type initially)
+- ✅ IPv4-first DNS workaround needed for Firebase CLI (`node --dns-result-order=ipv4first`)
+- ✅ SendGrid API key configured in `functions/.env` (gitignored)
+- **Build & Deploy**: ✅ Success (15.25s frontend build, all functions deployed)
+
+**Files Created**: `sendgridService.ts`, `templates.ts`, `notifyHROnAppeal.ts`, `employeeResponse.ts`, `EvidenceUploader.tsx`, `PublicEvidenceUploader.tsx`, `EmployeeResponsePage.tsx`, `functions/.env`
+**Files Modified**: `index.ts` (functions), `AppealModal.tsx`, `ReviewDashboard.tsx`, `AppealReviewModal.tsx`, `storage.rules`, `App.tsx`, `WarningDetailsModal.tsx`, `.gitignore`
+
+---
+
+## Previous: Session 56 (2026-01-27)
+- Dashboard tab content bug fix, metrics grid 2-column fix, demo bakery CSV created
+
+## Previous: Session 55 (2026-01-27)
+- Marketing PDF overhaul, legal documents, business structure clarified
+
+## Previous: Session 54 (2026-01-26)
+- Commission system fixed, Financial Dashboard, Fin/File integration
+
+## Previous: Session 52 (2025-12-10)
+- Mobile UX fixes: 9 issues from user testing resolved
+
+---
+
+## 🎯 PREVIOUS SESSION (2025-11-18 - Session 48)
 
 ### **✅ COMPLETED: SVG Signature System + Complete Witness Signature Support**
 

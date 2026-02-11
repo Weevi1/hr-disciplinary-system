@@ -1184,6 +1184,17 @@ useEffect(() => {
           // - Faster warning creation
           ...(pdfTemplateVersion ? { pdfTemplateVersion } : {}),
 
+          // Organization header snapshot — frozen at creation for identical reprints
+          organizationSnapshot: {
+            companyName: organization.branding?.companyName || organization.name,
+            address: (organization as any).address || null,
+            phone: (organization as any).phone || null,
+            email: (organization as any).email || null,
+            registrationNumber: organization.branding?.registrationNumber || null,
+            primaryColor: organization.branding?.primaryColor || '#3b82f6',
+            logoUrl: organization.branding?.logo || null,
+          },
+
           // 🔥 CRITICAL: Store disciplineRecommendation for PDF generation
           // This includes activeWarnings array needed for "Previous Disciplinary Action" section
           // Without this, PDFs will show "No previous disciplinary action on file" even when warnings exist
@@ -1420,7 +1431,7 @@ useEffect(() => {
         const currentLevel = overrideLevel || lraRecommendation?.suggestedLevel || 'counselling';
 
         // Determine if commitments are required based on level
-        const requiresCommitments = !['final_written', 'suspension', 'dismissal'].includes(currentLevel);
+        const requiresCommitments = !['final_written', 'dismissal'].includes(currentLevel);
 
         // Expected behavior is always required (min 20 chars)
         if (!correctiveDiscussionData.expectedBehavior || correctiveDiscussionData.expectedBehavior.trim().length < 20) {

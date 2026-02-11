@@ -85,6 +85,9 @@ export const ExecutiveManagementDashboardSection = memo<ExecutiveManagementDashb
   // ============================================
 
   // Metrics configuration
+  // Executive metric card color overrides from org dashboard theme
+  const execColors = organization?.dashboardTheme?.executiveDashboard?.metricColors;
+
   const dashboardMetrics: MetricCard[] = useMemo(() => [
     {
       id: 'total-employees',
@@ -92,6 +95,7 @@ export const ExecutiveManagementDashboardSection = memo<ExecutiveManagementDashb
       value: executiveMetrics.totalEmployees,
       icon: Users,
       color: 'success',
+      customColor: execColors?.totalEmployees,
       onClick: () => setActiveView('employees')
     },
     {
@@ -101,6 +105,7 @@ export const ExecutiveManagementDashboardSection = memo<ExecutiveManagementDashb
       subtext: `${executiveMetrics.undeliveredWarnings} undelivered`,
       icon: AlertTriangle,
       color: 'warning',
+      customColor: execColors?.activeWarnings,
       onClick: () => setActiveView('warnings')
     },
     {
@@ -110,6 +115,7 @@ export const ExecutiveManagementDashboardSection = memo<ExecutiveManagementDashb
       subtext: 'Critical cases',
       icon: Shield,
       color: 'error',
+      customColor: execColors?.highPriority,
       onClick: () => setActiveView('warnings')
     },
     {
@@ -118,9 +124,10 @@ export const ExecutiveManagementDashboardSection = memo<ExecutiveManagementDashb
       value: metrics?.departmentCount || 0,
       icon: Building2,
       color: 'primary',
+      customColor: execColors?.departments,
       onClick: () => setActiveView('departments')
     }
-  ], [executiveMetrics, metrics]);
+  ], [executiveMetrics, metrics, execColors]);
 
   // Tabs configuration
   const dashboardTabs: TabConfig[] = useMemo(() => [
@@ -241,7 +248,7 @@ export const ExecutiveManagementDashboardSection = memo<ExecutiveManagementDashb
       error={dashboardError}
       bottomSection={
         <React.Suspense fallback={<LoadingSkeleton />}>
-          <FinalWarningsWatchList employees={employees} />
+          <FinalWarningsWatchList employees={employees} warnings={warnings} />
         </React.Suspense>
       }
       className={className}

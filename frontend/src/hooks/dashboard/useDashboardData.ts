@@ -11,6 +11,8 @@ import { API } from '../../api';
 import { DataServiceV2 } from '../../services/DataServiceV2';
 import { ShardedDataService } from '../../services/ShardedDataService';
 import CacheService from '../../services/CacheService';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 // Types for dashboard data
 interface DashboardData {
@@ -23,7 +25,7 @@ interface DashboardData {
   employees: any[];           // HOD, HR, Executive Management
   followUps: any[];          // HOD, HR
   permissions: any;          // All roles
-  warnings: any[];           // HR mainly
+  warnings: any[];           // HOD, HR, Executive Management
   reports: any[];            // Executive Management, HR
   teams: any[];              // Executive Management
   metrics: any;              // Executive Management, HR
@@ -85,9 +87,9 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
   const getDataRequirements = useCallback((userRole: string) => {
     const requirements = {
       core: ['organization', 'categories', 'permissions'],
-      hod: ['employees', 'followUps'],
+      hod: ['employees', 'followUps', 'warnings'],
       hr: ['employees', 'followUps', 'warnings', 'reports', 'metrics'],
-      executive_management: ['employees', 'teams', 'reports', 'metrics'],
+      executive_management: ['employees', 'teams', 'reports', 'metrics', 'warnings'],
       super_admin: ['employees', 'warnings', 'reports', 'metrics', 'teams']
     };
 
@@ -218,7 +220,18 @@ export const useDashboardData = ({ role, skipData = [] }: UseDashboardDataProps 
       if (requirements.includes('warnings')) {
         CacheService.getOrFetch(
           CacheService.generateOrgKey(orgId, 'warnings'),
-          () => API.warnings.getAll(orgId)
+          async () => {
+            const warnings = await API.warnings.getAll(orgId);
+            // Snapshot warningsVersion from org doc for staleness detection
+            try {
+              const orgDoc = await getDoc(doc(db, 'organizations', orgId));
+              const version = orgDoc.data()?.warningsVersion || 0;
+              CacheService.set(CacheService.generateOrgKey(orgId, 'warningsVersion'), version, 600_000);
+            } catch (e) {
+              Logger.warn('Failed to snapshot warningsVersion:', e);
+            }
+            return warnings;
+          }
         ).then(data => updateDataItem('warnings', Array.isArray(data) ? data : []))
           .catch(error => {
             Logger.error('❌ Failed to load warnings:', error);

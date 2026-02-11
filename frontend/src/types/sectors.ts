@@ -169,11 +169,10 @@ export const getHealthcareSectorTemplate = (): Sector => ({
       escalationPath: [
         {
           level: 1,
-          action: 'suspension' as WarningLevel,
-          label: 'Immediate Suspension + Investigation',
+          action: 'dismissal' as WarningLevel,
+          label: 'Contact HR - Serious Offence',
           timeframeDays: 0,
           requiresHRApproval: true,
-          requiresSuspension: true,
           documentationRequired: ['incident_report', 'medical_review', 'patient_impact_assessment']
         }
       ],
@@ -314,11 +313,10 @@ export const getMiningSectorTemplate = (): Sector => ({
       escalationPath: [
         {
           level: 1,
-          action: 'suspension' as WarningLevel,
-          label: 'Immediate Suspension + Safety Review',
+          action: 'dismissal' as WarningLevel,
+          label: 'Contact HR - Serious Offence',
           timeframeDays: 0,
           requiresHRApproval: true,
-          requiresSuspension: true,
           documentationRequired: ['safety_incident_report', 'mine_safety_assessment', 'dmr_notification']
         }
       ],

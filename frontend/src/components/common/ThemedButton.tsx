@@ -8,6 +8,8 @@ export interface ThemedButtonProps extends React.ButtonHTMLAttributes<HTMLButton
   fullWidth?: boolean;
   children: React.ReactNode;
   icon?: React.ComponentType<{ className?: string }>;
+  loading?: boolean;
+  iconPosition?: 'left' | 'right';
 }
 
 // 🚀 MEMOIZED: Prevents re-renders when props haven't changed
@@ -19,6 +21,8 @@ export const ThemedButton = React.memo<ThemedButtonProps>(({
   children,
   style,
   icon: Icon,
+  loading = false,
+  iconPosition = 'left',
   onMouseEnter,
   onMouseLeave,
   ...props
@@ -121,8 +125,9 @@ export const ThemedButton = React.memo<ThemedButtonProps>(({
       onMouseLeave={handleMouseLeave}
       {...props}
     >
-      {Icon && <Icon className="mr-2" />}
-      {children}
+      {Icon && iconPosition === 'left' && <Icon className="mr-2 inline-block" />}
+      {loading ? 'Loading...' : children}
+      {Icon && iconPosition === 'right' && <Icon className="ml-2 inline-block" />}
     </button>
   );
 });
