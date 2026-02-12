@@ -385,14 +385,13 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
         submittedBy: user?.email || 'Employee',
       };
       if (appealData.evidenceItems && appealData.evidenceItems.length > 0) {
-        // Strip File objects before saving to Firestore (not serializable)
+        // Strip File objects and thumbnails before saving to Firestore
         appealDetailsPayload.evidenceItems = appealData.evidenceItems.map(item => ({
           id: item.id,
           type: item.type,
           url: item.url,
-          thumbnail: item.thumbnail,
           description: item.description,
-          capturedAt: item.capturedAt,
+          capturedAt: item.capturedAt instanceof Date ? item.capturedAt.toISOString() : item.capturedAt,
           captureMethod: item.captureMethod,
           metadata: item.metadata ? {
             filename: item.metadata.filename,

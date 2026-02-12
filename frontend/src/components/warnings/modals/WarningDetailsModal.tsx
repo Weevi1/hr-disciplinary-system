@@ -14,6 +14,7 @@ import {
   Calendar, User, MapPin, FileText, Download, Share2,
   ChevronDown, ChevronUp, MessageSquare, Headphones,
   FileSignature, Badge, ExternalLink, Link, Copy, Loader2,
+  Archive,
 } from 'lucide-react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../../../config/firebase';
@@ -40,6 +41,8 @@ interface WarningDetailsModalProps {
   // HR Appeal functionality
   onAppealOutcome?: (outcome: 'upheld' | 'overturned' | 'modified') => void;
   canManageAppeals?: boolean;
+  // Archive functionality
+  onArchive?: (warningId: string, reason: string) => Promise<void>;
 }
 
 interface WarningTheme {
@@ -190,7 +193,8 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
   onApprove,
   onReject,
   onAppealOutcome,
-  canManageAppeals = false
+  canManageAppeals = false,
+  onArchive,
 }) => {
 
   // ============================================
@@ -225,7 +229,12 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
   const [appealOutcome, setAppealOutcome] = useState<'upheld' | 'overturned' | 'modified' | null>(null);
   const [appealNotes, setAppealNotes] = useState('');
   const [appealProcessing, setAppealProcessing] = useState(false);
-  
+
+  // Archive functionality state
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [archiveReason, setArchiveReason] = useState('');
+  const [archiveProcessing, setArchiveProcessing] = useState(false);
+
   const modalRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -289,7 +298,9 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
       followUpDate: warning.followUpDate ? safeDate(warning.followUpDate) : null,
 
       createdAt: safeDate(warning.createdAt),
-      updatedAt: safeDate(warning.updatedAt)
+      updatedAt: safeDate(warning.updatedAt),
+      isArchived: Boolean(warning.isArchived),
+      archiveReason: warning.archiveReason || null,
     };
   }, [warning]);
 
@@ -492,6 +503,21 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
     });
     setShowSignatureModal(true);
   }, [warningData]);
+
+  const handleArchive = useCallback(async () => {
+    if (!onArchive || !warningData?.id || !archiveReason) return;
+    setArchiveProcessing(true);
+    try {
+      await onArchive(warningData.id, archiveReason);
+      setShowArchiveDialog(false);
+      setArchiveReason('');
+      setTimeout(handleClose, 500);
+    } catch (error) {
+      Logger.error('Failed to archive warning:', error);
+    } finally {
+      setArchiveProcessing(false);
+    }
+  }, [onArchive, warningData?.id, archiveReason, handleClose]);
 
   // ============================================
   // EARLY RETURN
@@ -1087,8 +1113,72 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
                   </button>
                 </div>
 
-                {/* Reject/Approve buttons removed - not applicable for issued warnings */}
+                {/* Archive button */}
+                {onArchive && !warningData.isArchived && (
+                  <button
+                    onClick={() => setShowArchiveDialog(true)}
+                    className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors text-sm"
+                  >
+                    <Archive className="w-4 h-4" />
+                    Archive
+                  </button>
+                )}
+                {warningData.isArchived && (
+                  <span className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-500 rounded-lg text-sm">
+                    <Archive className="w-4 h-4" />
+                    Archived{warningData.archiveReason ? ` (${warningData.archiveReason})` : ''}
+                  </span>
+                )}
               </div>
+
+              {/* Archive Confirmation Dialog */}
+              {showArchiveDialog && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Archive className="w-4 h-4 text-red-600" />
+                    <span className="text-sm font-semibold text-red-900">Archive Warning</span>
+                  </div>
+                  <p className="text-xs text-red-700 mb-3">
+                    Archived warnings are removed from active views and will no longer affect future escalation levels. This action can be reversed by an administrator.
+                  </p>
+                  <div className="mb-3">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Reason for archiving</label>
+                    <select
+                      value={archiveReason}
+                      onChange={(e) => setArchiveReason(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    >
+                      <option value="">Select a reason...</option>
+                      <option value="test_data">Test data / Demo warning</option>
+                      <option value="issued_in_error">Issued in error</option>
+                      <option value="duplicate">Duplicate warning</option>
+                      <option value="overturned">Overturned on appeal</option>
+                      <option value="expired">Naturally expired</option>
+                      <option value="manual">Other (manual archive)</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2 justify-end">
+                    <button
+                      onClick={() => { setShowArchiveDialog(false); setArchiveReason(''); }}
+                      className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleArchive}
+                      disabled={!archiveReason || archiveProcessing}
+                      className="flex items-center gap-2 px-4 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                    >
+                      {archiveProcessing ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Archive className="w-3 h-3" />
+                      )}
+                      Archive Warning
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Response Link Display */}
               {responseLink && (

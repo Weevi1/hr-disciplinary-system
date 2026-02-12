@@ -22,10 +22,21 @@ service firebase.storage {
         && request.resource.size < 10 * 1024 * 1024; // 10MB limit for PDFs
     }
     
+    // Allow authenticated users to upload warning evidence during wizard
+    match /warnings/{organizationId}/{warningId}/evidence/{file} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.token.email_verified == true
+        && file.matches('.*\\.(jpg|jpeg|png|webp|heic|pdf|doc|docx)$')
+        && request.resource.size < 5 * 1024 * 1024; // 5MB limit
+    }
+
     // Allow authenticated users to upload appeal evidence
     match /appeals/{organizationId}/{warningId}/{file} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
+        && request.auth.token.email_verified == true
+        && file.matches('.*\\.(jpg|jpeg|png|webp|heic|pdf|doc|docx)$')
         && request.resource.size < 5 * 1024 * 1024; // 5MB limit
     }
 

@@ -549,15 +549,20 @@ export const submitEmployeeAppeal = onRequest(
       const sanitizedGrounds = sanitizeText(grounds, 200);
 
       // Build evidence items array from uploaded URLs
+      // Strip query params before checking extension (signed/token URLs have ?alt=media&token=...)
       const evidenceItems = Array.isArray(evidenceUrls)
-        ? evidenceUrls.map((url: string, i: number) => ({
-            id: `ev_appeal_${Date.now()}_${i}`,
-            type: url.match(/\.(jpg|jpeg|png|webp|heic)$/i) ? 'photo' : 'document',
-            url,
-            description: `Appeal evidence ${i + 1}`,
-            capturedAt: new Date(),
-            captureMethod: 'upload',
-          }))
+        ? evidenceUrls.map((url: string, i: number) => {
+            const pathOnly = url.split('?')[0];
+            const isPhoto = /\.(jpg|jpeg|png|webp|heic)$/i.test(pathOnly);
+            return {
+              id: `ev_appeal_${Date.now()}_${i}`,
+              type: isPhoto ? 'photo' : 'document',
+              url,
+              description: `Appeal evidence ${i + 1}`,
+              capturedAt: new Date(),
+              captureMethod: 'upload',
+            };
+          })
         : [];
 
       // Update the warning with appeal data
@@ -693,14 +698,18 @@ export const uploadResponseEvidence = onRequest(
         },
       });
 
-      // Make file publicly readable (since it's accessed without auth)
-      await file.makePublic();
-      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+      // Generate a download token for Firebase Storage URL (non-expiring, controlled by security rules)
+      const downloadToken = crypto.randomUUID();
+      await file.setMetadata({
+        metadata: { firebaseStorageDownloadTokens: downloadToken },
+      });
+      const encodedPath = encodeURIComponent(storagePath);
+      const downloadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`;
 
       logger.info(`Evidence uploaded for warning ${tokenData.warningId}: ${storagePath}`);
       res.status(200).json({
         success: true,
-        url: publicUrl,
+        url: downloadUrl,
         storagePath,
       });
     } catch (error) {

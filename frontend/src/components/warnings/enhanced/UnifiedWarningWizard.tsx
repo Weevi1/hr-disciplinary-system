@@ -236,6 +236,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
   const [transitionDirection, setTransitionDirection] = useState<'next' | 'prev'>('next');
   const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
   const [audioUploadWarning, setAudioUploadWarning] = useState(false);
+  const [evidenceUploadWarning, setEvidenceUploadWarning] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   // Form data - use South African timezone for dates/times
@@ -729,7 +730,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
         employeeDepartment: selectedEmployee.employment?.department || selectedEmployee.department || '',
         employeePosition: selectedEmployee.employment?.position || selectedEmployee.position || '',
         // Issued by
-        issuedBy: user?.uid || '',
+        issuedBy: user?.uid || user?.id || '',
         issuedByName: currentManagerName,
         // Signatures - only include defined values (Firestore doesn't allow undefined)
         signatures: {
@@ -782,19 +783,31 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
       Logger.success('Warning created with ID:', warningId);
       setFinalWarningId(warningId);
 
-      // Stop and upload audio if recording AND audio is enabled
+      // Stop and upload audio if audio is enabled AND (recording is active OR already-stopped recording has data)
       let audioUploadFailed = false;
-      if (isAudioEnabled && audioRecording.isRecording) {
+      const hasActiveRecording = audioRecording.isRecording;
+      const hasStoppedRecordingWithData = !audioRecording.isRecording && audioRecording.audioUrl && audioRecording.recordingId;
+
+      if (isAudioEnabled && (hasActiveRecording || hasStoppedRecordingWithData)) {
         try {
           // Capture recordingId before stopping (won't change)
           const recordingId = audioRecording.recordingId;
+          let localAudioUrl: string | null = null;
 
-          // Stop recording — returns blob URL. Duration/size are set by the onstop handler.
-          const localAudioUrl = await audioRecording.stopRecording();
+          if (hasActiveRecording) {
+            // Recording still active — stop it and get blob URL
+            localAudioUrl = await audioRecording.stopRecording();
+          } else {
+            // Recording already stopped (e.g. auto-stop at 5 min) — use existing blob URL
+            Logger.debug('📼 Using already-stopped recording data for upload');
+            localAudioUrl = audioRecording.audioUrl;
+          }
 
           // Capture duration/size AFTER stop completes (onstop handler has updated state)
           const finalDuration = audioRecording.duration || 0;
           const finalSize = audioRecording.size || 0;
+
+          const issuerId = user?.uid || user?.id || '';
 
           if (localAudioUrl && recordingId && warningId) {
             const firebaseAudioUrl = await audioRecording.uploadToFirebaseFromUrl(
@@ -823,7 +836,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
                   bitrate: 24000,
                   sampleRate: 16000,
                   channels: 1,
-                  recordedBy: user?.uid,
+                  recordedBy: issuerId,
                   recordedByName: currentManagerName,
                   recordedAt: new Date().toISOString(),
                   uploadedAt: new Date().toISOString(),
@@ -841,7 +854,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
                 audioRecording: {
                   recordingId,
                   processingStatus: 'failed',
-                  recordedBy: user?.uid,
+                  recordedBy: issuerId,
                   recordedByName: currentManagerName,
                   recordedAt: new Date().toISOString(),
                   consentGiven: true
@@ -889,7 +902,12 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
           }
         } catch (evidenceError) {
           Logger.error('Failed to upload evidence:', evidenceError);
-          // Continue - warning is still saved
+          setEvidenceUploadWarning(true);
+          // Reconcile evidenceCount since upload failed
+          try {
+            const warningRef = doc(db, 'organizations', organization.id, 'warnings', warningId);
+            await updateDoc(warningRef, { evidenceCount: 0 });
+          } catch (_) { /* best effort */ }
         }
       }
 
@@ -1783,6 +1801,15 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-5 h-5" />
                   <span>Audio recording failed to upload. The warning was saved without audio.</span>
+                </div>
+              </ThemedAlert>
+            )}
+
+            {evidenceUploadWarning && (
+              <ThemedAlert variant="warning">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5" />
+                  <span>Evidence files failed to upload. The warning was saved without evidence attachments.</span>
                 </div>
               </ThemedAlert>
             )}

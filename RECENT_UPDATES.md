@@ -6,6 +6,16 @@ Latest session updates and recent changes to the HR Disciplinary System.
 
 ---
 
+## Session 63 (2026-02-11) — Reseller User Creation Bug Fixes & Audio Auto-Stop
+
+- **Bug Fix: Reseller user creation** — `ShardedOrganizationService.createAdminUser()` was missing `uid` field and saving role as raw string instead of normalized object
+- **Bug Fix: `issuedBy` empty on warnings** — Executive user had no `uid` in Firestore. Added `user?.id` fallback
+- **Bug Fix: Audio recording lost on auto-stop** — Save handler now checks for stopped recordings with data (`audioUrl`)
+- **Firestore Fix: Adam Swanepoel** — Manually patched user doc: added `uid`, normalized role
+- **Files**: `ShardedOrganizationService.ts`, `UnifiedWarningWizard.tsx`
+
+---
+
 ## Session 62 (2026-02-11) — Multi-Dashboard Theming in Branding & CI Tab
 
 ### **✅ Multi-Dashboard Theming**

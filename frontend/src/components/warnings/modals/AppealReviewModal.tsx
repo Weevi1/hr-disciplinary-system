@@ -333,8 +333,8 @@ export const AppealReviewModal: React.FC<AppealReviewModalProps> = ({
                           rel="noopener noreferrer"
                           className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow group"
                         >
-                          {item.type === 'photo' && item.thumbnail ? (
-                            <img src={item.thumbnail} alt={item.description} className="w-full h-20 object-cover" />
+                          {item.type === 'photo' && (item.thumbnail || item.url) ? (
+                            <img src={item.thumbnail || item.url} alt={item.description} className="w-full h-20 object-cover" />
                           ) : (
                             <div className="w-full h-20 flex items-center justify-center bg-gray-50">
                               {item.type === 'photo' ? (

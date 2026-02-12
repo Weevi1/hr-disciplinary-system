@@ -357,28 +357,24 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 **For complete change history, see `RECENT_UPDATES.md` (Sessions 20-52) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Session 62 - 2026-02-11)
-- **✅ Multi-Dashboard Theming** — Reseller Branding & CI tab now supports theming all 3 dashboard views (Manager, HR, Executive) with per-view metric card color overrides and live previews
-- **✅ Extended `DashboardThemeSettings`** — Added `hrDashboard.metricColors` (5 fields) and `executiveDashboard.metricColors` (4 fields) to `core.ts` type. All optional, no migration needed
-- **✅ `DashboardShell` `customColor`** — `MetricCard` interface gains `customColor?: string` prop, used as override over semantic `GRADIENT_COLORS` in both mobile and desktop rendering
-- **✅ HR & Executive Dashboards Wired** — Both `HRDashboardSection` and `ExecutiveManagementDashboardSection` read org theme and pass `customColor` on each metric card
-- **✅ `DashboardPreviewPanels.tsx`** (NEW) — Extracted shared `PhoneFrame`, `PhoneTopBar`, `QuotesCard` + 3 mini previews + 3 phone-frame previews for Manager, HR, Executive
-- **✅ Branding Tab Restructured** — Shared settings (greeting, top bar, background, font, button shape) always visible; view switcher pills for Manager/HR/Executive with per-view controls and inline+full previews
-- **Files**: `core.ts`, `DashboardShell.tsx`, `HRDashboardSection.tsx`, `ExecutiveManagementDashboardSection.tsx`, `DashboardPreviewPanels.tsx` (new), `ClientOrganizationManager.tsx`
-
-### Previous Sessions (52-61)
-See `RECENT_UPDATES.md` for detailed session history including Sessions 57-61.
+### Most Recent (Session 64 - 2026-02-12)
+- **✅ Client-side image optimization** — New `imageOptimizer.ts` resizes to max 1920px, compresses JPEG 0.8. Phone photos 5-10MB → ~200-400KB
+- **✅ Evidence upload security** — `file.makePublic()` replaced with download token URLs, storage rules hardened, thumbnail stripped from Firestore, silent failure fixed with user warning banner, filename/MIME mismatch fixed
+- **✅ Bug Fix: Archive didn't remove from LRA** — `API.warnings.archive()` now sets `isActive: false` so archived warnings stop affecting escalation. `HRDashboardSection` filter updated to check `!isArchived`
+- **✅ Archive in WarningDetailsModal** — Archive button with reason selector (test data, issued in error, duplicate, overturned, expired, manual). Inline confirmation dialog with explanation. Shows "Archived (reason)" badge if already archived. Wired from `HRDashboardSection` via `onArchive` prop
+### Previous Sessions (52-63)
+See `RECENT_UPDATES.md` for detailed session history including Sessions 57-63.
 
 **For complete session history, see:**
-- `RECENT_UPDATES.md` - Sessions 20-62 (current)
+- `RECENT_UPDATES.md` - Sessions 20-63 (current)
 - `SESSION_HISTORY.md` - Sessions 5-19 (archived)
 - `legal/BUSINESS_LAUNCH_TRACKER.md` - Company formation & go-to-market progress
 
 ---
 
-*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ org scalability, progressive enhancement for 2012-2025 devices, **unified design system**, **DashboardShell** across all dashboards, **WCAG AA compliance**, **versioned PDF generation**, **per-org PDF templates**, **SVG signatures**, **10-phase unified warning wizard**, **link-based employee response/appeal system** with token auth and PDF viewing, **HR email notifications via SendGrid**, **evidence upload on appeals**, **per-organization multi-dashboard theming** (Manager, HR, Executive views with per-view metric card colors), **optimized warning data loading with staleness detection**, and **session guard with auto-logout + forced app updates**.*
+*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ org scalability, progressive enhancement for 2012-2025 devices, **unified design system**, **DashboardShell** across all dashboards, **WCAG AA compliance**, **versioned PDF generation**, **per-org PDF templates**, **SVG signatures**, **10-phase unified warning wizard**, **link-based employee response/appeal system** with token auth and PDF viewing, **HR email notifications via SendGrid**, **evidence upload on appeals with client-side image optimization**, **per-organization multi-dashboard theming** (Manager, HR, Executive views with per-view metric card colors), **optimized warning data loading with staleness detection**, and **session guard with auto-logout + forced app updates**.*
 
-*Last Updated: 2026-02-11 - Session 62: Multi-dashboard theming in Branding & CI tab — extended DashboardThemeSettings type, DashboardShell customColor prop, HR/Executive dashboards wired, DashboardPreviewPanels component, branding tab restructured with view switcher pills.*
+*Last Updated: 2026-02-12 - Session 64: Image optimization, evidence upload hardening, warning archive in WarningDetailsModal, LRA escalation bug fix.*
 
 ---
 

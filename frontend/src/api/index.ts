@@ -480,12 +480,13 @@ export const warnings = {
   /**
    * Archive a warning (for appealed/overturned warnings)
    */
-  async archive(warningId: string, organizationId: string, reason: 'appealed' | 'overturned' | 'expired' | 'manual'): Promise<void> {
+  async archive(warningId: string, organizationId: string, reason: 'appealed' | 'overturned' | 'expired' | 'manual' | 'test_data' | 'issued_in_error' | 'duplicate'): Promise<void> {
     try {
       const warningRef = doc(db, `organizations/${organizationId}/warnings/${warningId}`);
 
       await updateDoc(warningRef, {
         isArchived: true,
+        isActive: false,
         archivedAt: serverTimestamp(),
         archiveReason: reason,
         updatedAt: serverTimestamp()
