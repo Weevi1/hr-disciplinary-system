@@ -1,8 +1,10 @@
 // frontend/src/components/public/PublicEvidenceUploader.tsx
 // Evidence uploader for the public employee response page
 // Uploads via Cloud Function (no Firebase Auth required)
+// Images are automatically optimized client-side before upload
 
 import React, { useState, useRef, useCallback } from 'react';
+import { optimizeImage, createOptimizedThumbnail, isOptimizableImage } from '../../utils/imageOptimizer';
 import {
   Upload,
   Camera,
@@ -12,6 +14,7 @@ import {
   Loader2,
   AlertCircle,
   Paperclip,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface EvidenceFile {
@@ -50,12 +53,6 @@ const ACCEPT_STRING = Object.keys(ACCEPTED_TYPES).join(',');
 const DEFAULT_MAX_ITEMS = 5;
 const DEFAULT_MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
-}
-
 export const PublicEvidenceUploader: React.FC<PublicEvidenceUploaderProps> = ({
   items,
   onAdd,
@@ -67,7 +64,9 @@ export const PublicEvidenceUploader: React.FC<PublicEvidenceUploaderProps> = ({
   uploadEndpoint,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [recentlySavedIds, setRecentlySavedIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -75,7 +74,7 @@ export const PublicEvidenceUploader: React.FC<PublicEvidenceUploaderProps> = ({
     setError(null);
 
     if (file.size > maxFileSize) {
-      setError(`File too large. Maximum size is ${formatFileSize(maxFileSize)}.`);
+      setError('File too large. Maximum size is 5MB.');
       return;
     }
 
@@ -91,8 +90,16 @@ export const PublicEvidenceUploader: React.FC<PublicEvidenceUploaderProps> = ({
 
     setIsUploading(true);
     try {
-      // Convert file to base64
-      const base64 = await fileToBase64(file);
+      // Optimize images client-side before upload
+      let processedFile = file;
+      if (isOptimizableImage(file)) {
+        setUploadStatus('Optimizing...');
+        processedFile = await optimizeImage(file);
+      }
+
+      // Convert optimized file to base64
+      setUploadStatus('Uploading...');
+      const base64 = await fileToBase64(processedFile);
 
       const response = await fetch(uploadEndpoint, {
         method: 'POST',
@@ -100,8 +107,8 @@ export const PublicEvidenceUploader: React.FC<PublicEvidenceUploaderProps> = ({
         body: JSON.stringify({
           token,
           file: base64,
-          fileName: file.name,
-          mimeType: file.type,
+          fileName: processedFile.name,
+          mimeType: processedFile.type,
         }),
       });
 
@@ -112,25 +119,39 @@ export const PublicEvidenceUploader: React.FC<PublicEvidenceUploaderProps> = ({
 
       const result = await response.json();
 
-      // Create thumbnail for images
+      // Create small thumbnail for images
       let thumbnail: string | undefined;
-      if (ACCEPTED_TYPES[file.type] === 'photo') {
-        thumbnail = await createThumbnail(file);
+      if (ACCEPTED_TYPES[processedFile.type] === 'photo') {
+        thumbnail = await createOptimizedThumbnail(processedFile);
       }
 
+      const evidenceId = `ev_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+
       const evidenceFile: EvidenceFile = {
-        id: `ev_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`,
+        id: evidenceId,
         url: result.url,
         fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-        type: ACCEPTED_TYPES[file.type] || 'document',
+        fileSize: processedFile.size,
+        mimeType: processedFile.type,
+        type: ACCEPTED_TYPES[processedFile.type] || 'document',
         thumbnail,
       };
 
       onAdd(evidenceFile);
+      setUploadStatus(null);
+
+      // Show "Saved" indicator briefly
+      setRecentlySavedIds(prev => new Set(prev).add(evidenceId));
+      setTimeout(() => {
+        setRecentlySavedIds(prev => {
+          const next = new Set(prev);
+          next.delete(evidenceId);
+          return next;
+        });
+      }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload file. Please try again.');
+      setUploadStatus(null);
     } finally {
       setIsUploading(false);
     }
@@ -156,7 +177,7 @@ export const PublicEvidenceUploader: React.FC<PublicEvidenceUploaderProps> = ({
       </div>
 
       {canAddMore && (
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -180,6 +201,13 @@ export const PublicEvidenceUploader: React.FC<PublicEvidenceUploaderProps> = ({
             Photo
           </button>
 
+          {/* Upload status */}
+          {uploadStatus && (
+            <span className="text-xs text-blue-600 font-medium animate-pulse">
+              {uploadStatus}
+            </span>
+          )}
+
           <input
             ref={fileInputRef}
             type="file"
@@ -200,7 +228,7 @@ export const PublicEvidenceUploader: React.FC<PublicEvidenceUploaderProps> = ({
 
       {items.length === 0 && !isUploading && (
         <p className="text-xs text-gray-500">
-          Upload photos, PDFs, or documents to support your submission. Max {formatFileSize(maxFileSize)} per file.
+          Upload photos, PDFs, or documents to support your submission. Max 5MB per file.
         </p>
       )}
 
@@ -232,13 +260,26 @@ export const PublicEvidenceUploader: React.FC<PublicEvidenceUploaderProps> = ({
                   )}
                 </div>
               )}
-              <div className="px-2 py-1.5">
-                <p className="text-xs text-gray-700 truncate flex items-center gap-1">
-                  <Paperclip className="w-3 h-3 flex-shrink-0" />
+
+              {/* File info - name only, no size */}
+              <div className="px-2 py-1.5 flex items-center gap-1">
+                {recentlySavedIds.has(item.id) ? (
+                  <CheckCircle2 className="w-3 h-3 flex-shrink-0 text-green-500" />
+                ) : (
+                  <Paperclip className="w-3 h-3 flex-shrink-0 text-gray-400" />
+                )}
+                <p className="text-xs text-gray-700 truncate">
                   {item.fileName}
                 </p>
-                <p className="text-xs text-gray-400">{formatFileSize(item.fileSize)}</p>
               </div>
+
+              {/* Saved badge */}
+              {recentlySavedIds.has(item.id) && (
+                <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-green-500 text-white text-[10px] font-semibold rounded-full">
+                  Saved
+                </div>
+              )}
+
               {!disabled && (
                 <button
                   onClick={() => onRemove(item.id)}
@@ -266,15 +307,6 @@ function fileToBase64(file: File): Promise<string> {
       resolve(base64);
     };
     reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function createThumbnail(file: File): Promise<string> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target?.result as string);
-    reader.onerror = () => resolve('');
     reader.readAsDataURL(file);
   });
 }

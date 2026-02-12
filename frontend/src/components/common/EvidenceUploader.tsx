@@ -1,11 +1,13 @@
 // frontend/src/components/common/EvidenceUploader.tsx
 // Reusable evidence upload component for appeals and responses
 // Supports photo, document upload with camera capture and preview
+// Images are automatically optimized client-side before upload
 
 import React, { useState, useRef, useCallback } from 'react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../config/firebase';
 import type { EvidenceItem } from '../../types/warning';
+import { optimizeImage, createOptimizedThumbnail, isOptimizableImage } from '../../utils/imageOptimizer';
 import {
   Upload,
   Camera,
@@ -15,6 +17,7 @@ import {
   Loader2,
   AlertCircle,
   Paperclip,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface EvidenceUploaderProps {
@@ -47,12 +50,6 @@ const ACCEPT_STRING = Object.keys(ACCEPTED_TYPES).join(',');
 const DEFAULT_MAX_ITEMS = 5;
 const DEFAULT_MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
-}
-
 function getFileType(mimeType: string): 'photo' | 'document' {
   return (ACCEPTED_TYPES as Record<string, string>)[mimeType] === 'photo' ? 'photo' : 'document';
 }
@@ -72,7 +69,9 @@ export const EvidenceUploader: React.FC<EvidenceUploaderProps> = ({
   hintText,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [recentlySavedIds, setRecentlySavedIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -81,9 +80,9 @@ export const EvidenceUploader: React.FC<EvidenceUploaderProps> = ({
   const handleFileUpload = useCallback(async (file: File, captureMethod: 'upload' | 'camera') => {
     setError(null);
 
-    // Validate file size
+    // Validate file size (before optimization)
     if (file.size > maxFileSize) {
-      setError(`File too large. Maximum size is ${formatFileSize(maxFileSize)}.`);
+      setError(`File too large. Maximum size is 5MB.`);
       return;
     }
 
@@ -101,42 +100,62 @@ export const EvidenceUploader: React.FC<EvidenceUploaderProps> = ({
 
     setIsUploading(true);
     try {
+      // Optimize images client-side (resize + compress)
+      let processedFile = file;
+      if (isOptimizableImage(file)) {
+        setUploadStatus('Optimizing...');
+        processedFile = await optimizeImage(file);
+      }
+
       const evidenceId = `ev_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+
+      // Generate thumbnail for images (small 200px version)
+      let thumbnail: string | undefined;
+      if (getFileType(processedFile.type) === 'photo') {
+        thumbnail = await createOptimizedThumbnail(processedFile);
+      }
 
       // Deferred upload mode: collect files locally, skip Firebase upload
       if (deferUpload) {
-        let thumbnail: string | undefined;
-        if (getFileType(file.type) === 'photo') {
-          thumbnail = await createThumbnail(file);
-        }
-
         const evidenceItem: EvidenceItem = {
           id: evidenceId,
-          type: getFileType(file.type),
-          file,
+          type: getFileType(processedFile.type),
+          file: processedFile,
           thumbnail,
           description: file.name,
           capturedAt: new Date(),
           captureMethod,
           metadata: {
             filename: file.name,
-            fileSize: file.size,
-            mimeType: file.type,
+            fileSize: processedFile.size,
+            mimeType: processedFile.type,
           },
         };
 
         onAdd(evidenceItem);
+        setUploadStatus(null);
+
+        // Show "Saved" indicator briefly
+        setRecentlySavedIds(prev => new Set(prev).add(evidenceId));
+        setTimeout(() => {
+          setRecentlySavedIds(prev => {
+            const next = new Set(prev);
+            next.delete(evidenceId);
+            return next;
+          });
+        }, 2000);
         return;
       }
 
       // Standard upload mode: upload to Firebase Storage immediately
-      const extension = file.name.split('.').pop() || 'file';
+      setUploadStatus('Uploading...');
+      const extension = processedFile.name.split('.').pop() || 'file';
       const fileName = `${evidenceId}.${extension}`;
       const fullPath = `${basePath}/${fileName}`;
       const storageRef = ref(storage, fullPath);
 
       const metadata = {
-        contentType: file.type,
+        contentType: processedFile.type,
         customMetadata: {
           organizationId,
           warningId: warningId || '',
@@ -147,18 +166,12 @@ export const EvidenceUploader: React.FC<EvidenceUploaderProps> = ({
         },
       };
 
-      await uploadBytes(storageRef, file, metadata);
+      await uploadBytes(storageRef, processedFile, metadata);
       const downloadUrl = await getDownloadURL(storageRef);
-
-      // Generate thumbnail for images
-      let thumbnail: string | undefined;
-      if (getFileType(file.type) === 'photo') {
-        thumbnail = await createThumbnail(file);
-      }
 
       const evidenceItem: EvidenceItem = {
         id: evidenceId,
-        type: getFileType(file.type),
+        type: getFileType(processedFile.type),
         url: downloadUrl,
         thumbnail,
         description: file.name,
@@ -166,14 +179,26 @@ export const EvidenceUploader: React.FC<EvidenceUploaderProps> = ({
         captureMethod,
         metadata: {
           filename: file.name,
-          fileSize: file.size,
-          mimeType: file.type,
+          fileSize: processedFile.size,
+          mimeType: processedFile.type,
         },
       };
 
       onAdd(evidenceItem);
+      setUploadStatus(null);
+
+      // Show "Saved" indicator briefly
+      setRecentlySavedIds(prev => new Set(prev).add(evidenceId));
+      setTimeout(() => {
+        setRecentlySavedIds(prev => {
+          const next = new Set(prev);
+          next.delete(evidenceId);
+          return next;
+        });
+      }, 2000);
     } catch (err) {
       setError('Failed to upload file. Please try again.');
+      setUploadStatus(null);
       console.error('Evidence upload error:', err);
     } finally {
       setIsUploading(false);
@@ -213,7 +238,7 @@ export const EvidenceUploader: React.FC<EvidenceUploaderProps> = ({
 
       {/* Upload Buttons */}
       {canAddMore && (
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -237,6 +262,13 @@ export const EvidenceUploader: React.FC<EvidenceUploaderProps> = ({
             {compact ? 'Photo' : 'Take Photo'}
           </button>
 
+          {/* Upload status */}
+          {uploadStatus && (
+            <span className="text-xs text-blue-600 font-medium animate-pulse">
+              {uploadStatus}
+            </span>
+          )}
+
           {/* Hidden file inputs */}
           <input
             ref={fileInputRef}
@@ -259,7 +291,7 @@ export const EvidenceUploader: React.FC<EvidenceUploaderProps> = ({
       {/* Hint */}
       {items.length === 0 && !isUploading && (
         <p className="text-xs text-gray-500">
-          {hintText || `Upload photos, PDFs, or Word documents to support your ${compact ? 'submission' : 'appeal'}. Max ${formatFileSize(maxFileSize)} per file.`}
+          {hintText || `Upload photos, PDFs, or Word documents to support your ${compact ? 'submission' : 'appeal'}. Max 5MB per file.`}
         </p>
       )}
 
@@ -299,16 +331,24 @@ export const EvidenceUploader: React.FC<EvidenceUploaderProps> = ({
                 </div>
               )}
 
-              {/* File info */}
-              <div className="px-2 py-1.5">
-                <p className="text-xs text-gray-700 truncate flex items-center gap-1">
-                  <Paperclip className="w-3 h-3 flex-shrink-0" />
+              {/* File info - name only, no size */}
+              <div className="px-2 py-1.5 flex items-center gap-1">
+                {recentlySavedIds.has(item.id) ? (
+                  <CheckCircle2 className="w-3 h-3 flex-shrink-0 text-green-500" />
+                ) : (
+                  <Paperclip className="w-3 h-3 flex-shrink-0 text-gray-400" />
+                )}
+                <p className="text-xs text-gray-700 truncate">
                   {item.metadata?.filename || item.description}
                 </p>
-                {item.metadata?.fileSize && (
-                  <p className="text-xs text-gray-400">{formatFileSize(item.metadata.fileSize)}</p>
-                )}
               </div>
+
+              {/* Saved badge */}
+              {recentlySavedIds.has(item.id) && (
+                <div className="absolute top-1 left-1 px-1.5 py-0.5 bg-green-500 text-white text-[10px] font-semibold rounded-full">
+                  Saved
+                </div>
+              )}
 
               {/* Remove button */}
               {!disabled && (
@@ -327,19 +367,5 @@ export const EvidenceUploader: React.FC<EvidenceUploaderProps> = ({
     </div>
   );
 };
-
-/**
- * Create a thumbnail from an image file for preview
- */
-async function createThumbnail(file: File): Promise<string> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      resolve(e.target?.result as string);
-    };
-    reader.onerror = () => resolve('');
-    reader.readAsDataURL(file);
-  });
-}
 
 export default EvidenceUploader;

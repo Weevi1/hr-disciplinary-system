@@ -61,6 +61,7 @@ const ReviewFollowUpDashboard = React.lazy(() =>
 import { ThemedCard, ThemedAlert } from '../common/ThemedCard';
 import { ThemedButton } from '../common/ThemedButton';
 import Logger from '../../utils/logger';
+import API from '../../api';
 
 // 🎨 Loading Skeleton for Lazy Components
 const LoadingSkeleton = () => (
@@ -189,8 +190,8 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
   );
 
   // 📊 HR METRICS
-  // Filter out archived warnings (expired/overturned) from all metrics
-  const activeWarnings = warnings?.filter(w => w.status !== 'expired' && w.status !== 'overturned') || [];
+  // Filter out archived warnings from all metrics
+  const activeWarnings = warnings?.filter(w => !w.isArchived && w.status !== 'expired' && w.status !== 'overturned') || [];
   const warningStats = {
     totalActive: activeWarnings.length,
     undelivered: activeWarnings.filter(w => w.status !== 'delivered').length,
@@ -831,6 +832,12 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
           }}
           canTakeAction={true}
           userRole="hr"
+          onArchive={organization?.id ? async (warningId: string, reason: string) => {
+            await API.warnings.archive(warningId, organization.id, reason as any);
+            setSelectedWarning(null);
+            setShowWarningDetails(false);
+            refreshData();
+          } : undefined}
         />
       </React.Suspense>
     </>

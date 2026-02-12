@@ -300,13 +300,28 @@ export class ShardedOrganizationService {
       const userId = response.uid
       Logger.debug(`📝 [SHARDED ORG] Admin user created via Cloud Function: ${userId}`)
 
+      // Normalize role to structured object (matches createOrganizationUser Cloud Function pattern)
+      const roleData = {
+        id: adminData.role,
+        name: adminData.role === 'executive-management' ? 'Executive Management'
+            : adminData.role === 'hr-manager' ? 'HR Manager'
+            : 'Department Manager',
+        description: adminData.role === 'executive-management' ? 'Business Owner / Executive Management'
+            : adminData.role === 'hr-manager' ? 'Human Resources Manager'
+            : 'Head of Department Manager',
+        level: adminData.role === 'executive-management' ? 4
+            : adminData.role === 'hr-manager' ? 3
+            : 2
+      }
+
       // Create user document in sharded structure
       const userData = {
+        uid: userId,
         id: userId,
         email: adminData.email,
         firstName: adminData.firstName,
         lastName: adminData.lastName,
-        role: adminData.role,
+        role: roleData,
         organizationId,
         isActive: true,
         createdAt: TimeService.getServerTimestamp(),
