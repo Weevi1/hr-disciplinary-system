@@ -5,11 +5,12 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { updateDoc, doc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../../config/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, storage, functions } from '../../../config/firebase';
 import {
   User, FileText, Tag, MessageSquare, Target, TrendingUp,
   CheckCircle, FileSearch, PenTool, Send, AlertTriangle, AlertCircle, X, Scale, Eye,
-  ChevronRight, Info, Paperclip
+  ChevronRight, Info, Paperclip, Mail, Loader2, Lock, RefreshCw
 } from 'lucide-react';
 import Logger from '../../../utils/logger';
 
@@ -296,6 +297,15 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
   const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState<string>('');
   const [finalWarningId, setFinalWarningId] = useState<string>('');
 
+  // Email delivery state
+  const [isEmailDelivering, setIsEmailDelivering] = useState(false);
+  const [emailDeliveryStatus, setEmailDeliveryStatus] = useState<
+    'idle' | 'generating_pdf' | 'uploading_pdf' | 'sending_email' | 'success' | 'failed'
+  >('idle');
+  const [useAlternativeEmail, setUseAlternativeEmail] = useState(false);
+  const [alternativeEmail, setAlternativeEmail] = useState('');
+  const [emailDeliveryError, setEmailDeliveryError] = useState<string | null>(null);
+
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -385,7 +395,8 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
         );
 
       case Phase.DELIVERY:
-        return !!selectedDeliveryMethod;
+        // Email has its own Send button, so only enable Finalize for non-email methods
+        return !!selectedDeliveryMethod && selectedDeliveryMethod !== 'email';
 
       default:
         return false;
@@ -729,6 +740,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
         employeeNumber: selectedEmployee.profile?.employeeNumber || selectedEmployee.employeeNumber || '',
         employeeDepartment: selectedEmployee.employment?.department || selectedEmployee.department || '',
         employeePosition: selectedEmployee.employment?.position || selectedEmployee.position || '',
+        employeeEmail: selectedEmployee.profile?.email || selectedEmployee.email || '',
         // Issued by
         issuedBy: user?.uid || user?.id || '',
         issuedByName: currentManagerName,
@@ -935,15 +947,32 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
   };
 
   const handleFinalize = async () => {
-    if (!selectedDeliveryMethod || !finalWarningId) return;
+    if (!selectedDeliveryMethod || !finalWarningId || !organization?.id) return;
+
+    // Email delivery is handled separately via handleEmailDelivery
+    if (selectedDeliveryMethod === 'email') return;
 
     setIsLoading(true);
     try {
-      // Create HR notification for delivery
-      // This would call the notification service
-      Logger.success('Warning finalized with delivery method:', selectedDeliveryMethod);
+      // Save delivery method and status to warning document
+      const warningRef = doc(db, 'organizations', organization.id, 'warnings', finalWarningId);
+      const historyEntry = {
+        method: selectedDeliveryMethod,
+        timestamp: new Date().toISOString(),
+        status: selectedDeliveryMethod === 'qr' ? 'delivered' : 'pending',
+        attemptedBy: user?.uid || '',
+        attemptedByName: currentManagerName,
+        type: selectedDeliveryMethod,
+      };
 
-      // Show success celebration
+      await updateDoc(warningRef, {
+        deliveryMethod: selectedDeliveryMethod,
+        deliveryStatus: selectedDeliveryMethod === 'qr' ? 'delivered' : 'pending',
+        deliveryHistory: [historyEntry],
+        updatedAt: new Date(),
+      });
+
+      Logger.success('Warning finalized with delivery method:', selectedDeliveryMethod);
       setShowSuccessCelebration(true);
     } catch (error) {
       Logger.error('Failed to finalize:', error);
@@ -958,74 +987,157 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
     onComplete();
   }, [onComplete]);
 
-  // Handle QR Code delivery - generate PDF and show QR modal
-  const handleQRCodeDelivery = async () => {
+  // Shared PDF generation helper - used by QR code and email delivery
+  const generatePDFBlob = async (): Promise<Blob> => {
     if (!organization?.id || !selectedEmployee || !selectedCategory) {
-      Logger.error('Missing data for QR code generation');
-      return;
+      throw new Error('Missing data for PDF generation');
     }
 
+    const { PDFGenerationService } = await import('@/services/PDFGenerationService');
+    const { transformWarningDataForPDF } = await import('@/utils/pdfDataTransformer');
+
+    const warningDataForPDF = {
+      id: finalWarningId,
+      organizationId: organization.id,
+      level: currentLevel,
+      category: selectedCategory.name,
+      description: formData.incidentDescription,
+      incidentDate: formData.incidentDate,
+      incidentTime: formData.incidentTime,
+      incidentLocation: formData.incidentLocation,
+      issueDate: formData.issueDate,
+      validityPeriod: formData.validityPeriod,
+      signatures: {
+        manager: signatures.manager,
+        employee: signatures.employee,
+        witness: signatures.witness,
+        managerName: currentManagerName,
+        employeeName: employeeName,
+        signedAt: new Date().toISOString()
+      },
+      employeeStatement,
+      expectedBehaviorStandards: expectedBehavior,
+      actionSteps: actionCommitments.map(c => ({
+        action: c.commitment,
+        timeline: c.timeline
+      })),
+      reviewDate,
+      disciplineRecommendation: lraRecommendation,
+      pdfGeneratorVersion: PDF_GENERATOR_VERSION
+    };
+
+    const transformedData = await transformWarningDataForPDF(
+      warningDataForPDF,
+      selectedEmployee,
+      organization
+    );
+
+    return PDFGenerationService.generateWarningPDF(
+      transformedData,
+      transformedData.pdfGeneratorVersion,
+      transformedData.pdfSettings
+    );
+  };
+
+  // Handle QR Code delivery - generate PDF and show QR modal
+  const handleQRCodeDelivery = async () => {
     setIsGeneratingQRPdf(true);
     setSelectedDeliveryMethod('qr');
 
     try {
-      // Import PDF services
-      const { PDFGenerationService } = await import('@/services/PDFGenerationService');
-      const { transformWarningDataForPDF } = await import('@/utils/pdfDataTransformer');
-
-      // Build warning data for PDF
-      const warningDataForPDF = {
-        id: finalWarningId,
-        organizationId: organization.id,
-        level: currentLevel,
-        category: selectedCategory.name,
-        description: formData.incidentDescription,
-        incidentDate: formData.incidentDate,
-        incidentTime: formData.incidentTime,
-        incidentLocation: formData.incidentLocation,
-        issueDate: formData.issueDate,
-        validityPeriod: formData.validityPeriod,
-        signatures: {
-          manager: signatures.manager,
-          employee: signatures.employee,
-          witness: signatures.witness,
-          managerName: currentManagerName,
-          employeeName: employeeName,
-          signedAt: new Date().toISOString()
-        },
-        employeeStatement,
-        expectedBehaviorStandards: expectedBehavior,
-        actionSteps: actionCommitments.map(c => ({
-          action: c.commitment,
-          timeline: c.timeline
-        })),
-        reviewDate,
-        disciplineRecommendation: lraRecommendation,
-        pdfGeneratorVersion: PDF_GENERATOR_VERSION
-      };
-
-      // Transform and generate PDF
-      const transformedData = await transformWarningDataForPDF(
-        warningDataForPDF,
-        selectedEmployee,
-        organization
-      );
-
-      const blob = await PDFGenerationService.generateWarningPDF(
-        transformedData,
-        transformedData.pdfGeneratorVersion,
-        transformedData.pdfSettings
-      );
-
+      const blob = await generatePDFBlob();
       setQrPdfBlob(blob);
       setShowQRModal(true);
       Logger.success('PDF generated for QR code delivery');
-
     } catch (error) {
       Logger.error('Failed to generate PDF for QR code:', error);
       alert('Failed to generate PDF for QR code. Please try again.');
     } finally {
       setIsGeneratingQRPdf(false);
+    }
+  };
+
+  // Handle email delivery
+  const handleEmailDelivery = async () => {
+    if (!organization?.id || !finalWarningId) return;
+
+    const employeeEmailOnRecord = selectedEmployee?.profile?.email || selectedEmployee?.email || '';
+    const isManualPath = useAlternativeEmail || !employeeEmailOnRecord;
+
+    setIsEmailDelivering(true);
+    setEmailDeliveryError(null);
+
+    try {
+      if (!isManualPath) {
+        // === AUTOMATED PATH: generate PDF, upload, send email ===
+        setEmailDeliveryStatus('generating_pdf');
+        const blob = await generatePDFBlob();
+
+        // Upload PDF to Storage
+        setEmailDeliveryStatus('uploading_pdf');
+        const pdfFilename = `Warning_${selectedCategory?.name || 'Document'}_${employeeName}_${formData.issueDate}.pdf`;
+        const storagePath = `warnings/${organization.id}/${finalWarningId}/pdfs/${pdfFilename}`;
+        const storageRef = ref(storage, storagePath);
+        await uploadBytes(storageRef, blob, { contentType: 'application/pdf' });
+
+        // Update warning doc with PDF info
+        const warningRef = doc(db, 'organizations', organization.id, 'warnings', finalWarningId);
+        await updateDoc(warningRef, {
+          pdfGenerated: true,
+          pdfFilename,
+        });
+
+        // Call Cloud Function to send email
+        setEmailDeliveryStatus('sending_email');
+        const deliverFn = httpsCallable(functions, 'deliverWarningByEmail');
+        const result = await deliverFn({
+          warningId: finalWarningId,
+          organizationId: organization.id,
+          employeeEmail: employeeEmailOnRecord,
+          pdfFilename,
+        });
+
+        const data = result.data as any;
+        if (data.success) {
+          setEmailDeliveryStatus('success');
+          setSelectedDeliveryMethod('email');
+          // Show celebration after a brief delay
+          setTimeout(() => setShowSuccessCelebration(true), 1500);
+        } else {
+          setEmailDeliveryStatus('failed');
+          setEmailDeliveryError(data.error || 'Email delivery failed');
+        }
+      } else {
+        // === MANUAL PATH: just notify HR ===
+        setEmailDeliveryStatus('sending_email');
+        const deliverFn = httpsCallable(functions, 'deliverWarningByEmail');
+        const result = await deliverFn({
+          warningId: finalWarningId,
+          organizationId: organization.id,
+          alternativeEmail: alternativeEmail || undefined,
+        });
+
+        const data = result.data as any;
+        if (data.success) {
+          setEmailDeliveryStatus('success');
+          setSelectedDeliveryMethod('email');
+          // Show celebration after a brief delay
+          setTimeout(() => setShowSuccessCelebration(true), 1500);
+        } else {
+          setEmailDeliveryStatus('failed');
+          setEmailDeliveryError(data.error || 'Failed to notify HR');
+        }
+      }
+    } catch (error: any) {
+      Logger.error('Email delivery failed:', error);
+      setEmailDeliveryStatus('failed');
+      setEmailDeliveryError(
+        error?.message?.includes('already-exists')
+          ? 'This warning has already been delivered via email.'
+          : error?.message || 'Something went wrong. Please try again.'
+      );
+    } finally {
+      setIsEmailDelivering(false);
     }
   };
 
@@ -1786,7 +1898,18 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
           </div>
         );
 
-      case Phase.DELIVERY:
+      case Phase.DELIVERY: {
+        const employeeEmailOnRecord = selectedEmployee?.profile?.email || selectedEmployee?.email || '';
+        const showEmailPanel = selectedDeliveryMethod === 'email';
+        const needsAlternativeEmail = !employeeEmailOnRecord || useAlternativeEmail;
+        const isValidAlternativeEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(alternativeEmail);
+
+        const emailStatusMessages: Record<string, string> = {
+          generating_pdf: 'Generating PDF document...',
+          uploading_pdf: 'Uploading PDF to secure storage...',
+          sending_email: needsAlternativeEmail ? 'Notifying HR...' : 'Sending email to employee...',
+        };
+
         return (
           <div className="space-y-4">
             <ThemedAlert variant="success">
@@ -1814,40 +1937,200 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
               </ThemedAlert>
             )}
 
+            {/* Delivery method cards */}
             <div className="grid grid-cols-2 gap-3">
-              {['email', 'whatsapp', 'printed', 'qr'].map((method) => (
+              {[
+                { key: 'email', label: 'Email', icon: Mail },
+                { key: 'whatsapp', label: 'WhatsApp', icon: Send },
+                { key: 'printed', label: 'Printed', icon: FileText },
+                { key: 'qr', label: 'QR Code', icon: Eye },
+              ].map(({ key, label, icon: Icon }) => (
                 <button
-                  key={method}
+                  key={key}
                   onClick={() => {
-                    if (method === 'qr') {
+                    if (key === 'qr') {
                       handleQRCodeDelivery();
                     } else {
-                      setSelectedDeliveryMethod(method);
+                      setSelectedDeliveryMethod(key);
+                      // Reset email state when switching methods
+                      if (key !== 'email') {
+                        setEmailDeliveryStatus('idle');
+                        setEmailDeliveryError(null);
+                      }
                     }
                   }}
-                  disabled={method === 'qr' && isGeneratingQRPdf}
+                  disabled={(key === 'qr' && isGeneratingQRPdf) || isEmailDelivering}
                   className={`
-                    p-4 rounded-lg border text-center transition-all
-                    ${selectedDeliveryMethod === method ? 'ring-2 ring-primary' : ''}
-                    ${method === 'qr' && isGeneratingQRPdf ? 'opacity-50 cursor-wait' : ''}
+                    p-4 rounded-lg border text-center transition-all flex flex-col items-center gap-2
+                    ${selectedDeliveryMethod === key ? 'ring-2' : ''}
+                    ${(key === 'qr' && isGeneratingQRPdf) || isEmailDelivering ? 'opacity-50 cursor-wait' : ''}
                   `}
                   style={{
-                    borderColor: selectedDeliveryMethod === method
+                    borderColor: selectedDeliveryMethod === key
                       ? 'var(--color-primary)'
                       : 'var(--color-border)',
-                    backgroundColor: selectedDeliveryMethod === method
+                    backgroundColor: selectedDeliveryMethod === key
                       ? 'var(--color-primary-light)'
                       : 'var(--color-background)'
                   }}
                 >
-                  <span className="text-sm font-medium capitalize" style={{ color: 'var(--color-text-primary)' }}>
-                    {method === 'qr' ? (isGeneratingQRPdf ? 'Generating...' : 'QR Code') : method}
+                  <Icon className="w-5 h-5" style={{ color: selectedDeliveryMethod === key ? 'var(--color-primary)' : 'var(--color-text-secondary)' }} />
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                    {key === 'qr' && isGeneratingQRPdf ? 'Generating...' : label}
                   </span>
                 </button>
               ))}
             </div>
+
+            {/* Email expanded panel */}
+            {showEmailPanel && emailDeliveryStatus !== 'success' && (
+              <div
+                className="rounded-lg border p-4 space-y-4"
+                style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-background)' }}
+              >
+                {/* Active delivery progress */}
+                {isEmailDelivering && emailStatusMessages[emailDeliveryStatus] && (
+                  <div className="flex items-center gap-3 py-3">
+                    <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--color-primary)' }} />
+                    <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
+                      {emailStatusMessages[emailDeliveryStatus]}
+                    </span>
+                  </div>
+                )}
+
+                {/* Error state */}
+                {emailDeliveryStatus === 'failed' && emailDeliveryError && (
+                  <ThemedAlert variant="error">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm">{emailDeliveryError}</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setEmailDeliveryStatus('idle');
+                          setEmailDeliveryError(null);
+                        }}
+                        className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded hover:opacity-80"
+                        style={{ color: 'var(--color-primary)' }}
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        Retry
+                      </button>
+                    </div>
+                  </ThemedAlert>
+                )}
+
+                {/* Idle state - show email options */}
+                {!isEmailDelivering && emailDeliveryStatus !== 'failed' && (
+                  <>
+                    {!needsAlternativeEmail ? (
+                      /* Employee has email on record */
+                      <div className="space-y-3">
+                        <div
+                          className="flex items-center gap-3 p-3 rounded-lg"
+                          style={{ backgroundColor: 'var(--color-primary-light)' }}
+                        >
+                          <Lock className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--color-primary)' }} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>Employee email on record</p>
+                            <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text-primary)' }}>
+                              {employeeEmailOnRecord}
+                            </p>
+                          </div>
+                        </div>
+
+                        <ThemedButton
+                          onClick={handleEmailDelivery}
+                          icon={Mail}
+                          className="w-full"
+                        >
+                          Send Warning via Email
+                        </ThemedButton>
+
+                        <button
+                          onClick={() => setUseAlternativeEmail(true)}
+                          className="w-full text-xs text-center py-1 hover:underline"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                        >
+                          Use a different email instead
+                        </button>
+                      </div>
+                    ) : (
+                      /* No email on record or manager wants alternative */
+                      <div className="space-y-3">
+                        {useAlternativeEmail && employeeEmailOnRecord && (
+                          <button
+                            onClick={() => {
+                              setUseAlternativeEmail(false);
+                              setAlternativeEmail('');
+                            }}
+                            className="text-xs hover:underline"
+                            style={{ color: 'var(--color-primary)' }}
+                          >
+                            &larr; Use employee email on record ({employeeEmailOnRecord})
+                          </button>
+                        )}
+
+                        <div>
+                          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+                            {employeeEmailOnRecord ? 'Alternative email address' : 'Employee email address'}
+                          </label>
+                          <input
+                            type="email"
+                            value={alternativeEmail}
+                            onChange={(e) => setAlternativeEmail(e.target.value)}
+                            placeholder="employee@example.com"
+                            className="w-full px-3 py-2 rounded-lg border text-sm"
+                            style={{
+                              borderColor: 'var(--color-border)',
+                              backgroundColor: 'var(--color-input-bg)',
+                              color: 'var(--color-text-primary)'
+                            }}
+                          />
+                        </div>
+
+                        <ThemedAlert variant="info">
+                          <div className="flex items-center gap-2">
+                            <Info className="w-4 h-4 flex-shrink-0" />
+                            <span className="text-xs">HR will be notified to deliver the warning to this email address.</span>
+                          </div>
+                        </ThemedAlert>
+
+                        <ThemedButton
+                          onClick={handleEmailDelivery}
+                          disabled={!isValidAlternativeEmail}
+                          icon={Send}
+                          className="w-full"
+                          variant="outline"
+                        >
+                          Notify HR for Manual Delivery
+                        </ThemedButton>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Email success state */}
+            {showEmailPanel && emailDeliveryStatus === 'success' && (
+              <div
+                className="rounded-lg border p-4 text-center space-y-2"
+                style={{ borderColor: '#86efac', backgroundColor: '#f0fdf4' }}
+              >
+                <CheckCircle className="w-8 h-8 mx-auto" style={{ color: '#16a34a' }} />
+                <p className="text-sm font-medium" style={{ color: '#166534' }}>
+                  {needsAlternativeEmail
+                    ? `HR has been notified to deliver the warning to ${alternativeEmail}`
+                    : `Email sent to ${employeeEmailOnRecord}`
+                  }
+                </p>
+              </div>
+            )}
           </div>
         );
+      }
 
       default:
         return null;

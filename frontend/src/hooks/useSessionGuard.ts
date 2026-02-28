@@ -14,6 +14,8 @@ import Logger from '../utils/logger';
 const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 const CHECK_INTERVAL_MS = 30 * 1000; // Check every 30 seconds
 const CURRENT_BUILD_VERSION = typeof __BUILD_VERSION__ !== 'undefined' ? __BUILD_VERSION__ : 'dev';
+const RELOAD_COOLDOWN_MS = 30 * 1000; // Don't reload more than once per 30 seconds
+const RELOAD_TS_KEY = 'session_guard_reload_ts';
 
 export const useSessionGuard = () => {
   const { user, logout } = useAuth();
@@ -45,7 +47,14 @@ export const useSessionGuard = () => {
       const serverVersion = versionDoc.data()?.version;
 
       if (serverVersion && serverVersion !== CURRENT_BUILD_VERSION) {
+        // Guard against infinite reload loops — only reload once per cooldown period
+        const lastReload = parseInt(sessionStorage.getItem(RELOAD_TS_KEY) || '0', 10);
+        if (Date.now() - lastReload < RELOAD_COOLDOWN_MS) {
+          Logger.warn(`🔄 [SessionGuard] Version mismatch persists after reload (local: ${CURRENT_BUILD_VERSION}, server: ${serverVersion}) — skipping to prevent loop`);
+          return;
+        }
         Logger.info(`🔄 [SessionGuard] App update detected (local: ${CURRENT_BUILD_VERSION}, server: ${serverVersion}) — reloading`);
+        sessionStorage.setItem(RELOAD_TS_KEY, Date.now().toString());
         window.location.reload();
       }
     } catch (error) {

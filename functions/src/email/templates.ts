@@ -257,6 +257,181 @@ export function responseConfirmationTemplate(data: {
   return baseLayout(content);
 }
 
+/**
+ * Warning delivery template - sent to employee with PDF attached
+ */
+export function warningDeliveryTemplate(data: {
+  employeeName: string;
+  warningLevel: string;
+  warningCategory: string;
+  issueDate: string;
+  organizationName: string;
+  issuedByName: string;
+  responseUrl?: string;
+}): string {
+  const content = `
+    <h2 style="color:#1e293b;margin:0 0 16px;font-size:18px;">Disciplinary Warning Notice</h2>
+    <p style="color:#475569;font-size:14px;line-height:1.6;margin:0 0 24px;">
+      Dear ${data.employeeName},<br><br>
+      Please be advised that a <strong>${formatLevel(data.warningLevel)}</strong> has been issued to you by ${data.organizationName}. The warning document is attached to this email as a PDF.
+    </p>
+
+    <!-- Warning Details -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;background-color:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">
+      <tr>
+        <td style="padding:16px;">
+          <p style="color:#64748b;font-size:11px;text-transform:uppercase;margin:0 0 8px;font-weight:600;">Warning Details</p>
+          <table width="100%" cellpadding="4" cellspacing="0">
+            <tr>
+              <td style="color:#64748b;font-size:13px;width:40%;">Warning Level:</td>
+              <td style="color:#1e293b;font-size:13px;font-weight:600;">${formatLevel(data.warningLevel)}</td>
+            </tr>
+            <tr>
+              <td style="color:#64748b;font-size:13px;">Category:</td>
+              <td style="color:#1e293b;font-size:13px;">${data.warningCategory}</td>
+            </tr>
+            <tr>
+              <td style="color:#64748b;font-size:13px;">Issue Date:</td>
+              <td style="color:#1e293b;font-size:13px;">${data.issueDate}</td>
+            </tr>
+            <tr>
+              <td style="color:#64748b;font-size:13px;">Organization:</td>
+              <td style="color:#1e293b;font-size:13px;">${data.organizationName}</td>
+            </tr>
+            <tr>
+              <td style="color:#64748b;font-size:13px;">Issued By:</td>
+              <td style="color:#1e293b;font-size:13px;">${data.issuedByName}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Rights Notice -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;background-color:#eff6ff;border-radius:6px;border:1px solid #bfdbfe;">
+      <tr>
+        <td style="padding:16px;">
+          <p style="color:#1e40af;font-size:13px;margin:0 0 8px;font-weight:600;">Your Rights</p>
+          <ul style="color:#1e40af;font-size:13px;margin:0;padding-left:20px;line-height:1.8;">
+            <li>You have the right to respond to this warning in writing</li>
+            <li>You have the right to submit a formal appeal</li>
+            <li>You may be assisted by a shop steward or colleague in any proceedings</li>
+            <li>This warning is issued in accordance with the Labour Relations Act (LRA)</li>
+          </ul>
+        </td>
+      </tr>
+    </table>
+
+    ${data.responseUrl ? `
+    <!-- Response CTA -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+      <tr>
+        <td align="center" style="padding:8px 0;">
+          <a href="${data.responseUrl}" style="display:inline-block;background-color:${BRAND_COLOR};color:#ffffff;text-decoration:none;padding:12px 32px;border-radius:6px;font-size:14px;font-weight:600;">
+            View Warning &amp; Respond
+          </a>
+        </td>
+      </tr>
+      <tr>
+        <td align="center">
+          <p style="color:#94a3b8;font-size:11px;margin:4px 0 0;">This link will expire in 30 days</p>
+        </td>
+      </tr>
+    </table>` : ''}
+
+    <p style="color:#64748b;font-size:12px;line-height:1.6;margin:0;">
+      The full warning document is attached to this email as a PDF. Please review it carefully and keep it for your records.
+    </p>
+  `;
+  return baseLayout(content);
+}
+
+/**
+ * Warning delivery HR notification template - sent to HR managers
+ */
+export function warningDeliveryHRNotificationTemplate(data: {
+  employeeName: string;
+  employeeEmail: string;
+  warningLevel: string;
+  warningCategory: string;
+  issueDate: string;
+  organizationName: string;
+  issuedByName: string;
+  deliveryType: 'automated' | 'manual_requested';
+  alternativeEmail?: string;
+}): string {
+  const isAutomated = data.deliveryType === 'automated';
+
+  const statusBanner = isAutomated
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+        <tr>
+          <td style="background-color:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:12px 16px;">
+            <p style="color:#166534;font-size:13px;margin:0;font-weight:600;">Warning emailed successfully</p>
+            <p style="color:#15803d;font-size:12px;margin:4px 0 0;">Sent to ${data.employeeEmail} with PDF attached and response link included.</p>
+          </td>
+        </tr>
+      </table>`
+    : `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+        <tr>
+          <td style="background-color:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:12px 16px;">
+            <p style="color:#92400e;font-size:13px;margin:0;font-weight:600;">Manual delivery required</p>
+            <p style="color:#92400e;font-size:12px;margin:4px 0 0;">Manager provided alternative email: <strong>${data.alternativeEmail || 'Not specified'}</strong>. Please deliver the warning to this address.</p>
+          </td>
+        </tr>
+      </table>`;
+
+  const content = `
+    <h2 style="color:#1e293b;margin:0 0 16px;font-size:18px;">${isAutomated ? 'Warning Delivered via Email' : 'Manual Warning Delivery Required'}</h2>
+    <p style="color:#475569;font-size:14px;line-height:1.6;margin:0 0 24px;">
+      ${data.issuedByName} has ${isAutomated ? 'delivered' : 'requested delivery of'} a warning to ${data.employeeName}.
+    </p>
+
+    ${statusBanner}
+
+    <!-- Warning Details -->
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;background-color:#f8fafc;border-radius:6px;border:1px solid #e2e8f0;">
+      <tr>
+        <td style="padding:16px;">
+          <table width="100%" cellpadding="4" cellspacing="0">
+            <tr>
+              <td style="color:#64748b;font-size:13px;width:40%;">Employee:</td>
+              <td style="color:#1e293b;font-size:13px;font-weight:600;">${data.employeeName}</td>
+            </tr>
+            <tr>
+              <td style="color:#64748b;font-size:13px;">Warning Level:</td>
+              <td style="color:#1e293b;font-size:13px;">${formatLevel(data.warningLevel)}</td>
+            </tr>
+            <tr>
+              <td style="color:#64748b;font-size:13px;">Category:</td>
+              <td style="color:#1e293b;font-size:13px;">${data.warningCategory}</td>
+            </tr>
+            <tr>
+              <td style="color:#64748b;font-size:13px;">Issue Date:</td>
+              <td style="color:#1e293b;font-size:13px;">${data.issueDate}</td>
+            </tr>
+            <tr>
+              <td style="color:#64748b;font-size:13px;">Issued By:</td>
+              <td style="color:#1e293b;font-size:13px;">${data.issuedByName}</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- CTA -->
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:8px 0;">
+          <a href="https://file.fifo.systems/dashboard" style="display:inline-block;background-color:${BRAND_COLOR};color:#ffffff;text-decoration:none;padding:12px 32px;border-radius:6px;font-size:14px;font-weight:600;">
+            View in Dashboard
+          </a>
+        </td>
+      </tr>
+    </table>
+  `;
+  return baseLayout(content);
+}
+
 // Helper functions
 function formatLevel(level: string): string {
   const map: Record<string, string> = {

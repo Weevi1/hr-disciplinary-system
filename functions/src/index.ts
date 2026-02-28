@@ -63,6 +63,9 @@ import {
 // 📧 ADD HR NOTIFICATION ON APPEAL
 import { notifyHROnAppeal } from './notifyHROnAppeal';
 
+// 📧 ADD WARNING DELIVERY
+import { deliverWarningByEmail } from './warningDelivery';
+
 // 🔗 ADD EMPLOYEE RESPONSE SYSTEM
 import {
   generateResponseToken,
@@ -124,6 +127,7 @@ export {
 
   // Email notification functions
   notifyHROnAppeal,
+  deliverWarningByEmail,
 
   // Employee response system
   generateResponseToken,
