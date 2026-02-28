@@ -2,6 +2,11 @@
 
 Essential guidance for Claude Code when working with this HR Disciplinary System repository.
 
+## Lessons
+- Review `lessons.md` at the start of each session
+- After any correction from Riaan, record the pattern in `lessons.md`
+- Format: `[date] What went wrong → What to do instead`
+
 ---
 
 ## Quick Start
@@ -357,13 +362,10 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 **For complete change history, see `RECENT_UPDATES.md` (Sessions 20-52) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Session 64 - 2026-02-12)
-- **✅ Client-side image optimization** — New `imageOptimizer.ts` resizes to max 1920px, compresses JPEG 0.8. Phone photos 5-10MB → ~200-400KB
-- **✅ Evidence upload security** — `file.makePublic()` replaced with download token URLs, storage rules hardened, thumbnail stripped from Firestore, silent failure fixed with user warning banner, filename/MIME mismatch fixed
-- **✅ Bug Fix: Archive didn't remove from LRA** — `API.warnings.archive()` now sets `isActive: false` so archived warnings stop affecting escalation. `HRDashboardSection` filter updated to check `!isArchived`
-- **✅ Archive in WarningDetailsModal** — Archive button with reason selector (test data, issued in error, duplicate, overturned, expired, manual). Inline confirmation dialog with explanation. Shows "Archived (reason)" badge if already archived. Wired from `HRDashboardSection` via `onArchive` prop
-### Previous Sessions (52-63)
-See `RECENT_UPDATES.md` for detailed session history including Sessions 57-63.
+### Most Recent (Session 65 - 2026-02-17)
+- **✅ Bug Fix: Super user infinite sign-in loop** — `useSessionGuard.ts` version check caused infinite `window.location.reload()` for super user only (only account with Firestore `system` collection read access). Mismatch between `__BUILD_VERSION__` in JS bundle and `system/appVersion` doc. Added 30-second reload cooldown via `sessionStorage` to prevent future loops. Also ran `post-deploy.js` to sync Firestore version.
+### Previous Sessions (52-64)
+See `RECENT_UPDATES.md` for detailed session history including Sessions 57-64.
 
 **For complete session history, see:**
 - `RECENT_UPDATES.md` - Sessions 20-63 (current)
@@ -374,7 +376,7 @@ See `RECENT_UPDATES.md` for detailed session history including Sessions 57-63.
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ org scalability, progressive enhancement for 2012-2025 devices, **unified design system**, **DashboardShell** across all dashboards, **WCAG AA compliance**, **versioned PDF generation**, **per-org PDF templates**, **SVG signatures**, **10-phase unified warning wizard**, **link-based employee response/appeal system** with token auth and PDF viewing, **HR email notifications via SendGrid**, **evidence upload on appeals with client-side image optimization**, **per-organization multi-dashboard theming** (Manager, HR, Executive views with per-view metric card colors), **optimized warning data loading with staleness detection**, and **session guard with auto-logout + forced app updates**.*
 
-*Last Updated: 2026-02-12 - Session 64: Image optimization, evidence upload hardening, warning archive in WarningDetailsModal, LRA escalation bug fix.*
+*Last Updated: 2026-02-17 - Session 65: Super user sign-in loop fix (useSessionGuard reload cooldown).*
 
 ---
 
@@ -408,13 +410,34 @@ All 3 gaps identified by HR practitioner feedback have been implemented and depl
 - **✅ Gap 3: HR Email Notification** — `notifyHROnAppeal` Firestore trigger, SendGrid emails from `file@fifo.systems`
 - **✅ Bonus: PDF Viewing** — Employees can view/print warning PDF from response link via signed URL
 
-### Email Architecture Decision (2026-01-29)
-All FIFO products use the same email setup:
-- **Sending (automated)**: SendGrid, domain-verified for fifo.systems. This project should send from `file@fifo.systems`.
-- **Receiving**: Cloudflare Email Routing (free) -- all @fifo.systems addresses forward to Riaan's Gmail.
-- **Sending (personal)**: Riaan sends from `riaan@fifo.systems` via Gmail "Send as" aliases.
-- **No email hosting needed.** No Google Workspace. No monthly cost.
-- When implementing email features, use SendGrid API with sender address `file@fifo.systems`.
+### FIFO Comms Policy (2026-02-17)
+
+**Full spec:** `fifo-ops/docs/COMMS_HANDBOOK.md`
+
+Two types of outbound email across FIFO — use these exact terms:
+
+| Term | What | Who sends | How |
+|------|------|----------|-----|
+| **App Email** | Single-recipient, triggered by a user's action | This app | SendGrid, `file@fifo.systems` |
+| **Ops Broadcast** | Multi-recipient, business decision | FIFO Ops | Brevo SMTP, `riaan@fifo.systems`, Riaan approves |
+
+**This app's App Emails (you own these — template, logic, sending):**
+- HR notification when employee appeals (`notifyHROnAppeal` Cloud Function)
+- Warning delivery emails to employees
+- Password resets, account verification
+- Any future single-recipient transactional emails
+
+**Ops Broadcasts (do NOT build — flag via outbox):**
+- Legal page updates (ToS, Privacy Policy for File by FIFO)
+- Feature announcements to all File tenants
+- Pricing/billing changes, maintenance notices
+
+**To request an Ops Broadcast:** Add `[OPS-BROADCAST]` to outbox with subject, body, and recipients.
+
+### Email Architecture (2026-01-29)
+- **Sending**: SendGrid, domain-verified. Send from `file@fifo.systems`.
+- **Receiving**: Cloudflare Email Routing → Gmail.
+- No Google Workspace needed.
 
 ### Remaining HR Practitioner Feedback (from Adam's colleague, 2 Feb)
 

@@ -6,6 +6,15 @@ Latest session updates and recent changes to the HR Disciplinary System.
 
 ---
 
+## Session 64 (2026-02-12) — Evidence Upload Optimization, Security Hardening & Warning Archive
+
+- **✅ Client-side image optimization** — New `imageOptimizer.ts` resizes to max 1920px, compresses JPEG 0.8. Phone photos 5-10MB → ~200-400KB
+- **✅ Evidence upload security** — `file.makePublic()` replaced with download token URLs, storage rules hardened, thumbnail stripped from Firestore, silent failure fixed with user warning banner, filename/MIME mismatch fixed
+- **✅ Bug Fix: Archive didn't remove from LRA** — `API.warnings.archive()` now sets `isActive: false` so archived warnings stop affecting escalation. `HRDashboardSection` filter updated to check `!isArchived`
+- **✅ Archive in WarningDetailsModal** — Archive button with reason selector (test data, issued in error, duplicate, overturned, expired, manual). Inline confirmation dialog with explanation. Shows "Archived (reason)" badge if already archived. Wired from `HRDashboardSection` via `onArchive` prop
+
+---
+
 ## Session 63 (2026-02-11) — Reseller User Creation Bug Fixes & Audio Auto-Stop
 
 - **Bug Fix: Reseller user creation** — `ShardedOrganizationService.createAdminUser()` was missing `uid` field and saving role as raw string instead of normalized object

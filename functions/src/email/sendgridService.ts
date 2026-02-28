@@ -1,6 +1,6 @@
 // functions/src/email/sendgridService.ts
 // SendGrid email service wrapper for File by FIFO
-// Handles appeal notifications, response notifications, and confirmation emails
+// Handles appeal notifications, response notifications, warning delivery, and confirmation emails
 
 import { logger } from 'firebase-functions';
 import { defineString } from 'firebase-functions/params';
@@ -8,6 +8,8 @@ import {
   appealNotificationTemplate,
   responseNotificationTemplate,
   responseConfirmationTemplate,
+  warningDeliveryTemplate,
+  warningDeliveryHRNotificationTemplate,
 } from './templates';
 
 // SendGrid API key from environment
@@ -16,11 +18,18 @@ const sendgridApiKey = defineString('SENDGRID_API_KEY');
 const SENDER_EMAIL = 'file@fifo.systems';
 const SENDER_NAME = 'File by FIFO';
 
+export interface EmailAttachment {
+  content: string;    // base64-encoded
+  type: string;       // MIME type e.g. 'application/pdf'
+  filename: string;
+}
+
 interface EmailPayload {
   to: string | string[];
   subject: string;
   html: string;
   replyTo?: string;
+  attachments?: EmailAttachment[];
 }
 
 interface AppealNotificationData {
@@ -71,12 +80,20 @@ export async function sendEmail(payload: EmailPayload): Promise<boolean> {
   const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
   const personalizations = recipients.map(email => ({ to: [{ email }] }));
 
-  const body = {
+  const body: Record<string, any> = {
     personalizations,
     from: { email: SENDER_EMAIL, name: SENDER_NAME },
     subject: payload.subject,
     content: [{ type: 'text/html', value: payload.html }],
     ...(payload.replyTo ? { reply_to: { email: payload.replyTo } } : {}),
+    ...(payload.attachments?.length ? {
+      attachments: payload.attachments.map(a => ({
+        content: a.content,
+        type: a.type,
+        filename: a.filename,
+        disposition: 'attachment',
+      })),
+    } : {}),
   };
 
   try {
@@ -156,6 +173,77 @@ export async function sendResponseConfirmation(
   return sendEmail({
     to: employeeEmail,
     subject: `${typeLabel} Received - ${data.organizationName}`,
+    html,
+  });
+}
+
+// ============================================
+// WARNING DELIVERY EMAILS
+// ============================================
+
+export interface WarningDeliveryData {
+  employeeName: string;
+  warningLevel: string;
+  warningCategory: string;
+  issueDate: string;
+  organizationName: string;
+  issuedByName: string;
+  responseUrl?: string;
+}
+
+/**
+ * Send warning delivery email to employee with PDF attachment
+ */
+export async function sendWarningDeliveryEmail(
+  employeeEmail: string,
+  data: WarningDeliveryData,
+  pdfBase64: string,
+  pdfFilename: string
+): Promise<boolean> {
+  const html = warningDeliveryTemplate(data);
+  return sendEmail({
+    to: employeeEmail,
+    subject: `Disciplinary Warning - ${data.organizationName}`,
+    html,
+    attachments: [{
+      content: pdfBase64,
+      type: 'application/pdf',
+      filename: pdfFilename,
+    }],
+  });
+}
+
+export interface WarningDeliveryHRNotificationData {
+  employeeName: string;
+  employeeEmail: string;
+  warningLevel: string;
+  warningCategory: string;
+  issueDate: string;
+  organizationName: string;
+  issuedByName: string;
+  deliveryType: 'automated' | 'manual_requested';
+  alternativeEmail?: string;
+}
+
+/**
+ * Send HR notification about warning delivery
+ */
+export async function sendWarningDeliveryHRNotification(
+  hrEmails: string[],
+  data: WarningDeliveryHRNotificationData
+): Promise<boolean> {
+  if (hrEmails.length === 0) {
+    logger.warn('No HR email addresses provided for delivery notification');
+    return false;
+  }
+
+  const html = warningDeliveryHRNotificationTemplate(data);
+  const subjectPrefix = data.deliveryType === 'automated'
+    ? 'Warning Delivered'
+    : 'Manual Delivery Required';
+  return sendEmail({
+    to: hrEmails,
+    subject: `${subjectPrefix}: ${data.employeeName} - ${data.warningCategory}`,
     html,
   });
 }
