@@ -48,3 +48,11 @@ Thumbs.db
 
 # Build artifacts
 *.js.map
+.claude/
+*-adminsdk-*.json
+serviceAccountKey.json
+*.p8
+*.pem
+*.key
+credentials*.json
+service-account.json
