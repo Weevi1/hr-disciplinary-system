@@ -10,7 +10,7 @@ import { db, storage, functions } from '../../../config/firebase';
 import {
   User, FileText, Tag, MessageSquare, Target, TrendingUp,
   CheckCircle, FileSearch, PenTool, Send, AlertTriangle, AlertCircle, X, Scale, Eye,
-  ChevronRight, Info, Paperclip, Mail, Loader2, Lock, RefreshCw
+  ChevronLeft, ChevronRight, Info, Paperclip, Mail, Loader2, Lock, RefreshCw
 } from 'lucide-react';
 import Logger from '../../../utils/logger';
 
@@ -263,8 +263,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
   const [overrideLevel, setOverrideLevel] = useState<string | null>(null);
   const [warningHistory, setWarningHistory] = useState<any[]>([]);
   const warningHistoryLoaded = useRef(false); // Tracks if prefetch completed (even if result is empty)
-  const [hasFinalWarningBlock, setHasFinalWarningBlock] = useState(false);
-  const [hasDismissalRedirect, setHasDismissalRedirect] = useState(false);
+  const [hrInterventionRequired, setHrInterventionRequired] = useState<false | 'final_warning' | 'dismissal'>(false);
 
   // Corrective discussion
   const [employeeStatement, setEmployeeStatement] = useState('');
@@ -359,8 +358,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
         return !!(
           formData.categoryId &&
           !isAnalyzing &&
-          !hasFinalWarningBlock &&
-          !hasDismissalRedirect
+          !hrInterventionRequired
         );
 
       case Phase.EMPLOYEE_RESPONSE:
@@ -402,7 +400,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
         return false;
     }
   }, [
-    currentPhase, formData, lraRecommendation, isAnalyzing, hasFinalWarningBlock,
+    currentPhase, formData, lraRecommendation, isAnalyzing, hrInterventionRequired,
     levelInfo, employeeStatement, expectedBehavior, actionCommitments, reviewDate,
     scriptReadConfirmed, hasAcknowledged, signatures, selectedDeliveryMethod, employeeViewedPDF,
     selectedEmployee, selectedCategory, organization?.id
@@ -564,7 +562,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
       );
 
       if (hasFinalWarningForCategory && !pathHasStepAfterFinal) {
-        setHasFinalWarningBlock(true);
+        setHrInterventionRequired('final_warning');
         // Ensure minimum loading time
         const elapsed = Date.now() - startTime;
         if (elapsed < MIN_LOADING_TIME) {
@@ -596,7 +594,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
 
       // Check if dismissal level — redirect to HR instead of proceeding
       if (recommendation.suggestedLevel === 'dismissal') {
-        setHasDismissalRedirect(true);
+        setHrInterventionRequired('dismissal');
         setIsAnalyzing(false);
         return;
       }
@@ -623,7 +621,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
           warningCount: 0
         };
         setLraRecommendation(dismissalRecommendation);
-        setHasDismissalRedirect(true);
+        setHrInterventionRequired('dismissal');
         setIsAnalyzing(false);
         return;
       }
@@ -1209,8 +1207,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
               onCategorySelect={(id) => {
                 // Reset state and trigger analysis via useEffect
                 setLraRecommendation(null);
-                setHasFinalWarningBlock(false);
-                setHasDismissalRedirect(false);
+                setHrInterventionRequired(false);
                 // 🔥 FIX: Update selectedCategory BEFORE formData to avoid race condition
                 // The generateLRARecommendation useEffect uses selectedCategory state
                 const category = categories.find(c => c.id === id);
@@ -1225,7 +1222,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
             />
 
             {/* Show spinner when analyzing OR when no recommendation yet (after category selected) */}
-            {(isAnalyzing || (!lraRecommendation && formData.categoryId)) && (
+            {!hrInterventionRequired && (isAnalyzing || (!lraRecommendation && formData.categoryId)) && (
               <div className="flex flex-col items-center justify-center py-8 px-4">
                 <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
                 <p className="text-sm font-medium text-gray-700">Analyzing warning history...</p>
@@ -1233,7 +1230,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
               </div>
             )}
 
-            {lraRecommendation && !hasDismissalRedirect && (
+            {lraRecommendation && !hrInterventionRequired && (
               <ThemedCard padding="md" className="border-l-4" style={{ borderLeftColor: 'var(--color-primary)' }}>
                 <div className="flex items-start gap-3">
                   <Scale className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-primary)' }} />
@@ -1314,21 +1311,7 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
               </ThemedCard>
             )}
 
-            {hasFinalWarningBlock && (
-              <ThemedAlert variant="error">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-                  <div>
-                    <strong>HR Intervention Required</strong>
-                    <p className="text-sm mt-1">
-                      This employee has a final warning on file. Contact HR before proceeding.
-                    </p>
-                  </div>
-                </div>
-              </ThemedAlert>
-            )}
-
-            {hasDismissalRedirect && (
+            {hrInterventionRequired && (
               <div className="rounded-xl border-2 p-5 space-y-4"
                 style={{
                   borderColor: '#dc2626',
@@ -1341,7 +1324,9 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
                   </div>
                   <div>
                     <h3 className="font-bold text-lg" style={{ color: '#dc2626' }}>
-                      Serious Matter — Immediate HR Involvement Required
+                      {hrInterventionRequired === 'final_warning'
+                        ? 'HR Intervention Required'
+                        : 'Serious Matter — Immediate HR Involvement Required'}
                     </h3>
                     <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
                       This cannot be handled through the warning system
@@ -1371,8 +1356,9 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
                 </div>
 
                 <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                  Based on the severity of this offense and the employee's disciplinary history,
-                  this matter may require formal dismissal proceedings which must be conducted by HR.
+                  {hrInterventionRequired === 'final_warning'
+                    ? 'This employee already has a final written warning on file for this category. Any further action must be conducted by HR.'
+                    : 'Based on the severity of this offense and the employee\'s disciplinary history, this matter may require formal dismissal proceedings which must be conducted by HR.'}
                 </p>
               </div>
             )}
@@ -2288,17 +2274,43 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
                   {renderPhaseContent()}
                 </div>
 
-                <PhaseNavigation
-                  currentPhase={currentPhase}
-                  totalPhases={TOTAL_PHASES}
-                  isValid={isPhaseValid}
-                  isLoading={isSaving || isLoading}
-                  onPrevious={handlePreviousPhase}
-                  onNext={currentPhase === Phase.SIGNATURES ? handleSaveWarning : handleNextPhase}
-                  customNextText={currentPhase === Phase.SIGNATURES ? 'Save Warning' : undefined}
-                  showFinalize={currentPhase === Phase.DELIVERY}
-                  onFinalize={handleFinalize}
-                />
+                {/* HR intervention: replace navigation with Back + I Understand */}
+                {hrInterventionRequired && currentPhase === Phase.CATEGORY_RECOMMENDATION ? (
+                  <div
+                    className="flex items-center justify-between mt-6 pt-4 border-t"
+                    style={{ borderColor: 'var(--color-border)' }}
+                  >
+                    <ThemedButton
+                      variant="outline"
+                      onClick={handlePreviousPhase}
+                      icon={ChevronLeft}
+                    >
+                      Back
+                    </ThemedButton>
+                    <button
+                      onClick={handleCancel}
+                      className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-all active:scale-[0.97]"
+                      style={{
+                        backgroundColor: '#dc2626',
+                        color: 'white',
+                      }}
+                    >
+                      I Understand
+                    </button>
+                  </div>
+                ) : (
+                  <PhaseNavigation
+                    currentPhase={currentPhase}
+                    totalPhases={TOTAL_PHASES}
+                    isValid={isPhaseValid}
+                    isLoading={isSaving || isLoading}
+                    onPrevious={handlePreviousPhase}
+                    onNext={currentPhase === Phase.SIGNATURES ? handleSaveWarning : handleNextPhase}
+                    customNextText={currentPhase === Phase.SIGNATURES ? 'Save Warning' : undefined}
+                    showFinalize={currentPhase === Phase.DELIVERY}
+                    onFinalize={handleFinalize}
+                  />
+                )}
 
                 {/* Save Warning feedback when button is disabled */}
                 {currentPhase === Phase.SIGNATURES && !isPhaseValid && (

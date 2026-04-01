@@ -23,3 +23,7 @@
 
 ## Active Wizard
 - [2026-02] Wrong wizard investigated → Active/production wizard is `UnifiedWarningWizard.tsx`. Legacy `EnhancedWarningWizard.tsx` + `CombinedIncidentStepV2.tsx` are NOT used. Always verify which component is rendered
+
+## PDF Pipeline
+- [2026-03-09] PDF missing corrective data (employee statement, commitments, expected standards) → Root cause was `WarningDetailsModal.tsx` manually constructing `formData` without including corrective fields. Always check the full data pipeline: Firestore → Modal → PDFPreviewModal → pdfDataTransformer → PDFGenerationService
+- [2026-03-09] PDF changes are universal vs per-tenant → Section renderer methods (`addEmployeeStatementSection` etc.) are hardcoded and shared by both the dynamic section router AND fallback path. Template system only controls section ordering/visibility, not rendering logic inside each section. Changes to renderer methods affect ALL tenants

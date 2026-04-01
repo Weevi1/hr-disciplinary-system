@@ -362,10 +362,20 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 **For complete change history, see `RECENT_UPDATES.md` (Sessions 20-52) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Session 65 - 2026-02-17)
-- **✅ Bug Fix: Super user infinite sign-in loop** — `useSessionGuard.ts` version check caused infinite `window.location.reload()` for super user only (only account with Firestore `system` collection read access). Mismatch between `__BUILD_VERSION__` in JS bundle and `system/appVersion` doc. Added 30-second reload cooldown via `sessionStorage` to prevent future loops. Also ran `post-deploy.js` to sync Firestore version.
-### Previous Sessions (52-64)
-See `RECENT_UPDATES.md` for detailed session history including Sessions 57-64.
+### Most Recent (Session 66 - 2026-03-09)
+- **✅ Unified HR intervention messages** — Merged two separate `hasFinalWarningBlock`/`hasDismissalRedirect` states into single `hrInterventionRequired` state with context-aware UI in `UnifiedWarningWizard.tsx`
+- **✅ "I Understand" button** — Replaces Continue when HR intervention required; closes wizard gracefully
+- **✅ Spinner fix** — LRA loading animation no longer persists when intervention message appears
+- **✅ PDF corrective data fix** — `WarningDetailsModal.tsx` was not passing `employeeStatement`, `expectedBehaviorStandards`, `actionSteps`, `reviewDate` to PDF; now wired correctly
+- **✅ PDF v1.2.0 fallback path** — Added corrective discussion section renderers to fallback (no-template) code path
+- **✅ PDF improvements (universal, all tenants)**:
+  - Section labels (B)(C)(E)(F) on corrective discussion headers
+  - Continuation headers on page 2+ ("OrgName — Warning: EmployeeName — Page X of Y")
+  - "Electronically signed by [name] on [date]" notation under all signatures
+  - Empty timeline defaults to "Immediately" in improvement commitments
+  - Initial spots (Manager/Employee) on all pages except last
+### Previous Sessions (52-65)
+See `RECENT_UPDATES.md` for detailed session history including Sessions 57-65.
 
 **For complete session history, see:**
 - `RECENT_UPDATES.md` - Sessions 20-63 (current)
@@ -374,9 +384,9 @@ See `RECENT_UPDATES.md` for detailed session history including Sessions 57-64.
 
 ---
 
-*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ org scalability, progressive enhancement for 2012-2025 devices, **unified design system**, **DashboardShell** across all dashboards, **WCAG AA compliance**, **versioned PDF generation**, **per-org PDF templates**, **SVG signatures**, **10-phase unified warning wizard**, **link-based employee response/appeal system** with token auth and PDF viewing, **HR email notifications via SendGrid**, **evidence upload on appeals with client-side image optimization**, **per-organization multi-dashboard theming** (Manager, HR, Executive views with per-view metric card colors), **optimized warning data loading with staleness detection**, and **session guard with auto-logout + forced app updates**.*
+*System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ org scalability, progressive enhancement for 2012-2025 devices, **unified design system**, **DashboardShell** across all dashboards, **WCAG AA compliance**, **versioned PDF generation**, **per-org PDF templates**, **SVG signatures**, **10-phase unified warning wizard**, **link-based employee response/appeal system** with token auth and PDF viewing, **HR email notifications via SendGrid**, **evidence upload on appeals with client-side image optimization**, **per-organization multi-dashboard theming** (Manager, HR, Executive views with per-view metric card colors), **optimized warning data loading with staleness detection**, **session guard with auto-logout + forced app updates**, and **CCMA-ready PDFs with section labels, continuation headers, electronic signature notation, and page initials**.*
 
-*Last Updated: 2026-02-17 - Session 65: Super user sign-in loop fix (useSessionGuard reload cooldown).*
+*Last Updated: 2026-03-09 - Session 66: PDF quality improvements, HR intervention UX, corrective data pipeline fix.*
 
 ---
 

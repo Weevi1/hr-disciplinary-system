@@ -1337,7 +1337,14 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
               status: warning.status, // Pass warning status for PDF watermarking
               pdfGeneratorVersion: warning.pdfGeneratorVersion, // Pass stored PDF code version
               pdfTemplateVersion: warning.pdfTemplateVersion, // Pass stored template version for fetching from versions collection
-              pdfSettings: warning.pdfSettings // Pass stored PDF template settings (backward compatibility for old warnings)
+              pdfSettings: warning.pdfSettings, // Pass stored PDF template settings (backward compatibility for old warnings)
+              // Corrective discussion fields
+              employeeStatement: warning.employeeStatement,
+              expectedBehaviorStandards: warning.expectedBehaviorStandards,
+              actionSteps: warning.actionSteps,
+              reviewDate: warning.reviewDate,
+              interventionDetails: warning.interventionDetails,
+              resourcesProvided: warning.resourcesProvided
             },
             signatures: warning.signatures || { manager: null, employee: null },
             lraRecommendation: warning.disciplineRecommendation || {

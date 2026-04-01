@@ -657,6 +657,9 @@ export class PDFGenerationService {
         Logger.debug('⏭️ Skipping appeal history section (no data)');
       }
 
+      // 10.6. Continuation headers on page 2+
+      this.addContinuationHeaders(doc, data);
+
       // 11. Footer
       Logger.debug('🦶 Adding document footer...')
       this.addDocumentFooter(doc, data, pageWidth);
@@ -1042,10 +1045,27 @@ export class PDFGenerationService {
       } else {
         Logger.warn('⚠️ No sections configured, using fallback rendering');
 
-        // Fallback: Render standard sections if no configuration provided
+        // Fallback: Render all standard sections when no configuration provided
         if (data.disciplineRecommendation) {
           currentY = this.addPreviousDisciplinaryActionSection(doc, data.disciplineRecommendation, currentY, pageWidth, margin, pageHeight, bottomMargin);
           currentY = this.addConsequencesSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        }
+
+        // Corrective discussion sections
+        if (data.employeeStatement) {
+          currentY = this.addEmployeeStatementSection(doc, data.employeeStatement, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        }
+        if (data.expectedBehaviorStandards) {
+          currentY = this.addExpectedBehaviorSection(doc, data.expectedBehaviorStandards, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        }
+        if (data.factsLeadingToDecision) {
+          currentY = this.addFactsLeadingToDecisionSection(doc, data.factsLeadingToDecision, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        }
+        if (data.improvementCommitments && data.improvementCommitments.length > 0) {
+          currentY = this.addImprovementCommitmentsSection(doc, data.improvementCommitments, currentY, pageWidth, margin, pageHeight, bottomMargin);
+        }
+        if (data.reviewDate) {
+          currentY = this.addReviewDateSection(doc, data.reviewDate, currentY, pageWidth, margin, pageHeight, bottomMargin);
         }
 
         if (data.legalCompliance) {
@@ -1070,6 +1090,9 @@ export class PDFGenerationService {
         Logger.debug('📋 Adding appeal report...');
         await this.addAppealReportSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
       }
+
+      // 10.6. Continuation headers on page 2+
+      this.addContinuationHeaders(doc, data);
 
       // 11. Footer
       Logger.debug('🦶 Adding document footer...');
@@ -2156,7 +2179,7 @@ export class PDFGenerationService {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(100, 100, 100);
-    doc.text("EMPLOYEE'S VERSION OF EVENTS", margin, startY);
+    doc.text("(B) EMPLOYEE'S VERSION OF EVENTS", margin, startY);
 
     // Content
     doc.setFontSize(10);
@@ -2199,7 +2222,7 @@ export class PDFGenerationService {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(100, 100, 100);
-    doc.text('REQUIRED/EXPECTED BEHAVIOR & STANDARDS', margin, startY);
+    doc.text('(C) REQUIRED/EXPECTED BEHAVIOR & STANDARDS', margin, startY);
 
     // Content
     doc.setFontSize(10);
@@ -2242,7 +2265,7 @@ export class PDFGenerationService {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(100, 100, 100);
-    doc.text('FACTS & REASONING FOR DISCIPLINARY ACTION', margin, startY);
+    doc.text('(E) FACTS & REASONING FOR DISCIPLINARY ACTION', margin, startY);
 
     // Content
     doc.setFontSize(10);
@@ -2289,7 +2312,7 @@ export class PDFGenerationService {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(100, 100, 100);
-    doc.text('ACTION STEPS & IMPROVEMENT COMMITMENTS', margin, startY);
+    doc.text('(F) ACTION STEPS & IMPROVEMENT COMMITMENTS', margin, startY);
 
     // Content
     doc.setFontSize(10);
@@ -2313,7 +2336,7 @@ export class PDFGenerationService {
       // Timeline
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(80, 80, 80);
-      doc.text(`Timeline: ${item.timeline}`, margin + 6, contentY);
+      doc.text(`Timeline: ${item.timeline || 'Immediately'}`, margin + 6, contentY);
       doc.setTextColor(0, 0, 0);
       contentY += 6;
     });
@@ -2602,8 +2625,8 @@ export class PDFGenerationService {
     issuedDate?: Date,
     managerName?: string
   ): number {
-    // Increased space requirement (was 50mm, now 65mm total)
-    startY = this.checkPageOverflow(doc, startY, 65, pageHeight, bottomMargin);
+    // Increased space requirement (was 50mm, now 70mm total for electronic signature notation)
+    startY = this.checkPageOverflow(doc, startY, 70, pageHeight, bottomMargin);
 
     // Add spacing before signatures section
     startY += 8;
@@ -2665,6 +2688,10 @@ export class PDFGenerationService {
         const managerNameText = managerName ? managerName : '_____________________';
         doc.text(`Manager Name: ${managerNameText}`, margin + 2, startY + signatureBoxHeight + 7);
         doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + signatureBoxHeight + 11);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Electronically signed by ${managerNameText} on ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + signatureBoxHeight + 15);
+        doc.setTextColor(0, 0, 0);
       } catch (error) {
         Logger.warn('Failed to embed manager signature image:', error)
         // Fallback to text
@@ -2674,6 +2701,10 @@ export class PDFGenerationService {
         const managerNameText = managerName ? managerName : '_____________________';
         doc.text(`Manager Name: ${managerNameText}`, margin + 2, startY + signatureBoxHeight + 7);
         doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + signatureBoxHeight + 11);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Electronically signed by ${managerNameText} on ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + signatureBoxHeight + 15);
+        doc.setTextColor(0, 0, 0);
       }
     } else {
       // Empty signature line
@@ -2734,6 +2765,10 @@ export class PDFGenerationService {
         doc.setFont('helvetica', 'normal');
         doc.text(`${employee.firstName} ${employee.lastName}`, employeeBoxX + 2, startY + signatureBoxHeight + 7);
         doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, employeeBoxX + 2, startY + signatureBoxHeight + 11);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Electronically signed by ${employee.firstName} ${employee.lastName} on ${this.formatDate(issuedDate || new Date())}`, employeeBoxX + 2, startY + signatureBoxHeight + 15);
+        doc.setTextColor(0, 0, 0);
       } catch (error) {
         Logger.warn('Failed to embed employee signature image:', error)
         // Fallback to text
@@ -2742,6 +2777,10 @@ export class PDFGenerationService {
         doc.text('✓ Digitally Signed', employeeBoxX + 5, startY + 25);
         doc.text(`${employee.firstName} ${employee.lastName}`, employeeBoxX + 2, startY + signatureBoxHeight + 7);
         doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, employeeBoxX + 2, startY + signatureBoxHeight + 11);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Electronically signed by ${employee.firstName} ${employee.lastName} on ${this.formatDate(issuedDate || new Date())}`, employeeBoxX + 2, startY + signatureBoxHeight + 15);
+        doc.setTextColor(0, 0, 0);
       }
     } else {
       // Empty signature line
@@ -2802,6 +2841,10 @@ export class PDFGenerationService {
         const witnessName = (signatures as any).witnessName || '_____________________';
         doc.text(`Witness Name: ${witnessName}`, margin + 2, startY + signatureBoxHeight + 7);
         doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + signatureBoxHeight + 11);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Electronically signed by ${witnessName} on ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + signatureBoxHeight + 15);
+        doc.setTextColor(0, 0, 0);
       } catch (error) {
         Logger.warn('Failed to embed witness signature image:', error)
         // Fallback to text
@@ -2811,6 +2854,10 @@ export class PDFGenerationService {
         const witnessName = (signatures as any).witnessName || '_____________________';
         doc.text(`Witness Name: ${witnessName}`, margin + 2, startY + signatureBoxHeight + 7);
         doc.text(`Date: ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + signatureBoxHeight + 11);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Electronically signed by ${witnessName} on ${this.formatDate(issuedDate || new Date())}`, margin + 2, startY + signatureBoxHeight + 15);
+        doc.setTextColor(0, 0, 0);
       }
 
       return startY + signatureBoxHeight + 12;
@@ -3034,9 +3081,40 @@ export class PDFGenerationService {
     const customFooterText = footerSettings?.footerText || '';
     const showPageNumbers = footerSettings?.showPageNumbers !== false; // default true
 
+    // Generate initials from names
+    const managerInitials = data.issuedByName
+      ? data.issuedByName.split(' ').map(n => n.charAt(0).toUpperCase()).join('')
+      : '';
+    const employeeInitials = `${data.employee.firstName.charAt(0)}${data.employee.lastName.charAt(0)}`.toUpperCase();
+
     // Add footer to each page
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
+
+      // Initial lines on all pages except the last (which has full signatures)
+      if (i < totalPages) {
+        const initialsY = pageHeight - 30;
+        const initialsX = pageWidth - 20; // right-aligned
+        doc.setFontSize(7);
+        doc.setTextColor(100, 100, 100);
+
+        // If digitally signed, show initials; otherwise show blank lines
+        if (data.signatures?.manager && managerInitials) {
+          doc.setFont('helvetica', 'italic');
+          doc.text(`Manager: ${managerInitials}`, initialsX - 55, initialsY);
+        } else {
+          doc.setFont('helvetica', 'normal');
+          doc.text('Manager: ______', initialsX - 55, initialsY);
+        }
+
+        if (data.signatures?.employee) {
+          doc.setFont('helvetica', 'italic');
+          doc.text(`Employee: ${employeeInitials}`, initialsX - 20, initialsY);
+        } else {
+          doc.setFont('helvetica', 'normal');
+          doc.text('Employee: ______', initialsX - 20, initialsY);
+        }
+      }
 
       // Footer line
       doc.setDrawColor(180, 180, 180);
@@ -3465,26 +3543,38 @@ export class PDFGenerationService {
   }
   
   /**
-   * Add page header for continuation pages
+   * Add continuation headers to all pages after page 1.
+   * Called as post-processing step before footer/watermark.
+   * Format: "OrgName — Warning: EmployeeName — Page X of Y"
    */
-  private static addPageHeader(doc: any, data: WarningPDFData, pageNumber: number): void {
+  private static addContinuationHeaders(doc: any, data: WarningPDFData): void {
+    const totalPages = doc.getNumberOfPages();
+    if (totalPages <= 1) return;
+
     const pageWidth = doc.internal.pageSize.width;
-    
-    // Simple header for continuation pages
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 100, 100);
-    
-    const headerText = `${data.organization.name} - Warning Document (Continued)`;
-    doc.text(headerText, 20, 10);
-    
-    const pageText = `Page ${pageNumber}`;
-    doc.text(pageText, pageWidth - 40, 10);
-    
-    // Separator line
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.3);
-    doc.line(20, 12, pageWidth - 20, 12);
+    const margin = 20;
+    const employeeName = `${data.employee.firstName} ${data.employee.lastName}`;
+    const orgName = data.organization.name || '';
+
+    for (let i = 2; i <= totalPages; i++) {
+      doc.setPage(i);
+
+      // Header text
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 120, 120);
+
+      const headerLeft = `${orgName} — Warning: ${employeeName}`;
+      doc.text(headerLeft, margin, 10);
+
+      const headerRight = `Page ${i} of ${totalPages}`;
+      doc.text(headerRight, pageWidth - margin, 10, { align: 'right' });
+
+      // Separator line
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(margin, 12, pageWidth - margin, 12);
+    }
   }
 
   // ============================================
