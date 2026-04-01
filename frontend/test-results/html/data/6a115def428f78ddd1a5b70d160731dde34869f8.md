@@ -1,0 +1,88 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - link "Skip to main content" [ref=e6] [cursor=pointer]:
+      - /url: "#main-content"
+    - link "Skip to navigation" [ref=e7] [cursor=pointer]:
+      - /url: "#navigation"
+  - banner [ref=e8]:
+    - generic [ref=e9]:
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img "File Logo" [ref=e13]:
+            - generic [ref=e18]: < File >
+          - generic [ref=e20]:
+            - generic [ref=e21]: <File>
+            - generic [ref=e22]: by Fifo
+        - generic [ref=e23]:
+          - generic [ref=e24]: <File>
+          - generic [ref=e25]: by Fifo - Fully Integrated, Fully Online
+      - button "S" [ref=e28] [cursor=pointer]:
+        - generic [ref=e29] [cursor=pointer]: S
+  - main [ref=e30]:
+    - generic [ref=e31]:
+      - generic [ref=e32]:
+        - heading "👑 Welcome, System Administrator" [level=2] [ref=e33]
+        - paragraph [ref=e34]: Super User • superuser@hrdignitysystem.com
+        - paragraph [ref=e35]: Global system administration and client management
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - heading "Revenue Command Center" [level=1] [ref=e39]
+            - paragraph [ref=e40]: Provincial reseller network performance & payouts
+          - generic [ref=e41]:
+            - button "Process Payouts" [ref=e42] [cursor=pointer]:
+              - img [ref=e43] [cursor=pointer]
+              - text: Process Payouts
+            - button "🧪 Test Org" [ref=e45] [cursor=pointer]
+            - button "Deploy New Client" [ref=e46] [cursor=pointer]:
+              - img [ref=e47] [cursor=pointer]
+              - text: Deploy New Client
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - generic [ref=e50]:
+              - generic [ref=e51]:
+                - paragraph [ref=e52]: Monthly Recurring Revenue
+                - paragraph [ref=e53]: R0.00
+              - img [ref=e54]
+            - generic [ref=e57]: +15.2% from last month
+          - generic [ref=e58]:
+            - generic [ref=e59]:
+              - generic [ref=e60]:
+                - paragraph [ref=e61]: Your Monthly Income (30%)
+                - paragraph [ref=e62]: R0.00
+              - img [ref=e63]
+            - generic [ref=e67]: After reseller commissions & company fund
+          - generic [ref=e68]:
+            - generic [ref=e69]:
+              - generic [ref=e70]:
+                - paragraph [ref=e71]: Commissions Owed
+                - paragraph [ref=e72]: R0.00
+              - img [ref=e73]
+            - generic [ref=e75]: 0 payouts pending
+          - generic [ref=e76]:
+            - generic [ref=e77]:
+              - generic [ref=e78]:
+                - paragraph [ref=e79]: Active Network
+                - paragraph [ref=e80]: "10"
+              - img [ref=e81]
+            - generic [ref=e85]: 0 active resellers
+        - navigation [ref=e87]:
+          - button "Overview" [ref=e88] [cursor=pointer]:
+            - img [ref=e89] [cursor=pointer]
+            - text: Overview
+          - button "Resellers" [ref=e92] [cursor=pointer]:
+            - img [ref=e93] [cursor=pointer]
+            - text: Resellers
+          - button "Provinces" [ref=e97] [cursor=pointer]:
+            - img [ref=e98] [cursor=pointer]
+            - text: Provinces
+          - button "Payouts" [ref=e101] [cursor=pointer]:
+            - img [ref=e102] [cursor=pointer]
+            - text: Payouts
+        - generic [ref=e104]:
+          - heading "Provincial Performance" [level=3] [ref=e106]
+          - heading "Top Performing Resellers" [level=3] [ref=e108]
+```
