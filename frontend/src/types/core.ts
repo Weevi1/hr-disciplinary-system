@@ -8,7 +8,7 @@
 // CORE ENUMS & UNIONS - ENHANCED
 // ============================================
 
-export type UserRoleId = 'super-user' | 'executive-management' | 'hr-manager' | 'hod-manager';
+export type UserRoleId = 'super-user' | 'executive-management' | 'hr-manager' | 'hod-manager' | 'reseller';
 // Industry type - accepts any string to support 90+ industry categories
 export type IndustryType = string;
 export type DeliveryMethod = 'email' | 'whatsapp' | 'printed';
@@ -338,6 +338,17 @@ export interface Organization {
 
   // 🎨 Dashboard Theme Settings - Per-organization dashboard visual customization
   dashboardTheme?: DashboardThemeSettings;
+
+  // 🧪 Demo Organization — deployed by a reseller for prospect testing
+  // Not billable, not counted in reseller commission, reset-on-demand
+  isDemo?: boolean;
+  demoMetadata?: {
+    resellerId: string;            // Owning reseller (also mirrored on top-level resellerId)
+    createdAt: string;
+    lastResetAt?: string;
+    resetCount: number;
+    activeProspectLoginIds: string[]; // uids of temp prospect users issued for this demo
+  };
 
   createdAt?: string;
   updatedAt?: string;

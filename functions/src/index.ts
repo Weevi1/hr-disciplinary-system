@@ -78,6 +78,14 @@ import {
   cleanupExpiredResponseTokens
 } from './employeeResponse';
 
+// 🧪 ADD RESELLER DEMO MANAGEMENT
+import {
+  deployDemoOrganization,
+  createDemoProspectLogin,
+  resetDemoOrganization,
+  deleteDemoOrganization
+} from './Reseller/demoManagement';
+
 // Export all cloud functions
 export {
   // User/Auth functions
@@ -137,5 +145,11 @@ export {
   submitEmployeeAppeal,
   uploadResponseEvidence,
   revokeResponseToken,
-  cleanupExpiredResponseTokens
+  cleanupExpiredResponseTokens,
+
+  // Reseller demo management
+  deployDemoOrganization,
+  createDemoProspectLogin,
+  resetDemoOrganization,
+  deleteDemoOrganization
 };
