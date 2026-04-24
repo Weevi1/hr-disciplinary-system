@@ -16,13 +16,15 @@ import {
   Target,
   ChevronRight,
   Download,
-  Rocket
+  Rocket,
+  FlaskConical
 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import Logger from '../../utils/logger';
 import { DataService } from '../../services/DataService';
 import CommissionService from '../../services/CommissionService';
 import { MyClients } from './MyClients';
+import { MyDemos } from './demos/MyDemos';
 import { EnhancedOrganizationWizard } from '../admin/EnhancedOrganizationWizard';
 import type { Reseller, CommissionStatement, Organization } from '../../types/billing';
 
@@ -59,7 +61,7 @@ export const ResellerDashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState<ResellerDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeframe, setTimeframe] = useState<'3m' | '6m' | '12m'>('6m');
-  const [activeView, setActiveView] = useState<'overview' | 'clients' | 'deploy' | 'performance' | null>(null);
+  const [activeView, setActiveView] = useState<'overview' | 'clients' | 'demos' | 'deploy' | 'performance' | null>(null);
   const [showWizard, setShowWizard] = useState(false);
 
   useEffect(() => {
@@ -273,6 +275,22 @@ export const ResellerDashboard: React.FC = () => {
             padding="md"
             shadow="sm"
             hover
+            onClick={() => setActiveView('demos')}
+            className="cursor-pointer transition-all duration-200 active:scale-95"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <FlaskConical className="w-5 h-5" style={{ color: 'var(--color-primary)' }} />
+                <span className="font-semibold" style={{ color: 'var(--color-text)' }}>My Demos</span>
+              </div>
+              <ChevronRight className="w-5 h-5" style={{ color: 'var(--color-text-secondary)' }} />
+            </div>
+          </ThemedCard>
+
+          <ThemedCard
+            padding="md"
+            shadow="sm"
+            hover
             onClick={() => setActiveView('performance')}
             className="cursor-pointer transition-all duration-200 active:scale-95"
           >
@@ -316,6 +334,20 @@ export const ResellerDashboard: React.FC = () => {
                 ← Back to Dashboard
               </button>
               <MyClients onDeployClient={() => setShowWizard(true)} />
+            </div>
+          </div>
+        )}
+
+        {activeView === 'demos' && (
+          <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+            <div className="p-4">
+              <button
+                onClick={() => setActiveView(null)}
+                className="mb-4 text-blue-600 hover:text-blue-800 flex items-center gap-2"
+              >
+                ← Back to Dashboard
+              </button>
+              <MyDemos />
             </div>
           </div>
         )}
@@ -504,6 +536,7 @@ export const ResellerDashboard: React.FC = () => {
           {[
             { id: 'overview', label: 'Overview', count: null },
             { id: 'clients', label: 'My Clients', count: metrics.totalClients },
+            { id: 'demos', label: 'My Demos', count: null },
             { id: 'performance', label: 'Performance', count: null }
           ].map((tab) => (
             <button
@@ -643,6 +676,9 @@ export const ResellerDashboard: React.FC = () => {
 
       case 'clients':
         return <MyClients onDeployClient={() => setShowWizard(true)} />;
+
+      case 'demos':
+        return <MyDemos />;
 
       case 'performance':
         return (

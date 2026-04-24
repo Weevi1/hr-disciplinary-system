@@ -498,6 +498,14 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
       {/* Modern Top Navigation */}
       <TopNavigation />
 
+      {/* 🧪 Demo organization banner — persistent, non-dismissable while inside a demo */}
+      {organization?.isDemo && (
+        <div className="bg-amber-500 text-white text-center text-xs sm:text-sm font-medium px-4 py-1.5 shadow-sm">
+          <span role="img" aria-label="test tube" className="mr-1.5">🧪</span>
+          DEMO ORGANIZATION — data will be reset when the reseller chooses. Not for production use.
+        </div>
+      )}
+
       {/* Password Reset Modal */}
       {/* 🚀 REFACTORED: Using useModal hook */}
       <UnifiedModal

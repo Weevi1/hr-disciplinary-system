@@ -2236,24 +2236,28 @@ export class DataService {
 
 
   /**
-   * Get organizations (clients) for a specific reseller
+   * Get organizations (clients) for a specific reseller.
+   * Demo organizations (isDemo === true) are excluded — they're tracked
+   * separately in the My Demos tab and never count toward reseller metrics.
    */
   static async getResellerClients(resellerId: string): Promise<any[]> {
     try {
       const orgsRef = collection(db, COLLECTIONS.ORGANIZATIONS);
       const q = query(
-        orgsRef, 
+        orgsRef,
         where('resellerId', '==', resellerId),
         orderBy('createdAt', 'desc')
       );
-      
+
       const snapshot = await getDocs(q);
-      const clients = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: this.convertOptionalDate(doc.data().createdAt),
-        updatedAt: this.convertOptionalDate(doc.data().updatedAt)
-      }));
+      const clients = snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: this.convertOptionalDate(doc.data().createdAt),
+          updatedAt: this.convertOptionalDate(doc.data().updatedAt)
+        }))
+        .filter((c: any) => c.isDemo !== true);
 
       Logger.success(`📊 Loaded ${clients.length} clients for reseller ${resellerId}`);
       return clients;
