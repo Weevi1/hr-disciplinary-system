@@ -73,7 +73,7 @@ firebase projects:list
    - Firebase emulator testing: `npm run test:firebase`
 3. **Builds**: Allow 5+ minutes for full production builds
 4. **Never commit**: Unless explicitly requested by user
-5. **🚫 FIRESTORE INDEXES**: Never programmatically deploy indexes via firebase.json - user creates them manually in Firebase Console using error links
+5. **Firestore indexes**: Add required composite indexes to `firestore.indexes.json` when you introduce a new query that needs them. Riaan deploys them via `firebase deploy --only firestore:indexes`. Don't run that deploy yourself unless asked.
 
 ### 📏 Documentation Maintenance
 
