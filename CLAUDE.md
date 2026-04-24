@@ -362,20 +362,17 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 **For complete change history, see `RECENT_UPDATES.md` (Sessions 20-52) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Session 66 - 2026-03-09)
-- **✅ Unified HR intervention messages** — Merged two separate `hasFinalWarningBlock`/`hasDismissalRedirect` states into single `hrInterventionRequired` state with context-aware UI in `UnifiedWarningWizard.tsx`
-- **✅ "I Understand" button** — Replaces Continue when HR intervention required; closes wizard gracefully
-- **✅ Spinner fix** — LRA loading animation no longer persists when intervention message appears
-- **✅ PDF corrective data fix** — `WarningDetailsModal.tsx` was not passing `employeeStatement`, `expectedBehaviorStandards`, `actionSteps`, `reviewDate` to PDF; now wired correctly
-- **✅ PDF v1.2.0 fallback path** — Added corrective discussion section renderers to fallback (no-template) code path
-- **✅ PDF improvements (universal, all tenants)**:
-  - Section labels (B)(C)(E)(F) on corrective discussion headers
-  - Continuation headers on page 2+ ("OrgName — Warning: EmployeeName — Page X of Y")
-  - "Electronically signed by [name] on [date]" notation under all signatures
-  - Empty timeline defaults to "Immediately" in improvement commitments
-  - Initial spots (Manager/Employee) on all pages except last
-### Previous Sessions (52-65)
-See `RECENT_UPDATES.md` for detailed session history including Sessions 57-65.
+### Most Recent (Session 67 - 2026-04-24)
+- **✅ Reseller demo organizations** — Resellers can deploy pre-populated demo orgs for prospect testing, separate from paying-client lifecycle
+- **Backend**: 4 new Cloud Functions in `functions/src/Reseller/demoManagement.ts` — `deployDemoOrganization`, `createDemoProspectLogin`, `resetDemoOrganization`, `deleteDemoOrganization`. Max 5 concurrent demos per reseller (separate quota from real deployments). Seed data in `demoSeedData.ts` (10 canonical SA employees) and `demoCategories.ts` (8 LRA categories)
+- **Frontend**: `ResellerDemoService.ts` + 5 new components under `components/reseller/demos/` (MyDemos list + 4 modals). New "My Demos" tab on ResellerDashboard, desktop + mobile
+- **Org schema**: Added `isDemo?: boolean` and `demoMetadata?: { resellerId, createdAt, lastResetAt, resetCount, activeProspectLoginIds }` to `Organization`. Added `resellerId` + `isDemoProspect` to `User`. Added `'reseller'` to `UserRoleId` (fixed pre-existing type gap)
+- **Safety rails**: Persistent amber `DEMO ORGANIZATION` banner in MainLayout. `DataService.getResellerClients` filters out `isDemo: true`. Cron/trigger guards added to `reviewFollowUpCron.ts`, `warningDelivery.ts`, and `notifyHROnAppeal.ts` so demo orgs never generate SendGrid bounces on fake `@demo.local` addresses
+- **Indexes deployed**: `organizations (resellerId, isDemo)` and `organizations (resellerId, isDemo, isActive)` in `config/firestore.indexes.json`
+- **Reset semantics**: Full re-seed to pristine template — wipes warnings, evidence, response tokens, prospect logins, employees, departments; re-seeds the 10 canonical employees + Operations/Admin departments. Reset count is tracked
+
+### Previous Sessions (52-66)
+See `RECENT_UPDATES.md` for detailed session history including Sessions 57-66.
 
 **For complete session history, see:**
 - `RECENT_UPDATES.md` - Sessions 20-63 (current)
@@ -386,7 +383,7 @@ See `RECENT_UPDATES.md` for detailed session history including Sessions 57-65.
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ org scalability, progressive enhancement for 2012-2025 devices, **unified design system**, **DashboardShell** across all dashboards, **WCAG AA compliance**, **versioned PDF generation**, **per-org PDF templates**, **SVG signatures**, **10-phase unified warning wizard**, **link-based employee response/appeal system** with token auth and PDF viewing, **HR email notifications via SendGrid**, **evidence upload on appeals with client-side image optimization**, **per-organization multi-dashboard theming** (Manager, HR, Executive views with per-view metric card colors), **optimized warning data loading with staleness detection**, **session guard with auto-logout + forced app updates**, and **CCMA-ready PDFs with section labels, continuation headers, electronic signature notation, and page initials**.*
 
-*Last Updated: 2026-03-09 - Session 66: PDF quality improvements, HR intervention UX, corrective data pipeline fix.*
+*Last Updated: 2026-04-24 - Session 67: Reseller demo organizations — deploy / reset / delete, prospect logins, demo-safe cron guards.*
 
 ---
 

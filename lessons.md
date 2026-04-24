@@ -27,3 +27,9 @@
 ## PDF Pipeline
 - [2026-03-09] PDF missing corrective data (employee statement, commitments, expected standards) → Root cause was `WarningDetailsModal.tsx` manually constructing `formData` without including corrective fields. Always check the full data pipeline: Firestore → Modal → PDFPreviewModal → pdfDataTransformer → PDFGenerationService
 - [2026-03-09] PDF changes are universal vs per-tenant → Section renderer methods (`addEmployeeStatementSection` etc.) are hardcoded and shared by both the dynamic section router AND fallback path. Template system only controls section ordering/visibility, not rendering logic inside each section. Changes to renderer methods affect ALL tenants
+
+## Config Files
+- [2026-04-24] Edited root `firestore.indexes.json` but indexes didn't deploy → `firebase.json` points to `config/firestore.indexes.json`; the root file is stale/unused. Always check `firebase.json` for the actual path before editing Firestore config (rules + indexes both live under `config/`)
+
+## Demo Organizations
+- [2026-04-24] Any new cron/trigger/delivery Cloud Function that iterates orgs or emails users must guard against demo data → Demo orgs use fake `@demo.local` addresses and prospect logins with real auth. Add `if (orgData.isDemo === true) continue;` to cron loops; throw `failed-precondition` in callable delivery functions; filter `isDemoProspect === true` from user recipient lists. Pattern established in `reviewFollowUpCron.ts`, `warningDelivery.ts`, `notifyHROnAppeal.ts`

@@ -6,6 +6,16 @@ Latest session updates and recent changes to the HR Disciplinary System.
 
 ---
 
+## Session 66 (2026-03-09) — PDF Quality Improvements & HR Intervention UX
+
+- **✅ Unified HR intervention messages** — Merged `hasFinalWarningBlock`/`hasDismissalRedirect` into a single `hrInterventionRequired` state in `UnifiedWarningWizard.tsx` with context-aware UI and a graceful "I Understand" close
+- **✅ Spinner fix** — LRA loading animation no longer persists when intervention message appears
+- **✅ PDF corrective data fix** — `WarningDetailsModal.tsx` now passes `employeeStatement`, `expectedBehaviorStandards`, `actionSteps`, `reviewDate` into the PDF pipeline
+- **✅ PDF v1.2.0 fallback path** — Added corrective discussion section renderers to the no-template code path
+- **✅ PDF improvements (universal)**: (B)(C)(E)(F) section labels, continuation headers on page 2+, "Electronically signed by [name] on [date]" under signatures, "Immediately" default in timeline, Manager/Employee initial spots on all pages except last
+
+---
+
 ## Session 64 (2026-02-12) — Evidence Upload Optimization, Security Hardening & Warning Archive
 
 - **✅ Client-side image optimization** — New `imageOptimizer.ts` resizes to max 1920px, compresses JPEG 0.8. Phone photos 5-10MB → ~200-400KB
