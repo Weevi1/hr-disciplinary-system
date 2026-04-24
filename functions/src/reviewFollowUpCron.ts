@@ -63,6 +63,13 @@ export const checkDueReviewsDaily = onSchedule(
         const orgData = orgDoc.data();
         const orgName = orgData.name || 'Unknown Organization';
 
+        // Skip demo organizations — they use fake @demo.local addresses and
+        // review follow-ups would generate SendGrid bounces.
+        if (orgData.isDemo === true) {
+          logger.info(`⏭️  Skipping demo organization: ${orgName} (${orgId})`);
+          continue;
+        }
+
         try {
           logger.info(`Processing reviews for organization: ${orgName} (${orgId})`);
 

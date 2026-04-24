@@ -61,6 +61,8 @@ export interface User {
   passwordChangedAt?: string;   // Timestamp of last password change
   hasSeenWelcome?: boolean; // Flag for first-time login welcome message
   hodPermissions?: HODPermissions; // Feature toggles for HOD managers (controlled by HR)
+  resellerId?: string;     // For users with role 'reseller' — links to resellers/{id} document
+  isDemoProspect?: boolean; // Temporary prospect login issued for a demo organization
 }
 
 export interface UserRole {

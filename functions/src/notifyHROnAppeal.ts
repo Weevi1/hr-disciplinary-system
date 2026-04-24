@@ -63,6 +63,13 @@ export const notifyHROnAppeal = onDocumentUpdated(
       const orgDoc = await db.collection('organizations').doc(orgId).get();
       const orgName = orgDoc.data()?.name || 'Your Organization';
 
+      // Skip appeal notifications for demo organizations — their only users are
+      // temporary prospect logins with fake @demo.local-style emails.
+      if (orgDoc.data()?.isDemo === true) {
+        logger.info(`⏭️  Skipping HR appeal notification for demo org ${orgId}`);
+        return;
+      }
+
       // Find HR managers and executive management in this organization
       const usersSnapshot = await db.collection('users')
         .where('organizationId', '==', orgId)
@@ -71,6 +78,10 @@ export const notifyHROnAppeal = onDocumentUpdated(
       const hrEmails: string[] = [];
       usersSnapshot.forEach(doc => {
         const userData = doc.data();
+        // Skip prospect logins that might have been created in a demo that was
+        // subsequently promoted, or any user flagged as demo-only.
+        if (userData.isDemoProspect === true) return;
+
         const roles = userData.roles || [];
         const role = userData.role || '';
         // Include HR managers and executive management

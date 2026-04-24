@@ -183,6 +183,16 @@ export const deliverWarningByEmail = onCall(
       const orgDoc = await db.collection('organizations').doc(organizationId).get();
       const orgName = orgDoc.data()?.name || 'Your Organization';
 
+      // Demo organizations use fake @demo.local employee addresses — block delivery
+      // to avoid SendGrid bounces polluting our sender reputation.
+      if (orgDoc.data()?.isDemo === true) {
+        logger.info(`⏭️  Skipping warning delivery for demo org ${organizationId}`);
+        throw new HttpsError(
+          'failed-precondition',
+          'Warning delivery is disabled for demo organizations. This is an evaluation environment only.'
+        );
+      }
+
       const employeeName = warningData.employeeName || 'Employee';
       const warningLevel = warningData.level || 'unknown';
       const warningCategory = warningData.categoryName || warningData.category || 'General';
