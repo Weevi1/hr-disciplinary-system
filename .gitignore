@@ -9,6 +9,15 @@ node_modules/
 # Production
 /build
 /dist
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+frontend/coverage/
+
+# Dev data dumps (never commit PII or Firebase Auth/Firestore exports)
+auth-export.json
+users.json
+*-export.json
 
 # Misc
 .DS_Store
