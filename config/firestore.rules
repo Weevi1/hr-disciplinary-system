@@ -126,14 +126,18 @@ service cloud.firestore {
     }
 
     // UserOrgIndex collection - for scalable O(1) user-organization mapping
+    // Production writes go through Admin SDK in functions/src/createOrganizationUser.ts
+    // (which bypasses these rules). Client writes are restricted to self-only as
+    // defence-in-depth; the only client caller is UserOrgIndexService.setUserOrganization
+    // which always writes the current user's own index entry.
     match /userOrgIndex/{userId} {
       // Allow users to read their own index entry for authentication
       allow read: if isAuthenticated() && (
         request.auth.uid == userId ||
         isSuperUser()
       );
-      // Allow system services to maintain the index
-      allow write: if isAuthenticated();
+      // Self-write only - prevents cross-user index poisoning
+      allow write: if isAuthenticated() && request.auth.uid == userId;
     }
 
     // Organizations collection
@@ -294,6 +298,12 @@ service cloud.firestore {
     // ===================================
 
     // Sectors collection - read-only for most users, write for super users only
+    //
+    // Global reference data: industry classifications (Mining, Construction, Retail,
+    // Hospitality, etc.) shared across all tenants. Authenticated read is intentional
+    // and correct - every tenant needs the full sector list to configure their org.
+    // No Cloud Function ever writes to this collection; reads happen from
+    // CacheService.ts. Writes are super-user only (platform-wide reference data).
     match /sectors/{sectorId} {
       allow read: if isAuthenticated();
 

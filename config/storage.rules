@@ -14,6 +14,14 @@ service firebase.storage {
     }
     
     // Public read access for temporary PDF downloads (1-hour expiry)
+    //
+    // Access control is enforced at the URL layer, not by Storage rules:
+    // Cloud Functions mint signed URLs with a 1-hour expiry whenever a QR code
+    // PDF needs to be served to an unauthenticated recipient. Without the signed
+    // URL, the path is unguessable (orgId + filename UUID). See
+    // functions/src/temporaryDownload.ts for the URL-minting logic. The `if true`
+    // is intentional: this bucket is the public delivery surface, gated by URL
+    // possession and time-to-live.
     match /temp-downloads/{organizationId}/{filename} {
       allow read: if true; // Public read access for QR code downloads
       allow write: if request.auth != null
@@ -41,6 +49,13 @@ service firebase.storage {
     }
 
     // Public read for employee response evidence (uploaded via Cloud Function)
+    //
+    // Access control is enforced at the URL layer, not by Storage rules:
+    // employee response links carry a token (functions/src/employeeResponse.ts:365
+    // mints signed URLs with expiry). The path is unguessable without the token.
+    // Writes are admin-SDK only (Cloud Function handles upload server-side).
+    // The `if true` read is intentional: this bucket is the response-link delivery
+    // surface, gated by token possession and signed-URL TTL.
     match /response-evidence/{organizationId}/{warningId}/{file} {
       allow read: if true; // Public - accessed via response links
       // Write handled by Cloud Function admin SDK (no client writes)
