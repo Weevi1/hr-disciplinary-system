@@ -39,6 +39,17 @@ service firebase.storage {
         && request.resource.size < 5 * 1024 * 1024; // 5MB limit
     }
 
+    // Generated warning PDFs (uploaded by UnifiedWarningWizard at end of flow,
+    // read by PDFViewerModal in the app, also read by Cloud Functions via
+    // Admin SDK for email/response delivery)
+    match /warnings/{organizationId}/{warningId}/pdfs/{file} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && request.auth.token.email_verified == true
+        && file.matches('.*\\.pdf$')
+        && request.resource.size < 10 * 1024 * 1024; // 10MB PDF limit
+    }
+
     // Allow authenticated users to upload appeal evidence
     match /appeals/{organizationId}/{warningId}/{file} {
       allow read: if request.auth != null;
