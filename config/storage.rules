@@ -61,9 +61,40 @@ service firebase.storage {
       // Write handled by Cloud Function admin SDK (no client writes)
     }
 
-    // Allow authenticated users for other files
+    // Organization-scoped storage (logos, signatures, audio analytics, etc.)
+    //
+    // Read: org members, super-users, or resellers (firestore-rule equivalent of
+    //       canReadOrgData). Resellers are trusted across all orgs at the storage
+    //       layer; tighter scoping by resellerId would require a firestore.get()
+    //       which is expensive in storage rules — Phase 1 work.
+    // Write: same set, but email_verified required (matches other write rules).
+    match /organizations/{organizationId}/{allPaths=**} {
+      allow read: if request.auth != null && (
+        request.auth.token.org == organizationId ||
+        request.auth.token.organizationId == organizationId ||
+        request.auth.token.r == 'super-user' ||
+        request.auth.token.role == 'super-user' ||
+        request.auth.token.r == 'reseller' ||
+        request.auth.token.role == 'reseller'
+      );
+      allow write: if request.auth != null
+        && request.auth.token.email_verified == true
+        && (
+          request.auth.token.org == organizationId ||
+          request.auth.token.organizationId == organizationId ||
+          request.auth.token.r == 'super-user' ||
+          request.auth.token.role == 'super-user' ||
+          request.auth.token.r == 'reseller' ||
+          request.auth.token.role == 'reseller'
+        );
+    }
+
+    // Deny by default - any path not explicitly matched above is rejected.
+    // This replaces the previous catch-all `allow read, write: if request.auth != null`
+    // which was wide open across all unmatched paths. New storage paths must add
+    // an explicit match block above this rule.
     match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
   }
 }

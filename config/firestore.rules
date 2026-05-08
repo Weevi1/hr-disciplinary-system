@@ -67,41 +67,6 @@ service cloud.firestore {
     }
 
     // ===================================
-    // CONSOLIDATED PERMISSION HELPERS
-    // ===================================
-
-    // Common read permission pattern for organization-scoped data
-    function canReadOrgData(orgId) {
-      return isAuthenticated() && (
-        isSuperUser() ||
-        belongsToOrganization(orgId) ||
-        resellerManagesOrganization(orgId)
-      );
-    }
-
-    // Common write permission pattern for HR-managed data
-    function canManageOrgData(orgId) {
-      return isAuthenticated() && (
-        isSuperUser() ||
-        (belongsToOrganization(orgId) && isHRManager()) ||
-        resellerManagesOrganization(orgId)
-      );
-    }
-
-    // Permission for manager-level operations
-    function canManagerAccess(orgId) {
-      return isAuthenticated() && (
-        isSuperUser() ||
-        (belongsToOrganization(orgId) && isManager())
-      );
-    }
-
-    // Permission for reseller creation during deployment
-    function canResellerCreate(orgId) {
-      return isReseller() && resource == null;
-    }
-
-    // ===================================
     // CORE COLLECTIONS
     // ===================================
 
