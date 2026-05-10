@@ -505,6 +505,44 @@ export interface Warning {
   position?: string;
   category?: string; // Category display name (e.g. "Poor Time Keeping")
 
+  // Legacy snapshot aliases — present on existing production warnings.
+  // Prefer the canonical fields above (`employeeName`, `department`, `position`).
+  // These are kept on the type so consumers reading legacy documents type-check;
+  // they should not be written by new code.
+  /** @deprecated last-name component of `employeeName`; use full `employeeName` instead */
+  employeeLastName?: string;
+  /** @deprecated alias of `department`; use `department` instead */
+  employeeDepartment?: string;
+  /** @deprecated alias of `position`; use `position` instead */
+  employeePosition?: string;
+  /** @deprecated alias of `category`; use `category` instead */
+  categoryName?: string;
+  /** Number of evidence files attached at creation time. Files themselves live under
+   *  `warnings/{orgId}/{warningId}/evidence/*` in Storage. */
+  evidenceCount?: number;
+  /** Frozen organization header info captured at warning creation; allows reprints
+   *  to render with the org's branding/letterhead exactly as it was when issued. */
+  organizationSnapshot?: {
+    companyName?: string;
+    address?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    registrationNumber?: string | null;
+    website?: string | null;
+    primaryColor?: string | null;
+    logoUrl?: string | null;
+  };
+  /**
+   * Alternative shape of `improvementCommitments` written by `UnifiedWarningWizard`.
+   * FIXME (Phase 2/3 cleanup): reconcile — the wizard saves `actionSteps` with `{action,timeline}`
+   * fields, while `improvementCommitments` declares `{commitment,timeline,completedDate?}`.
+   * Both shapes exist in production warnings.
+   */
+  actionSteps?: Array<{
+    action: string;
+    timeline: string;
+  }>;
+
   // ============================================
   // 🎯 STATUS FLAGS (calculated / convenience flags)
   // ============================================

@@ -20,12 +20,12 @@ import { db } from '../config/firebase';
 import * as UniversalCategories from '../services/UniversalCategories';
 import { NestedDataService } from '../services/NestedDataService';
 import { isDualWriteEnabled, useNestedStructure } from '../config/features';
-import type { 
+import type {
   Warning,
   WarningLevel,
-  EnhancedWarningFormData,
-  EscalationRecommendation 
+  EnhancedWarningFormData
 } from '../types/warning';
+import type { EscalationRecommendation } from '../services/WarningService';
 import type { Employee } from '../types';
 
 // ============================================
@@ -39,15 +39,17 @@ class APIError extends Error {
   }
 }
 
-const handleError = (operation: string, error: unknown): never => {
-  Logger.error(`API Error in ${operation}:`, error)
+// Function declaration (not arrow) so TypeScript propagates the `never`
+// return type through control-flow analysis at every catch site.
+function handleError(operation: string, error: unknown): never {
+  Logger.error(`API Error in ${operation}:`, error);
 
   if (error instanceof Error) {
     throw new APIError(`${operation} failed: ${error.message}`, 'OPERATION_FAILED', error);
   }
 
   throw new APIError(`${operation} failed with unknown error`, 'UNKNOWN_ERROR', error);
-};
+}
 
 /**
  * Remove undefined values from an object (recursively)
@@ -75,6 +77,91 @@ const removeUndefinedValues = (obj: any): any => {
 
   return obj;
 };
+
+// ============================================
+// WARNINGS API — PAYLOAD TYPES
+// ============================================
+
+/**
+ * Payload accepted by `warnings.create()`. The wizard composes a richer object
+ * than `EnhancedWarningFormData` (which is its internal form-state type) — it
+ * adds employee snapshots, signatures, organization header info, and audit
+ * metadata before persistence. This type captures that on-the-wire shape so
+ * the API layer can type-check it independently of the wizard's form state.
+ *
+ * NOTE: Most fields are optional. The function applies sensible defaults
+ * (level='verbal', validityPeriod=6, status='issued', etc.) when missing.
+ */
+export interface WarningCreatePayload {
+  // Identifiers
+  id?: string;
+  organizationId: string;
+  employeeId: string;
+  categoryId: string;
+  categoryName?: string;
+  level?: WarningLevel;
+
+  // Incident
+  incidentDescription: string;
+  incidentDate: string | Date;
+  incidentTime?: string;
+  incidentLocation?: string;
+  additionalNotes?: string;
+
+  // Validity / dates
+  issueDate?: string | Date;
+  expiryDate?: string | Date;
+  validityPeriod?: 3 | 6 | 12;
+
+  // Employee snapshot (denormalized for dashboard/PDF)
+  employeeName?: string;
+  employeeLastName?: string;
+  employeeNumber?: string;
+  employeeDepartment?: string;
+  employeePosition?: string;
+  employeeEmail?: string;
+
+  // Issued by
+  issuedBy?: string;
+  issuedByName?: string;
+
+  // Signatures (shape composed by wizard; permissive so legacy callers still pass)
+  signatures?: Record<string, unknown>;
+
+  // Corrective discussion
+  employeeStatement?: string;
+  expectedBehaviorStandards?: string;
+  factsLeadingToDecision?: string;
+  actionSteps?: Array<{ action: string; timeline: string }>;
+  reviewDate?: any;              // Firestore Timestamp or Date (typed `any` for spread-compat)
+  reviewStatus?: string;
+  reviewLastChecked?: any;       // Firestore Timestamp or Date (typed `any` for spread-compat)
+  interventionDetails?: string;
+  resourcesProvided?: string[];
+
+  // Discipline recommendation + override tracking.
+  // Typed as `any` because callers spread these conditionally (`...(x && {x})`)
+  // and TS can't spread an `unknown` truthy check; the API layer accepts whatever
+  // shape the caller provides and persists it as-is.
+  disciplineRecommendation?: any;
+  wasOverridden?: boolean;
+  originalRecommendedLevel?: WarningLevel;
+
+  // Evidence / audio / delivery
+  evidenceCount?: number;
+  audioRecording?: any;
+  deliveryMethod?: string;
+
+  // Versioning + organization snapshot
+  pdfGeneratorVersion?: string;
+  pdfTemplateVersion?: string;
+  organizationSnapshot?: Warning['organizationSnapshot'];
+
+  // Status / audit
+  status?: string;
+  createdAt?: Date | string;
+  createdBy?: string;
+}
 
 // ============================================
 // WARNINGS API
@@ -164,7 +251,7 @@ export const warnings = {
   /**
    * Create new warning
    */
-  async create(warningData: EnhancedWarningFormData): Promise<string> {
+  async create(warningData: WarningCreatePayload): Promise<string> {
     try {
       // Use DataService to save the warning directly
       Logger.debug('💾 Creating warning via DataService:', warningData)
@@ -178,7 +265,7 @@ export const warnings = {
         category: warningData.categoryName || 'Unknown',
         categoryName: warningData.categoryName || 'Unknown', // Keep separate field for clarity
         level: warningData.level || 'verbal',
-        
+
         // Employee snapshot data (denormalized for dashboard) - Keep individual fields
         employeeName: warningData.employeeName || 'Unknown',
         employeeLastName: warningData.employeeLastName || 'Employee',
@@ -187,27 +274,32 @@ export const warnings = {
         employeePosition: warningData.employeePosition || 'Unknown',
         department: warningData.employeeDepartment || 'Unknown', // Legacy field for compatibility
         position: warningData.employeePosition || 'Unknown', // Legacy field for compatibility
-        
+
         // Incident details
         incidentDate: new Date(warningData.incidentDate),
         incidentTime: warningData.incidentTime,
         incidentLocation: warningData.incidentLocation,
         description: warningData.incidentDescription,
-        
+        title: warningData.categoryName || 'Warning',
+
         // Administrative
-        issueDate: new Date(warningData.issueDate),
-        expiryDate: new Date(warningData.expiryDate || Date.now() + (warningData.validityPeriod || 6) * 30 * 24 * 60 * 60 * 1000),
+        issueDate: warningData.issueDate ? new Date(warningData.issueDate) : new Date(),
+        expiryDate: new Date(
+          warningData.expiryDate
+            ? warningData.expiryDate
+            : Date.now() + (warningData.validityPeriod || 6) * 30 * 24 * 60 * 60 * 1000
+        ),
         validityPeriod: warningData.validityPeriod || 6,
         issuedBy: warningData.issuedBy || '',
         issuedByName: warningData.issuedByName || '',
-        
+
         // Status and flags
         isActive: true,
         status: 'issued',
-        
+
         // Optional fields - handle undefined values for Firestore
         ...(warningData.additionalNotes && { additionalNotes: warningData.additionalNotes }),
-        ...(warningData.signatures && { signatures: warningData.signatures }),
+        ...(warningData.signatures && { signatures: warningData.signatures as Warning['signatures'] }),
         ...(warningData.disciplineRecommendation && { disciplineRecommendation: removeUndefinedValues(warningData.disciplineRecommendation) }),
         ...(warningData.pdfGeneratorVersion && { pdfGeneratorVersion: warningData.pdfGeneratorVersion }),
         ...(warningData.pdfTemplateVersion && { pdfTemplateVersion: warningData.pdfTemplateVersion }),
@@ -219,14 +311,14 @@ export const warnings = {
         ...(warningData.factsLeadingToDecision && { factsLeadingToDecision: warningData.factsLeadingToDecision }),
         ...(warningData.actionSteps && { actionSteps: warningData.actionSteps }),
         ...(warningData.reviewDate && { reviewDate: warningData.reviewDate }),
-        ...(warningData.reviewStatus && { reviewStatus: warningData.reviewStatus }),
+        ...(warningData.reviewStatus && { reviewStatus: warningData.reviewStatus as Warning['reviewStatus'] }),
         ...(warningData.reviewLastChecked && { reviewLastChecked: warningData.reviewLastChecked }),
         ...(warningData.interventionDetails && { interventionDetails: warningData.interventionDetails }),
         ...(warningData.resourcesProvided && { resourcesProvided: warningData.resourcesProvided }),
 
         // Audio recording — populated after warning creation if recording was active
-        ...(warningData.audioRecording ? { audioRecording: warningData.audioRecording } : {}),
-        deliveryMethod: warningData.deliveryMethod || 'email',
+        ...(warningData.audioRecording ? { audioRecording: warningData.audioRecording as Warning['audioRecording'] } : {}),
+        deliveryMethod: (warningData.deliveryMethod || 'email') as Warning['deliveryMethod'],
 
         // Audit fields
         createdAt: new Date(),
@@ -259,13 +351,19 @@ export const warnings = {
         warningId = await WarningService.saveWarning(warning, warningData.organizationId);
         Logger.success(`📋 [SHARD] Warning created: ${warningId}`);
 
-        // Dual-write to nested structure if enabled
+        // Dual-write to nested structure if enabled.
+        // NestedDataService expects Omit<Warning, 'id' | 'organizationId' | 'employeeId'>;
+        // strip those keys from the constructed warning before passing.
         if (isDualWriteEnabled()) {
           try {
+            const { id: _id, organizationId: _orgId, employeeId: _empId, ...nestedPayload } = {
+              ...warning,
+              id: warningId,
+            };
             await NestedDataService.createWarning(
               warningData.organizationId,
               warningData.employeeId,
-              { ...warning, id: warningId }
+              nestedPayload
             );
             Logger.debug(`📁 [DUAL-WRITE] Warning also saved to nested structure`);
           } catch (error) {
@@ -367,10 +465,12 @@ export const warnings = {
       organizationId: undefined
     };
 
-    // Remove undefined fields
-    Object.keys(updateData).forEach(key => {
-      if (updateData[key] === undefined) {
-        delete updateData[key];
+    // Remove undefined fields (Firestore rejects undefined values on writes).
+    // Cast to a permissive index signature so we can iterate keys dynamically.
+    const dynamic = updateData as Record<string, unknown>;
+    Object.keys(dynamic).forEach(key => {
+      if (dynamic[key] === undefined) {
+        delete dynamic[key];
       }
     });
 
@@ -450,28 +550,27 @@ export const warnings = {
    */
   async getStats(organizationId: string): Promise<{
     total: number;
-    pendingReview: number;
-    approved: number;
+    issued: number;
+    delivered: number;
     byLevel: Record<WarningLevel, number>;
   }> {
     try {
       // Get all warnings and calculate stats
       const allWarnings = await DataServiceV2.getWarningsByOrganization(organizationId);
-      
-      const stats = {
+
+      return {
         total: allWarnings.length,
         issued: allWarnings.filter(w => w.status === 'issued').length,
         delivered: allWarnings.filter(w => w.status === 'delivered').length,
         byLevel: {
-          counselling: allWarnings.filter(w => w.warningLevel === 'counselling').length,
-          written_warning_1: allWarnings.filter(w => w.warningLevel === 'written_warning_1').length,
-          written_warning_2: allWarnings.filter(w => w.warningLevel === 'written_warning_2').length,
-          final_written_warning: allWarnings.filter(w => w.warningLevel === 'final_written_warning').length,
-          dismissal: allWarnings.filter(w => w.warningLevel === 'dismissal').length
-        } as Record<WarningLevel, number>
+          counselling: allWarnings.filter(w => w.level === 'counselling').length,
+          verbal: allWarnings.filter(w => w.level === 'verbal').length,
+          first_written: allWarnings.filter(w => w.level === 'first_written').length,
+          second_written: allWarnings.filter(w => w.level === 'second_written').length,
+          final_written: allWarnings.filter(w => w.level === 'final_written').length,
+          dismissal: allWarnings.filter(w => w.level === 'dismissal').length
+        }
       };
-      
-      return stats;
     } catch (error) {
       handleError('warnings.getStats', error);
     }
@@ -506,11 +605,13 @@ export const warnings = {
       // Load all warnings including archived ones
       const result = await ShardedDataService.loadWarnings(organizationId);
 
-      // Filter to only archived warnings
+      // Filter to only archived warnings. Overturned warnings are flagged via
+      // `archiveReason: 'overturned'` (set in api.warnings.archive); 'overturned'
+      // is not part of the WarningStatus union.
       const archivedWarnings = result.documents.filter(warning =>
         warning.isArchived === true ||
         warning.status === 'expired' ||
-        warning.status === 'overturned'
+        warning.archiveReason === 'overturned'
       );
 
       return archivedWarnings;
@@ -556,16 +657,19 @@ export const employees = {
 
       allWarnings.forEach(warning => {
         try {
-          // Only count active, non-expired warnings
+          // Only count active, non-expired warnings.
+          // The Warning type declares `expiryDate: Date`, but Firestore returns
+          // Timestamp objects with a `.toDate()` method on raw reads. Cast to
+          // `unknown` first so we can probe at runtime without lying to the type system.
           let expiryDate: Date | null = null;
-          if (warning.expiryDate) {
-            // Handle Firestore Timestamp objects
-            if (typeof warning.expiryDate.toDate === 'function') {
-              expiryDate = warning.expiryDate.toDate();
-            } else if (warning.expiryDate instanceof Date) {
-              expiryDate = warning.expiryDate;
-            } else if (typeof warning.expiryDate === 'string' || typeof warning.expiryDate === 'number') {
-              expiryDate = new Date(warning.expiryDate);
+          const raw = warning.expiryDate as unknown;
+          if (raw) {
+            if (typeof (raw as { toDate?: () => Date }).toDate === 'function') {
+              expiryDate = (raw as { toDate: () => Date }).toDate();
+            } else if (raw instanceof Date) {
+              expiryDate = raw;
+            } else if (typeof raw === 'string' || typeof raw === 'number') {
+              expiryDate = new Date(raw);
             }
           }
 
