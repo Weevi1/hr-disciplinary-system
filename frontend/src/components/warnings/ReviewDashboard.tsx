@@ -18,8 +18,6 @@ import {
 // Use API layer with proper warning types
 import { API } from '../../api';
 import { useAuth } from '../../auth/AuthContext';
-import { NestedDataService } from '../../services/NestedDataService';
-import { useNestedStructure, useCollectionGroup } from '../../config/features';
 import CacheService from '../../services/CacheService';
 import type { Warning } from '../../types/warning';
 import { getLevelLabel } from '../../services/UniversalCategories';
@@ -207,24 +205,12 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
         CacheService.delete(CacheService.generateOrgKey(organizationId, 'warnings'));
       }
 
-      let data: Warning[];
-
-      if (useNestedStructure() && useCollectionGroup()) {
-        Logger.debug('🔄 Loading warnings via NestedDataService for org:', organizationId);
-        const result = await NestedDataService.getOrganizationWarnings(
-          organizationId,
-          {},
-          { pageSize: 500, orderField: 'issueDate', orderDirection: 'desc' }
-        );
-        data = result.warnings;
-      } else {
-        // 🚀 Use CacheService - deduplicates with useDashboardData's fetch
-        data = await CacheService.getOrFetch(
-          CacheService.generateOrgKey(organizationId, 'warnings'),
-          () => API.warnings.getAll(organizationId)
-        ) as Warning[];
-        data = Array.isArray(data) ? data : [];
-      }
+      // 🚀 Use CacheService - deduplicates with useDashboardData's fetch
+      let data = await CacheService.getOrFetch(
+        CacheService.generateOrgKey(organizationId, 'warnings'),
+        () => API.warnings.getAll(organizationId)
+      ) as Warning[];
+      data = Array.isArray(data) ? data : [];
 
       Logger.debug(`🔄 [ReviewDashboard] Got ${data.length} warnings (via CacheService)`);
       processWarnings(data);

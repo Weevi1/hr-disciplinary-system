@@ -18,8 +18,6 @@ import CacheService from '../services/CacheService';
 import { where, doc, updateDoc, getDoc, serverTimestamp, increment } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import * as UniversalCategories from '../services/UniversalCategories';
-import { NestedDataService } from '../services/NestedDataService';
-import { isDualWriteEnabled, useNestedStructure } from '../config/features';
 import type {
   Warning,
   WarningLevel,
@@ -325,52 +323,9 @@ export const warnings = {
         updatedAt: new Date()
       };
 
-      // Determine which data structure to use based on feature flags
-      let warningId: string;
-
-      if (useNestedStructure()) {
-        // Use nested structure
-        warningId = await NestedDataService.createWarning(
-          warningData.organizationId,
-          warningData.employeeId,
-          warning
-        );
-        Logger.success(`📁 [NESTED] Warning created: ${warningId}`);
-
-        // Dual-write to sharded structure if enabled
-        if (isDualWriteEnabled()) {
-          try {
-            await WarningService.saveWarning(warning, warningData.organizationId);
-            Logger.debug(`📋 [DUAL-WRITE] Warning also saved to sharded structure`);
-          } catch (error) {
-            Logger.warn(`⚠️ [DUAL-WRITE] Failed to save to sharded structure:`, error);
-          }
-        }
-      } else {
-        // Use sharded organization structure (organizations/{orgId}/warnings/{id})
-        warningId = await WarningService.saveWarning(warning, warningData.organizationId);
-        Logger.success(`📋 [SHARD] Warning created: ${warningId}`);
-
-        // Dual-write to nested structure if enabled.
-        // NestedDataService expects Omit<Warning, 'id' | 'organizationId' | 'employeeId'>;
-        // strip those keys from the constructed warning before passing.
-        if (isDualWriteEnabled()) {
-          try {
-            const { id: _id, organizationId: _orgId, employeeId: _empId, ...nestedPayload } = {
-              ...warning,
-              id: warningId,
-            };
-            await NestedDataService.createWarning(
-              warningData.organizationId,
-              warningData.employeeId,
-              nestedPayload
-            );
-            Logger.debug(`📁 [DUAL-WRITE] Warning also saved to nested structure`);
-          } catch (error) {
-            Logger.warn(`⚠️ [DUAL-WRITE] Failed to save to nested structure:`, error);
-          }
-        }
-      }
+      // Persist via the sharded organization structure (organizations/{orgId}/warnings/{id}).
+      const warningId = await WarningService.saveWarning(warning, warningData.organizationId);
+      Logger.success(`📋 [SHARD] Warning created: ${warningId}`);
 
       // 🚀 Bump warningsVersion on org doc so other sessions detect staleness
       try {
@@ -390,7 +345,7 @@ export const warnings = {
   /**
    * Update warning
    */
-  async update(warningId: string, updates: Partial<Warning>, organizationId?: string, employeeId?: string): Promise<void> {
+  async update(warningId: string, updates: Partial<Warning>, organizationId?: string, _employeeId?: string): Promise<void> {
     try {
       // Require organizationId either from updates or as parameter
       const orgId = organizationId || updates.organizationId;
@@ -399,43 +354,9 @@ export const warnings = {
         throw new Error('Organization ID required for warning update');
       }
 
-      // Determine which data structure to use based on feature flags
-      if (useNestedStructure()) {
-        // Use nested structure
-        if (!employeeId) {
-          // If employeeId not provided, we need to get it from the warning
-          // For now, log a warning and fallback to sharded structure
-          Logger.warn(`⚠️ [NESTED] Employee ID required for nested update, falling back to sharded structure`);
-          await this.updateFlatStructure(warningId, updates, orgId);
-        } else {
-          await NestedDataService.updateWarning(orgId, employeeId, warningId, updates);
-          Logger.success(`📁 [NESTED] Warning ${warningId} updated successfully`);
-
-          // Dual-write to sharded structure if enabled
-          if (isDualWriteEnabled()) {
-            try {
-              await this.updateFlatStructure(warningId, updates, orgId);
-              Logger.debug(`📋 [DUAL-WRITE] Warning also updated in sharded structure`);
-            } catch (error) {
-              Logger.warn(`⚠️ [DUAL-WRITE] Failed to update sharded structure:`, error);
-            }
-          }
-        }
-      } else {
-        // Use sharded organization structure (organizations/{orgId}/warnings/{id})
-        await this.updateFlatStructure(warningId, updates, orgId);
-        Logger.success(`📋 [SHARD] Warning ${warningId} updated successfully`);
-
-        // Dual-write to nested structure if enabled
-        if (isDualWriteEnabled() && employeeId) {
-          try {
-            await NestedDataService.updateWarning(orgId, employeeId, warningId, updates);
-            Logger.debug(`📁 [DUAL-WRITE] Warning also updated in nested structure`);
-          } catch (error) {
-            Logger.warn(`⚠️ [DUAL-WRITE] Failed to update nested structure:`, error);
-          }
-        }
-      }
+      // Persist via sharded structure: organizations/{orgId}/warnings/{id}
+      await this.updateFlatStructure(warningId, updates, orgId);
+      Logger.success(`📋 [SHARD] Warning ${warningId} updated successfully`);
       // 🚀 Bump warningsVersion so other sessions detect staleness
       try {
         await updateDoc(doc(db, 'organizations', orgId), {

@@ -8,8 +8,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AlertTriangle, ChevronDown, Shield } from 'lucide-react';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { API } from '../../api';
-import { NestedDataService } from '../../services/NestedDataService';
-import { useNestedStructure, useCollectionGroup, useIndexes } from '../../config/features';
 import Logger from '../../utils/logger';
 
 interface FinalWarningsWatchListProps {
@@ -33,38 +31,13 @@ export const FinalWarningsWatchList: React.FC<FinalWarningsWatchListProps> = ({
 
     setLoading(true);
     try {
-      let warnings;
-
       // 🚀 OPTIMIZATION: Use preloaded warnings from useDashboardData when available
-      if (preloadedWarnings && preloadedWarnings.length > 0) {
-        warnings = preloadedWarnings;
-      } else if (useNestedStructure() && useIndexes()) {
-        // Use index collection for fast final warnings lookup
-        const indexEntries = await NestedDataService.getActiveWarningsIndex(organization.id, 100);
-        warnings = indexEntries
-          .filter(entry => entry.priority === 'high') // Final warnings are high priority
-          .map(entry => ({
-            ...entry.metadata,
-            id: entry.id,
-            employeeId: entry.employeeId,
-            level: entry.metadata.level,
-            employeeName: entry.metadata.employeeName
-          }));
-      } else if (useNestedStructure() && useCollectionGroup()) {
-        // Use collection group query for organization-wide warnings
-        const result = await NestedDataService.getOrganizationWarnings(
-          organization.id,
-          { level: 'final_written' },
-          { pageSize: 100, orderField: 'issueDate', orderDirection: 'desc' }
-        );
-        warnings = result.warnings;
-      } else if (!preloadedWarnings) {
-        // Fallback: Use original flat structure fetch only if no preloaded data
-        warnings = await API.warnings.getAll(organization.id);
-      } else {
-        // preloadedWarnings was provided but empty — no warnings exist
-        warnings = [];
-      }
+      // (skips a fetch if useDashboardData already loaded warnings for the parent dashboard).
+      const warnings = preloadedWarnings && preloadedWarnings.length > 0
+        ? preloadedWarnings
+        : preloadedWarnings
+          ? [] // preloadedWarnings was provided but empty — no warnings exist
+          : await API.warnings.getAll(organization.id);
 
       // Filter for final written warnings
       let finalWarnings = warnings.filter((warning: any) => warning.level === 'final_written');
