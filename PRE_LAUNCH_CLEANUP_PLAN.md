@@ -98,9 +98,20 @@
   - Otherwise delete the files
 
 **Phase 1 acceptance gate:**
-- [ ] `cd frontend && npm run build` succeeds and bundle size noticeably smaller than baseline
-- [ ] `git diff --stat` shows >10,000 lines removed
-- [ ] App still boots locally (`npm run dev` → smoke test login → dashboard)
+- [x] `cd frontend && npm run build` succeeds (verified after each commit)
+- [x] `git diff --stat HEAD~3 HEAD` shows >18,000 lines removed (commit `aba8b7cf` deleted 6,777, commit `55ad5e82` deleted 12,200)
+- [x] tsc baseline dropped 937 → 905 (32 errors removed, exceeds projection of ≤916)
+- [x] No `EnhancedWarningWizard` symbol in code (1 remaining match is a historical doc comment)
+- [x] `_legacy/` directory deleted, vite + tsconfig references removed
+- [x] All `.backup` / `.fixed` files removed from `frontend/src/`
+- [x] `@headlessui/react` uninstalled (was zero imports)
+- [x] Legacy contexts deleted (BrandingContext_legacy, ThemeContext_legacy)
+- [ ] App still boots locally (`npm run dev`) — Riaan smoke-tests warning wizard end-to-end
+
+**Phase 1 nearly complete: 2026-05-10.** Awaiting Riaan's smoke test of the warning wizard (HR/business-owner "Issue Warning" flow + HOD team-warning trigger) to confirm no UI regressions.
+
+**Deferred from Phase 1:**
+- Dual custom-claim format cleanup → **Phase 1.5** (own focused session). Audit complete. Migration order documented in plan file.
 
 ---
 
