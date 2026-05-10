@@ -33,7 +33,7 @@ describe('WarningService Integration Tests', () => {
       expect(warningId).toBeTruthy()
 
       // Verify warning was saved correctly
-      const savedWarning = await WarningService.getWarningById(warningId)
+      const savedWarning = await WarningService.getWarningById(warningId, 'test-org')
       expect(savedWarning).toBeTruthy()
       expect(savedWarning!.employeeId).toBe('test-employee')
       expect(savedWarning!.categoryId).toBe('attendance')
@@ -350,8 +350,8 @@ describe('WarningService Integration Tests', () => {
         isActive: true,
       }, 'test-org')
 
-      const savedWarning = await WarningService.getWarningById(warningId)
-      
+      const savedWarning = await WarningService.getWarningById(warningId, 'test-org')
+
       expect(savedWarning).toBeTruthy()
       expect(savedWarning!.employeeId).toBe('test-employee')
       expect(savedWarning!.organizationId).toBe('test-org')

@@ -271,7 +271,7 @@ describe('WarningService', () => {
         getDoc: vi.fn().mockResolvedValue(mockDoc)
       }))
 
-      const result = await WarningService.getWarningById('warn-123')
+      const result = await WarningService.getWarningById('warn-123', 'test-org')
 
       expect(result).toBeTruthy()
       expect(result?.id).toBe('warn-123')
@@ -288,7 +288,7 @@ describe('WarningService', () => {
         getDoc: vi.fn().mockResolvedValue(mockDoc)
       }))
 
-      const result = await WarningService.getWarningById('non-existent')
+      const result = await WarningService.getWarningById('non-existent', 'test-org')
       expect(result).toBeNull()
     })
   })

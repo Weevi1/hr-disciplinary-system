@@ -23,7 +23,6 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { DataService } from './DataService';
 import { TimeService } from './TimeService';
 import { DatabaseShardingService } from './DatabaseShardingService';
 
@@ -75,9 +74,6 @@ export interface WarningCategory {
   createdAt: Date;
   updatedAt: Date;
 }
-
-// Re-export from canonical type definition to avoid dual definitions
-export type { AudioRecordingData } from '../types/warning';
 
 export interface EmployeeWithContext {
   id: string;
@@ -571,15 +567,9 @@ export class WarningService {
    * 🔒 FRAUD-PROOF: Uses server time to prevent device clock manipulation
    * 💰 COST-OPTIMIZED: Caches results for 5 minutes to reduce Cloud Function calls
    */
-  static async getActiveWarnings(employeeId: string, organizationId?: string): Promise<Warning[]> {
+  static async getActiveWarnings(employeeId: string, organizationId: string): Promise<Warning[]> {
     try {
       Logger.debug('📋 [WARNINGS] Getting active warnings for employee:', employeeId)
-
-      if (!organizationId) {
-        Logger.warn('⚠️ [WARNINGS] No organizationId provided, using DataService fallback')
-        const org = await DataService.getOrganization();
-        organizationId = org.id;
-      }
 
       // 💰 CHECK CACHE FIRST - reduces Cloud Function invocations by ~70% during wizard flows
       const cacheKey = `${employeeId}-${organizationId}`;
@@ -819,11 +809,9 @@ export class WarningService {
    * Get warning by ID
    * ✅ Properly converts all Firestore Timestamps including counselling fields
    */
-  static async getWarningById(warningId: string): Promise<Warning | null> {
+  static async getWarningById(warningId: string, organizationId: string): Promise<Warning | null> {
     try {
-      // Need organizationId to construct sharded path - get from user context
-      const organization = await DataService.getOrganization();
-      const warningRef = doc(db, 'organizations', organization.id, 'warnings', warningId);
+      const warningRef = doc(db, 'organizations', organizationId, 'warnings', warningId);
       const warningDoc = await getDoc(warningRef);
 
       if (!warningDoc.exists()) {
