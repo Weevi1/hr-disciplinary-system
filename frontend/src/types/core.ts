@@ -1,8 +1,11 @@
 // frontend/src/types/core.ts
 // 🏆 CORE FOUNDATION TYPES - Essential shared types for the entire system
-// Version: 2.2 - ENHANCED: Built on existing core.ts with counselling support
-// 🔧 CRITICAL FIX: Added 'counselling' to WarningLevel type without losing functionality
-// ✅ Preserves all existing interfaces and functionality
+// Version: 2.3 - Phase 2 Tier 1A: Warning interface unified here as canonical superset.
+// types/warning.ts and services/WarningService.ts now re-export from this file.
+
+// `AudioRecordingData` and `EvidenceItem` remain in types/warning.ts as canonical
+// definitions; we import them here as types only (no runtime circular import).
+import type { AudioRecordingData, EvidenceItem } from './warning';
 
 // ============================================
 // CORE ENUMS & UNIONS - ENHANCED
@@ -473,14 +476,87 @@ export interface Warning {
   expiryDate: Date;
   validityPeriod?: 3 | 6 | 12;
   issuedBy: string;
+  issuedByName?: string;
   deliveryMethod?: DeliveryMethod;
-  deliveryStatus?: DeliveryStatus;
+  deliveryStatus?: DeliveryStatus | 'pending' | 'delivered' | 'failed' | 'cancelled';
   deliveryDate?: Date;
-  signatures?: any; // Will be defined in signature.ts
-  followUpActions: string[];
-  status: WarningStatus;
+  deliveryChoice?: any; // Captured from delivery modal
+  signatures?: {
+    manager?: string | null;
+    employee?: string | null;
+    witnesses?: string[];
+    timestamp?: string;
+    managerName?: string;
+    employeeName?: string;
+    isFinalized?: boolean;
+  };
+  followUpActions?: string[];
+  status?: WarningStatus | 'issued' | 'delivered' | 'acknowledged' | 'appealed' | 'expired';
   createdAt: string | Date;
-  updatedAt: string | Date;
+  updatedAt?: string | Date;
+
+  // ============================================
+  // 📸 EMPLOYEE SNAPSHOT (denormalized for HR review + PDF generation)
+  // Populated at warning creation; allows render without re-fetching employee record.
+  // ============================================
+  employeeName?: string;
+  employeeNumber?: string;
+  department?: string;
+  position?: string;
+  category?: string; // Category display name (e.g. "Poor Time Keeping")
+
+  // ============================================
+  // 🎯 STATUS FLAGS (calculated / convenience flags)
+  // ============================================
+  isActive?: boolean;        // false once expired or archived
+  isArchived?: boolean;      // true if explicitly archived
+  isSigned?: boolean;        // true once signatures captured
+  isDelivered?: boolean;     // true once delivery confirmed
+  archivedAt?: Date | string;
+  archiveReason?: string;
+
+  // ============================================
+  // 🎤 AUDIO RECORDING (warning conversation)
+  // ============================================
+  audioRecording?: AudioRecordingData;
+
+  // ============================================
+  // 📋 EVIDENCE + WITNESSES
+  // ============================================
+  witnessIds?: string[];
+  evidenceItems?: EvidenceItem[];
+
+  // ============================================
+  // 🔒 PROGRESSIVE DISCIPLINE CONTEXT
+  // ============================================
+  escalationReason?: string;
+  activeWarningsAtTime?: number;
+  legalRequirements?: string[];
+  disciplineRecommendation?: any; // EscalationRecommendation — defined in WarningService
+
+  // 🆕 Override tracking (manager overrode system recommendation)
+  wasOverridden?: boolean;
+  originalRecommendedLevel?: WarningLevel;
+
+  // ============================================
+  // 📄 PDF GENERATION
+  // ============================================
+  pdfGenerated?: boolean;
+  pdfFilename?: string;
+  pdfTemplateVersion?: string; // Reference to per-org template version
+
+  // ============================================
+  // ✅ ACKNOWLEDGEMENT + APPEAL
+  // ============================================
+  acknowledgedAt?: Date;
+  acknowledgedBy?: string;
+  appealSubmitted?: boolean;
+  appealDate?: Date;
+  appealOutcome?: 'upheld' | 'overturned' | 'modified';
+  appealDecisionDate?: Date;
+
+  // Created-by audit (user who entered/created the warning, may differ from issuer)
+  createdBy?: string;
 
   // 📄 HISTORICAL ENTRY TRACKING - For warnings created outside the system
   isHistoricalEntry?: boolean;        // Flag indicating manual entry from physical document
@@ -814,4 +890,4 @@ export type Action = string;
 export type { DeliveryStatus as DeliveryStatusType };
 
 // Re-export the enhanced WarningLevel for backward compatibility
-export { WarningLevel as UnifiedWarningLevel };
+export type { WarningLevel as UnifiedWarningLevel };
