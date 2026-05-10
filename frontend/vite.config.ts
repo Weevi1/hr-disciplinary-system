@@ -52,8 +52,6 @@ export default defineConfig({
       },
     },
     rollupOptions: {
-      // Exclude legacy components from build
-      external: (id) => id.includes('/_legacy/'),
       output: {
         manualChunks: {
           // Core React libraries
@@ -70,7 +68,7 @@ export default defineConfig({
           ],
 
           // UI and Icon libraries
-          'ui-vendor': ['lucide-react', '@headlessui/react'],
+          'ui-vendor': ['lucide-react'],
 
           // PDF and document libraries
           'pdf-vendor': ['jspdf', 'html2canvas'],
