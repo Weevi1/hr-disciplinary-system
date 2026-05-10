@@ -36,8 +36,8 @@ class SuperUserAuthMiddleware {
             firebase_functions_1.logger.debug('SuperUser validation: Using cached session', { uid, email: userEmail });
             return this.validatePermissions(cachedContext, requiredPermissions, options);
         }
-        // 3. Validate super-user role from custom claims
-        const userRole = token.role || 'guest';
+        // 3. Validate super-user role from custom claims (NEW format only)
+        const userRole = token.r || 'guest';
         // TEMPORARY: Allow specific super-user emails for development
         const isDevelopmentSuperUser = ((userEmail === 'superuser@hrdignitysystem.com' && uid === 'SYCfyGeQJ9OXTGNo7LPiNLRa7EX2') ||
             (userEmail === 'riaan.potas@gmail.com' && uid === 'SYCfyGeQJ9OXTGNo7LPiNLRa7EX2'));

@@ -94,15 +94,16 @@ exports.manageSuperUser = (0, https_1.onCall)({
             case 'GRANT_SUPER_USER':
                 // Only allow if there are less than 3 super-users (security limit)
                 const existingSuperUsers = await adminAuth.listUsers();
-                const superUserCount = existingSuperUsers.users.filter(user => { var _a; return ((_a = user.customClaims) === null || _a === void 0 ? void 0 : _a.role) === 'super-user'; }).length;
+                const superUserCount = existingSuperUsers.users.filter(user => { var _a, _b; return (((_a = user.customClaims) === null || _a === void 0 ? void 0 : _a.r) === 'super-user' || ((_b = user.customClaims) === null || _b === void 0 ? void 0 : _b.role) === 'super-user'); }).length;
                 if (superUserCount >= 3) {
                     throw new https_1.HttpsError('resource-exhausted', 'Maximum of 3 super-users allowed');
                 }
                 await adminAuth.setCustomUserClaims(targetUserId, {
-                    role: 'super-user',
+                    r: 'super-user',
                     permissions: ['all'],
                     grantedBy: context.uid,
-                    grantedAt: new Date().toISOString()
+                    grantedAt: new Date().toISOString(),
+                    v: Date.now()
                 });
                 firebase_functions_1.logger.warn('SuperUser privileges granted', {
                     targetUserId: targetUserId,
@@ -119,10 +120,11 @@ exports.manageSuperUser = (0, https_1.onCall)({
                     throw new https_1.HttpsError('invalid-argument', 'Cannot revoke your own super-user privileges');
                 }
                 await adminAuth.setCustomUserClaims(targetUserId, {
-                    role: 'executive-management', // Downgrade to business owner
+                    r: 'executive-management', // Downgrade to business owner
                     permissions: [],
                     revokedBy: context.uid,
-                    revokedAt: new Date().toISOString()
+                    revokedAt: new Date().toISOString(),
+                    v: Date.now()
                 });
                 firebase_functions_1.logger.warn('SuperUser privileges revoked', {
                     targetUserId: targetUserId,
@@ -199,7 +201,7 @@ exports.initializeSuperUser = (0, https_1.onCall)({
     // This function should only work if no super-users exist
     const adminAuth = (0, auth_1.getAuth)();
     const allUsers = await adminAuth.listUsers();
-    const existingSuperUsers = allUsers.users.filter(user => { var _a; return ((_a = user.customClaims) === null || _a === void 0 ? void 0 : _a.role) === 'super-user'; });
+    const existingSuperUsers = allUsers.users.filter(user => { var _a, _b; return (((_a = user.customClaims) === null || _a === void 0 ? void 0 : _a.r) === 'super-user' || ((_b = user.customClaims) === null || _b === void 0 ? void 0 : _b.role) === 'super-user'); });
     if (existingSuperUsers.length > 0) {
         throw new https_1.HttpsError('already-exists', 'Super-user already exists. Use manageSuperUser function instead.');
     }
@@ -210,13 +212,13 @@ exports.initializeSuperUser = (0, https_1.onCall)({
         displayName: `${data.firstName} ${data.lastName}`,
         emailVerified: false
     });
-    // Set super-user claims
+    // Set super-user claims (NEW abbreviated format)
     await adminAuth.setCustomUserClaims(userRecord.uid, {
-        role: 'super-user',
+        r: 'super-user',
         permissions: ['all'],
-        organizationId: 'SYSTEM',
         isFounder: true,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        v: Date.now()
     });
     firebase_functions_1.logger.info('Initial SuperUser created', {
         uid: userRecord.uid,
