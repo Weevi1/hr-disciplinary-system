@@ -1,10 +1,23 @@
 // functions/src/index.ts
 // Main Firebase Functions entry point
-import { 
-  createOrganizationAdmin, 
-  createOrganizationUsers, 
+import { setGlobalOptions } from 'firebase-functions/v2';
+
+// Conservative defaults applied to every function unless overridden inline.
+// Keeps Cloud Run CPU reservation low (us-central1 quota pressure) and caps
+// runaway scaling. Per-function `cpu` / `memory` / `maxInstances` overrides
+// in individual function definitions take precedence.
+setGlobalOptions({
+  region: 'us-central1',
+  cpu: 0.5,
+  maxInstances: 10,
+  memory: '256MiB',
+});
+
+import {
+  createOrganizationAdmin,
+  createOrganizationUsers,
   resetUserPassword,
-  createResellerUser 
+  createResellerUser
 } from './Auth/userCreationService';
 
 // 🎯 ADD AUDIO CLEANUP FUNCTIONS
@@ -33,13 +46,6 @@ import {
   getUserClaims,
   refreshOrganizationUserClaims
 } from './customClaims';
-
-// 🔒 ADD SUPER USER MANAGEMENT FUNCTIONS
-import {
-  manageSuperUser,
-  getSuperUserInfo,
-  initializeSuperUser
-} from './superUserManagement';
 
 // 👥 ADD ORGANIZATION USER CREATION
 import { createOrganizationUser } from './createOrganizationUser';
@@ -115,11 +121,6 @@ export {
 
   // Permission management functions
   updateUserPermissions,
-
-  // Super-user management functions
-  manageSuperUser,
-  getSuperUserInfo,
-  initializeSuperUser,
 
   // API versioning
   getApiVersionInfo,
