@@ -138,9 +138,9 @@ export class EmployeeService {
       const searchLower = searchTerm.toLowerCase();
       
       return allEmployees.filter(employee => {
-        const fullName = `${employee.firstName} ${employee.lastName}`.toLowerCase();
-        const employeeCode = employee.employeeNumber?.toLowerCase() || '';
-        
+        const fullName = `${employee.profile?.firstName ?? ''} ${employee.profile?.lastName ?? ''}`.toLowerCase();
+        const employeeCode = employee.profile?.employeeNumber?.toLowerCase() ?? '';
+
         return fullName.includes(searchLower) || employeeCode.includes(searchLower);
       });
     } catch (error) {
@@ -316,18 +316,18 @@ static async getEmployeesWithWarningContext(organizationId: string): Promise<Emp
             isHighRisk = true;
           }
           
-          if (employee.currentDisciplinaryLevel === 'final_written') {
+          if (employee.disciplinaryRecord?.currentLevel === 'final_written') {
             riskFactors.push('On final written warning');
             isHighRisk = true;
           }
-          
+
           // Get delivery preference (default to email if not set)
-          const deliveryPreference = employee.preferredDeliveryMethod || 'email';
-          
+          const deliveryPreference = employee.deliveryPreferences?.preferredMethod ?? 'email';
+
           const employeeWithContext: EmployeeWithContext = {
             id: employee.id,
-            firstName: employee.profile?.firstName || employee.firstName || '',
-            lastName: employee.profile?.lastName || employee.lastName || '',
+            firstName: employee.profile?.firstName ?? '',
+            lastName: employee.profile?.lastName ?? '',
             department: employee.profile?.department || employee.employment?.department || 'Unknown',
             position: employee.profile?.position || employee.employment?.position || 'Unknown',
             deliveryPreference: deliveryPreference,
@@ -351,11 +351,11 @@ static async getEmployeesWithWarningContext(organizationId: string): Promise<Emp
           // Return basic employee data if warning context fails
           return {
             id: employee.id,
-            firstName: employee.profile?.firstName || employee.firstName || '',
-            lastName: employee.profile?.lastName || employee.lastName || '',
+            firstName: employee.profile?.firstName ?? '',
+            lastName: employee.profile?.lastName ?? '',
             department: employee.profile?.department || employee.employment?.department || 'Unknown',
             position: employee.profile?.position || employee.employment?.position || 'Unknown',
-            deliveryPreference: employee.preferredDeliveryMethod || 'email',
+            deliveryPreference: employee.deliveryPreferences?.preferredMethod ?? 'email',
             recentWarnings: {
               count: 0,
             },
@@ -408,8 +408,8 @@ static async getEmployeesWithWarningContext(organizationId: string): Promise<Emp
         active: allEmployees.filter(e => e.isActive).length,
         inactive: allEmployees.filter(e => !e.isActive).length,
         byDepartment: {} as Record<string, number>,
-        withWarnings: allEmployees.filter(e => 
-          (e.warningCount || 0) > 0
+        withWarnings: allEmployees.filter(e =>
+          (e.disciplinaryRecord?.activeWarnings || 0) > 0
         ).length
       };
 

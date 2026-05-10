@@ -37,7 +37,7 @@ export const EmployeePromotionModal: React.FC<EmployeePromotionModalProps> = ({
   const [loadingDepartments, setLoadingDepartments] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [email, setEmail] = useState(employee.profile?.email || employee.email || '');
+  const [email, setEmail] = useState(employee.profile?.email ?? '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -115,12 +115,12 @@ export const EmployeePromotionModal: React.FC<EmployeePromotionModalProps> = ({
       const payload: any = {
         organizationId,
         email: email.trim(),
-        firstName: employee.profile?.firstName || employee.firstName,
-        lastName: employee.profile?.lastName || employee.lastName,
+        firstName: employee.profile?.firstName,
+        lastName: employee.profile?.lastName,
         password: password,
         role: selectedRole,
         employeeId: employee.id, // Link to existing employee
-        updateEmployeeEmail: email !== (employee.profile?.email || employee.email) // Update if email changed
+        updateEmployeeEmail: email !== employee.profile?.email // Update if email changed
       };
 
       // Add departmentIds for HOD managers
@@ -133,7 +133,7 @@ export const EmployeePromotionModal: React.FC<EmployeePromotionModalProps> = ({
         password: '***HIDDEN***', // Don't log the actual password
         employeeData: {
           id: employee.id,
-          emailChanged: email !== (employee.profile?.email || employee.email)
+          emailChanged: email !== employee.profile?.email
         }
       });
 
@@ -191,10 +191,10 @@ export const EmployeePromotionModal: React.FC<EmployeePromotionModalProps> = ({
                 Promoting:
               </p>
               <p className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                {employee.profile?.firstName || employee.firstName} {employee.profile?.lastName || employee.lastName}
+                {employee.profile?.firstName} {employee.profile?.lastName}
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                {employee.profile?.email || employee.email}
+                {employee.profile?.email}
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 {employee.profile?.department || 'No Department'} • {employee.profile?.position || 'No Position'}
