@@ -49,7 +49,7 @@ export const useNetworkError = (): UseNetworkErrorReturn => {
   }, []);
 
   // Retry wrapper with organization context
-  const withRetry = useCallback(async <T>(
+  const withRetry = useCallback(async <T,>(
     operation: () => Promise<T>,
     config?: Partial<RetryConfig>
   ): Promise<T> => {
@@ -109,7 +109,7 @@ export const withNetworkErrorBoundary = <P extends object>(
 export const useFirebaseOperation = () => {
   const { withRetry, handleError } = useNetworkError();
   
-  const executeFirebaseOperation = useCallback(async <T>(
+  const executeFirebaseOperation = useCallback(async <T,>(
     operation: () => Promise<T>,
     operationName: string = 'Firebase operation'
   ): Promise<T> => {

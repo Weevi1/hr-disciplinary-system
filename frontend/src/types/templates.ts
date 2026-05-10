@@ -283,7 +283,6 @@ export const getSALegalRequirements = (): LegalRequirement[] => [
     ]
   },
   {
-  {
     id: 'dismissal_sa',
     level: 'dismissal',
     category: 'gross_misconduct',
