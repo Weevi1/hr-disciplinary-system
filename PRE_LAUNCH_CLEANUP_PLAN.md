@@ -54,11 +54,17 @@
   - Riaan deploys with `firebase deploy --only firestore:indexes`
 
 **Phase 0 acceptance gate:**
-- [ ] All `.backup`/`.fixed` rules files deleted
-- [ ] `npm run typecheck` (or `npx tsc --noEmit`) passes — or error baseline documented and triaged
-- [ ] `firestore.rules` reviewed and helpers extracted
-- [ ] `.gitignore` updated; no build artefacts tracked
-- [ ] All Firestore indexes in `config/firestore.indexes.json`
+- [x] All `.backup`/`.fixed` rules files deleted (commit `296d69e0`)
+- [x] `npm run typecheck` runs; baseline captured at `docs/development/tsc-baseline-2026-05-10.txt` (937 errors — Phase 2 punchlist)
+- [x] `firestore.rules` reviewed: 4 dead helpers removed, userOrgIndex write tightened to self-only, sectors documented (commits `296d69e0`, `b5691b6b`)
+- [x] `storage.rules` tightened: explicit `organizations/{orgId}/**` + deny-default catch-all + new `warnings/{orgId}/{warningId}/pdfs/` rule (commits `b5691b6b`, `51585eff`)
+- [x] `.gitignore` updated; build artifacts untracked (commit `b7c66f64`)
+- [x] PII history scrubbed via `git filter-repo` + force-push + cats reset (101 commits rewritten, fresh-clone verification clean)
+- [x] All 21 production Firestore indexes in `config/firestore.indexes.json` (was 7, commit `96bf4be2`)
+- [x] Frontend `tsconfig.json` + `tsconfig.node.json` created with strict mode (`strict: true`, `noImplicitReturns: true`, `noFallthroughCasesInSwitch: true`)
+- [x] `npm run typecheck` script added (not wired into build — Phase 2)
+
+**Phase 0 complete: 2026-05-10.** Subsequent phases are maintainability/polish, not production blockers.
 
 ---
 

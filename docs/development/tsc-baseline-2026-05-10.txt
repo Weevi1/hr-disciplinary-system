@@ -1,0 +1,1154 @@
+
+> file-by-fifo@1.0.0 typecheck
+> tsc --noEmit
+
+src/App.tsx(151,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/App.tsx(167,26): error TS2339: Property 'firstName' does not exist on type 'Employee'.
+src/App.tsx(168,25): error TS2339: Property 'lastName' does not exist on type 'Employee'.
+src/App.tsx(169,25): error TS2339: Property 'position' does not exist on type 'Employee'.
+src/App.tsx(170,27): error TS2339: Property 'department' does not exist on type 'Employee'.
+src/App.tsx(171,22): error TS2339: Property 'email' does not exist on type 'Employee'.
+src/App.tsx(171,57): error TS2339: Property 'contact' does not exist on type 'Employee'.
+src/App.tsx(172,22): error TS2339: Property 'phone' does not exist on type 'Employee'.
+src/App.tsx(172,44): error TS2339: Property 'phone' does not exist on type 'EmployeeProfile'.
+src/App.tsx(172,57): error TS2339: Property 'contact' does not exist on type 'Employee'.
+src/App.tsx(173,36): error TS2551: Property 'deliveryPreference' does not exist on type 'Employee'. Did you mean 'deliveryPreferences'?
+src/App.tsx(174,31): error TS2339: Property 'recentWarnings' does not exist on type 'Employee'.
+src/App.tsx(175,31): error TS2339: Property 'riskIndicators' does not exist on type 'Employee'.
+src/App.tsx(184,27): error TS2339: Property 'lraSection' does not exist on type 'WarningCategory'.
+src/App.tsx(185,35): error TS2339: Property 'schedule8Reference' does not exist on type 'WarningCategory'.
+src/App.tsx(189,22): error TS2345: Argument of type '{ id: string; firstName: any; lastName: any; position: any; department: any; email: any; phone: any; deliveryPreference: "email" | "whatsapp" | "print"; recentWarnings: any; riskIndicators: any; }[]' is not assignable to parameter of type 'SetStateAction<never[]>'.
+  Type '{ id: string; firstName: any; lastName: any; position: any; department: any; email: any; phone: any; deliveryPreference: "email" | "whatsapp" | "print"; recentWarnings: any; riskIndicators: any; }[]' is not assignable to type 'never[]'.
+    Type '{ id: string; firstName: any; lastName: any; position: any; department: any; email: any; phone: any; deliveryPreference: "email" | "whatsapp" | "print"; recentWarnings: any; riskIndicators: any; }' is not assignable to type 'never'.
+src/App.tsx(190,23): error TS2345: Argument of type '{ id: string; name: string; severity: "critical" | "low" | "medium" | "high"; description: string; lraSection: any; schedule8Reference: any; escalationPath: WarningLevel[]; }[]' is not assignable to parameter of type 'SetStateAction<never[]>'.
+  Type '{ id: string; name: string; severity: "critical" | "low" | "medium" | "high"; description: string; lraSection: any; schedule8Reference: any; escalationPath: WarningLevel[]; }[]' is not assignable to type 'never[]'.
+    Type '{ id: string; name: string; severity: "low" | "medium" | "high" | "critical"; description: string; lraSection: any; schedule8Reference: any; escalationPath: WarningLevel[]; }' is not assignable to type 'never'.
+src/App.tsx(349,14): error TS2739: Type '{}' is missing the following properties from type 'UnifiedBookHRMeetingProps': isOpen, onClose
+src/App.tsx(354,14): error TS2739: Type '{}' is missing the following properties from type 'UnifiedReportAbsenceProps': isOpen, onClose
+src/api/index.ts(27,3): error TS2305: Module '"../types/warning"' has no exported member 'EscalationRecommendation'.
+src/api/index.ts(91,7): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(111,73): error TS2339: Property 'employeeName' does not exist on type 'Warning'.
+src/api/index.ts(116,51): error TS2339: Property 'employeeLastName' does not exist on type 'Warning'.
+src/api/index.ts(117,73): error TS2339: Property 'employeeNumber' does not exist on type 'Warning'.
+src/api/index.ts(118,76): error TS2551: Property 'employeeDepartment' does not exist on type 'Warning'. Did you mean 'employeeStatement'?
+src/api/index.ts(119,72): error TS2339: Property 'employeePosition' does not exist on type 'Warning'.
+src/api/index.ts(120,68): error TS2339: Property 'department' does not exist on type 'Warning'.
+src/api/index.ts(121,64): error TS2339: Property 'position' does not exist on type 'Warning'.
+src/api/index.ts(136,21): error TS2339: Property 'employeeName' does not exist on type 'Warning | { employeeName: any; employeeLastName: any; employeeNumber: any; employeeDepartment: any; employeePosition: any; department: any; position: any; id: string; organizationId: string; ... 47 more ...; reviewLastChecked?: any; }'.
+  Property 'employeeName' does not exist on type 'Warning'.
+src/api/index.ts(137,21): error TS2339: Property 'employeeName' does not exist on type 'Warning | { employeeName: any; employeeLastName: any; employeeNumber: any; employeeDepartment: any; employeePosition: any; department: any; position: any; id: string; organizationId: string; ... 47 more ...; reviewLastChecked?: any; }'.
+  Property 'employeeName' does not exist on type 'Warning'.
+src/api/index.ts(147,7): error TS2322: Type '(Warning | { employeeName: any; employeeLastName: any; employeeNumber: any; employeeDepartment: any; employeePosition: any; department: any; position: any; id: string; organizationId: string; ... 47 more ...; reviewLastChecked?: any; })[]' is not assignable to type 'Warning[]'.
+  Type 'Warning | { employeeName: any; employeeLastName: any; employeeNumber: any; employeeDepartment: any; employeePosition: any; department: any; position: any; id: string; organizationId: string; ... 47 more ...; reviewLastChecked?: any; }' is not assignable to type 'Warning'.
+    Type 'Warning' is missing the following properties from type 'Warning': category, isActive, employeeName, employeeNumber, and 2 more.
+src/api/index.ts(156,61): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(158,7): error TS2322: Type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").Warning | null' is not assignable to type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/warning").Warning | null'.
+  Type 'Warning' is missing the following properties from type 'Warning': category, isActive, employeeName, employeeNumber, and 2 more.
+src/api/index.ts(167,55): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(174,25): error TS2339: Property 'id' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(175,37): error TS2339: Property 'organizationId' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(178,31): error TS2339: Property 'categoryName' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(179,35): error TS2339: Property 'categoryName' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(180,28): error TS2339: Property 'level' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(183,35): error TS2339: Property 'employeeName' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(184,39): error TS2339: Property 'employeeLastName' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(185,37): error TS2339: Property 'employeeNumber' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(186,41): error TS2339: Property 'employeeDepartment' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(187,39): error TS2339: Property 'employeePosition' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(188,33): error TS2339: Property 'employeeDepartment' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(189,31): error TS2339: Property 'employeePosition' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(198,41): error TS2339: Property 'issueDate' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(199,42): error TS2339: Property 'expiryDate' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(201,31): error TS2339: Property 'issuedBy' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(202,35): error TS2339: Property 'issuedByName' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(210,25): error TS2339: Property 'signatures' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(210,65): error TS2339: Property 'signatures' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(211,25): error TS2339: Property 'disciplineRecommendation' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(211,115): error TS2339: Property 'disciplineRecommendation' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(212,25): error TS2339: Property 'pdfGeneratorVersion' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(212,83): error TS2339: Property 'pdfGeneratorVersion' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(213,25): error TS2339: Property 'pdfTemplateVersion' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(213,81): error TS2339: Property 'pdfTemplateVersion' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(214,25): error TS2339: Property 'organizationSnapshot' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(214,85): error TS2339: Property 'organizationSnapshot' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(217,25): error TS2339: Property 'employeeStatement' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(217,79): error TS2339: Property 'employeeStatement' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(218,25): error TS2339: Property 'expectedBehaviorStandards' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(218,95): error TS2339: Property 'expectedBehaviorStandards' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(219,25): error TS2339: Property 'factsLeadingToDecision' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(219,89): error TS2339: Property 'factsLeadingToDecision' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(220,25): error TS2339: Property 'actionSteps' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(220,67): error TS2339: Property 'actionSteps' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(221,25): error TS2339: Property 'reviewDate' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(221,65): error TS2339: Property 'reviewDate' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(222,25): error TS2339: Property 'reviewStatus' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(222,69): error TS2339: Property 'reviewStatus' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(223,25): error TS2339: Property 'reviewLastChecked' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(223,79): error TS2339: Property 'reviewLastChecked' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(224,25): error TS2339: Property 'interventionDetails' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(224,83): error TS2339: Property 'interventionDetails' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(225,25): error TS2339: Property 'resourcesProvided' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(225,79): error TS2339: Property 'resourcesProvided' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(242,23): error TS2339: Property 'organizationId' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(244,11): error TS2345: Argument of type 'Warning' is not assignable to parameter of type 'Omit<Warning, "id" | "organizationId" | "employeeId">'.
+  Type 'Warning' is missing the following properties from type 'Omit<Warning, "id" | "organizationId" | "employeeId">': title, followUpActions
+src/api/index.ts(251,46): error TS2345: Argument of type 'Warning' is not assignable to parameter of type 'Partial<Warning>'.
+  Types of property 'status' are incompatible.
+    Type '"issued" | "acknowledged" | "expired" | "appealed" | undefined' is not assignable to type '"delivered" | "issued" | "acknowledged" | "expired" | undefined'.
+      Type '"appealed"' is not assignable to type '"delivered" | "issued" | "acknowledged" | "expired" | undefined'.
+src/api/index.ts(251,67): error TS2339: Property 'organizationId' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(259,54): error TS2345: Argument of type 'Warning' is not assignable to parameter of type 'Partial<Warning>'.
+  Types of property 'status' are incompatible.
+    Type '"issued" | "acknowledged" | "expired" | "appealed" | undefined' is not assignable to type '"delivered" | "issued" | "acknowledged" | "expired" | undefined'.
+      Type '"appealed"' is not assignable to type '"delivered" | "issued" | "acknowledged" | "expired" | undefined'.
+src/api/index.ts(259,75): error TS2339: Property 'organizationId' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(266,27): error TS2339: Property 'organizationId' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(268,29): error TS2353: Object literal may only specify known properties, and 'id' does not exist in type 'Omit<Warning, "id" | "organizationId" | "employeeId">'.
+src/api/index.ts(279,62): error TS2339: Property 'organizationId' does not exist on type 'EnhancedWarningFormData'.
+src/api/index.ts(313,79): error TS2345: Argument of type 'Partial<import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/warning").Warning>' is not assignable to parameter of type 'Partial<import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").Warning>'.
+  Types of property 'status' are incompatible.
+    Type '"issued" | "acknowledged" | "expired" | "appealed" | undefined' is not assignable to type 'WarningStatus | undefined'.
+      Type '"expired"' is not assignable to type 'WarningStatus | undefined'.
+src/api/index.ts(334,81): error TS2345: Argument of type 'Partial<import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/warning").Warning>' is not assignable to parameter of type 'Partial<import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").Warning>'.
+  Types of property 'status' are incompatible.
+    Type '"issued" | "acknowledged" | "expired" | "appealed" | undefined' is not assignable to type 'WarningStatus | undefined'.
+      Type '"expired"' is not assignable to type 'WarningStatus | undefined'.
+src/api/index.ts(372,11): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ updatedAt: FieldValue; organizationId: undefined; id?: string | undefined; employeeId?: string | undefined; categoryId?: string | undefined; category?: string | undefined; ... 41 more ...; trainingProvided?: string[] | undefined; }'.
+  No index signature with a parameter of type 'string' was found on type '{ updatedAt: FieldValue; organizationId: undefined; id?: string | undefined; employeeId?: string | undefined; categoryId?: string | undefined; category?: string | undefined; ... 41 more ...; trainingProvided?: string[] | undefined; }'.
+src/api/index.ts(373,16): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ updatedAt: FieldValue; organizationId: undefined; id?: string | undefined; employeeId?: string | undefined; categoryId?: string | undefined; category?: string | undefined; ... 41 more ...; trainingProvided?: string[] | undefined; }'.
+  No index signature with a parameter of type 'string' was found on type '{ updatedAt: FieldValue; organizationId: undefined; id?: string | undefined; employeeId?: string | undefined; categoryId?: string | undefined; category?: string | undefined; ... 41 more ...; trainingProvided?: string[] | undefined; }'.
+src/api/index.ts(418,72): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(421,7): error TS2322: Type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/services/WarningService").Warning[]' is not assignable to type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/warning").Warning[]'.
+  Property 'position' is missing in type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/services/WarningService").Warning' but required in type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/warning").Warning'.
+src/api/index.ts(451,43): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(465,18): error TS2352: Conversion of type '{ counselling: number; written_warning_1: number; written_warning_2: number; final_written_warning: number; dismissal: number; }' to type 'Record<WarningLevel, number>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ counselling: number; written_warning_1: number; written_warning_2: number; final_written_warning: number; dismissal: number; }' is missing the following properties from type 'Record<WarningLevel, number>': verbal, first_written, second_written, final_written
+src/api/index.ts(466,50): error TS2339: Property 'warningLevel' does not exist on type 'Warning'.
+src/api/index.ts(467,56): error TS2339: Property 'warningLevel' does not exist on type 'Warning'.
+src/api/index.ts(468,56): error TS2339: Property 'warningLevel' does not exist on type 'Warning'.
+src/api/index.ts(469,60): error TS2339: Property 'warningLevel' does not exist on type 'Warning'.
+src/api/index.ts(470,48): error TS2339: Property 'warningLevel' does not exist on type 'Warning'.
+src/api/index.ts(474,7): error TS2739: Type '{ total: number; issued: number; delivered: number; byLevel: Record<WarningLevel, number>; }' is missing the following properties from type '{ total: number; pendingReview: number; approved: number; byLevel: Record<WarningLevel, number>; }': pendingReview, approved
+src/api/index.ts(511,17): error TS2339: Property 'isArchived' does not exist on type 'Warning'.
+src/api/index.ts(512,9): error TS2367: This comparison appears to be unintentional because the types 'WarningStatus' and '"expired"' have no overlap.
+src/api/index.ts(513,9): error TS2367: This comparison appears to be unintentional because the types 'WarningStatus' and '"overturned"' have no overlap.
+src/api/index.ts(516,7): error TS2322: Type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").Warning[]' is not assignable to type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/warning").Warning[]'.
+  Type 'Warning' is missing the following properties from type 'Warning': category, isActive, employeeName, employeeNumber, and 2 more.
+src/api/index.ts(533,65): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(563,43): error TS2339: Property 'toDate' does not exist on type 'Date'.
+src/api/index.ts(564,47): error TS2339: Property 'toDate' does not exist on type 'Date'.
+src/api/index.ts(572,36): error TS2339: Property 'isActive' does not exist on type 'Warning'.
+src/api/index.ts(608,62): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(619,53): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(656,81): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(668,61): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(687,66): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(729,6): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(779,6): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(855,57): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(879,46): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(891,80): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(908,9): error TS7030: Not all code paths return a value.
+src/api/index.ts(931,9): error TS7030: Not all code paths return a value.
+src/api/index.ts(986,7): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(1050,63): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/api/index.ts(1108,77): error TS2355: A function whose declared type is neither 'undefined', 'void', nor 'any' must return a value.
+src/api/index.ts(1215,41): error TS2366: Function lacks ending return statement and return type does not include 'undefined'.
+src/auth/AuthContext.tsx(342,21): error TS2345: Argument of type 'UserRole' is not assignable to parameter of type 'string'.
+src/auth/AuthContext.tsx(376,19): error TS2345: Argument of type 'UserRole' is not assignable to parameter of type 'string'.
+src/auth/ForgotPasswordModal.tsx(30,26): error TS2554: Expected 1 arguments, but got 2.
+src/auth/ForgotPasswordModal.tsx(88,25): error TS2551: Property 'MODAL' does not exist on type '{ readonly base: 0; readonly aboveBase: 1; readonly dropdown: 1000; readonly sticky: 1100; readonly fixedHeader: 1200; readonly sidePanel: 1300; readonly overlay: 9000; readonly modalBackdrop: 9000; ... 13 more ...; readonly maximum: 9999; }'. Did you mean 'modal'?
+src/components/absences/AbsenceReportReview.tsx(236,25): error TS2345: Argument of type '(prev: AbsenceReport[]) => (AbsenceReport | { hrReviewed: boolean; hrNotes: string | undefined; payrollProcessed: boolean; hrReviewedBy: string | undefined; ... 15 more ...; createdAt: string; })[]' is not assignable to parameter of type 'SetStateAction<AbsenceReport[]>'.
+  Type '(prev: AbsenceReport[]) => (AbsenceReport | { hrReviewed: boolean; hrNotes: string | undefined; payrollProcessed: boolean; hrReviewedBy: string | undefined; ... 15 more ...; createdAt: string; })[]' is not assignable to type '(prevState: AbsenceReport[]) => AbsenceReport[]'.
+    Type '(AbsenceReport | { hrReviewed: boolean; hrNotes: string | undefined; payrollProcessed: boolean; hrReviewedBy: string | undefined; hrReviewedAt: FieldValue | undefined; ... 14 more ...; createdAt: string; })[]' is not assignable to type 'AbsenceReport[]'.
+      Type 'AbsenceReport | { hrReviewed: boolean; hrNotes: string | undefined; payrollProcessed: boolean; hrReviewedBy: string | undefined; hrReviewedAt: FieldValue | undefined; ... 14 more ...; createdAt: string; }' is not assignable to type 'AbsenceReport'.
+        Type '{ hrReviewed: boolean; hrNotes: string | undefined; payrollProcessed: boolean; hrReviewedBy: string | undefined; hrReviewedAt: FieldValue | undefined; payrollProcessedAt: FieldValue | undefined; ... 13 more ...; createdAt: string; }' is not assignable to type 'AbsenceReport'.
+          Types of property 'hrReviewedAt' are incompatible.
+            Type 'FieldValue | undefined' is not assignable to type 'string | undefined'.
+              Type 'FieldValue' is not assignable to type 'string'.
+src/components/absences/UnifiedReportAbsence.tsx(126,11): error TS2783: 'id' is specified more than once, so this usage will be overwritten.
+src/components/absences/UnifiedReportAbsence.tsx(127,52): error TS2339: Property 'firstName' does not exist on type 'Employee'.
+src/components/absences/UnifiedReportAbsence.tsx(128,50): error TS2339: Property 'lastName' does not exist on type 'Employee'.
+src/components/absences/UnifiedReportAbsence.tsx(131,31): error TS2339: Property 'employeeNumber' does not exist on type 'Employee'.
+src/components/absences/UnifiedReportAbsence.tsx(196,43): error TS2339: Property 'firstName' does not exist on type 'Employee'.
+src/components/absences/UnifiedReportAbsence.tsx(196,73): error TS2339: Property 'lastName' does not exist on type 'Employee'.
+src/components/absences/UnifiedReportAbsence.tsx(197,42): error TS2339: Property 'employeeNumber' does not exist on type 'Employee'.
+src/components/absences/UnifiedReportAbsence.tsx(201,9): error TS2322: Type 'FieldValue' is not assignable to type 'string'.
+src/components/absences/UnifiedReportAbsence.tsx(204,9): error TS2322: Type 'FieldValue' is not assignable to type 'string'.
+src/components/absences/UnifiedReportAbsence.tsx(205,9): error TS2322: Type 'FieldValue' is not assignable to type 'string'.
+src/components/absences/UnifiedReportAbsence.tsx(286,61): error TS2339: Property 'firstName' does not exist on type 'Employee'.
+src/components/absences/UnifiedReportAbsence.tsx(286,91): error TS2339: Property 'lastName' does not exist on type 'Employee'.
+src/components/absences/UnifiedReportAbsence.tsx(368,21): error TS2322: Type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").Employee[]' is not assignable to type 'Employee[]'.
+  Type 'Employee' is missing the following properties from type 'Employee': firstName, lastName, position, department
+src/components/absences/UnifiedReportAbsence.tsx(488,35): error TS2353: Object literal may only specify known properties, and '':hover'' does not exist in type 'Properties<string | number, string & {}>'.
+src/components/admin/CategoryManagement.tsx(336,33): error TS2345: Argument of type 'WarningCategory[] | undefined' is not assignable to parameter of type 'SetStateAction<WarningCategory[]>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<WarningCategory[]>'.
+src/components/admin/CategoryManagement.tsx(415,15): error TS2304: Cannot find name 'DataService'.
+src/components/admin/CategoryManagement.tsx(421,15): error TS2304: Cannot find name 'DataService'.
+src/components/admin/CategoryManagement.tsx(445,13): error TS2304: Cannot find name 'DataService'.
+src/components/admin/CategoryManagement.tsx(477,13): error TS2304: Cannot find name 'DataService'.
+src/components/admin/CategoryManagement.tsx(602,13): error TS7030: Not all code paths return a value.
+src/components/admin/EnhancedOrganizationWizard.tsx(960,11): error TS2353: Object literal may only specify known properties, and 'secondaryColor' does not exist in type '{ logoUrl?: string | undefined; primaryColor?: string | undefined; }'.
+src/components/admin/EnhancedOrganizationWizard.tsx(976,9): error TS2322: Type 'OrganizationCategory[]' is not assignable to type 'string[]'.
+  Type 'OrganizationCategory' is not assignable to type 'string'.
+src/components/admin/HODPermissionsModal.tsx(152,7): error TS2322: Type '"medium"' is not assignable to type '"sm" | "md" | "lg" | "xl" | "full" | undefined'.
+src/components/admin/SectionEditorModal.tsx(279,7): error TS2322: Type '{ children: Element[]; isOpen: true; onClose: () => void; size: "lg"; zIndex: any; }' is not assignable to type 'IntrinsicAttributes & UnifiedModalProps'.
+  Property 'zIndex' does not exist on type 'IntrinsicAttributes & UnifiedModalProps'.
+src/components/admin/SectionEditorModal.tsx(279,23): error TS2551: Property 'MODAL' does not exist on type '{ readonly base: 0; readonly aboveBase: 1; readonly dropdown: 1000; readonly sticky: 1100; readonly fixedHeader: 1200; readonly sidePanel: 1300; readonly overlay: 9000; readonly modalBackdrop: 9000; ... 13 more ...; readonly maximum: 9999; }'. Did you mean 'modal'?
+src/components/admin/SuperAdminDashboard.tsx(175,31): error TS2339: Property 'employeeCount' does not exist on type '{ warningCount: number; storageUsage: number; id: string; name: string; industry: string; sectorId?: string | undefined; sectorName?: string | undefined; email?: string | undefined; phone?: string | undefined; ... 11 more ...; updatedAt?: string | undefined; }'.
+src/components/admin/SuperAdminDashboard.tsx(190,31): error TS2358: The left-hand side of an 'instanceof' expression must be of type 'any', an object type or a type parameter.
+src/components/admin/SuperAdminDashboard.tsx(192,29): error TS2339: Property 'toDate' does not exist on type 'string'.
+src/components/admin/SuperAdminDashboard.tsx(639,50): error TS2551: Property 'sector' does not exist on type 'Organization'. Did you mean 'sectorId'?
+src/components/admin/SuperAdminDashboard.tsx(643,48): error TS2339: Property 'employeeCount' does not exist on type 'Organization'.
+src/components/admin/SuperAdminDashboard.tsx(644,34): error TS2339: Property 'employeeCount' does not exist on type 'Organization'.
+src/components/admin/SuperAdminDashboard.tsx(648,48): error TS2339: Property 'warningCount' does not exist on type 'Organization'.
+src/components/admin/SuperAdminDashboard.tsx(649,34): error TS2339: Property 'warningCount' does not exist on type 'Organization'.
+src/components/admin/SuperAdminDashboard.tsx(656,48): error TS2339: Property 'storageUsage' does not exist on type 'Organization'.
+src/components/admin/SuperAdminDashboard.tsx(705,13): error TS2322: Type '(result: any) => Promise<void>' is not assignable to type '() => void'.
+  Target signature provides too few arguments. Expected 1 or more, but got 0.
+src/components/auth/ChangePasswordModal.tsx(115,32): error TS2551: Property 'MODAL' does not exist on type '{ readonly base: 0; readonly aboveBase: 1; readonly dropdown: 1000; readonly sticky: 1100; readonly fixedHeader: 1200; readonly sidePanel: 1300; readonly overlay: 9000; readonly modalBackdrop: 9000; ... 13 more ...; readonly maximum: 9999; }'. Did you mean 'modal'?
+src/components/auth/FirstTimeWelcomeModal.tsx(229,10): error TS2678: Type '"department-manager"' is not comparable to type 'UserRoleId'.
+src/components/common/SkeletonLoader.tsx(128,13): error TS2322: Type '{ key: number; className: string; style: { height: string; }; }' is not assignable to type 'IntrinsicAttributes & SkeletonProps'.
+  Property 'style' does not exist on type 'IntrinsicAttributes & SkeletonProps'.
+src/components/common/SmartComponentLoader.tsx(68,8): error TS2322: Type 'T' is not assignable to type 'IntrinsicAttributes & T'.
+  Type 'T' is not assignable to type 'IntrinsicAttributes'.
+src/components/common/SmartComponentLoader.tsx(198,24): error TS2322: Type 'Promise<typeof import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/components/employees/EmployeeManagement")>' is not assignable to type 'Promise<{ default: ComponentType<any>; }>'.
+  Property 'default' is missing in type 'typeof import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/components/employees/EmployeeManagement")' but required in type '{ default: ComponentType<any>; }'.
+src/components/common/SmartComponentLoader.tsx(199,26): error TS2322: Type 'Promise<typeof import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/components/employees/EmployeeManagement")>' is not assignable to type 'Promise<{ default: ComponentType<any>; }>'.
+  Property 'default' is missing in type 'typeof import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/components/employees/EmployeeManagement")' but required in type '{ default: ComponentType<any>; }'.
+src/components/common/SmartComponentLoader.tsx(203,24): error TS2322: Type 'Promise<typeof import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/layouts/MainLayout")>' is not assignable to type 'Promise<{ default: ComponentType<any>; }>'.
+  Property 'default' is missing in type 'typeof import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/layouts/MainLayout")' but required in type '{ default: ComponentType<any>; }'.
+src/components/common/SmartComponentLoader.tsx(204,26): error TS2322: Type 'Promise<typeof import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/layouts/MainLayout")>' is not assignable to type 'Promise<{ default: ComponentType<any>; }>'.
+  Property 'default' is missing in type 'typeof import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/layouts/MainLayout")' but required in type '{ default: ComponentType<any>; }'.
+src/components/common/ThemedButton.tsx(121,9): error TS2353: Object literal may only specify known properties, and 'focusRingColor' does not exist in type 'Properties<string | number, string & {}>'.
+src/components/common/ThemedStatusCard.tsx(189,7): error TS2322: Type '{ children: Element; padding: "sm" | "md" | "lg"; hover: boolean; className: string; style: CSSProperties; onClick: (() => void) | undefined; onMouseEnter: (e: MouseEvent<HTMLDivElement, MouseEvent>) => void; onMouseLeave: (e: MouseEvent<...>) => void; }' is not assignable to type 'IntrinsicAttributes & ThemedCardProps'.
+  Property 'onMouseEnter' does not exist on type 'IntrinsicAttributes & ThemedCardProps'.
+src/components/common/UniversalEmployeeSelector.tsx(178,23): error TS2353: Object literal may only specify known properties, and ''--ring-color'' does not exist in type 'Properties<string | number, string & {}>'.
+src/components/common/UniversalEmployeeSelector.tsx(195,27): error TS2353: Object literal may only specify known properties, and '':hover'' does not exist in type 'Properties<string | number, string & {}>'.
+src/components/dashboard/DashboardRoleSelector.tsx(73,13): error TS7030: Not all code paths return a value.
+src/components/dashboard/ExecutiveManagementDashboardSection.tsx(228,15): error TS2322: Type '"business-owner"' is not assignable to type '"executive-management" | "hr-manager"'.
+src/components/dashboard/WelcomeSection.tsx(126,21): error TS2322: Type '{ children: Element[]; variant: "primary"; size: "md"; className: string; style: { backgroundColor: string; color: string; backdropFilter: string; }; }' is not assignable to type 'IntrinsicAttributes & ThemedBadgeProps'.
+  Property 'style' does not exist on type 'IntrinsicAttributes & ThemedBadgeProps'.
+src/components/employees/BulkAssignDepartmentModal.tsx(13,25): error TS2305: Module '"../../types"' has no exported member 'Department'.
+src/components/employees/EmployeeFormModal.tsx(9,31): error TS2305: Module '"../../types"' has no exported member 'Department'.
+src/components/employees/EmployeeFormModal.tsx(122,19): error TS2345: Argument of type 'EmployeeFormData' is not assignable to parameter of type 'SetStateAction<EmployeeFormData>'.
+  Type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/employee").EmployeeFormData' is not assignable to type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").EmployeeFormData'.
+    Types of property 'email' are incompatible.
+      Type 'string | undefined' is not assignable to type 'string'.
+        Type 'undefined' is not assignable to type 'string'.
+src/components/employees/EmployeeFormModal.tsx(129,55): error TS2339: Property 'profile' does not exist on type 'User'.
+src/components/employees/EmployeeFormModal.tsx(174,66): error TS2345: Argument of type '{ profile: { employeeNumber: string; firstName: string; lastName: string; email: string; phoneNumber: string | null; whatsappNumber: string | null; department: string; position: string; startDate: Date; }; ... 12 more ...; restoredBy?: string; }' is not assignable to parameter of type 'Partial<Employee>'.
+  The types of 'profile.phoneNumber' are incompatible between these types.
+    Type 'string | null' is not assignable to type 'string | undefined'.
+      Type 'null' is not assignable to type 'string | undefined'.
+src/components/employees/EmployeeFormModal.tsx(178,53): error TS2345: Argument of type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").EmployeeFormData' is not assignable to parameter of type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/employee").EmployeeFormData'.
+  Types of property 'phoneNumber' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/components/employees/EmployeeFormModal.tsx(394,67): error TS2322: Type '"permanent" | "contract" | "temporary" | "intern"' is not assignable to type 'ContractType'.
+  Type '"intern"' is not assignable to type 'ContractType'.
+src/components/employees/EmployeeManagement.tsx(180,46): error TS2559: Type 'Employee[]' has no properties in common with type 'LogContext'.
+src/components/employees/EmployeeManagement.tsx(627,11): error TS2322: Type '(employee: Employee) => void' is not assignable to type '(employee: Employee | null) => void'.
+  Types of parameters 'employee' and 'employee' are incompatible.
+    Type 'Employee | null' is not assignable to type 'Employee'.
+      Type 'null' is not assignable to type 'Employee'.
+src/components/employees/EmployeeManagement.tsx(821,13): error TS2322: Type '{ children: Element; isOpen: true; onClose: () => void; title: string; maxWidth: string; }' is not assignable to type 'IntrinsicAttributes & UnifiedModalProps'.
+  Property 'maxWidth' does not exist on type 'IntrinsicAttributes & UnifiedModalProps'.
+src/components/employees/EmployeeOrganogram.tsx(131,78): error TS2352: Conversion of type '{ id: string; profile: { firstName: any; lastName: any; email: string; employeeNumber: string; department: any; position: string; }; employment: { department: any; position: string; managerId: null; }; }' to type 'Employee' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ id: string; profile: { firstName: any; lastName: any; email: string; employeeNumber: string; department: any; position: string; }; employment: { department: any; position: string; managerId: null; }; }' is missing the following properties from type 'Employee': organizationId, disciplinaryRecord, deliveryPreferences, isActive, and 2 more.
+src/components/employees/EmployeeOrganogram.tsx(134,47): error TS2339: Property 'displayName' does not exist on type 'User'.
+src/components/employees/EmployeeOrganogram.tsx(135,45): error TS2339: Property 'displayName' does not exist on type 'User'.
+src/components/employees/EmployeeOrganogram.tsx(138,30): error TS2551: Property 'department' does not exist on type 'User'. Did you mean 'departmentIds'?
+src/components/employees/EmployeeOrganogram.tsx(142,30): error TS2551: Property 'department' does not exist on type 'User'. Did you mean 'departmentIds'?
+src/components/employees/EmployeePromotionModal.tsx(40,74): error TS2339: Property 'email' does not exist on type 'Employee'.
+src/components/employees/EmployeePromotionModal.tsx(110,15): error TS2339: Property 'functions' does not exist on type '{ default: typeof import("/home/aiguy/projects/hr-disciplinary-system/frontend/node_modules/firebase/functions/dist/functions/index"); connectFunctionsEmulator(functionsInstance: Functions, host: string, port: number): void; getFunctions(app?: FirebaseApp | undefined, regionOrCustomDomain?: string | undefined): Func...'.
+src/components/employees/EmployeePromotionModal.tsx(118,60): error TS2339: Property 'firstName' does not exist on type 'Employee'.
+src/components/employees/EmployeePromotionModal.tsx(119,58): error TS2339: Property 'lastName' does not exist on type 'Employee'.
+src/components/employees/EmployeePromotionModal.tsx(123,77): error TS2339: Property 'email' does not exist on type 'Employee'.
+src/components/employees/EmployeePromotionModal.tsx(136,72): error TS2339: Property 'email' does not exist on type 'Employee'.
+src/components/employees/EmployeePromotionModal.tsx(194,58): error TS2339: Property 'firstName' does not exist on type 'Employee'.
+src/components/employees/EmployeePromotionModal.tsx(194,109): error TS2339: Property 'lastName' does not exist on type 'Employee'.
+src/components/employees/EmployeePromotionModal.tsx(197,54): error TS2339: Property 'email' does not exist on type 'Employee'.
+src/components/employees/EmployeeTableBrowser.tsx(208,49): error TS2339: Property 'toDate' does not exist on type 'Date'.
+src/components/employees/EmployeeTableBrowser.tsx(209,34): error TS2339: Property 'toDate' does not exist on type 'Date'.
+src/components/employees/EmployeeTableBrowser.tsx(303,45): error TS2339: Property 'toDate' does not exist on type 'Date'.
+src/components/employees/EmployeeTableBrowser.tsx(304,30): error TS2339: Property 'toDate' does not exist on type 'Date'.
+src/components/employees/EmployeeTableBrowser.tsx(617,33): error TS2322: Type '{ className: string; title: string; }' is not assignable to type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+src/components/employees/EmployeeTableBrowser.tsx(623,33): error TS2322: Type '{ className: string; title: string; }' is not assignable to type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+  Property 'title' does not exist on type 'IntrinsicAttributes & Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>'.
+src/components/employees/EmployeeTableBrowser.tsx(649,65): error TS2339: Property 'toDate' does not exist on type 'Date'.
+src/components/employees/EmployeeTableBrowser.tsx(650,50): error TS2339: Property 'toDate' does not exist on type 'Date'.
+src/components/employees/EmployeeTableBrowser.tsx(753,71): error TS2339: Property 'toDate' does not exist on type 'Date'.
+src/components/employees/EmployeeTableBrowser.tsx(754,56): error TS2339: Property 'toDate' does not exist on type 'Date'.
+src/components/employees/MobileEmployeeManagement.tsx(63,5): error TS2304: Cannot find name 'refreshData'.
+src/components/employees/MobileEmployeeManagement.tsx(72,5): error TS2304: Cannot find name 'refreshData'.
+src/components/employees/MobileEmployeeManagement.tsx(75,30): error TS2339: Property 'overall' does not exist on type 'boolean'.
+src/components/employees/MobileEmployeeManagement.tsx(75,50): error TS2339: Property 'employees' does not exist on type 'boolean'.
+src/components/employees/MobileEmployeeManagement.tsx(323,29): error TS2304: Cannot find name 'refreshData'.
+src/components/hr/EmailDeliveryGuide.tsx(278,19): error TS2322: Type '"success" | "primary"' is not assignable to type '"primary" | "secondary" | "accent" | "ghost" | "outline" | "danger" | undefined'.
+  Type '"success"' is not assignable to type '"primary" | "secondary" | "accent" | "ghost" | "outline" | "danger" | undefined'.
+src/components/hr/EmailDeliveryGuide.tsx(512,15): error TS2322: Type '"success"' is not assignable to type '"primary" | "secondary" | "accent" | "ghost" | "outline" | "danger" | undefined'.
+src/components/hr/EmailDeliveryGuide.tsx(540,13): error TS2353: Object literal may only specify known properties, and 'employee' does not exist in type 'WarningWizardData'.
+src/components/hr/PrintDeliveryGuide.tsx(139,28): error TS2339: Property 'warningId' does not exist on type 'Promise<any>'.
+src/components/hr/PrintDeliveryGuide.tsx(140,38): error TS2339: Property 'pdfGeneratorVersion' does not exist on type 'Promise<any>'.
+src/components/hr/PrintDeliveryGuide.tsx(141,30): error TS2339: Property 'employee' does not exist on type 'Promise<any>'.
+src/components/hr/PrintDeliveryGuide.tsx(141,60): error TS2339: Property 'employee' does not exist on type 'Promise<any>'.
+src/components/hr/PrintDeliveryGuide.tsx(151,9): error TS2345: Argument of type 'Promise<any>' is not assignable to parameter of type 'WarningPDFData'.
+  Type 'Promise<any>' is missing the following properties from type 'WarningPDFData': warningId, issuedDate, employee, warningLevel, and 6 more.
+src/components/hr/PrintDeliveryGuide.tsx(152,17): error TS2339: Property 'pdfGeneratorVersion' does not exist on type 'Promise<any>'.
+src/components/hr/PrintDeliveryGuide.tsx(153,17): error TS2339: Property 'pdfSettings' does not exist on type 'Promise<any>'.
+src/components/hr/PrintDeliveryGuide.tsx(541,15): error TS2322: Type '"success"' is not assignable to type '"primary" | "secondary" | "accent" | "ghost" | "outline" | "danger" | undefined'.
+src/components/hr/WhatsAppDeliveryGuide.tsx(226,17): error TS2322: Type '"success" | "primary"' is not assignable to type '"primary" | "secondary" | "accent" | "ghost" | "outline" | "danger" | undefined'.
+  Type '"success"' is not assignable to type '"primary" | "secondary" | "accent" | "ghost" | "outline" | "danger" | undefined'.
+src/components/hr/WhatsAppDeliveryGuide.tsx(438,15): error TS2322: Type '"success"' is not assignable to type '"primary" | "secondary" | "accent" | "ghost" | "outline" | "danger" | undefined'.
+src/components/hr/WhatsAppDeliveryGuide.tsx(466,13): error TS2353: Object literal may only specify known properties, and 'employee' does not exist in type 'WarningWizardData'.
+src/components/managers/ManagerDetailsModal.tsx(122,49): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(predicate: (value: DocumentData, index: number, array: DocumentData[]) => value is DocumentData, thisArg?: any): DocumentData[]', gave the following error.
+    Argument of type '(emp: Employee) => boolean' is not assignable to parameter of type '(value: DocumentData, index: number, array: DocumentData[]) => value is DocumentData'.
+      Types of parameters 'emp' and 'value' are incompatible.
+        Type 'DocumentData' is missing the following properties from type 'Employee': id, organizationId, profile, employment, and 5 more.
+  Overload 2 of 2, '(predicate: (value: DocumentData, index: number, array: DocumentData[]) => unknown, thisArg?: any): DocumentData[]', gave the following error.
+    Argument of type '(emp: Employee) => boolean' is not assignable to parameter of type '(value: DocumentData, index: number, array: DocumentData[]) => unknown'.
+      Types of parameters 'emp' and 'value' are incompatible.
+        Type 'DocumentData' is missing the following properties from type 'Employee': id, organizationId, profile, employment, and 5 more.
+src/components/managers/ManagerManagement.tsx(269,60): error TS18047: 'demoteModal.data' is possibly 'null'.
+src/components/managers/ManagerManagement.tsx(279,11): error TS2741: Property 'permissions' is missing in type 'Manager' but required in type 'User'.
+src/components/meetings/HRMeetingReview.tsx(178,26): error TS2345: Argument of type '(prev: HRMeetingRequest[]) => (HRMeetingRequest | { status: string; scheduledDate: string | undefined; scheduledTime: string | undefined; ... 15 more ...; createdAt: string; })[]' is not assignable to parameter of type 'SetStateAction<HRMeetingRequest[]>'.
+  Type '(prev: HRMeetingRequest[]) => (HRMeetingRequest | { status: string; scheduledDate: string | undefined; scheduledTime: string | undefined; ... 15 more ...; createdAt: string; })[]' is not assignable to type '(prevState: HRMeetingRequest[]) => HRMeetingRequest[]'.
+    Type '(HRMeetingRequest | { status: string; scheduledDate: string | undefined; scheduledTime: string | undefined; hrNotes: string | undefined; hrReviewedBy: string; ... 13 more ...; createdAt: string; })[]' is not assignable to type 'HRMeetingRequest[]'.
+      Type 'HRMeetingRequest | { status: string; scheduledDate: string | undefined; scheduledTime: string | undefined; hrNotes: string | undefined; hrReviewedBy: string; ... 13 more ...; createdAt: string; }' is not assignable to type 'HRMeetingRequest'.
+        Type '{ status: string; scheduledDate: string | undefined; scheduledTime: string | undefined; hrNotes: string | undefined; hrReviewedBy: string; hrReviewedAt: FieldValue; updatedAt: FieldValue; ... 11 more ...; createdAt: string; }' is not assignable to type 'HRMeetingRequest'.
+          Types of property 'status' are incompatible.
+            Type 'string' is not assignable to type '"cancelled" | "pending" | "scheduled" | "completed"'.
+src/components/meetings/HRMeetingReview.tsx(211,12): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ yellow: { bg: string; text: string; border: string; }; blue: { bg: string; text: string; border: string; }; green: { bg: string; text: string; border: string; }; red: { bg: string; text: string; border: string; }; }'.
+  No index signature with a parameter of type 'string' was found on type '{ yellow: { bg: string; text: string; border: string; }; blue: { bg: string; text: string; border: string; }; green: { bg: string; text: string; border: string; }; red: { bg: string; text: string; border: string; }; }'.
+src/components/meetings/UnifiedBookHRMeeting.tsx(236,11): error TS2783: 'id' is specified more than once, so this usage will be overwritten.
+src/components/meetings/UnifiedBookHRMeeting.tsx(237,52): error TS2339: Property 'firstName' does not exist on type 'Employee'.
+src/components/meetings/UnifiedBookHRMeeting.tsx(238,50): error TS2339: Property 'lastName' does not exist on type 'Employee'.
+src/components/meetings/UnifiedBookHRMeeting.tsx(241,44): error TS2339: Property 'contact' does not exist on type 'Employee'.
+src/components/meetings/UnifiedBookHRMeeting.tsx(241,66): error TS2339: Property 'email' does not exist on type 'Employee'.
+src/components/meetings/UnifiedBookHRMeeting.tsx(292,43): error TS2339: Property 'firstName' does not exist on type 'Employee'.
+src/components/meetings/UnifiedBookHRMeeting.tsx(292,73): error TS2339: Property 'lastName' does not exist on type 'Employee'.
+src/components/meetings/UnifiedBookHRMeeting.tsx(296,9): error TS2322: Type 'FieldValue' is not assignable to type 'string'.
+src/components/meetings/UnifiedBookHRMeeting.tsx(297,9): error TS2322: Type 'FieldValue' is not assignable to type 'string'.
+src/components/meetings/UnifiedBookHRMeeting.tsx(298,9): error TS2322: Type 'FieldValue' is not assignable to type 'string'.
+src/components/meetings/UnifiedBookHRMeeting.tsx(372,63): error TS2339: Property 'firstName' does not exist on type 'Employee'.
+src/components/meetings/UnifiedBookHRMeeting.tsx(372,93): error TS2339: Property 'lastName' does not exist on type 'Employee'.
+src/components/meetings/UnifiedBookHRMeeting.tsx(454,19): error TS2322: Type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").Employee[]' is not assignable to type 'Employee[]'.
+  Type 'Employee' is missing the following properties from type 'Employee': firstName, lastName, position, department
+src/components/organization/OrganizationCategoriesViewer.tsx(116,21): error TS2345: Argument of type 'WarningCategory[] | undefined' is not assignable to parameter of type 'SetStateAction<WarningCategory[]>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<WarningCategory[]>'.
+src/components/organization/OrganizationCategoriesViewer.tsx(173,25): error TS2339: Property 'level' does not exist on type 'WarningCategory'.
+src/components/organization/OrganizationCategoriesViewer.tsx(174,25): error TS2339: Property 'color' does not exist on type 'WarningCategory'.
+src/components/organization/OrganizationCategoriesViewer.tsx(840,48): error TS2339: Property 'level' does not exist on type 'WarningCategory'.
+src/components/organization/OrganizationCategoriesViewer.tsx(841,83): error TS2353: Object literal may only specify known properties, and 'level' does not exist in type 'WarningCategory | ((prevState: WarningCategory | null) => WarningCategory | null)'.
+src/components/organization/OrganizationCategoriesViewer.tsx(885,48): error TS2339: Property 'color' does not exist on type 'WarningCategory'.
+src/components/organization/OrganizationCategoriesViewer.tsx(886,83): error TS2353: Object literal may only specify known properties, and 'color' does not exist in type 'WarningCategory | ((prevState: WarningCategory | null) => WarningCategory | null)'.
+src/components/organization/OrganizationCategoriesViewer.tsx(1029,57): error TS2345: Argument of type 'string' is not assignable to parameter of type 'WarningLevel'.
+src/components/organization/OrganizationCategoriesViewer.tsx(1032,52): error TS2322: Type 'string' is not assignable to type 'WarningLevel'.
+src/components/organization/OrganizationCategoriesViewer.tsx(1032,68): error TS2322: Type 'string' is not assignable to type 'WarningLevel'.
+src/components/organization/OrganizationCategoriesViewer.tsx(1036,80): error TS2345: Argument of type 'string' is not assignable to parameter of type 'WarningLevel'.
+src/components/organization/OrganizationCategoriesViewer.tsx(1038,72): error TS2345: Argument of type 'string' is not assignable to parameter of type 'WarningLevel'.
+src/components/organization/OrganizationCategoriesViewer.tsx(1084,59): error TS2339: Property 'color' does not exist on type 'WarningCategory'.
+src/components/organization/OrganizationManagementV2.tsx(129,14): error TS18046: 'result.data' is of type 'unknown'.
+src/components/organization/OrganizationManagementV2.tsx(130,27): error TS18046: 'result.data' is of type 'unknown'.
+src/components/organization/OrganizationManagementV2.tsx(153,14): error TS18046: 'result.data' is of type 'unknown'.
+src/components/organization/OrganizationManagementV2.tsx(154,27): error TS18046: 'result.data' is of type 'unknown'.
+src/components/organization/OrganizationManagementV2.tsx(157,68): error TS18046: 'result.data' is of type 'unknown'.
+src/components/organization/OrganizationManagementV2.tsx(606,13): error TS2304: Cannot find name 'ShardedDataService'.
+src/components/organization/OrganizationManagementV2.tsx(613,29): error TS2339: Property 'uid' does not exist on type 'OrganizationUser'.
+src/components/organization/OrganizationManagementV2.tsx(641,13): error TS2304: Cannot find name 'ShardedDataService'.
+src/components/organization/OrganizationManagementV2.tsx(648,29): error TS2339: Property 'uid' does not exist on type 'OrganizationUser'.
+src/components/organization/OrganizationManagementV2.tsx(700,9): error TS2304: Cannot find name 'ShardedDataService'.
+src/components/organization/OrganizationManagementV2.tsx(822,17): error TS2367: This comparison appears to be unintentional because the types 'UserRole | undefined' and 'string' have no overlap.
+src/components/organization/OrganizationManagementV2.tsx(822,48): error TS2367: This comparison appears to be unintentional because the types 'UserRole | undefined' and 'string' have no overlap.
+src/components/organization/OrganizationManagementV2.tsx(852,16): error TS2367: This comparison appears to be unintentional because the types 'UserRole | undefined' and 'string' have no overlap.
+src/components/recognition/RecognitionDetailsModal.tsx(162,34): error TS2551: Property 'MODAL_BACKDROP' does not exist on type '{ readonly base: 0; readonly aboveBase: 1; readonly dropdown: 1000; readonly sticky: 1100; readonly fixedHeader: 1200; readonly sidePanel: 1300; readonly overlay: 9000; readonly modalBackdrop: 9000; ... 13 more ...; readonly maximum: 9999; }'. Did you mean 'modalBackdrop'?
+src/components/recognition/RecognitionDetailsModal.tsx(169,34): error TS2551: Property 'MODAL' does not exist on type '{ readonly base: 0; readonly aboveBase: 1; readonly dropdown: 1000; readonly sticky: 1100; readonly fixedHeader: 1200; readonly sidePanel: 1300; readonly overlay: 9000; readonly modalBackdrop: 9000; ... 13 more ...; readonly maximum: 9999; }'. Did you mean 'modal'?
+src/components/recognition/RecognitionEntry.tsx(222,11): error TS2783: 'id' is specified more than once, so this usage will be overwritten.
+src/components/recognition/RecognitionEntry.tsx(223,52): error TS2339: Property 'firstName' does not exist on type 'Employee'.
+src/components/recognition/RecognitionEntry.tsx(224,50): error TS2339: Property 'lastName' does not exist on type 'Employee'.
+src/components/recognition/RecognitionEntry.tsx(227,31): error TS2339: Property 'employeeNumber' does not exist on type 'Employee'.
+src/components/recognition/RecognitionEntry.tsx(361,43): error TS2339: Property 'firstName' does not exist on type 'Employee'.
+src/components/recognition/RecognitionEntry.tsx(361,73): error TS2339: Property 'lastName' does not exist on type 'Employee'.
+src/components/recognition/RecognitionEntry.tsx(362,42): error TS2339: Property 'employeeNumber' does not exist on type 'Employee'.
+src/components/recognition/RecognitionEntry.tsx(373,9): error TS2322: Type 'FieldValue' is not assignable to type 'string'.
+src/components/recognition/RecognitionEntry.tsx(374,9): error TS2322: Type 'FieldValue' is not assignable to type 'string'.
+src/components/recognition/RecognitionEntry.tsx(497,103): error TS2339: Property 'firstName' does not exist on type 'Employee'.
+src/components/recognition/RecognitionEntry.tsx(497,133): error TS2339: Property 'lastName' does not exist on type 'Employee'.
+src/components/recognition/RecognitionEntry.tsx(583,19): error TS2322: Type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").Employee[]' is not assignable to type 'Employee[]'.
+  Type 'Employee' is missing the following properties from type 'Employee': firstName, lastName, position, department
+src/components/recognition/RecognitionEntry.tsx(807,19): error TS2322: Type '{ selectedDate: string; onDateChange: (date: any) => void; maxDate: string; }' is not assignable to type 'IntrinsicAttributes & CustomDatePickerProps'.
+  Property 'selectedDate' does not exist on type 'IntrinsicAttributes & CustomDatePickerProps'.
+src/components/recognition/RecognitionEntry.tsx(808,34): error TS7006: Parameter 'date' implicitly has an 'any' type.
+src/components/reseller/ClientOrganizationManager.tsx(91,25): error TS2339: Property 'description' does not exist on type 'Organization'.
+src/components/reseller/ClientOrganizationManager.tsx(131,27): error TS2339: Property 'description' does not exist on type 'Organization'.
+src/components/reseller/ClientOrganizationManager.tsx(1562,78): error TS2339: Property 'activeWarnings' does not exist on type '{ totalEmployees: number; totalWarnings: number; totalCategories: number; totalUsers: number; }'.
+src/components/reseller/ClientOrganizationManager.tsx(1584,26): error TS2339: Property 'activeWarnings' does not exist on type '{ totalEmployees: number; totalWarnings: number; totalCategories: number; totalUsers: number; }'.
+src/components/reseller/ClientSummaryModal.tsx(69,7): error TS2322: Type '{ children: Element; isOpen: boolean; onClose: () => void; title: string; maxWidth: string; }' is not assignable to type 'IntrinsicAttributes & UnifiedModalProps'.
+  Property 'maxWidth' does not exist on type 'IntrinsicAttributes & UnifiedModalProps'.
+src/components/reseller/ClientSummaryModal.tsx(79,50): error TS2551: Property 'sector' does not exist on type 'ClientWithMetrics'. Did you mean 'sectorId'?
+src/components/reseller/ClientSummaryModal.tsx(181,17): error TS2339: Property 'registrationNumber' does not exist on type 'ClientWithMetrics'.
+src/components/reseller/ClientSummaryModal.tsx(187,25): error TS2339: Property 'registrationNumber' does not exist on type 'ClientWithMetrics'.
+src/components/reseller/MyClients.tsx(92,33): error TS2551: Property 'sector' does not exist on type 'ClientWithMetrics'. Did you mean 'sectorId'?
+src/components/reseller/MyClients.tsx(230,39): error TS2551: Property 'sector' does not exist on type 'ClientWithMetrics'. Did you mean 'sectorId'?
+src/components/reseller/ResellerDashboard.tsx(29,46): error TS2305: Module '"../../types/billing"' has no exported member 'Organization'.
+src/components/reseller/ResellerDashboard.tsx(97,9): error TS2322: Type '{ id: string; clientName: string; periodStart: string; periodEnd: string; commissionAmount: number; baseAmount: number; commissionRate: number; }[]' is not assignable to type 'CommissionStatement[]'.
+  Type '{ id: string; clientName: string; periodStart: string; periodEnd: string; commissionAmount: number; baseAmount: number; commissionRate: number; }' is missing the following properties from type 'CommissionStatement': resellerId, clientId, status, createdAt
+src/components/reseller/ResellerDashboard.tsx(749,13): error TS2322: Type '(result: any) => Promise<void>' is not assignable to type '() => void'.
+  Target signature provides too few arguments. Expected 1 or more, but got 0.
+src/components/reseller/demos/MyDemos.tsx(62,43): error TS2339: Property 'isActive' does not exist on type 'Organization'.
+src/components/users/UserManagement.tsx(48,19): error TS7030: Not all code paths return a value.
+src/components/warnings/AudioPlaybackWidget.tsx(73,7): error TS2820: Type '"not-available"' is not assignable to type '"unavailable" | "failed" | "expired" | "deleted" | "available" | "processing"'. Did you mean '"unavailable"'?
+src/components/warnings/AudioPlaybackWidget.tsx(98,7): error TS2367: This comparison appears to be unintentional because the types '"pending" | "failed" | "completed" | "deleted" | undefined' and '"processing"' have no overlap.
+src/components/warnings/ManualWarningEntry.tsx(634,7): error TS2322: Type 'Element' is not assignable to type 'string'.
+src/components/warnings/ReviewDashboard.tsx(169,16): error TS2551: Property 'isArchived' does not exist on type 'Warning'. Did you mean 'isActive'?
+src/components/warnings/ReviewDashboard.tsx(171,7): error TS2367: This comparison appears to be unintentional because the types '"issued" | "acknowledged" | "appealed" | undefined' and '"overturned"' have no overlap.
+src/components/warnings/ReviewDashboard.tsx(175,39): error TS2367: This comparison appears to be unintentional because the types '"issued" | "acknowledged" | "appealed" | undefined' and '"overturned"' have no overlap.
+src/components/warnings/ReviewDashboard.tsx(183,18): error TS2339: Property 'appealDecisionDate' does not exist on type 'Warning'.
+src/components/warnings/ReviewDashboard.tsx(183,81): error TS2339: Property 'appealDecisionDate' does not exist on type 'Warning'.
+src/components/warnings/ReviewDashboard.tsx(219,9): error TS2322: Type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").Warning[]' is not assignable to type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/warning").Warning[]'.
+  Type 'Warning' is missing the following properties from type 'Warning': category, isActive, employeeName, employeeNumber, and 2 more.
+src/components/warnings/ReviewDashboard.tsx(408,9): error TS2353: Object literal may only specify known properties, and 'appealDetails' does not exist in type 'Partial<Warning>'.
+src/components/warnings/ReviewDashboard.tsx(498,60): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/components/warnings/ReviewDashboard.tsx(521,5): error TS2552: Cannot find name 'setSelectedWarning'. Did you mean 'selectedWarning'?
+src/components/warnings/ReviewDashboard.tsx(522,5): error TS2552: Cannot find name 'setShowDetails'. Did you mean 'showDetails'?
+src/components/warnings/ReviewDashboard.tsx(530,47): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/components/warnings/ReviewDashboard.tsx(564,13): error TS2322: Type '(forceRefresh?: boolean) => Promise<void>' is not assignable to type 'MouseEventHandler<HTMLButtonElement>'.
+  Types of parameters 'forceRefresh' and 'event' are incompatible.
+    Type 'MouseEvent<HTMLButtonElement, MouseEvent>' is not assignable to type 'boolean | undefined'.
+src/components/warnings/ReviewDashboard.tsx(604,13): error TS2322: Type '(forceRefresh?: boolean) => Promise<void>' is not assignable to type 'MouseEventHandler<HTMLButtonElement>'.
+  Types of parameters 'forceRefresh' and 'event' are incompatible.
+    Type 'MouseEvent<HTMLButtonElement, MouseEvent>' is not assignable to type 'boolean | undefined'.
+src/components/warnings/ReviewDashboard.tsx(660,51): error TS2367: This comparison appears to be unintentional because the types '"issued" | "acknowledged" | "expired" | "appealed" | undefined' and '"overturned"' have no overlap.
+src/components/warnings/ReviewDashboard.tsx(721,77): error TS2339: Property 'seconds' does not exist on type 'Date'.
+src/components/warnings/ReviewDashboard.tsx(721,105): error TS2339: Property 'seconds' does not exist on type 'Date'.
+src/components/warnings/ReviewDashboard.tsx(727,29): error TS2367: This comparison appears to be unintentional because the types '"issued" | "acknowledged" | "expired" | "appealed" | undefined' and '"overturned"' have no overlap.
+src/components/warnings/ReviewDashboard.tsx(731,30): error TS2367: This comparison appears to be unintentional because the types '"issued" | "acknowledged" | "expired" | "appealed" | undefined' and '"overturned"' have no overlap.
+src/components/warnings/ReviewDashboard.tsx(739,24): error TS2367: This comparison appears to be unintentional because the types '"issued" | "acknowledged" | "expired" | "appealed" | undefined' and '"overturned"' have no overlap.
+src/components/warnings/ReviewDashboard.tsx(739,67): error TS2339: Property 'appealDecisionDate' does not exist on type 'Warning'.
+src/components/warnings/ReviewDashboard.tsx(748,40): error TS2339: Property 'appealReasoning' does not exist on type 'Warning'.
+src/components/warnings/ReviewDashboard.tsx(750,87): error TS2339: Property 'appealReasoning' does not exist on type 'Warning'.
+src/components/warnings/ReviewDashboard.tsx(753,40): error TS2339: Property 'hrNotes' does not exist on type 'Warning'.
+src/components/warnings/ReviewDashboard.tsx(755,86): error TS2339: Property 'hrNotes' does not exist on type 'Warning'.
+src/components/warnings/ReviewDashboard.tsx(759,83): error TS2339: Property 'appealDecisionDate' does not exist on type 'Warning'.
+src/components/warnings/ReviewDashboard.tsx(892,36): error TS2304: Cannot find name 'setItemsPerPage'.
+src/components/warnings/ReviewDashboard.tsx(947,39): error TS2367: This comparison appears to be unintentional because the types 'WarningLevel' and '"final"' have no overlap.
+src/components/warnings/ReviewDashboard.tsx(1018,65): error TS2339: Property 'seconds' does not exist on type 'Date'.
+src/components/warnings/ReviewDashboard.tsx(1018,93): error TS2339: Property 'seconds' does not exist on type 'Date'.
+src/components/warnings/ReviewDashboard.tsx(1078,23): error TS2367: This comparison appears to be unintentional because the types '"dismissal"' and '"written"' have no overlap.
+src/components/warnings/ReviewDashboard.tsx(1079,23): error TS2367: This comparison appears to be unintentional because the types '"dismissal"' and '"final"' have no overlap.
+src/components/warnings/ReviewDashboard.tsx(1091,50): error TS2339: Property 'seconds' does not exist on type 'Date'.
+src/components/warnings/ReviewDashboard.tsx(1091,78): error TS2339: Property 'seconds' does not exist on type 'Date'.
+src/components/warnings/ReviewDashboard.tsx(1143,96): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/components/warnings/ReviewDashboard.tsx(1181,65): error TS2339: Property 'seconds' does not exist on type 'Date'.
+src/components/warnings/ReviewDashboard.tsx(1182,60): error TS2339: Property 'seconds' does not exist on type 'Date'.
+src/components/warnings/ReviewDashboard.tsx(1284,53): error TS2339: Property 'deliveryNotificationId' does not exist on type 'Warning'.
+src/components/warnings/ReviewDashboard.tsx(1287,35): error TS2339: Property 'deliveryNotificationId' does not exist on type 'Warning'.
+src/components/warnings/ReviewDashboard.tsx(1315,33): error TS2339: Property 'deliveryNotificationId' does not exist on type 'Warning'.
+src/components/warnings/ReviewDashboard.tsx(1326,44): error TS2339: Property 'createdByName' does not exist on type 'Warning'.
+src/components/warnings/ReviewDashboard.tsx(1327,37): error TS2339: Property 'pdfUrl' does not exist on type 'Warning'.
+src/components/warnings/ReviewDashboard.tsx(1339,17): error TS2322: Type '"delivered"' is not assignable to type '"issued" | "acknowledged" | "expired" | "appealed" | undefined'.
+src/components/warnings/ReviewDashboard.tsx(1387,34): error TS2339: Property 'updateDeliveryStatus' does not exist on type '{ getAll(organizationId: string, filters?: { status?: string | undefined; employeeId?: string | undefined; level?: WarningLevel | undefined; } | undefined): Promise<Warning[]>; ... 10 more ...; getArchived(organizationId: string): Promise<...>; }'.
+src/components/warnings/ReviewDashboard.tsx(1436,11): error TS2739: Type '{ id: string; employeeName: string; employeeNumber: string; category: string; level: WarningLevel; issueDate: Date; description: string; appealDetails: any; }' is missing the following properties from type '{ id: string; employeeName: string; employeeNumber: string; department: string; category: string; level: string; issueDate: any; description: string; status: string; appealDetails?: { grounds: string; ... 4 more ...; evidenceItems?: { ...; }[] | undefined; } | undefined; }': department, status
+src/components/warnings/ReviewDashboard.tsx(1444,48): error TS2339: Property 'appealDetails' does not exist on type 'Warning'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(202,5): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(203,5): error TS2322: Type 'string | null' is not assignable to type 'string'.
+  Type 'null' is not assignable to type 'string'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(274,19): error TS2345: Argument of type '(prev: EnhancedWarningFormData) => { level: string; wasOverridden: boolean; employeeId: string; categoryId: string; issueDate: string; incidentDate: string; incidentTime: string; ... 5 more ...; audioRecording?: any; }' is not assignable to parameter of type 'SetStateAction<EnhancedWarningFormData>'.
+  Type '(prev: EnhancedWarningFormData) => { level: string; wasOverridden: boolean; employeeId: string; categoryId: string; issueDate: string; incidentDate: string; incidentTime: string; ... 5 more ...; audioRecording?: any; }' is not assignable to type '(prevState: EnhancedWarningFormData) => EnhancedWarningFormData'.
+    Call signature return types '{ level: string; wasOverridden: boolean; employeeId: string; categoryId: string; issueDate: string; incidentDate: string; incidentTime: string; incidentLocation: string; incidentDescription: string; additionalNotes?: string | undefined; validityPeriod: 3 | ... 1 more ... | 6; escalationReason?: string | undefined; a...' and 'EnhancedWarningFormData' are incompatible.
+      The types of 'level' are incompatible between these types.
+        Type 'string' is not assignable to type 'WarningLevel'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(310,63): error TS2345: Argument of type '{ manager: null; employee: null; }' is not assignable to parameter of type 'SignatureData | (() => SignatureData)'.
+  Property 'witness' is missing in type '{ manager: null; employee: null; }' but required in type 'SignatureData'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(584,46): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(584,105): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(614,46): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(614,105): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(671,9): error TS2322: Type 'null' is not assignable to type 'Date'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(752,43): error TS2339: Property 'employeeId' does not exist on type 'EscalationRecommendation'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(852,13): error TS7030: Not all code paths return a value.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(1012,22): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(1087,42): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(1088,46): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(1089,44): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(1090,48): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(1091,46): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(1120,60): error TS2339: Property 'factsAndReasoning' does not exist on type '{ employeeStatement: string; expectedBehavior: string; actionCommitments: { id: string; commitment: string; timeline: string; }[]; reviewDate: string; interventionDetails?: string | undefined; resourcesProvided?: string[] | undefined; }'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(1225,35): error TS2339: Property 'name' does not exist on type 'User'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(1560,13): error TS2322: Type 'string' is not assignable to type 'WarningLevel'.
+src/components/warnings/enhanced/EnhancedWarningWizard.tsx(1603,13): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/components/warnings/enhanced/PDFPreviewModal.tsx(105,106): error TS2339: Property 'employee' does not exist on type 'WarningWizardData'.
+src/components/warnings/enhanced/PDFPreviewModal.tsx(199,86): error TS2339: Property 'pdfTemplateVersion' does not exist on type 'WarningWizardData'.
+src/components/warnings/enhanced/PDFPreviewModal.tsx(201,88): error TS2339: Property 'pdfGeneratorVersion' does not exist on type 'WarningWizardData'.
+src/components/warnings/enhanced/PDFPreviewModal.tsx(215,84): error TS2339: Property 'employeeStatement' does not exist on type 'WarningWizardData'.
+src/components/warnings/enhanced/PDFPreviewModal.tsx(216,100): error TS2339: Property 'expectedBehaviorStandards' does not exist on type 'WarningWizardData'.
+src/components/warnings/enhanced/PDFPreviewModal.tsx(217,94): error TS2339: Property 'factsLeadingToDecision' does not exist on type 'WarningWizardData'.
+src/components/warnings/enhanced/PDFPreviewModal.tsx(218,72): error TS2339: Property 'actionSteps' does not exist on type 'WarningWizardData'.
+src/components/warnings/enhanced/PDFPreviewModal.tsx(219,70): error TS2339: Property 'reviewDate' does not exist on type 'WarningWizardData'.
+src/components/warnings/enhanced/PDFPreviewModal.tsx(220,88): error TS2339: Property 'interventionDetails' does not exist on type 'WarningWizardData'.
+src/components/warnings/enhanced/PDFPreviewModal.tsx(221,84): error TS2339: Property 'resourcesProvided' does not exist on type 'WarningWizardData'.
+src/components/warnings/enhanced/PDFPreviewModal.tsx(410,41): error TS2551: Property 'hasEmployee' does not exist on type '{ wizardState: WarningWizardData | { currentStep: number; selectedEmployee: any; selectedCategory: any; formData: any; signatures: any; lraRecommendation: any; organizationId: string; }; ... 10 more ...; isComplete: boolean; }'. Did you mean 'employee'?
+src/components/warnings/enhanced/PDFPreviewModal.tsx(411,41): error TS2551: Property 'hasCategory' does not exist on type '{ wizardState: WarningWizardData | { currentStep: number; selectedEmployee: any; selectedCategory: any; formData: any; signatures: any; lraRecommendation: any; organizationId: string; }; ... 10 more ...; isComplete: boolean; }'. Did you mean 'category'?
+src/components/warnings/enhanced/PDFPreviewModal.tsx(566,41): error TS2551: Property 'hasEmployee' does not exist on type '{ wizardState: WarningWizardData | { currentStep: number; selectedEmployee: any; selectedCategory: any; formData: any; signatures: any; lraRecommendation: any; organizationId: string; }; ... 10 more ...; isComplete: boolean; }'. Did you mean 'employee'?
+src/components/warnings/enhanced/PDFPreviewModal.tsx(567,41): error TS2551: Property 'hasCategory' does not exist on type '{ wizardState: WarningWizardData | { currentStep: number; selectedEmployee: any; selectedCategory: any; formData: any; signatures: any; lraRecommendation: any; organizationId: string; }; ... 10 more ...; isComplete: boolean; }'. Did you mean 'category'?
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(331,40): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(332,39): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(443,13): error TS7030: Not all code paths return a value.
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(481,98): error TS2559: Type '"active warnings"' has no properties in common with type 'LogContext'.
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(489,85): error TS2559: Type '"active warnings"' has no properties in common with type 'LogContext'.
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(737,44): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(738,42): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(738,86): error TS2339: Property 'employeeNumber' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(739,46): error TS2339: Property 'employment' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(740,44): error TS2339: Property 'employment' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(741,41): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(792,51): error TS2345: Argument of type '{ organizationSnapshot: { companyName: string; address: string | null; phone: string | null; email: string | null; registrationNumber: string | null; website: string | null; primaryColor: string; logoUrl: string | null; }; ... 34 more ...; pdfGeneratorVersion: string; }' is not assignable to parameter of type 'EnhancedWarningFormData'.
+  Type '{ organizationSnapshot: { companyName: string; address: string | null; phone: string | null; email: string | null; registrationNumber: string | null; website: string | null; primaryColor: string; logoUrl: string | null; }; ... 34 more ...; pdfGeneratorVersion: string; }' is missing the following properties from type 'EnhancedWarningFormData': witnessIds, evidenceItems, additionalNotes, deliveryMethod, and 2 more.
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(911,72): error TS2559: Type '"files"' has no properties in common with type 'LogContext'.
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(1062,53): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(1888,57): error TS2339: Property 'profile' does not exist on type 'EmployeeWithContext'.
+src/components/warnings/enhanced/UnifiedWarningWizard.tsx(2146,12): error TS2739: Type '{ onPermissionGranted: () => void; onPermissionDenied: () => void; onSkip: () => void; }' is missing the following properties from type 'MicrophonePermissionHandlerProps': organizationName, managerName
+src/components/warnings/enhanced/components/WizardProgress.tsx(19,22): error TS2305: Module '"@/types/warningWizard"' has no exported member 'STEP_CONFIG'.
+src/components/warnings/enhanced/shared/SuccessCelebration.tsx(67,13): error TS7030: Not all code paths return a value.
+src/components/warnings/enhanced/steps/CombinedIncidentStepV2.tsx(207,44): error TS2322: Type '"lg"' is not assignable to type '"sm" | "md" | undefined'.
+src/components/warnings/enhanced/steps/DeliveryCompletionStep.tsx(374,9): error TS2322: Type '"email" | "whatsapp" | "printed" | "qr" | null' is not assignable to type '"email" | "whatsapp" | "printed"'.
+  Type 'null' is not assignable to type '"email" | "whatsapp" | "printed"'.
+src/components/warnings/enhanced/steps/DeliveryCompletionStep.tsx(459,13): error TS7030: Not all code paths return a value.
+src/components/warnings/enhanced/steps/DeliveryCompletionStep.tsx(475,19): error TS2322: Type '"xl"' is not assignable to type '"none" | "sm" | "md" | "lg" | undefined'.
+src/components/warnings/enhanced/steps/DeliveryCompletionStep.tsx(534,70): error TS2345: Argument of type '"email" | "whatsapp" | "printed" | null' is not assignable to parameter of type '"email" | "whatsapp" | "printed"'.
+  Type 'null' is not assignable to type '"email" | "whatsapp" | "printed"'.
+src/components/warnings/enhanced/steps/DeliveryCompletionStep.tsx(541,74): error TS2345: Argument of type '"email" | "whatsapp" | "printed" | null' is not assignable to parameter of type '"email" | "whatsapp" | "printed"'.
+  Type 'null' is not assignable to type '"email" | "whatsapp" | "printed"'.
+src/components/warnings/enhanced/steps/DeliveryCompletionStep.tsx(550,74): error TS2345: Argument of type '"email" | "whatsapp" | "printed" | null' is not assignable to parameter of type '"email" | "whatsapp" | "printed"'.
+  Type 'null' is not assignable to type '"email" | "whatsapp" | "printed"'.
+src/components/warnings/enhanced/steps/DeliveryCompletionStep.tsx(559,74): error TS2345: Argument of type '"email" | "whatsapp" | "printed" | null' is not assignable to parameter of type '"email" | "whatsapp" | "printed"'.
+  Type 'null' is not assignable to type '"email" | "whatsapp" | "printed"'.
+src/components/warnings/enhanced/steps/DeliveryCompletionStep.tsx(792,13): error TS2353: Object literal may only specify known properties, and 'deliveryChoice' does not exist in type 'WarningWizardData'.
+src/components/warnings/enhanced/steps/LegalReviewSignaturesStepV2.tsx(706,19): error TS2322: Type '"xl"' is not assignable to type '"none" | "sm" | "md" | "lg" | undefined'.
+src/components/warnings/enhanced/steps/LegalReviewSignaturesStepV2.tsx(1151,69): error TS2322: Type '{ children: Element; variant: "success"; className: string; style: { borderLeftColor: string; }; }' is not assignable to type 'IntrinsicAttributes & ThemedAlertProps'.
+  Property 'style' does not exist on type 'IntrinsicAttributes & ThemedAlertProps'.
+src/components/warnings/enhanced/steps/components/CategorySelector.tsx(229,46): error TS2367: This comparison appears to be unintentional because the types '"critical" | "low" | "medium" | "high"' and '"serious"' have no overlap.
+src/components/warnings/enhanced/steps/components/CategorySelector.tsx(229,81): error TS2367: This comparison appears to be unintentional because the types '"critical" | "low" | "medium" | "high"' and '"gross_misconduct"' have no overlap.
+src/components/warnings/enhanced/steps/components/CategorySelector.tsx(231,33): error TS2367: This comparison appears to be unintentional because the types '"critical" | "low" | "medium" | "high"' and '"moderate"' have no overlap.
+src/components/warnings/enhanced/steps/components/CategorySelector.tsx(234,36): error TS2367: This comparison appears to be unintentional because the types '"critical" | "low" | "medium" | "high"' and '"serious"' have no overlap.
+src/components/warnings/enhanced/steps/components/CategorySelector.tsx(234,71): error TS2367: This comparison appears to be unintentional because the types '"critical" | "low" | "medium" | "high"' and '"gross_misconduct"' have no overlap.
+src/components/warnings/enhanced/steps/components/CategorySelector.tsx(236,33): error TS2367: This comparison appears to be unintentional because the types '"critical" | "low" | "medium" | "high"' and '"moderate"' have no overlap.
+src/components/warnings/enhanced/steps/components/CategorySelector.tsx(321,44): error TS2367: This comparison appears to be unintentional because the types '"critical" | "low" | "medium" | "high"' and '"serious"' have no overlap.
+src/components/warnings/enhanced/steps/components/CategorySelector.tsx(321,79): error TS2367: This comparison appears to be unintentional because the types '"critical" | "low" | "medium" | "high"' and '"gross_misconduct"' have no overlap.
+src/components/warnings/enhanced/steps/components/CategorySelector.tsx(323,31): error TS2367: This comparison appears to be unintentional because the types '"critical" | "low" | "medium" | "high"' and '"moderate"' have no overlap.
+src/components/warnings/enhanced/steps/components/CategorySelector.tsx(326,34): error TS2367: This comparison appears to be unintentional because the types '"critical" | "low" | "medium" | "high"' and '"serious"' have no overlap.
+src/components/warnings/enhanced/steps/components/CategorySelector.tsx(326,69): error TS2367: This comparison appears to be unintentional because the types '"critical" | "low" | "medium" | "high"' and '"gross_misconduct"' have no overlap.
+src/components/warnings/enhanced/steps/components/CategorySelector.tsx(328,31): error TS2367: This comparison appears to be unintentional because the types '"critical" | "low" | "medium" | "high"' and '"moderate"' have no overlap.
+src/components/warnings/enhanced/steps/components/EmployeeSelector.tsx(115,20): error TS2339: Property 'lastDate' does not exist on type '{ count: number; }'.
+src/components/warnings/enhanced/steps/components/EmployeeSelector.tsx(115,30): error TS2339: Property 'level' does not exist on type '{ count: number; }'.
+src/components/warnings/enhanced/steps/components/EmployeeSelector.tsx(127,24): error TS2322: Type '"secondary"' is not assignable to type '"error" | "default" | "warning" | "success" | "primary" | undefined'.
+src/components/warnings/enhanced/steps/components/EmployeeSelector.tsx(359,55): error TS2339: Property 'lastDate' does not exist on type '{ count: number; }'.
+src/components/warnings/enhanced/steps/components/EmployeeSelector.tsx(363,69): error TS2339: Property 'lastDate' does not exist on type '{ count: number; }'.
+src/components/warnings/enhanced/steps/components/IncidentDetailsForm.tsx(103,56): error TS7006: Parameter 'word' implicitly has an 'any' type.
+src/components/warnings/modals/DeliveryMethodSelectionModal.tsx(179,34): error TS2322: Type '"info"' is not assignable to type '"error" | "default" | "warning" | "success" | "primary" | undefined'.
+src/components/warnings/modals/DeliveryMethodSelectionModal.tsx(179,49): error TS2322: Type '"xs"' is not assignable to type '"sm" | "md" | undefined'.
+src/components/warnings/modals/DeliveryMethodSelectionModal.tsx(269,60): error TS2322: Type '"xs"' is not assignable to type '"sm" | "md" | undefined'.
+src/components/warnings/modals/PDFViewerModal.tsx(32,30): error TS2307: Cannot find module '../../types/warning' or its corresponding type declarations.
+src/components/warnings/modals/PDFViewerModal.tsx(148,22): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/components/warnings/modals/PDFViewerModal.tsx(175,32): error TS2339: Property 'warningId' does not exist on type 'Promise<any>'.
+src/components/warnings/modals/PDFViewerModal.tsx(176,34): error TS2339: Property 'employee' does not exist on type 'Promise<any>'.
+src/components/warnings/modals/PDFViewerModal.tsx(176,64): error TS2339: Property 'employee' does not exist on type 'Promise<any>'.
+src/components/warnings/modals/PDFViewerModal.tsx(177,31): error TS2339: Property 'category' does not exist on type 'Promise<any>'.
+src/components/warnings/modals/PDFViewerModal.tsx(178,42): error TS2339: Property 'pdfGeneratorVersion' does not exist on type 'Promise<any>'.
+src/components/warnings/modals/PDFViewerModal.tsx(187,13): error TS2345: Argument of type 'Promise<any>' is not assignable to parameter of type 'WarningPDFData'.
+  Type 'Promise<any>' is missing the following properties from type 'WarningPDFData': warningId, issuedDate, employee, warningLevel, and 6 more.
+src/components/warnings/modals/PDFViewerModal.tsx(188,21): error TS2339: Property 'pdfGeneratorVersion' does not exist on type 'Promise<any>'.
+src/components/warnings/modals/PDFViewerModal.tsx(189,21): error TS2339: Property 'pdfSettings' does not exist on type 'Promise<any>'.
+src/components/warnings/modals/PDFViewerModal.tsx(235,13): error TS7030: Not all code paths return a value.
+src/components/warnings/modals/PDFViewerModal.tsx(249,13): error TS7030: Not all code paths return a value.
+src/components/warnings/modals/ProofOfDeliveryModal.tsx(140,17): error TS2339: Property 'companyName' does not exist on type 'Organization'.
+src/components/warnings/modals/ProofOfDeliveryModal.tsx(187,32): error TS2352: Conversion of type '{ target: { files: File[]; }; }' to type 'ChangeEvent<HTMLInputElement>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ target: { files: File[]; }; }' is missing the following properties from type 'ChangeEvent<HTMLInputElement>': nativeEvent, currentTarget, bubbles, cancelable, and 10 more.
+src/components/warnings/modals/ProofOfDeliveryModal.tsx(269,28): error TS2339: Property 'warningId' does not exist on type 'Promise<any>'.
+src/components/warnings/modals/ProofOfDeliveryModal.tsx(270,30): error TS2339: Property 'employee' does not exist on type 'Promise<any>'.
+src/components/warnings/modals/ProofOfDeliveryModal.tsx(270,60): error TS2339: Property 'employee' does not exist on type 'Promise<any>'.
+src/components/warnings/modals/ProofOfDeliveryModal.tsx(271,27): error TS2339: Property 'category' does not exist on type 'Promise<any>'.
+src/components/warnings/modals/ProofOfDeliveryModal.tsx(272,38): error TS2339: Property 'pdfGeneratorVersion' does not exist on type 'Promise<any>'.
+src/components/warnings/modals/ProofOfDeliveryModal.tsx(281,9): error TS2345: Argument of type 'Promise<any>' is not assignable to parameter of type 'WarningPDFData'.
+  Type 'Promise<any>' is missing the following properties from type 'WarningPDFData': warningId, issuedDate, employee, warningLevel, and 6 more.
+src/components/warnings/modals/ProofOfDeliveryModal.tsx(282,17): error TS2339: Property 'pdfGeneratorVersion' does not exist on type 'Promise<any>'.
+src/components/warnings/modals/ProofOfDeliveryModal.tsx(283,17): error TS2339: Property 'pdfSettings' does not exist on type 'Promise<any>'.
+src/components/warnings/modals/ProofOfDeliveryModal.tsx(487,27): error TS2339: Property 'screenshotTips' does not exist on type '{ icon: ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>; ... 4 more ...; screenshotTips: string[]; } | { ...; } | { ...; }'.
+  Property 'screenshotTips' does not exist on type '{ icon: ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>; name: string; color: string; requiresProof: boolean; instructions: string[]; }'.
+src/components/warnings/modals/ProofOfDeliveryModal.tsx(487,48): error TS7006: Parameter 'tip' implicitly has an 'any' type.
+src/components/warnings/modals/ProofOfDeliveryModal.tsx(487,53): error TS7006: Parameter 'index' implicitly has an 'any' type.
+src/components/warnings/modals/QRCodeDownloadModal.tsx(288,69): error TS2322: Type '{ children: Element; variant: "warning"; className: string; style: { borderLeftColor: string; }; }' is not assignable to type 'IntrinsicAttributes & ThemedAlertProps'.
+  Property 'style' does not exist on type 'IntrinsicAttributes & ThemedAlertProps'.
+src/components/warnings/modals/QRCodeDownloadModal.tsx(327,19): error TS2322: Type '"success" | "secondary"' is not assignable to type '"primary" | "secondary" | "accent" | "ghost" | "outline" | "danger" | undefined'.
+  Type '"success"' is not assignable to type '"primary" | "secondary" | "accent" | "ghost" | "outline" | "danger" | undefined'.
+src/components/warnings/modals/QRCodeDownloadModal.tsx(349,66): error TS2322: Type '{ children: Element; variant: "info"; className: string; style: { borderLeftColor: string; }; }' is not assignable to type 'IntrinsicAttributes & ThemedAlertProps'.
+  Property 'style' does not exist on type 'IntrinsicAttributes & ThemedAlertProps'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(128,85): error TS2339: Property 'issuedByName' does not exist on type 'WarningWizardData'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(130,72): error TS2339: Property 'pdfGeneratorVersion' does not exist on type 'WarningWizardData'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(132,56): error TS2339: Property 'pdfSettings' does not exist on type 'WarningWizardData'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(135,68): error TS2339: Property 'employeeStatement' does not exist on type 'WarningWizardData'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(136,84): error TS2339: Property 'expectedBehaviorStandards' does not exist on type 'WarningWizardData'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(137,78): error TS2339: Property 'factsLeadingToDecision' does not exist on type 'WarningWizardData'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(138,56): error TS2339: Property 'actionSteps' does not exist on type 'WarningWizardData'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(139,54): error TS2339: Property 'reviewDate' does not exist on type 'WarningWizardData'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(140,72): error TS2339: Property 'interventionDetails' does not exist on type 'WarningWizardData'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(141,68): error TS2339: Property 'resourcesProvided' does not exist on type 'WarningWizardData'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(169,43): error TS2339: Property 'employee' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(169,79): error TS2339: Property 'employee' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(172,42): error TS2339: Property 'category' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(184,42): error TS2339: Property 'description' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(185,41): error TS2339: Property 'incidentLocation' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(186,41): error TS2339: Property 'additionalNotes' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(213,34): error TS2339: Property 'warningId' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(214,36): error TS2339: Property 'employee' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(214,72): error TS2339: Property 'employee' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(215,33): error TS2339: Property 'category' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(216,44): error TS2339: Property 'pdfGeneratorVersion' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(227,9): error TS2345: Argument of type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...' is not assignable to parameter of type 'WarningPDFData'.
+  Type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...' is missing the following properties from type 'WarningPDFData': warningId, issuedDate, employee, warningLevel, and 6 more.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(228,23): error TS2339: Property 'pdfGeneratorVersion' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(229,23): error TS2339: Property 'pdfSettings' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(326,36): error TS2339: Property 'employee' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(326,71): error TS2339: Property 'employee' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/SimplePDFDownloadModal.tsx(326,107): error TS2339: Property 'category' does not exist on type '{ isComplete: boolean; hasEmployee: boolean; hasCategory: boolean; then<TResult1 = any, TResult2 = never>(onfulfilled?: ((value: any) => TResult1 | PromiseLike<TResult1>) | null | undefined, onrejected?: ((reason: any) => TResult2 | PromiseLike<...>) | ... 1 more ... | undefined): Promise<...>; catch<TResult = never...'.
+src/components/warnings/modals/WarningDetailsModal.tsx(958,37): error TS2339: Property 'deliveryStatus' does not exist on type '{ id: any; employeeName: string; employeeNumber: string; department: string; position: string; category: string; level: any; status: any; incidentDate: string; incidentTime: string; incidentDateTime: string; ... 28 more ...; archiveReason: any; }'.
+src/components/warnings/modals/WarningDetailsModal.tsx(960,38): error TS2339: Property 'deliveryStatus' does not exist on type '{ id: any; employeeName: string; employeeNumber: string; department: string; position: string; category: string; level: any; status: any; incidentDate: string; incidentTime: string; incidentDateTime: string; ... 28 more ...; archiveReason: any; }'.
+src/config/performance.ts(5,38): error TS2724: '"firebase/performance"' has no exported member named 'Performance'. Did you mean 'getPerformance'?
+src/config/sentry.ts(96,47): error TS2554: Expected 1-3 arguments, but got 4.
+src/e2e/comprehensive-health-check.spec.ts(333,90): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ 'content-security-policy': string | undefined; 'x-frame-options': string | undefined; 'x-content-type-options': string | undefined; }'.
+  No index signature with a parameter of type 'string' was found on type '{ 'content-security-policy': string | undefined; 'x-frame-options': string | undefined; 'x-content-type-options': string | undefined; }'.
+src/e2e/test-helpers.ts(211,32): error TS2339: Property 'waitForDownload' does not exist on type 'Page'.
+src/e2e/test-helpers.ts(215,3): error TS2304: Cannot find name 'expect'.
+src/e2e/test-helpers.ts(265,5): error TS2741: Property 'isTypeSupported' is missing in type 'typeof MockMediaRecorder' but required in type '{ new (stream: MediaStream, options?: MediaRecorderOptions | undefined): MediaRecorder; prototype: MediaRecorder; isTypeSupported(type: string): boolean; }'.
+src/e2e/test-helpers.ts(274,18): error TS2349: This expression is not callable.
+  Type 'never' has no call signatures.
+src/e2e/test-helpers.ts(282,16): error TS2349: This expression is not callable.
+  Type 'never' has no call signatures.
+src/e2e/test-helpers.ts(286,24): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/e2e/test-helpers.ts(286,31): error TS7006: Parameter 'handler' implicitly has an 'any' type.
+src/e2e/test-helpers.ts(295,5): error TS2322: Type '() => Promise<{ getTracks: () => { stop: () => void; }[]; getAudioTracks: () => { stop: () => void; }[]; }>' is not assignable to type '(constraints?: MediaStreamConstraints | undefined) => Promise<MediaStream>'.
+  Type 'Promise<{ getTracks: () => { stop: () => void; }[]; getAudioTracks: () => { stop: () => void; }[]; }>' is not assignable to type 'Promise<MediaStream>'.
+    Type '{ getTracks: () => { stop: () => void; }[]; getAudioTracks: () => { stop: () => void; }[]; }' is missing the following properties from type 'MediaStream': active, id, onaddtrack, onremovetrack, and 8 more.
+src/hooks/dashboard/useDashboardData.ts(120,48): error TS2345: Argument of type 'string | UserRole' is not assignable to parameter of type 'string'.
+  Type 'UserRole' is not assignable to type 'string'.
+src/hooks/dashboard/useDashboardData.ts(180,29): error TS2367: This comparison appears to be unintentional because the types 'UserRoleId | UserRole' and '"hr"' have no overlap.
+src/hooks/dashboard/useDashboardData.ts(181,28): error TS2367: This comparison appears to be unintentional because the types 'UserRoleId | UserRole' and '"executive_management"' have no overlap.
+src/hooks/dashboard/useHRReportsData.ts(102,64): error TS2339: Property 'hrReviewed' does not exist on type '{ id: string; }'.
+src/hooks/dashboard/useHRReportsData.ts(140,67): error TS2339: Property 'status' does not exist on type '{ id: string; }'.
+src/hooks/dashboard/useWeatherData.ts(7,61): error TS7016: Could not find a declaration file for module '../../utils/weatherApi'. '/home/aiguy/projects/hr-disciplinary-system/frontend/src/utils/weatherApi.js' implicitly has an 'any' type.
+src/hooks/employees/useEmployeeForm.ts(31,5): error TS2353: Object literal may only specify known properties, and 'preferredDeliveryMethod' does not exist in type 'EmployeeFormData | (() => EmployeeFormData)'.
+src/hooks/employees/useEmployeeForm.ts(38,19): error TS2345: Argument of type 'EmployeeFormData' is not assignable to parameter of type 'SetStateAction<EmployeeFormData>'.
+  Type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/employee").EmployeeFormData' is not assignable to type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").EmployeeFormData'.
+    Types of property 'email' are incompatible.
+      Type 'string | undefined' is not assignable to type 'string'.
+        Type 'undefined' is not assignable to type 'string'.
+src/hooks/employees/useEmployeeForm.ts(95,51): error TS2345: Argument of type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").EmployeeFormData' is not assignable to parameter of type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/employee").EmployeeFormData'.
+  Types of property 'phoneNumber' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/hooks/employees/useEmployeeForm.ts(148,7): error TS2353: Object literal may only specify known properties, and 'preferredDeliveryMethod' does not exist in type 'SetStateAction<EmployeeFormData>'.
+src/hooks/employees/useEmployeeImport.ts(318,13): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/hooks/employees/useEmployeeImport.ts(329,55): error TS2345: Argument of type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").EmployeeFormData' is not assignable to parameter of type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/employee").EmployeeFormData'.
+  Types of property 'phoneNumber' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/hooks/employees/useEmployeeStats.ts(8,11): error TS2741: Property 'onProbationWithWarnings' is missing in type '{ total: number; active: number; inactive: number; onProbation: number; withActiveWarnings: number; departments: never[]; contractTypes: never[]; }' but required in type 'EmployeeStats'.
+src/hooks/useNetworkError.tsx(95,10): error TS2686: 'React' refers to a UMD global, but the current file is a module. Consider adding an import instead.
+src/hooks/useNetworkError.tsx(103,13): error TS2322: Type 'PropsWithoutRef<P> & { ref: ForwardedRef<any>; }' is not assignable to type 'IntrinsicAttributes & P'.
+  Type 'PropsWithoutRef<P> & { ref: ForwardedRef<any>; }' is not assignable to type 'P'.
+    'PropsWithoutRef<P> & { ref: ForwardedRef<any>; }' is assignable to the constraint of type 'P', but 'P' could be instantiated with a different subtype of constraint 'object'.
+src/hooks/useRecognitionData.ts(170,14): error TS2339: Property 'log' does not exist on type 'typeof Logger'.
+src/hooks/useReviewFollowUps.ts(18,18): error TS2430: Interface 'WarningWithReview' incorrectly extends interface 'Warning'.
+  Types of property 'reviewStatus' are incompatible.
+    Type '"pending" | "overdue" | "completed" | "auto-satisfied"' is not assignable to type '"pending" | "due_soon" | "overdue" | "in_progress" | "completed_satisfactory" | "completed_unsatisfactory" | "auto_satisfied" | "escalated" | undefined'.
+      Type '"completed"' is not assignable to type '"pending" | "due_soon" | "overdue" | "in_progress" | "completed_satisfactory" | "completed_unsatisfactory" | "auto_satisfied" | "escalated" | undefined'.
+src/hooks/useUserManagement.ts(160,60): error TS2339: Property 'includes' does not exist on type 'false | readonly ["reseller", "executive-management", "hr-manager", "hod-manager"] | readonly ["hr-manager", "hod-manager"] | readonly ["hod-manager"]'.
+  Property 'includes' does not exist on type 'false'.
+src/hooks/useUserManagement.ts(173,13): error TS2741: Property 'uid' is missing in type '{ id: string; email: string; firstName: string; lastName: string; role: UserRole; organizationId: string; departmentIds: string[]; isActive: true; createdAt: string; lastLogin: undefined; }' but required in type 'Omit<User, "permissions">'.
+src/hooks/useUserManagement.ts(271,9): error TS18047: 'currentUser' is possibly 'null'.
+src/hooks/useWizardLogging.ts(190,27): error TS2341: Property 'validateStepData' is private and only accessible within class 'WizardLoggingService'.
+src/hooks/warnings/useSimpleWarnings.ts(58,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/hooks/warnings/useSimpleWarnings.ts(62,22): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/hooks/warnings/useWarningFilters.ts(5,24): error TS2305: Module '"../../types"' has no exported member 'WarningFilters'.
+src/hooks/warnings/useWarningFilters.ts(49,19): error TS2551: Property 'category' does not exist on type 'Warning'. Did you mean 'categoryId'?
+src/hooks/warnings/useWarningFilters.ts(51,19): error TS2339: Property 'incident' does not exist on type 'Warning'.
+src/hooks/warnings/useWarningFilters.ts(52,19): error TS2339: Property 'incident' does not exist on type 'Warning'.
+src/hooks/warnings/useWarningFilters.ts(59,53): error TS2551: Property 'category' does not exist on type 'Warning'. Did you mean 'categoryId'?
+src/hooks/warnings/useWarningFilters.ts(94,56): error TS2551: Property 'category' does not exist on type 'Warning'. Did you mean 'categoryId'?
+src/hooks/warnings/useWarningFilters.ts(127,16): error TS7006: Parameter 'prev' implicitly has an 'any' type.
+src/hooks/warnings/useWarnings.ts(49,19): error TS2345: Argument of type 'Warning[]' is not assignable to parameter of type 'SetStateAction<Warning[]>'.
+  Type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/warning").Warning[]' is not assignable to type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/services/WarningService").Warning[]'.
+    Type 'Warning' is missing the following properties from type 'Warning': title, isSigned, isDelivered, createdBy
+src/hooks/warnings/useWarnings.ts(81,46): error TS2322: Type '"delivered" | "issued" | "acknowledged"' is not assignable to type '"issued" | "acknowledged" | "expired" | "appealed" | undefined'.
+  Type '"delivered"' is not assignable to type '"issued" | "acknowledged" | "expired" | "appealed" | undefined'.
+src/hooks/warnings/useWarnings.ts(152,38): error TS2339: Property 'priority' does not exist on type 'Warning'.
+src/hooks/warnings/useWarnings.ts(152,63): error TS2339: Property 'severity' does not exist on type 'Warning'.
+src/layouts/MainLayout.tsx(176,11): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/layouts/MainLayout.tsx(623,58): error TS2367: This comparison appears to be unintentional because the types '"executive-management" | "hr-manager" | "hod-manager" | "reseller" | undefined' and '"superuser"' have no overlap.
+src/main.tsx(5,17): error TS5097: An import path can only end with a '.tsx' extension when 'allowImportingTsExtensions' is enabled.
+src/pages/business/BusinessDashboard.tsx(60,11): error TS2353: Object literal may only specify known properties, and 'hover' does not exist in type 'Properties<string | number, string & {}>'.
+src/pages/business/BusinessDashboard.tsx(123,11): error TS2339: Property 'organizationData' does not exist on type 'OrganizationContextType'.
+src/permissions/__tests__/roleDefinitions.test.ts(111,16): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly 'super-user': { readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; }; readonly reseller: ...'.
+  No index signature with a parameter of type 'string' was found on type '{ readonly 'super-user': { readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; }; readonly reseller: ...'.
+src/permissions/__tests__/roleDefinitions.test.ts(112,16): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly 'super-user': { readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; }; readonly reseller: ...'.
+  No index signature with a parameter of type 'string' was found on type '{ readonly 'super-user': { readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; }; readonly reseller: ...'.
+src/permissions/__tests__/roleDefinitions.test.ts(154,53): error TS2551: Property 'hod-manager' does not exist on type '{ readonly 'super-user': { readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; }; readonly reseller: ...'. Did you mean 'hr-manager'?
+src/permissions/__tests__/roleDefinitions.test.ts(189,23): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly 'super-user': { readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; }; readonly reseller: ...'.
+  No index signature with a parameter of type 'string' was found on type '{ readonly 'super-user': { readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; }; readonly reseller: ...'.
+src/permissions/__tests__/roleDefinitions.test.ts(258,23): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ readonly 'super-user': { readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; }; readonly reseller: ...'.
+  No index signature with a parameter of type 'string' was found on type '{ readonly 'super-user': { readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; }; readonly reseller: ...'.
+src/permissions/__tests__/roleDefinitions.test.ts(270,24): error TS2339: Property 'restrictions' does not exist on type '{ readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; } | { ...; } | { ...; } | { ...; }'.
+  Property 'restrictions' does not exist on type '{ readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; }'.
+src/permissions/__tests__/roleDefinitions.test.ts(271,38): error TS2339: Property 'restrictions' does not exist on type '{ readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; } | { ...; } | { ...; } | { ...; }'.
+  Property 'restrictions' does not exist on type '{ readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; }'.
+src/permissions/__tests__/roleDefinitions.test.ts(272,24): error TS2339: Property 'restrictions' does not exist on type '{ readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; } | { ...; } | { ...; } | { ...; }'.
+  Property 'restrictions' does not exist on type '{ readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; }'.
+src/permissions/roleDefinitions.ts(181,31): error TS2339: Property 'includes' does not exist on type 'false | readonly ["reseller", "executive-management", "hr-manager", "hod-manager"] | readonly ["hr-manager", "hod-manager"] | readonly ["hod-manager"]'.
+  Property 'includes' does not exist on type 'false'.
+src/permissions/roleDefinitions.ts(184,40): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/permissions/roleDefinitions.ts(187,40): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/permissions/roleDefinitions.ts(190,14): error TS2367: This comparison appears to be unintentional because the types 'false | readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]' and 'true' have no overlap.
+src/permissions/roleDefinitions.ts(190,48): error TS2339: Property 'canManage' does not exist on type 'never'.
+src/permissions/roleDefinitions.ts(193,20): error TS2339: Property 'canDeactivate' does not exist on type '{ readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; } | { ...; } | { ...; } | { ...; }'.
+  Property 'canDeactivate' does not exist on type '{ readonly canManage: readonly ["super-user", "reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canCreate: readonly ["reseller", "executive-management", "hr-manager", "hod-manager"]; readonly canDelete: readonly [...]; readonly scope: "global"; }'.
+src/scripts/initializeFirebase.ts(68,7): error TS2741: Property 'accentColor' is missing in type '{ logo: string; primaryColor: string; secondaryColor: string; companyName: string; domain: string; }' but required in type '{ logo: string | null; primaryColor: string; secondaryColor: string; accentColor: string; companyName: string; domain: string; registrationNumber?: string | undefined; vatNumber?: string | undefined; website?: string | undefined; tagline?: string | undefined; }'.
+src/scripts/initializeFirebase.ts(75,7): error TS2739: Type '{ timezone: string; currency: string; language: string; }' is missing the following properties from type '{ timezone: string; currency: string; language: string; defaultDeliveryMethod: DeliveryMethod; allowEmployeeChoice: boolean; requireSignatures: boolean; delivery?: { allowedMethods: DeliveryMethod[]; printAdmin: { ...; }; } | undefined; codeOfConductReference?: string | undefined; }': defaultDeliveryMethod, allowEmployeeChoice, requireSignatures
+src/scripts/initializeFirebase.ts(80,7): error TS2741: Property 'enableAudioRecording' is missing in type '{ enablePhotoCapture: true; enableWhatsAppDelivery: true; enablePrintDelivery: false; }' but required in type '{ enablePhotoCapture: boolean; enableWhatsAppDelivery: boolean; enablePrintDelivery: boolean; enableAudioRecording: boolean; }'.
+src/scripts/migrateToShardedDatabase.ts(100,47): error TS2551: Property 'getAllOrganizations' does not exist on type 'typeof DataService'. Did you mean 'getOrganization'?
+src/scripts/migrateToShardedDatabase.ts(127,47): error TS2551: Property 'getAllOrganizations' does not exist on type 'typeof DataService'. Did you mean 'getOrganization'?
+src/scripts/migrateToShardedDatabase.ts(160,47): error TS2551: Property 'getAllOrganizations' does not exist on type 'typeof DataService'. Did you mean 'getOrganization'?
+src/scripts/migrateToShardedDatabase.ts(204,47): error TS2551: Property 'getAllOrganizations' does not exist on type 'typeof DataService'. Did you mean 'getOrganization'?
+src/scripts/migrateToShardedDatabase.ts(240,21): error TS2339: Property 'loadEmployees' does not exist on type 'typeof DataService'.
+src/scripts/migrateToShardedDatabase.ts(241,21): error TS2551: Property 'getWarningsForOrganization' does not exist on type 'typeof DataService'. Did you mean 'getWarningsByOrganization'?
+src/scripts/migrateToShardedDatabase.ts(241,62): error TS2551: Property 'getWarningsForOrganization' does not exist on type 'typeof DataService'. Did you mean 'getWarningsByOrganization'?
+src/scripts/migrateToShardedDatabase.ts(261,41): error TS2339: Property 'loadEmployees' does not exist on type 'typeof DataService'.
+src/scripts/migrateToShardedDatabase.ts(281,43): error TS2339: Property 'loadEmployees' does not exist on type 'typeof DataService'.
+src/scripts/migrateToShardedDatabase.ts(332,56): error TS2345: Argument of type 'WarningCategory' is not assignable to parameter of type 'Partial<WarningCategory>'.
+  Types of property 'createdAt' are incompatible.
+    Type 'Date' is not assignable to type 'string'.
+src/scripts/migrateUserOrgIndex.ts(96,15): error TS18046: 'user' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(96,26): error TS18046: 'user' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(96,40): error TS18046: 'user' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(98,15): error TS18046: 'user' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(99,15): error TS18046: 'user' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(100,15): error TS18046: 'user' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(101,15): error TS18046: 'user' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(109,51): error TS18046: 'user' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(111,58): error TS18046: 'user' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(114,58): error TS18046: 'user' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(138,52): error TS18046: 'org' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(138,64): error TS18046: 'org' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(140,58): error TS2339: Property 'getCollection' does not exist on type 'typeof DatabaseShardingService'.
+src/scripts/migrateUserOrgIndex.ts(141,13): error TS18046: 'org' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(150,19): error TS18046: 'org' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(160,74): error TS18046: 'org' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(162,67): error TS18046: 'org' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(165,82): error TS18046: 'org' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(169,52): error TS18046: 'org' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(172,59): error TS18046: 'org' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(173,45): error TS18046: 'org' is of type 'unknown'.
+src/scripts/migrateUserOrgIndex.ts(240,58): error TS18046: 'entry' is of type 'unknown'.
+src/services/AudioCleanupService.ts(97,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/AudioCleanupService.ts(132,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/AudioCleanupService.ts(265,20): error TS2339: Property 'triggerMethod' does not exist on type '{ totalScanned: number; totalExpired: number; successfulDeletions: number; failedDeletions: number; errors: string[]; organizationsProcessed: string[]; processingTime: number; }'.
+src/services/AudioCleanupService.ts(269,20): error TS2339: Property 'triggerMethod' does not exist on type '{ totalScanned: number; totalExpired: number; successfulDeletions: number; failedDeletions: number; errors: string[]; organizationsProcessed: string[]; processingTime: number; }'.
+src/services/CommissionService.ts(49,26): error TS2339: Property 'resellerId' does not exist on type 'Organization'.
+src/services/CommissionService.ts(54,67): error TS2339: Property 'resellerId' does not exist on type 'Organization'.
+src/services/CommissionService.ts(70,34): error TS2339: Property 'resellerId' does not exist on type 'Organization'.
+src/services/CommissionService.ts(89,9): error TS2322: Type 'FieldValue' is not assignable to type 'string'.
+src/services/CommissionService.ts(90,9): error TS2322: Type 'FieldValue' is not assignable to type 'string'.
+src/services/CommissionService.ts(157,38): error TS2339: Property 'subscriptionId' does not exist on type 'Organization'.
+src/services/CommissionService.ts(226,11): error TS2322: Type 'FieldValue' is not assignable to type 'string'.
+src/services/DataService.ts(32,3): error TS2305: Module '"../services/WarningService"' has no exported member 'Employee'.
+src/services/DataService.ts(207,15): error TS2741: Property 'icon' is missing in type '{ id: string; organizationId: string; name: string; description: string; severity: "critical" | "low" | "medium" | "high"; escalationPath: WarningLevel[]; legalRequirements: string[]; ... 5 more ...; updatedAt: Date; }' but required in type 'WarningCategory'.
+src/services/DataService.ts(212,46): error TS2345: Argument of type '"critical" | "low" | "medium" | "high" | CategorySeverity' is not assignable to parameter of type '"gross_misconduct" | "minor" | "serious"'.
+  Type '"critical"' is not assignable to type '"gross_misconduct" | "minor" | "serious"'.
+src/services/DataService.ts(229,15): error TS2741: Property 'icon' is missing in type '{ id: string; organizationId: string; name: string; description: string; severity: "critical" | "low" | "medium" | "high"; escalationPath: WarningLevel[]; legalRequirements: string[]; ... 5 more ...; updatedAt: Date; }' but required in type 'WarningCategory'.
+src/services/DataService.ts(452,5): error TS2741: Property 'icon' is missing in type '{ id: any; organizationId: string; name: any; description: any; severity: "critical" | "low" | "medium" | "high"; escalationPath: any; legalRequirements: any; examples: any; defaultValidityPeriod: any; isActive: true; createdAt: Date; updatedAt: Date; }' but required in type 'WarningCategory'.
+src/services/DataService.ts(1088,14): error TS2352: Conversion of type '{ createdAt: Date; lastLogin: Date | undefined; id: string; }' to type 'User' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ createdAt: Date; lastLogin: Date | undefined; id: string; }' is missing the following properties from type 'User': uid, email, firstName, lastName, and 3 more.
+src/services/DataService.ts(1116,14): error TS2352: Conversion of type '{ createdAt: Date; lastLogin: Date | undefined; id: string; }[]' to type 'User[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ createdAt: Date; lastLogin: Date | undefined; id: string; }' is missing the following properties from type 'User': uid, email, firstName, lastName, and 3 more.
+src/services/DataService.ts(1829,18): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/DataService.ts(2439,15): error TS2339: Property 'subscription' does not exist on type '{ createdAt: Date | undefined; updatedAt: Date | undefined; id: string; }'.
+src/services/DataServiceV2.ts(30,3): error TS2305: Module '"../types/core"' has no exported member 'EscalationRule'.
+src/services/DataServiceV2.ts(259,14): error TS2352: Conversion of type '{ createdAt: Date; lastLogin: Date | null; id: string; }[]' to type 'User[]' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ createdAt: Date; lastLogin: Date | null; id: string; }' is missing the following properties from type 'User': uid, email, firstName, lastName, and 3 more.
+src/services/DataServiceV2.ts(278,14): error TS2352: Conversion of type '{ createdAt: Date; lastLogin: Date | null; id: string; }' to type 'User' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ createdAt: Date; lastLogin: Date | null; id: string; }' is missing the following properties from type 'User': uid, email, firstName, lastName, and 3 more.
+src/services/DataServiceV2.ts(351,14): error TS2352: Conversion of type '{ createdAt: Date; updatedAt: Date; id: string; }' to type 'Organization' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ createdAt: Date; updatedAt: Date; id: string; }' is missing the following properties from type 'Organization': name, industry, branding, settings, customization
+src/services/DatabaseShardingService.ts(204,14): error TS2352: Conversion of type '{ id: string; }' to type 'T' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  '{ id: string; }' is assignable to the constraint of type 'T', but 'T' could be instantiated with a different subtype of constraint 'DocumentData'.
+src/services/DatabaseShardingService.ts(306,61): error TS2352: Conversion of type '{ id: string; }' to type 'T' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  '{ id: string; }' is assignable to the constraint of type 'T', but 'T' could be instantiated with a different subtype of constraint 'DocumentData'.
+src/services/DatabaseShardingService.ts(375,61): error TS2352: Conversion of type '{ id: string; }' to type 'T' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  '{ id: string; }' is assignable to the constraint of type 'T', but 'T' could be instantiated with a different subtype of constraint 'DocumentData'.
+src/services/DatabaseShardingService.ts(596,33): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/services/DatabaseShardingService.ts(615,31): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/services/DeliveryNotificationService.ts(179,68): error TS2345: Argument of type '"pending" | "delivered" | "failed" | "in_progress"' is not assignable to parameter of type 'LogContext | undefined'.
+  Type '"pending"' has no properties in common with type 'LogContext'.
+src/services/DeliveryNotificationService.ts(274,44): error TS2339: Property 'deliveryMethod' does not exist on type 'CreateDeliveryNotificationRequest'.
+src/services/DeliveryNotificationService.ts(289,59): error TS2339: Property 'deliveryMethod' does not exist on type 'CreateDeliveryNotificationRequest'.
+src/services/DeliveryNotificationService.ts(290,36): error TS2339: Property 'isEmployeePreference' does not exist on type 'CreateDeliveryNotificationRequest'.
+src/services/DepartmentService.ts(144,13): error TS2322: Type '{ createdAt: Date; updatedAt: Date; name: string; description: string; managerId: string | null; managerName: null; managerEmail: null; employeeCount: number; isDefault: boolean; organizationId: string; isActive: boolean; id: string; }' is not assignable to type 'Department'.
+  Types of property 'managerId' are incompatible.
+    Type 'string | null' is not assignable to type 'string | undefined'.
+      Type 'null' is not assignable to type 'string | undefined'.
+src/services/EmployeeLifecycleService.ts(106,75): error TS2345: Argument of type '{ isActive: boolean; archivedAt: FieldValue; archiveReason: string; archivedBy: string; updatedAt: FieldValue; }' is not assignable to parameter of type 'Partial<Employee>'.
+  Types of property 'updatedAt' are incompatible.
+    Type 'FieldValue' is missing the following properties from type 'Date': toDateString, toTimeString, toLocaleDateString, toLocaleTimeString, and 37 more.
+src/services/EmployeeLifecycleService.ts(153,75): error TS2345: Argument of type '{ isActive: boolean; restoredAt: FieldValue; restoredBy: string; updatedAt: FieldValue; archivedAt: null; archiveReason: null; archivedBy: null; }' is not assignable to parameter of type 'Partial<Employee>'.
+  Types of property 'updatedAt' are incompatible.
+    Type 'FieldValue' is missing the following properties from type 'Date': toDateString, toTimeString, toLocaleDateString, toLocaleTimeString, and 37 more.
+src/services/EmployeeService.ts(37,46): error TS2554: Expected 1 arguments, but got 0.
+src/services/EmployeeService.ts(40,32): error TS2339: Property 'loadEmployees' does not exist on type 'typeof DataService'.
+src/services/EmployeeService.ts(40,46): error TS18047: 'organization' is possibly 'null'.
+src/services/EmployeeService.ts(52,32): error TS2339: Property 'loadEmployees' does not exist on type 'typeof DataService'.
+src/services/EmployeeService.ts(76,46): error TS2554: Expected 1 arguments, but got 0.
+src/services/EmployeeService.ts(77,38): error TS18047: 'organization' is possibly 'null'.
+src/services/EmployeeService.ts(77,55): error TS2345: Argument of type 'Employee' is not assignable to parameter of type 'string'.
+src/services/EmployeeService.ts(81,55): error TS18047: 'organization' is possibly 'null'.
+src/services/EmployeeService.ts(97,46): error TS2554: Expected 1 arguments, but got 0.
+src/services/EmployeeService.ts(98,41): error TS18047: 'organization' is possibly 'null'.
+src/services/EmployeeService.ts(98,70): error TS2554: Expected 2 arguments, but got 3.
+src/services/EmployeeService.ts(102,55): error TS18047: 'organization' is possibly 'null'.
+src/services/EmployeeService.ts(117,46): error TS2554: Expected 1 arguments, but got 0.
+src/services/EmployeeService.ts(118,25): error TS2551: Property 'deleteEmployee' does not exist on type 'typeof DataService'. Did you mean 'getEmployee'?
+src/services/EmployeeService.ts(118,40): error TS18047: 'organization' is possibly 'null'.
+src/services/EmployeeService.ts(122,55): error TS18047: 'organization' is possibly 'null'.
+src/services/EmployeeService.ts(141,38): error TS2339: Property 'firstName' does not exist on type 'Employee'.
+src/services/EmployeeService.ts(141,60): error TS2339: Property 'lastName' does not exist on type 'Employee'.
+src/services/EmployeeService.ts(142,39): error TS2339: Property 'employeeNumber' does not exist on type 'Employee'.
+src/services/EmployeeService.ts(186,104): error TS2559: Type 'string' has no properties in common with type 'LogContext'.
+src/services/EmployeeService.ts(198,47): error TS2339: Property 'getUserProfile' does not exist on type 'typeof DataService'.
+src/services/EmployeeService.ts(240,64): error TS7006: Parameter 'managedDept' implicitly has an 'any' type.
+src/services/EmployeeService.ts(283,41): error TS2339: Property 'loadEmployees' does not exist on type 'typeof DataService'.
+src/services/EmployeeService.ts(288,28): error TS7006: Parameter 'employee' implicitly has an 'any' type.
+src/services/EmployeeService.ts(291,55): error TS2339: Property 'getEmployeeWarnings' does not exist on type 'typeof WarningService'.
+src/services/EmployeeService.ts(297,56): error TS7006: Parameter 'w' implicitly has an 'any' type.
+src/services/EmployeeService.ts(302,36): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/services/EmployeeService.ts(302,39): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/services/EmployeeService.ts(349,85): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/services/EmployeeService.ts(412,14): error TS2339: Property 'warningCount' does not exist on type 'Employee'.
+src/services/EmployeeSummaryService.ts(56,48): error TS2339: Property 'toDate' does not exist on type 'Date'.
+src/services/EmployeeSummaryService.ts(150,42): error TS2367: This comparison appears to be unintentional because the types '"counselling" | "verbal" | "first_written" | "second_written" | "dismissal"' and '"final"' have no overlap.
+src/services/EmployeeSummaryService.ts(155,21): error TS2339: Property 'isActive' does not exist on type 'Warning'.
+src/services/EmployeeSummaryService.ts(155,43): error TS2367: This comparison appears to be unintentional because the types 'WarningStatus' and '"expired"' have no overlap.
+src/services/EmployeeSummaryService.ts(155,75): error TS2367: This comparison appears to be unintentional because the types 'WarningStatus' and '"archived"' have no overlap.
+src/services/EmployeeSummaryService.ts(160,46): error TS2339: Property 'toDate' does not exist on type 'Date'.
+src/services/ErrorTrackingService.ts(40,7): error TS2322: Type 'string | null | undefined' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/services/EscalationAIService.ts(18,3): error TS2724: '"../types"' has no exported member named 'EscalationLevel'. Did you mean 'EscalationRule'?
+src/services/EscalationAIService.ts(20,3): error TS2305: Module '"../types"' has no exported member 'WarningHistory'.
+src/services/EscalationAIService.ts(21,3): error TS2724: '"../types"' has no exported member named 'EmployeeRiskProfile'. Did you mean 'EmployeeProfile'?
+src/services/EscalationAIService.ts(23,31): error TS2307: Cannot find module './SectorService' or its corresponding type declarations.
+src/services/EscalationAIService.ts(291,7): error TS2353: Object literal may only specify known properties, and 'riskScore' does not exist in type 'EscalationRecommendation'.
+src/services/ManagerService.ts(475,59): error TS7006: Parameter 'id' implicitly has an 'any' type.
+src/services/NestedDataService.ts(181,19): error TS2339: Property 'isActive' does not exist on type 'Warning'.
+src/services/NestedDataService.ts(188,48): error TS2551: Property 'category' does not exist on type 'Warning'. Did you mean 'categoryId'?
+src/services/NestedDataService.ts(192,20): error TS2367: This comparison appears to be unintentional because the types '"counselling" | "verbal" | "first_written" | "second_written" | "dismissal"' and '"written"' have no overlap.
+src/services/NestedDataService.ts(195,31): error TS2551: Property 'category' does not exist on type 'Warning'. Did you mean 'categoryId'?
+src/services/NestedDataService.ts(196,35): error TS2339: Property 'employeeName' does not exist on type 'Warning'.
+src/services/NestedDataService.ts(343,11): error TS2367: This comparison appears to be unintentional because the types 'WarningStatus | undefined' and '"archived"' have no overlap.
+src/services/NestedDataService.ts(343,52): error TS2339: Property 'isActive' does not exist on type 'Partial<Warning>'.
+src/services/NestedDataService.ts(352,35): error TS2367: This comparison appears to be unintentional because the types '"counselling" | "verbal" | "first_written" | "second_written" | "dismissal"' and '"written"' have no overlap.
+src/services/NestedDataService.ts(359,37): error TS2339: Property 'isActive' does not exist on type 'Partial<Warning>'.
+src/services/NestedDataService.ts(398,40): error TS2349: This expression is not callable.
+  Type 'Number' has no call signatures.
+src/services/NotificationDeliveryService.ts(77,5): error TS2322: Type '"high"' is not assignable to type '"info" | "error" | "warning" | "success"'.
+src/services/PDFGenerationService.ts(493,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/PDFGenerationService.ts(507,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/PDFGenerationService.ts(510,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/PDFGenerationService.ts(530,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/PDFGenerationService.ts(1091,20): error TS2339: Property 'addAppealReportSection' does not exist on type 'typeof PDFGenerationService'.
+src/services/PDFGenerationService.ts(1246,32): error TS2339: Property 'website' does not exist on type '{ colors?: { primary?: string | undefined; secondary?: string | undefined; accent?: string | undefined; } | undefined; logo?: string | undefined; companyName?: string | undefined; }'.
+src/services/PDFGenerationService.ts(1246,76): error TS2339: Property 'website' does not exist on type '{ colors?: { primary?: string | undefined; secondary?: string | undefined; accent?: string | undefined; } | undefined; logo?: string | undefined; companyName?: string | undefined; }'.
+src/services/PDFGenerationService.ts(1507,37): error TS2339: Property 'expiryDate' does not exist on type 'WarningPDFData'.
+src/services/PDFGenerationService.ts(1512,56): error TS2339: Property 'expiryDate' does not exist on type 'WarningPDFData'.
+src/services/PDFGenerationService.ts(1553,28): error TS2339: Property 'settings' does not exist on type '{ name: string; address?: string | undefined; phone?: string | undefined; email?: string | undefined; website?: string | undefined; registrationNumber?: string | undefined; branding?: { ...; } | undefined; }'.
+src/services/PDFGenerationService.ts(1557,64): error TS2339: Property 'settings' does not exist on type '{ name: string; address?: string | undefined; phone?: string | undefined; email?: string | undefined; website?: string | undefined; registrationNumber?: string | undefined; branding?: { ...; } | undefined; }'.
+src/services/PDFGenerationService.ts(1794,70): error TS2339: Property 'previousWarnings' does not exist on type '{ suggestedLevel: string; reason: string; warningCount: number; activeWarnings: any[]; legalRequirements: string[]; }'.
+src/services/PDFGenerationService.ts(2549,19): error TS18048: 'sectionConfig.content.subsections' is possibly 'undefined'.
+src/services/PDFGenerationService.ts(2604,19): error TS18048: 'sectionConfig.content.subsections' is possibly 'undefined'.
+src/services/PDFGenerationService.ts(2795,21): error TS2339: Property 'witness' does not exist on type '{ manager?: string | null | undefined; employee?: string | null | undefined; }'.
+src/services/PDFGenerationService.ts(2816,60): error TS2339: Property 'witness' does not exist on type '{ manager?: string | null | undefined; employee?: string | null | undefined; }'.
+src/services/PDFGenerationService.ts(2836,33): error TS2339: Property 'witness' does not exist on type '{ manager?: string | null | undefined; employee?: string | null | undefined; }'.
+src/services/PDFGenerationService.ts(3013,46): error TS2339: Property 'toUpperCase' does not exist on type 'never'.
+src/services/PDFGenerationService.ts(3397,48): error TS2339: Property 'toUpperCase' does not exist on type 'never'.
+src/services/PDFGenerationService.ts(3486,30): error TS2339: Property 'getNumberOfPages' does not exist on type 'jsPDF'.
+src/services/PDFGenerationService.ts(3537,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/PDFGenerationService.ts(4081,26): error TS2722: Cannot invoke an object which is possibly 'undefined'.
+src/services/PDFStorageService.ts(41,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/PDFStorageService.ts(56,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/PDFStorageService.ts(102,48): error TS18046: 'error' is of type 'unknown'.
+src/services/PDFStorageService.ts(111,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/RealtimeService.ts(54,13): error TS7030: Not all code paths return a value.
+src/services/RecognitionPDFService.ts(650,9): error TS18048: 'rewards' is possibly 'undefined'.
+src/services/RecognitionPDFService.ts(651,46): error TS18048: 'rewards' is possibly 'undefined'.
+src/services/RecognitionPDFService.ts(654,9): error TS18048: 'rewards' is possibly 'undefined'.
+src/services/RecognitionPDFService.ts(655,50): error TS18048: 'rewards' is possibly 'undefined'.
+src/services/RecognitionPDFService.ts(655,72): error TS18048: 'rewards' is possibly 'undefined'.
+src/services/RecognitionPDFService.ts(658,9): error TS18048: 'rewards' is possibly 'undefined'.
+src/services/RecognitionPDFService.ts(659,40): error TS18048: 'rewards' is possibly 'undefined'.
+src/services/RecognitionPDFService.ts(662,9): error TS18048: 'rewards' is possibly 'undefined'.
+src/services/RecognitionPDFService.ts(663,29): error TS18048: 'rewards' is possibly 'undefined'.
+src/services/ReviewFollowUpService.ts(585,15): error TS2554: Expected 5-6 arguments, but got 1.
+src/services/ShardedDataService.ts(86,44): error TS2339: Property 'firstName' does not exist on type 'Employee'.
+src/services/ShardedDataService.ts(86,67): error TS2339: Property 'lastName' does not exist on type 'Employee'.
+src/services/ShardedDataService.ts(176,66): error TS2339: Property 'firstName' does not exist on type 'Partial<Employee>'.
+src/services/ShardedDataService.ts(176,92): error TS2339: Property 'lastName' does not exist on type 'Partial<Employee>'.
+src/services/ShardedDataService.ts(569,9): error TS2345: Argument of type 'T' is not assignable to parameter of type 'DocumentData'.
+src/services/ShardedDataService.ts(592,67): error TS2344: Type 'T' does not satisfy the constraint 'DocumentData'.
+src/services/ShardedDataService.ts(731,31): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/services/ShardedOrganizationService.ts(16,11): error TS2430: Interface 'ShardedOrganizationData' incorrectly extends interface 'Partial<Organization>'.
+  Types of property 'branding' are incompatible.
+    Type '{ logoUrl?: string | undefined; primaryColor?: string | undefined; } | undefined' is not assignable to type '{ logo: string | null; primaryColor: string; secondaryColor: string; accentColor: string; companyName: string; domain: string; registrationNumber?: string | undefined; vatNumber?: string | undefined; website?: string | undefined; tagline?: string | undefined; } | undefined'.
+      Type '{ logoUrl?: string | undefined; primaryColor?: string | undefined; }' is missing the following properties from type '{ logo: string | null; primaryColor: string; secondaryColor: string; accentColor: string; companyName: string; domain: string; registrationNumber?: string | undefined; vatNumber?: string | undefined; website?: string | undefined; tagline?: string | undefined; }': logo, secondaryColor, accentColor, companyName, domain
+src/services/ShardedOrganizationService.ts(80,36): error TS2339: Property 'province' does not exist on type 'ShardedOrganizationData'.
+src/services/ShardedOrganizationService.ts(81,32): error TS2339: Property 'city' does not exist on type 'ShardedOrganizationData'.
+src/services/ShardedOrganizationService.ts(84,41): error TS2339: Property 'employeeCount' does not exist on type 'ShardedOrganizationData'.
+src/services/ShardedOrganizationService.ts(244,28): error TS2345: Argument of type '{ id: string; name: string; description: string; severity: "minor"; escalationPath: ("counselling" | "verbal" | "first_written" | "final_written")[]; color: string; isActive: true; isDefault: false; }' is not assignable to parameter of type '{ id: string; name: string; description: string; severity: CategorySeverity; escalationPath: WarningLevel[]; color: string; isActive: boolean; isDefault: boolean; ... 4 more ...; requiresImmediateAction: boolean; }'.
+  Type '{ id: string; name: string; description: string; severity: "minor"; escalationPath: ("counselling" | "verbal" | "first_written" | "final_written")[]; color: string; isActive: true; isDefault: false; }' is missing the following properties from type '{ id: string; name: string; description: string; severity: CategorySeverity; escalationPath: WarningLevel[]; color: string; isActive: boolean; isDefault: boolean; ... 4 more ...; requiresImmediateAction: boolean; }': lraSection, schedule8Reference, commonExamples, defaultValidityPeriod, requiresImmediateAction
+src/services/ShardedOrganizationService.ts(436,12): error TS18047: 'orgDoc' is possibly 'null'.
+src/services/ShardedOrganizationService.ts(440,14): error TS18047: 'orgDoc' is possibly 'null'.
+src/services/StripeService.ts(144,25): error TS1361: 'SUBSCRIPTION_PLANS' cannot be used as a value because it was imported using 'import type'.
+src/services/StripeService.ts(162,25): error TS1361: 'SUBSCRIPTION_PLANS' cannot be used as a value because it was imported using 'import type'.
+src/services/StripeService.ts(163,21): error TS1361: 'SUBSCRIPTION_PLANS' cannot be used as a value because it was imported using 'import type'.
+src/services/StripeService.ts(243,18): error TS1361: 'SUBSCRIPTION_PLANS' cannot be used as a value because it was imported using 'import type'.
+src/services/TemporaryLinkService.ts(131,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/UserOrgIndexService.ts(235,13): error TS2345: Argument of type 'UserRole' is not assignable to parameter of type 'string'.
+src/services/UserOrgIndexService.ts(246,58): error TS2339: Property 'getCollection' does not exist on type 'typeof DatabaseShardingService'.
+src/services/UserOrgIndexService.ts(246,78): error TS18046: 'org' is of type 'unknown'.
+src/services/UserOrgIndexService.ts(251,17): error TS18046: 'org' is of type 'unknown'.
+src/services/UserOrgIndexService.ts(258,82): error TS18046: 'org' is of type 'unknown'.
+src/services/UserOrgIndexService.ts(260,69): error TS18046: 'org' is of type 'unknown'.
+src/services/WarningService.ts(239,20): error TS2304: Cannot find name 'AudioRecordingData'.
+src/services/WarningService.ts(394,20): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/WarningService.ts(481,85): error TS2345: Argument of type 'string[]' is not assignable to parameter of type 'WarningLevel[]'.
+  Type 'string' is not assignable to type 'WarningLevel'.
+src/services/WarningService.ts(514,9): error TS2322: Type 'string[]' is not assignable to type 'WarningLevel[]'.
+  Type 'string' is not assignable to type 'WarningLevel'.
+src/services/WarningService.ts(526,54): error TS2345: Argument of type 'WarningLevel | "hr_intervention"' is not assignable to parameter of type 'WarningLevel'.
+  Type '"hr_intervention"' is not assignable to type 'WarningLevel'.
+src/services/WarningService.ts(592,18): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/services/WarningService.ts(703,39): error TS2554: Expected 1 arguments, but got 0.
+src/services/WarningService.ts(704,26): error TS18047: 'org' is possibly 'null'.
+src/services/WarningService.ts(824,7): error TS2353: Object literal may only specify known properties, and 'ccmaReadiness' does not exist in type 'EscalationRecommendation'.
+src/services/WarningService.ts(948,46): error TS2554: Expected 1 arguments, but got 0.
+src/services/WarningService.ts(949,51): error TS18047: 'organization' is possibly 'null'.
+src/services/WizardLoggingService.ts(560,63): error TS2559: Type 'ValidationResult' has no properties in common with type 'LogContext'.
+src/services/__tests__/DataService.integration.test.ts(20,9): error TS2353: Object literal may only specify known properties, and 'firstName' does not exist in type 'Partial<Employee>'.
+src/services/__tests__/DataService.integration.test.ts(29,44): error TS2551: Property 'createEmployee' does not exist on type 'typeof DataService'. Did you mean 'getEmployee'?
+src/services/__tests__/DataService.integration.test.ts(32,51): error TS2551: Property 'getEmployeeById' does not exist on type 'typeof DataService'. Did you mean 'getEmployee'?
+src/services/__tests__/DataService.integration.test.ts(72,27): error TS2551: Property 'createEmployee' does not exist on type 'typeof DataService'. Did you mean 'getEmployee'?
+src/services/__tests__/DataService.integration.test.ts(76,50): error TS2339: Property 'loadEmployees' does not exist on type 'typeof DataService'.
+src/services/__tests__/DataService.integration.test.ts(79,58): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/services/__tests__/DataService.integration.test.ts(84,49): error TS2339: Property 'loadEmployees' does not exist on type 'typeof DataService'.
+src/services/__tests__/DataService.integration.test.ts(95,44): error TS2551: Property 'createEmployee' does not exist on type 'typeof DataService'. Did you mean 'getEmployee'?
+src/services/__tests__/DataService.integration.test.ts(107,50): error TS2551: Property 'getEmployeeById' does not exist on type 'typeof DataService'. Did you mean 'getEmployee'?
+src/services/__tests__/DataService.integration.test.ts(112,49): error TS2339: Property 'loadEmployees' does not exist on type 'typeof DataService'.
+src/services/__tests__/DataService.integration.test.ts(113,50): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/services/__tests__/DataService.integration.test.ts(202,9): error TS2739: Type '{ timezone: string; currency: string; language: string; }' is missing the following properties from type '{ timezone: string; currency: string; language: string; defaultDeliveryMethod: DeliveryMethod; allowEmployeeChoice: boolean; requireSignatures: boolean; delivery?: { allowedMethods: DeliveryMethod[]; printAdmin: { ...; }; } | undefined; codeOfConductReference?: string | undefined; }': defaultDeliveryMethod, allowEmployeeChoice, requireSignatures
+src/services/__tests__/DataService.integration.test.ts(207,9): error TS2739: Type '{ primaryColor: string; secondaryColor: string; logo: string; companyName: string; }' is missing the following properties from type '{ logo: string | null; primaryColor: string; secondaryColor: string; accentColor: string; companyName: string; domain: string; registrationNumber?: string | undefined; vatNumber?: string | undefined; website?: string | undefined; tagline?: string | undefined; }': accentColor, domain
+src/services/__tests__/DataService.integration.test.ts(219,46): error TS2551: Property 'getOrganizationById' does not exist on type 'typeof DataService'. Did you mean 'getOrganization'?
+src/services/__tests__/DataService.integration.test.ts(237,25): error TS2551: Property 'updateOrganizationSettings' does not exist on type 'typeof DataService'. Did you mean 'updateOrganization'?
+src/services/__tests__/DataService.integration.test.ts(239,37): error TS2551: Property 'getOrganizationById' does not exist on type 'typeof DataService'. Did you mean 'getOrganization'?
+src/services/__tests__/DataService.integration.test.ts(260,12): error TS2554: Expected 1 arguments, but got 2.
+src/services/__tests__/DataService.integration.test.ts(263,27): error TS2551: Property 'createEmployee' does not exist on type 'typeof DataService'. Did you mean 'getEmployee'?
+src/services/__tests__/DataService.integration.test.ts(286,45): error TS2339: Property 'loadEmployees' does not exist on type 'typeof DataService'.
+src/services/__tests__/DataService.integration.test.ts(290,32): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/services/__tests__/DataService.integration.test.ts(294,52): error TS7006: Parameter 'e' implicitly has an 'any' type.
+src/services/__tests__/DataService.integration.test.ts(313,14): error TS2554: Expected 1 arguments, but got 2.
+src/services/__tests__/DataService.integration.test.ts(315,23): error TS2551: Property 'createEmployee' does not exist on type 'typeof DataService'. Did you mean 'getEmployee'?
+src/services/__tests__/DataService.integration.test.ts(333,43): error TS2339: Property 'loadEmployees' does not exist on type 'typeof DataService'.
+src/services/__tests__/DataService.integration.test.ts(348,21): error TS2339: Property 'loadEmployees' does not exist on type 'typeof DataService'.
+src/services/__tests__/DataService.integration.test.ts(361,19): error TS2339: Property 'clearCache' does not exist on type 'typeof DataService'.
+src/services/__tests__/DataService.integration.test.ts(364,43): error TS2339: Property 'loadEmployees' does not exist on type 'typeof DataService'.
+src/services/__tests__/DataService.integration.test.ts(372,19): error TS2339: Property 'clearCache' does not exist on type 'typeof DataService'.
+src/services/__tests__/DataService.integration.test.ts(376,21): error TS2339: Property 'loadEmployees' does not exist on type 'typeof DataService'.
+src/services/__tests__/DataService.integration.test.ts(394,21): error TS2551: Property 'createEmployee' does not exist on type 'typeof DataService'. Did you mean 'getEmployee'?
+src/services/__tests__/PDFGenerationService.integration.test.ts(25,9): error TS2741: Property 'accentColor' is missing in type '{ logo: string; primaryColor: string; secondaryColor: string; companyName: string; domain: string; }' but required in type '{ logo: string | null; primaryColor: string; secondaryColor: string; accentColor: string; companyName: string; domain: string; registrationNumber?: string | undefined; vatNumber?: string | undefined; website?: string | undefined; tagline?: string | undefined; }'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(32,9): error TS2739: Type '{ timezone: string; currency: string; language: string; }' is missing the following properties from type '{ timezone: string; currency: string; language: string; defaultDeliveryMethod: DeliveryMethod; allowEmployeeChoice: boolean; requireSignatures: boolean; delivery?: { allowedMethods: DeliveryMethod[]; printAdmin: { ...; }; } | undefined; codeOfConductReference?: string | undefined; }': defaultDeliveryMethod, allowEmployeeChoice, requireSignatures
+src/services/__tests__/PDFGenerationService.integration.test.ts(38,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(39,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(45,9): error TS2353: Object literal may only specify known properties, and 'employeeNumber' does not exist in type 'Employee'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(67,9): error TS2353: Object literal may only specify known properties, and 'location' does not exist in type 'Warning'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(96,9): error TS2345: Argument of type 'Warning' is not assignable to parameter of type 'WarningPDFData'.
+  Type 'Warning' is missing the following properties from type 'WarningPDFData': warningId, issuedDate, employee, warningLevel, and 2 more.
+src/services/__tests__/PDFGenerationService.integration.test.ts(102,25): error TS2339: Property 'output' does not exist on type 'Blob'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(105,18): error TS2339: Property 'internal' does not exist on type 'Blob'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(122,9): error TS2353: Object literal may only specify known properties, and 'isActive' does not exist in type 'Warning'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(132,9): error TS2353: Object literal may only specify known properties, and 'firstName' does not exist in type 'Employee'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(146,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(147,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(151,9): error TS2345: Argument of type 'Warning' is not assignable to parameter of type 'WarningPDFData'.
+  Type 'Warning' is missing the following properties from type 'WarningPDFData': warningId, issuedDate, employee, warningLevel, and 2 more.
+src/services/__tests__/PDFGenerationService.integration.test.ts(157,18): error TS2339: Property 'internal' does not exist on type 'Blob'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(174,11): error TS2353: Object literal may only specify known properties, and 'theme' does not exist in type '{ logo: string | null; primaryColor: string; secondaryColor: string; accentColor: string; companyName: string; domain: string; registrationNumber?: string | undefined; vatNumber?: string | undefined; website?: string | undefined; tagline?: string | undefined; }'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(176,9): error TS2739: Type '{ timezone: string; currency: string; language: string; }' is missing the following properties from type '{ timezone: string; currency: string; language: string; defaultDeliveryMethod: DeliveryMethod; allowEmployeeChoice: boolean; requireSignatures: boolean; delivery?: { allowedMethods: DeliveryMethod[]; printAdmin: { ...; }; } | undefined; codeOfConductReference?: string | undefined; }': defaultDeliveryMethod, allowEmployeeChoice, requireSignatures
+src/services/__tests__/PDFGenerationService.integration.test.ts(182,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(183,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(196,9): error TS2353: Object literal may only specify known properties, and 'isActive' does not exist in type 'Warning'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(206,9): error TS2353: Object literal may only specify known properties, and 'firstName' does not exist in type 'Employee'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(216,9): error TS2345: Argument of type 'Warning' is not assignable to parameter of type 'WarningPDFData'.
+  Type 'Warning' is missing the following properties from type 'WarningPDFData': warningId, issuedDate, employee, warningLevel, and 2 more.
+src/services/__tests__/PDFGenerationService.integration.test.ts(225,29): error TS2339: Property 'output' does not exist on type 'Blob'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(242,9): error TS2353: Object literal may only specify known properties, and 'correctiveAction' does not exist in type 'Warning'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(275,9): error TS2353: Object literal may only specify known properties, and 'firstName' does not exist in type 'Employee'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(290,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(291,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(295,9): error TS2345: Argument of type 'Warning' is not assignable to parameter of type 'WarningPDFData'.
+  Type 'Warning' is missing the following properties from type 'WarningPDFData': warningId, issuedDate, employee, warningLevel, and 2 more.
+src/services/__tests__/PDFGenerationService.integration.test.ts(303,18): error TS2339: Property 'internal' does not exist on type 'Blob'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(306,27): error TS2339: Property 'output' does not exist on type 'Blob'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(331,9): error TS2353: Object literal may only specify known properties, and 'location' does not exist in type 'Warning'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(359,9): error TS2353: Object literal may only specify known properties, and 'employeeNumber' does not exist in type 'Employee'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(381,9): error TS2741: Property 'accentColor' is missing in type '{ logo: string; primaryColor: string; secondaryColor: string; companyName: string; domain: string; }' but required in type '{ logo: string | null; primaryColor: string; secondaryColor: string; accentColor: string; companyName: string; domain: string; registrationNumber?: string | undefined; vatNumber?: string | undefined; website?: string | undefined; tagline?: string | undefined; }'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(388,9): error TS2739: Type '{ timezone: string; currency: string; language: string; }' is missing the following properties from type '{ timezone: string; currency: string; language: string; defaultDeliveryMethod: DeliveryMethod; allowEmployeeChoice: boolean; requireSignatures: boolean; delivery?: { allowedMethods: DeliveryMethod[]; printAdmin: { ...; }; } | undefined; codeOfConductReference?: string | undefined; }': defaultDeliveryMethod, allowEmployeeChoice, requireSignatures
+src/services/__tests__/PDFGenerationService.integration.test.ts(394,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(395,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(399,9): error TS2345: Argument of type 'Warning' is not assignable to parameter of type 'WarningPDFData'.
+  Type 'Warning' is missing the following properties from type 'WarningPDFData': warningId, issuedDate, employee, warningLevel, and 2 more.
+src/services/__tests__/PDFGenerationService.integration.test.ts(407,18): error TS2339: Property 'internal' does not exist on type 'Blob'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(410,27): error TS2339: Property 'output' does not exist on type 'Blob'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(430,9): error TS2353: Object literal may only specify known properties, and 'isActive' does not exist in type 'Warning'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(440,9): error TS2353: Object literal may only specify known properties, and 'firstName' does not exist in type 'Employee'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(454,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(455,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(461,9): error TS2345: Argument of type 'Warning' is not assignable to parameter of type 'WarningPDFData'.
+  Type 'Warning' is missing the following properties from type 'WarningPDFData': warningId, issuedDate, employee, warningLevel, and 2 more.
+src/services/__tests__/PDFGenerationService.integration.test.ts(494,9): error TS2353: Object literal may only specify known properties, and 'firstName' does not exist in type 'Employee'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(508,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(509,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(517,13): error TS2353: Object literal may only specify known properties, and 'id' does not exist in type 'WarningPDFData'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(530,36): error TS2339: Property 'internal' does not exist on type 'Blob'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(548,9): error TS2353: Object literal may only specify known properties, and 'firstName' does not exist in type 'Employee'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(562,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(563,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(568,65): error TS2345: Argument of type 'Employee' is not assignable to parameter of type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(586,9): error TS2353: Object literal may only specify known properties, and 'isActive' does not exist in type 'Warning'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(597,9): error TS2353: Object literal may only specify known properties, and 'firstName' does not exist in type 'Employee'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(612,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(613,9): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/services/__tests__/PDFGenerationService.integration.test.ts(618,9): error TS2345: Argument of type 'Warning' is not assignable to parameter of type 'WarningPDFData'.
+  Type 'Warning' is missing the following properties from type 'WarningPDFData': warningId, issuedDate, employee, warningLevel, and 2 more.
+src/services/__tests__/PDFGenerationService.integration.test.ts(624,18): error TS2339: Property 'internal' does not exist on type 'Blob'.
+src/services/__tests__/PDFGenerationService.test.ts(298,21): error TS2339: Property 'output' does not exist on type 'Blob'.
+src/services/__tests__/PDFGenerationService.test.ts(299,21): error TS2339: Property 'save' does not exist on type 'Blob'.
+src/services/__tests__/PDFGenerationService.test.ts(306,26): error TS2339: Property 'output' does not exist on type 'Blob'.
+src/services/__tests__/ShardedOrganizationService.test.ts(5,15): error TS2305: Module '"../../types/billing"' has no exported member 'ShardedOrganizationData'.
+src/services/__tests__/ShardedOrganizationService.test.ts(76,28): error TS2345: Argument of type 'undefined' is not assignable to parameter of type 'string'.
+src/services/__tests__/ShardedOrganizationService.test.ts(77,41): error TS2339: Property 'initializeShardedCollections' does not exist on type 'typeof DatabaseShardingService'.
+src/services/__tests__/ShardedOrganizationService.test.ts(97,38): error TS2339: Property 'initializeShardedCollections' does not exist on type 'typeof DatabaseShardingService'.
+src/services/__tests__/ShardedOrganizationService.test.ts(126,28): error TS2345: Argument of type 'undefined' is not assignable to parameter of type 'string'.
+src/services/__tests__/ShardedOrganizationService.test.ts(167,28): error TS2345: Argument of type 'undefined' is not assignable to parameter of type 'string'.
+src/services/__tests__/WarningService.integration.test.ts(25,9): error TS2353: Object literal may only specify known properties, and 'location' does not exist in type 'Partial<Warning>'.
+src/services/__tests__/WarningService.integration.test.ts(32,58): error TS2345: Argument of type 'Partial<import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").Warning>' is not assignable to parameter of type 'Partial<import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/services/WarningService").Warning>'.
+  Types of property 'deliveryMethod' are incompatible.
+    Type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").DeliveryMethod | undefined' is not assignable to type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/services/WarningService").DeliveryMethod | undefined'.
+      Type '"printed"' is not assignable to type 'DeliveryMethod | undefined'. Did you mean '"print"'?
+src/services/__tests__/WarningService.test.ts(28,12): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ counselling: string; verbal: string; first_written: string; final_written: string; dismissal: string; }'.
+src/services/__tests__/WarningService.test.ts(75,71): error TS2345: Argument of type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").Warning[]' is not assignable to parameter of type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/services/WarningService").Warning[]'.
+  Type 'Warning' is missing the following properties from type 'Warning': isActive, isSigned, isDelivered, createdBy
+src/services/__tests__/WarningService.test.ts(88,39): error TS2551: Property 'categoryId' does not exist on type 'SimplifiedWarningSummary'. Did you mean 'category'?
+src/services/__tests__/WarningService.test.ts(108,71): error TS2345: Argument of type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").Warning[]' is not assignable to parameter of type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/services/WarningService").Warning[]'.
+  Type 'Warning' is missing the following properties from type 'Warning': isActive, isSigned, isDelivered, createdBy
+src/services/__tests__/WarningService.test.ts(118,39): error TS2551: Property 'categoryId' does not exist on type 'SimplifiedWarningSummary'. Did you mean 'category'?
+src/services/__tests__/WarningService.test.ts(126,50): error TS2345: Argument of type 'null' is not assignable to parameter of type 'UniversalCategory | undefined'.
+src/services/__tests__/WarningService.test.ts(245,55): error TS2345: Argument of type 'Warning' is not assignable to parameter of type 'Partial<Warning>'.
+  Types of property 'deliveryMethod' are incompatible.
+    Type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/types/core").DeliveryMethod | undefined' is not assignable to type 'import("/home/aiguy/projects/hr-disciplinary-system/frontend/src/services/WarningService").DeliveryMethod | undefined'.
+      Type '"printed"' is not assignable to type 'DeliveryMethod | undefined'. Did you mean '"print"'?
+src/test-firebase-setup.ts(3,65): error TS2307: Cannot find module '@firebase/rules-unit-testing' or its corresponding type declarations.
+src/test-firebase-setup.ts(12,1): error TS2304: Cannot find name 'beforeAll'.
+src/test-firebase-setup.ts(36,75): error TS18046: 'error' is of type 'unknown'.
+src/test-firebase-setup.ts(41,1): error TS2304: Cannot find name 'afterAll'.
+src/test-firebase-setup.ts(48,1): error TS2304: Cannot find name 'beforeEach'.
+src/test-setup.ts(28,1): error TS2322: Type 'Mock<[], { observe: Mock<[target: Element], void>; unobserve: Mock<[target: Element], void>; disconnect: Mock<[], void>; }>' is not assignable to type '{ new (callback: IntersectionObserverCallback, options?: IntersectionObserverInit | undefined): IntersectionObserver; prototype: IntersectionObserver; }'.
+  Type '{ observe: Mock<[target: Element], void>; unobserve: Mock<[target: Element], void>; disconnect: Mock<[], void>; }' is missing the following properties from type 'IntersectionObserver': root, rootMargin, thresholds, takeRecords
+src/test-setup.ts(35,1): error TS2322: Type 'typeof MockFile' is not assignable to type '{ new (fileBits: BlobPart[], fileName: string, options?: FilePropertyBag | undefined): File; prototype: File; }'.
+  Types of property 'prototype' are incompatible.
+    Type 'MockFile' is missing the following properties from type 'File': lastModified, name, webkitRelativePath, size, and 6 more.
+src/test-setup.ts(36,15): error TS7006: Parameter 'parts' implicitly has an 'any' type.
+src/test-setup.ts(36,22): error TS7006: Parameter 'filename' implicitly has an 'any' type.
+src/test-setup.ts(36,32): error TS7006: Parameter 'properties' implicitly has an 'any' type.
+src/test-setup.ts(37,10): error TS2339: Property 'name' does not exist on type 'MockFile'.
+src/test-setup.ts(38,10): error TS2339: Property 'size' does not exist on type 'MockFile'.
+src/test-setup.ts(39,10): error TS2339: Property 'type' does not exist on type 'MockFile'.
+src/test-setup.ts(43,1): error TS2739: Type 'typeof MockFileReader' is missing the following properties from type '{ new (): FileReader; prototype: FileReader; readonly EMPTY: 0; readonly LOADING: 1; readonly DONE: 2; }': EMPTY, LOADING, DONE
+src/test-setup.ts(46,12): error TS2339: Property 'onload' does not exist on type 'MockFileReader'.
+src/test-setup.ts(52,1): error TS2322: Type 'Mock<[], { fillRect: Mock<[x: number, y: number, w: number, h: number], void>; clearRect: Mock<[x: number, y: number, w: number, h: number], void>; getImageData: Mock<[], { data: any[]; }>; putImageData: Mock<...>; ... 19 more ...; clip: Mock<...>; }>' is not assignable to type '{ (contextId: "2d", options?: CanvasRenderingContext2DSettings | undefined): CanvasRenderingContext2D | null; (contextId: "bitmaprenderer", options?: ImageBitmapRenderingContextSettings | undefined): ImageBitmapRenderingContext | null; (contextId: "webgl", options?: WebGLContextAttributes | undefined): WebGLRenderin...'.
+  Type '{ fillRect: Mock<[x: number, y: number, w: number, h: number], void>; clearRect: Mock<[x: number, y: number, w: number, h: number], void>; getImageData: Mock<[], { data: any[]; }>; putImageData: Mock<...>; ... 19 more ...; clip: Mock<...>; }' is missing the following properties from type 'CanvasRenderingContext2D': canvas, globalAlpha, globalCompositeOperation, isPointInPath, and 44 more.
+src/test-setup.ts(80,1): error TS2322: Type 'Mock<[], { play: Mock<[], Promise<void>>; pause: Mock<[], void>; addEventListener: Mock<[type: string, listener: EventListenerOrEventListenerObject, options?: boolean | ... 1 more ... | undefined], void>; removeEventListener: Mock<...>; }>' is not assignable to type 'new (src?: string | undefined) => HTMLAudioElement'.
+  Type '{ play: Mock<[], Promise<void>>; pause: Mock<[], void>; addEventListener: Mock<[type: string, listener: EventListenerOrEventListenerObject, options?: boolean | ... 1 more ... | undefined], void>; removeEventListener: Mock<...>; }' is missing the following properties from type 'HTMLAudioElement': autoplay, buffered, controls, crossOrigin, and 348 more.
+src/test-setup.ts(88,1): error TS2741: Property 'isTypeSupported' is missing in type 'Mock<[], { start: Mock<any, any>; stop: Mock<any, any>; addEventListener: Mock<any, any>; removeEventListener: Mock<any, any>; state: string; }>' but required in type '{ new (stream: MediaStream, options?: MediaRecorderOptions | undefined): MediaRecorder; prototype: MediaRecorder; isTypeSupported(type: string): boolean; }'.
+src/test-setup.ts(96,18): error TS2540: Cannot assign to 'mediaDevices' because it is a read-only property.
+src/test-setup.ts(110,1): error TS2304: Cannot find name 'beforeEach'.
+src/test-setup.ts(124,1): error TS2304: Cannot find name 'afterEach'.
+src/test-utils/factories.ts(9,3): error TS2353: Object literal may only specify known properties, and 'firstName' does not exist in type 'Employee'.
+src/test-utils/factories.ts(41,3): error TS2353: Object literal may only specify known properties, and 'isActive' does not exist in type 'Warning'.
+src/test-utils/factories.ts(64,3): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/test-utils/factories.ts(65,3): error TS2322: Type 'Date' is not assignable to type 'string'.
+src/test-utils/factories.ts(72,33): error TS2322: Type '{ suggestedLevel: WarningLevel; recommendedLevel: string; reason: string; requiresHRIntervention?: boolean | undefined; interventionReason?: string | undefined; ... 13 more ...; previousWarnings: SimplifiedWarningSummary[]; }' is not assignable to type 'EscalationRecommendation'.
+  Types of property 'requiresHRIntervention' are incompatible.
+    Type 'boolean | undefined' is not assignable to type 'boolean'.
+      Type 'undefined' is not assignable to type 'boolean'.
+src/test-utils/factories.ts(187,49): error TS2345: Argument of type 'Function' is not assignable to parameter of type '(value: any, index: number, array: any[]) => void'.
+  Type 'Function' provides no match for the signature '(value: any, index: number, array: any[]): void'.
+src/types/core.ts(817,10): error TS1205: Re-exporting a type when 'isolatedModules' is enabled requires using 'export type'.
+src/types/employee.ts(269,5): error TS2322: Type 'string' is not assignable to type 'Date'.
+src/types/employee.ts(270,5): error TS2322: Type 'string' is not assignable to type 'Date'.
+src/types/employee.ts(277,7): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/types/employee.ts(278,7): error TS2322: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
+src/types/employee.ts(287,7): error TS2322: Type 'Date | null' is not assignable to type 'Date | undefined'.
+  Type 'null' is not assignable to type 'Date | undefined'.
+src/types/employee.ts(304,7): error TS2353: Object literal may only specify known properties, and 'primaryMethod' does not exist in type 'DeliveryPreferences'.
+src/types/employee.ts(349,50): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/types/employee.ts(439,10): error TS2678: Type '"hod"' is not comparable to type 'UserRoleId'.
+src/types/index.ts(20,1): error TS2308: Module './core' has already exported a member named 'DeliveryStatus'. Consider explicitly re-exporting to resolve the ambiguity.
+src/types/index.ts(36,1): error TS2308: Module './core' has already exported a member named 'DeliveryPreferences'. Consider explicitly re-exporting to resolve the ambiguity.
+src/types/index.ts(71,3): error TS2305: Module '"../services/WarningService"' has no exported member 'WarningFormData'.
+src/types/index.ts(76,3): error TS2305: Module '"../services/WarningService"' has no exported member 'AudioUploadRequest'.
+src/types/index.ts(77,3): error TS2305: Module '"../services/WarningService"' has no exported member 'AudioUploadResponse'.
+src/types/index.ts(78,3): error TS2305: Module '"../services/WarningService"' has no exported member 'OrganizationAudioSettings'.
+src/types/index.ts(81,3): error TS2305: Module '"../services/WarningService"' has no exported member 'EvidenceItem'.
+src/types/index.ts(82,3): error TS2305: Module '"../services/WarningService"' has no exported member 'WitnessInfo'.
+src/types/index.ts(85,3): error TS2305: Module '"../services/WarningService"' has no exported member 'WarningEscalation'.
+src/types/index.ts(86,3): error TS2305: Module '"../services/WarningService"' has no exported member 'DisciplinaryRecord'.
+src/types/index.ts(90,3): error TS2305: Module '"../services/WarningService"' has no exported member 'ActiveWarningsSummary'.
+src/types/index.ts(91,3): error TS2305: Module '"../services/WarningService"' has no exported member 'WarningValidation'.
+src/types/index.ts(146,32): error TS2304: Cannot find name 'WarningLevel'.
+src/types/index.ts(147,35): error TS2304: Cannot find name 'WarningCategory'.
+src/types/index.ts(148,28): error TS2304: Cannot find name 'Employee'.
+src/types/index.ts(149,32): error TS2304: Cannot find name 'Organization'.
+src/types/index.ts(152,30): error TS2304: Cannot find name 'EscalationRecommendation'.
+src/types/index.ts(153,31): error TS2304: Cannot find name 'EmployeeWithContext'.
+src/types/index.ts(154,24): error TS2304: Cannot find name 'EnhancedWarningFormData'.
+src/types/organization.ts(282,5): error TS2741: Property 'accentColor' is missing in type '{ logo: any; primaryColor: any; secondaryColor: any; companyName: any; domain: any; }' but required in type '{ logo: string | null; primaryColor: string; secondaryColor: string; accentColor: string; companyName: string; domain: string; registrationNumber?: string | undefined; vatNumber?: string | undefined; website?: string | undefined; tagline?: string | undefined; }'.
+src/utils/dashboard/performanceUtils.ts(353,14): error TS2395: Individual declarations in merged declaration 'DASHBOARD_THEMES' must be all exported or all local.
+src/utils/dashboard/performanceUtils.ts(399,10): error TS2395: Individual declarations in merged declaration 'DASHBOARD_THEMES' must be all exported or all local.
+src/utils/dashboard/performanceUtils.ts(399,34): error TS2307: Cannot find module './constants' or its corresponding type declarations.
+src/utils/deviceDetection.ts(50,39): error TS2339: Property 'deviceMemory' does not exist on type 'Navigator'.
+src/utils/deviceDetection.ts(172,92): error TS2559: Type '"MB"' has no properties in common with type 'LogContext'.
+src/utils/networkErrorHandler.ts(1,20): error TS2307: Cannot find module 'logger' or its corresponding type declarations.
+src/utils/newsApi.ts(1,20): error TS2307: Cannot find module 'logger' or its corresponding type declarations.
+src/utils/newsApi.ts(5,19): error TS2307: Cannot find module 'axios' or its corresponding type declarations.
+src/utils/newsApi.ts(83,15): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/utils/newsApi.ts(83,18): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/utils/newsApi.ts(85,14): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ high: number; medium: number; low: number; }'.
+src/utils/newsApi.ts(85,30): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ high: number; medium: number; low: number; }'.
+src/utils/newsApi.ts(128,29): error TS2345: Argument of type 'string | null | undefined' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.
