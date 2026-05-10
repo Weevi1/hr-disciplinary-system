@@ -35,7 +35,7 @@ export class AuthorizationMiddleware {
     const claims = token as any;
 
     // Quick check: JWT organization (fast, offline)
-    const orgFromClaims = claims.org || claims.organizationId;
+    const orgFromClaims = claims.org;
     if (!orgFromClaims) {
       logger.error(`No organization in token for user ${uid}`);
       throw new HttpsError('permission-denied', 'No organization in token');
@@ -131,7 +131,7 @@ export class AuthorizationMiddleware {
     const { uid, token } = request.auth;
     const claims = token as any;
 
-    const orgFromClaims = claims.org || claims.organizationId;
+    const orgFromClaims = claims.org;
     if (!orgFromClaims) {
       throw new HttpsError('permission-denied', 'No organization in token');
     }
@@ -196,7 +196,7 @@ export class AuthorizationMiddleware {
     const claims = token as any;
 
     // Quick check: JWT organization matches
-    const orgFromClaims = claims.org || claims.organizationId;
+    const orgFromClaims = claims.org;
     if (orgFromClaims !== organizationId && orgFromClaims !== 'SYSTEM') {
       logger.warn(`Org mismatch: ${orgFromClaims} vs ${organizationId}`);
       throw new HttpsError('permission-denied', 'Organization mismatch');

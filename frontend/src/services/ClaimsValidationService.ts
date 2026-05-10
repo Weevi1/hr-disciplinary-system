@@ -28,7 +28,7 @@ export class ClaimsValidationService {
       const idTokenResult = await firebaseUser.getIdTokenResult();
       const claims = idTokenResult.claims as any;
 
-      const hasClaims = claims.r || claims.role;
+      const hasClaims = !!claims.r;
       const claimsVersion = claims.v || 0;
 
       // Log issues but don't block

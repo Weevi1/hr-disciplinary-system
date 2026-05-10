@@ -10,21 +10,20 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-   function getUserRole() {
-  // Get user role from Firebase Auth custom claims
-  // Supports both minimal format (r) and legacy format (role) for backward compatibility
-  return request.auth != null
-    ? (request.auth.token.r != null ? request.auth.token.r :
-       (request.auth.token.role != null ? request.auth.token.role : 'guest'))
-    : 'guest';
-}
+    function getUserRole() {
+      // Get user role from Firebase Auth custom claims (NEW abbreviated format).
+      // LEGACY `role` fallback was removed 2026-05-10 after Phase 1.5 bulk
+      // claim refresh — all production users now mint NEW format only.
+      return request.auth != null && request.auth.token.r != null
+        ? request.auth.token.r
+        : 'guest';
+    }
 
     function getUserOrgId() {
-      // Get user organization ID from Firebase Auth custom claims
-      // Supports both minimal format (org) and legacy format (organizationId) for backward compatibility
-      return request.auth != null
-        ? (request.auth.token.org != null ? request.auth.token.org :
-           (request.auth.token.organizationId != null ? request.auth.token.organizationId : null))
+      // Get user organization ID from Firebase Auth custom claims (NEW format).
+      // LEGACY `organizationId` fallback removed 2026-05-10.
+      return request.auth != null && request.auth.token.org != null
+        ? request.auth.token.org
         : null;
     }
 

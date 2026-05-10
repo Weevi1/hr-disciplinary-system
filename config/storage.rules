@@ -74,29 +74,25 @@ service firebase.storage {
 
     // Organization-scoped storage (logos, signatures, audio analytics, etc.)
     //
-    // Read: org members, super-users, or resellers (firestore-rule equivalent of
-    //       canReadOrgData). Resellers are trusted across all orgs at the storage
-    //       layer; tighter scoping by resellerId would require a firestore.get()
-    //       which is expensive in storage rules — Phase 1 work.
+    // Read: org members, super-users, or resellers. Resellers are trusted across
+    //       all orgs at the storage layer; tighter scoping by resellerId would
+    //       require a firestore.get() which is expensive — Phase 2+ work.
     // Write: same set, but email_verified required (matches other write rules).
+    //
+    // NEW abbreviated claim format only. LEGACY (`organizationId`, `role`)
+    // fallback removed 2026-05-10 after Phase 1.5 bulk claim refresh.
     match /organizations/{organizationId}/{allPaths=**} {
       allow read: if request.auth != null && (
         request.auth.token.org == organizationId ||
-        request.auth.token.organizationId == organizationId ||
         request.auth.token.r == 'super-user' ||
-        request.auth.token.role == 'super-user' ||
-        request.auth.token.r == 'reseller' ||
-        request.auth.token.role == 'reseller'
+        request.auth.token.r == 'reseller'
       );
       allow write: if request.auth != null
         && request.auth.token.email_verified == true
         && (
           request.auth.token.org == organizationId ||
-          request.auth.token.organizationId == organizationId ||
           request.auth.token.r == 'super-user' ||
-          request.auth.token.role == 'super-user' ||
-          request.auth.token.r == 'reseller' ||
-          request.auth.token.role == 'reseller'
+          request.auth.token.r == 'reseller'
         );
     }
 

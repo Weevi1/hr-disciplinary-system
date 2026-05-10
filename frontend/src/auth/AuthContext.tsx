@@ -218,8 +218,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               try {
                 const idTokenResult = await firebaseUser.getIdTokenResult();
                 const claims = idTokenResult.claims as any;
-                if (claims.org || claims.organizationId) {
-                  const orgId = claims.org || claims.organizationId;
+                if (claims.org) {
+                  const orgId = claims.org;
                   return await FirebaseService.getDocument<Organization>(
                     COLLECTIONS.ORGANIZATIONS,
                     orgId

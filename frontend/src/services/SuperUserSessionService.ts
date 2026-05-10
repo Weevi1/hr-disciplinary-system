@@ -49,8 +49,8 @@ export class SuperUserSessionService {
     try {
       const userToken = await user.getIdTokenResult();
       
-      // Only initialize session for super-users (NEW format `r`, LEGACY fallback `role`)
-      if ((userToken.claims.r || userToken.claims.role) !== 'super-user') {
+      // Only initialize session for super-users (NEW format only)
+      if (userToken.claims.r !== 'super-user') {
         Logger.debug('Not a super-user, skipping session initialization');
         return;
       }
