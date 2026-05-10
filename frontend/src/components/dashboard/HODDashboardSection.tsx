@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 // 🚀 LAZY LOADED HEAVY COMPONENTS
-const EnhancedWarningWizard = React.lazy(() =>
+const UnifiedWarningWizard = React.lazy(() =>
   import('../warnings/enhanced/UnifiedWarningWizard').then(m => ({ default: m.UnifiedWarningWizard }))
 );
 const UnifiedBookHRMeeting = React.lazy(() =>
@@ -369,7 +369,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
       {/* Modals */}
       {showWarningWizard && (
         <React.Suspense fallback={<LoadingSkeleton />}>
-          <EnhancedWarningWizard
+          <UnifiedWarningWizard
             key="enhanced-warning-wizard"
             employees={employees}
             categories={categories}

@@ -12,7 +12,7 @@ import { ToastProvider } from './components/common/ToastContainer';
 import { ThemeBrandingProvider } from './contexts/ThemeBrandingContext';
 
 // 🚀 LAZY-LOADED COMPONENTS FOR BUNDLE OPTIMIZATION
-const EnhancedWarningWizard = React.lazy(() => import('./components/warnings/enhanced/UnifiedWarningWizard').then(m => ({ default: m.UnifiedWarningWizard })));
+const UnifiedWarningWizard = React.lazy(() => import('./components/warnings/enhanced/UnifiedWarningWizard').then(m => ({ default: m.UnifiedWarningWizard })));
 const EmployeeManagement = React.lazy(() => import('./components/employees/EmployeeManagement').then(m => ({ default: m.EmployeeManagement })));
 const UserManagement = React.lazy(() => import('./components/users/UserManagement').then(m => ({ default: m.UserManagement })));
 
@@ -127,7 +127,7 @@ const ErrorScreen = ({ error }: { error: string }) => (
 
 // 🎯 CRITICAL FIX: This component now properly uses the organization context
 // that's already available from the parent MainLayout OrganizationProvider
-const EnhancedWarningWizardWrapper: React.FC = () => {
+const UnifiedWarningWizardWrapper: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -234,7 +234,7 @@ const EnhancedWarningWizardWrapper: React.FC = () => {
   // Render the enhanced warning wizard
   return (
     <Suspense fallback={<ComponentLoader text="Loading Warning Wizard..." />}>
-      <EnhancedWarningWizard
+      <UnifiedWarningWizard
         employees={employees}
         categories={categories}
         currentManagerName={`${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Manager'}
@@ -329,7 +329,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/warnings/create" element={
           <WarningErrorBoundary>
             <Suspense fallback={<ComponentLoader text="Loading Warning Wizard..." />}>
-              <EnhancedWarningWizardWrapper />
+              <UnifiedWarningWizardWrapper />
             </Suspense>
           </WarningErrorBoundary>
         } />
