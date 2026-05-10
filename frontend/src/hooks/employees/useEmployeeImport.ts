@@ -2,7 +2,6 @@ import Logger from '../../utils/logger';
 // frontend/src/hooks/employees/useEmployeeImport.ts
 import { useState } from 'react';
 import { API } from '../../api';
-import { DataServiceV2 } from '../../services/DataServiceV2';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { createEmployeeFromForm } from '../../types';
 import type { CSVImportRow, CSVImportResult, EmployeeFormData } from '../../types';

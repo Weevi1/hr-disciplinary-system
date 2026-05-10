@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';import Logger from '../utils/logger';
 
-import { DataServiceV2 } from '../services/DataServiceV2';
+import { ShardedDataService } from '../services/ShardedDataService';
 import type { WarningCategory } from '../types';
 
 interface UseCategoriesState {
@@ -22,7 +22,7 @@ export const useWarningCategories = (organizationId: string): UseCategoriesState
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
       
-      const categories = await DataServiceV2.getWarningCategories(organizationId);
+      const categories = await ShardedDataService.getWarningCategories(organizationId);
       
       setState(prev => ({ 
         ...prev, 

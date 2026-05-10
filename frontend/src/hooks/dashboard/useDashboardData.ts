@@ -8,7 +8,6 @@ import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import Logger from '../../utils/logger';
 import { API } from '../../api';
-import { DataServiceV2 } from '../../services/DataServiceV2';
 import { ShardedDataService } from '../../services/ShardedDataService';
 import CacheService from '../../services/CacheService';
 import { doc, getDoc } from 'firebase/firestore';

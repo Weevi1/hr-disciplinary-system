@@ -1,7 +1,8 @@
 // src/services/ShardedDataService.ts
 // Sharded Data Service for Multi-Thousand Organization Scalability
 
-import { where, orderBy } from 'firebase/firestore'
+import { where, orderBy, doc, getDoc, Timestamp } from 'firebase/firestore'
+import { db } from '../config/firebase'
 import { DatabaseShardingService, ShardedQueryResult, PaginationConfig } from './DatabaseShardingService'
 import Logger from '../utils/logger'
 import type { Employee, Warning, WarningCategory, Organization } from '../types'
@@ -601,6 +602,43 @@ export class ShardedDataService {
     } catch (error) {
       Logger.error(`❌ [SHARD] Failed to query documents from ${collectionName}:`, error)
       throw error
+    }
+  }
+
+  // ============================================
+  // ORGANIZATION (top-level — not sharded)
+  // ============================================
+
+  /**
+   * Load a single organization document by id.
+   * Organizations live at the top level (`organizations/{id}`); only the
+   * subcollections under each org are sharded.
+   */
+  static async getOrganization(organizationId: string): Promise<Organization | null> {
+    try {
+      const orgRef = doc(db, 'organizations', organizationId)
+      const orgDoc = await getDoc(orgRef)
+      if (!orgDoc.exists()) return null
+
+      const data = orgDoc.data()
+      const convert = (ts: unknown): Date | undefined => {
+        if (!ts) return undefined
+        if (ts instanceof Timestamp) return ts.toDate()
+        if (typeof (ts as { toDate?: () => Date }).toDate === 'function') {
+          return (ts as { toDate: () => Date }).toDate()
+        }
+        return new Date(ts as string | number | Date)
+      }
+
+      return {
+        id: orgDoc.id,
+        ...data,
+        createdAt: convert(data.createdAt),
+        updatedAt: convert(data.updatedAt),
+      } as Organization
+    } catch (error) {
+      Logger.error('[SHARD] Error getting organization:', error)
+      return null
     }
   }
 

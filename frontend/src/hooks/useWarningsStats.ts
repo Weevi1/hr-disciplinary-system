@@ -6,7 +6,6 @@ import Logger from '../utils/logger';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { API } from '@/api';
-import { DataServiceV2 } from '../services/DataServiceV2';
 import type { Warning } from '../types';
 
 interface WarningsStats {

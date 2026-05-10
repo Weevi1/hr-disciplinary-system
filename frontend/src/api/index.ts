@@ -10,7 +10,6 @@ import Logger from '../utils/logger';
  * - Future-proof for potential backend changes
  */
 
-import { DataServiceV2 } from '../services/DataServiceV2';
 import { ShardedDataService } from '../services/ShardedDataService';
 import { DatabaseShardingService } from '../services/DatabaseShardingService';
 import { WarningService } from '../services/WarningService';
@@ -467,37 +466,6 @@ export const warnings = {
   },
 
   /**
-   * Get warning statistics
-   */
-  async getStats(organizationId: string): Promise<{
-    total: number;
-    issued: number;
-    delivered: number;
-    byLevel: Record<WarningLevel, number>;
-  }> {
-    try {
-      // Get all warnings and calculate stats
-      const allWarnings = await DataServiceV2.getWarningsByOrganization(organizationId);
-
-      return {
-        total: allWarnings.length,
-        issued: allWarnings.filter(w => w.status === 'issued').length,
-        delivered: allWarnings.filter(w => w.status === 'delivered').length,
-        byLevel: {
-          counselling: allWarnings.filter(w => w.level === 'counselling').length,
-          verbal: allWarnings.filter(w => w.level === 'verbal').length,
-          first_written: allWarnings.filter(w => w.level === 'first_written').length,
-          second_written: allWarnings.filter(w => w.level === 'second_written').length,
-          final_written: allWarnings.filter(w => w.level === 'final_written').length,
-          dismissal: allWarnings.filter(w => w.level === 'dismissal').length
-        }
-      };
-    } catch (error) {
-      handleError('warnings.getStats', error);
-    }
-  },
-
-  /**
    * Archive a warning (for appealed/overturned warnings)
    */
   async archive(warningId: string, organizationId: string, reason: 'appealed' | 'overturned' | 'expired' | 'manual' | 'test_data' | 'issued_in_error' | 'duplicate'): Promise<void> {
@@ -932,19 +900,20 @@ export const organizations = {
    */
   async getById(organizationId: string) {
     try {
-      return await DataServiceV2.getOrganization(organizationId);
+      return await ShardedDataService.getOrganization(organizationId);
     } catch (error) {
       handleError('organizations.getById', error);
     }
   },
 
   /**
-   * Update organization
+   * Update organization (not yet implemented).
+   * Organization documents live at the top level (`organizations/{id}`),
+   * outside the sharded subcollections; updates need their own write path.
    */
-  async update(organizationId: string, updates: any) {
+  async update(_organizationId: string, _updates: any) {
     try {
-      // Organization updates need to be handled differently for sharded architecture
-      throw new Error('Organization updates not implemented in DataServiceV2');
+      throw new Error('Organization updates not implemented');
     } catch (error) {
       handleError('organizations.update', error);
     }
@@ -1203,7 +1172,7 @@ export const batch = {
 
       // Load all data in parallel with caching
       const [orgData, categoriesData, settingsData] = await Promise.all([
-        CacheService.getOrFetch(orgKey, () => DataServiceV2.getOrganization(organizationId)),
+        CacheService.getOrFetch(orgKey, () => ShardedDataService.getOrganization(organizationId)),
         CacheService.getOrFetch(categoriesKey, () => ShardedDataService.getWarningCategories(organizationId)),
         CacheService.getOrFetch(settingsKey, () => Promise.resolve({})) // Placeholder for settings
       ]);

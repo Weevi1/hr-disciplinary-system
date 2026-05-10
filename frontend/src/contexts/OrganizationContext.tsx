@@ -6,7 +6,6 @@ import Logger from '../utils/logger';
 // ✅ Preserves organization and sector info for white label functionality
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
-import { DataServiceV2 } from '../services/DataServiceV2';
 import { ShardedDataService } from '../services/ShardedDataService';
 import CacheService from '../services/CacheService';
 import type { Organization } from '../types';
@@ -128,7 +127,7 @@ export const OrganizationProvider: React.FC<OrganizationProviderProps> = ({
         // Organization data with caching
         CacheService.getOrFetch(
           CacheService.generateOrgKey(organizationId, 'organization'),
-          () => DataServiceV2.getOrganization(organizationId)
+          () => ShardedDataService.getOrganization(organizationId)
         ),
         // Categories data with caching
         CacheService.getOrFetch(
