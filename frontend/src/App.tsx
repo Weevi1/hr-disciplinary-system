@@ -122,11 +122,11 @@ const ErrorScreen = ({ error }: { error: string }) => (
 );
 
 // ============================================
-// 🔧 FIXED: ENHANCED WARNING WIZARD WRAPPER
+// UNIFIED WARNING WIZARD WRAPPER
 // ============================================
 
-// 🎯 CRITICAL FIX: This component now properly uses the organization context
-// that's already available from the parent MainLayout OrganizationProvider
+// Uses the organization context provided by the parent MainLayout
+// OrganizationProvider; falls back gracefully for resellers / super-users.
 const UnifiedWarningWizardWrapper: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -231,7 +231,6 @@ const UnifiedWarningWizardWrapper: React.FC = () => {
     );
   }
 
-  // Render the enhanced warning wizard
   return (
     <Suspense fallback={<ComponentLoader text="Loading Warning Wizard..." />}>
       <UnifiedWarningWizard
@@ -325,7 +324,7 @@ const AppRoutes: React.FC = () => {
           </EmployeeErrorBoundary>
         } />
         
-        {/* 🚀 FIXED: Enhanced Warning Wizard - now properly wrapped */}
+        {/* Warning wizard (lazy-loaded) */}
         <Route path="/warnings/create" element={
           <WarningErrorBoundary>
             <Suspense fallback={<ComponentLoader text="Loading Warning Wizard..." />}>

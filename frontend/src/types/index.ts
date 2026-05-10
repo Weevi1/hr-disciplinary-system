@@ -31,11 +31,6 @@ export * from './meetings';
 export * from './absences';
 
 // ============================================
-// WARNING WIZARD TYPES
-// ============================================
-export * from './warningWizard';
-
-// ============================================
 // CORE TYPE RE-EXPORTS (Primary Source)
 // ============================================
 
@@ -122,21 +117,6 @@ export type {
   EmployeeStats,
   EmployeeFilters
 } from './employee';
-
-// ============================================
-// WIZARD TYPES
-// ============================================
-export type {
-  WizardStepConfig,
-  WizardProgress,
-  EnhancedWarningFormProps,
-  WizardHeaderProps,
-  WizardProgressProps,
-  WizardNavigationProps,
-  IncidentDetailsStepProps,
-  LegalReviewStepProps,
-  DeliveryCompletionStepProps
-} from './warningWizard';
 
 // ============================================
 // CONVENIENCE ALIASES FOR BACKWARD COMPATIBILITY

@@ -1309,7 +1309,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
           isOpen={showPDFPreview}
           onClose={() => setShowPDFPreview(false)}
           warningData={{
-            // Direct mapping from warning fields (saved by Enhanced Warning Wizard)
+            // Direct mapping from warning fields (saved by UnifiedWarningWizard)
             selectedEmployee: {
               id: warning.employeeId || '',
               firstName: warning.employeeName || 'Unknown',
