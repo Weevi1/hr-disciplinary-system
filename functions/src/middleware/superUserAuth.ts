@@ -62,8 +62,8 @@ export class SuperUserAuthMiddleware {
       return this.validatePermissions(cachedContext, requiredPermissions, options);
     }
 
-    // 3. Validate super-user role from custom claims
-    const userRole = token.role || 'guest';
+    // 3. Validate super-user role from custom claims (NEW format `r`, LEGACY fallback `role`)
+    const userRole = token.r || token.role || 'guest';
     
     // TEMPORARY: Allow specific super-user emails for development
     const isDevelopmentSuperUser = (

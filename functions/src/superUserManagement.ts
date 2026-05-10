@@ -117,7 +117,7 @@ export const manageSuperUser = onCall<UpdateSuperUserRequest>(
           // Only allow if there are less than 3 super-users (security limit)
           const existingSuperUsers = await adminAuth.listUsers();
           const superUserCount = existingSuperUsers.users.filter(
-            user => user.customClaims?.role === 'super-user'
+            user => (user.customClaims?.r === 'super-user' || user.customClaims?.role === 'super-user')
           ).length;
 
           if (superUserCount >= 3) {
@@ -125,10 +125,11 @@ export const manageSuperUser = onCall<UpdateSuperUserRequest>(
           }
 
           await adminAuth.setCustomUserClaims(targetUserId, {
-            role: 'super-user',
+            r: 'super-user',
             permissions: ['all'],
             grantedBy: context.uid,
-            grantedAt: new Date().toISOString()
+            grantedAt: new Date().toISOString(),
+            v: Date.now()
           });
 
           logger.warn('SuperUser privileges granted', {
@@ -149,10 +150,11 @@ export const manageSuperUser = onCall<UpdateSuperUserRequest>(
           }
 
           await adminAuth.setCustomUserClaims(targetUserId, {
-            role: 'executive-management', // Downgrade to business owner
+            r: 'executive-management', // Downgrade to business owner
             permissions: [],
             revokedBy: context.uid,
-            revokedAt: new Date().toISOString()
+            revokedAt: new Date().toISOString(),
+            v: Date.now()
           });
 
           logger.warn('SuperUser privileges revoked', {
@@ -253,7 +255,7 @@ export const initializeSuperUser = onCall<{
     const adminAuth = getAuth();
     const allUsers = await adminAuth.listUsers();
     const existingSuperUsers = allUsers.users.filter(
-      user => user.customClaims?.role === 'super-user'
+      user => (user.customClaims?.r === 'super-user' || user.customClaims?.role === 'super-user')
     );
 
     if (existingSuperUsers.length > 0) {
@@ -268,13 +270,13 @@ export const initializeSuperUser = onCall<{
       emailVerified: false
     });
 
-    // Set super-user claims
+    // Set super-user claims (NEW abbreviated format)
     await adminAuth.setCustomUserClaims(userRecord.uid, {
-      role: 'super-user',
+      r: 'super-user',
       permissions: ['all'],
-      organizationId: 'SYSTEM',
       isFounder: true,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      v: Date.now()
     });
 
     logger.info('Initial SuperUser created', {
