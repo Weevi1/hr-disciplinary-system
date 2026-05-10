@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { ThemedCard } from '../common/ThemedCard';
 import { UnifiedModal } from '../common/UnifiedModal';
-import { DataService } from '../../services/DataService';
 import CommissionService from '../../services/CommissionService';
 import Logger from '../../utils/logger';
 import type { Organization } from '../../types/core';

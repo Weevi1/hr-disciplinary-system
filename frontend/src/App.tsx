@@ -45,7 +45,7 @@ import { useOrganizationSafe } from './contexts/OrganizationContext';
 
 // 🚀 API LAYER FOR DATA LOADING
 import { API } from './api';
-import { DataService } from './services/DataService';
+import { ShardedDataService } from './services/ShardedDataService';
 
 import './App.css';
 
@@ -155,7 +155,7 @@ const UnifiedWarningWizardWrapper: React.FC = () => {
       try {
         const [employeesData, categoriesData] = await Promise.all([
           API.employees.getAll(organization.id),
-          DataService.getWarningCategories(organization.id)
+          ShardedDataService.getWarningCategories(organization.id)
         ]);
 
         Logger.success(4219)

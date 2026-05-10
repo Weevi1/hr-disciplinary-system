@@ -47,7 +47,6 @@ import {
   ManagerPhonePreview, HRPhonePreview, ExecutivePhonePreview
 } from './DashboardPreviewPanels';
 import { PDFTemplatePreview } from '../admin/PDFTemplatePreview';
-import { DataService } from '../../services/DataService';
 import { ShardedDataService } from '../../services/ShardedDataService';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
 import { PDFTemplateService } from '../../services/PDFTemplateService';
