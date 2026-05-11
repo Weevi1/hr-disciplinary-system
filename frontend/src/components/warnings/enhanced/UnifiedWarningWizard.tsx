@@ -67,6 +67,7 @@ import { ReviewDocumentationPhase } from './phases/ReviewDocumentationPhase';
 import { ScriptPdfReviewPhase } from './phases/ScriptPdfReviewPhase';
 import { ImprovementPlanPhase } from './phases/ImprovementPlanPhase';
 import { CategoryRecommendationPhase } from './phases/CategoryRecommendationPhase';
+import { WordCountTextareaPhase } from './phases/WordCountTextareaPhase';
 
 // Wizard-local types, constants, and helpers (extracted Phase 2 Tier 3C step 1)
 import {
@@ -1129,78 +1130,25 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
 
       case Phase.EMPLOYEE_RESPONSE:
         return (
-          <div className="space-y-4">
-            {!levelInfo.requiresCommitments && (
-              <ThemedAlert variant="info">
-                For {levelInfo.label} warnings, this section is optional.
-              </ThemedAlert>
-            )}
-            <textarea
-              value={employeeStatement}
-              onChange={(e) => setEmployeeStatement(e.target.value)}
-              placeholder="Record the employee's response to the incident discussion..."
-              rows={6}
-              className="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
-              style={{
-                backgroundColor: getWordCount(employeeStatement) > 0 && getWordCount(employeeStatement) < 6
-                  ? 'var(--color-alert-error-bg)'
-                  : 'var(--color-background)',
-                borderColor: getWordCount(employeeStatement) > 0 && getWordCount(employeeStatement) < 6
-                  ? 'var(--color-alert-error-border)'
-                  : 'var(--color-border)',
-                color: 'var(--color-text-primary)'
-              }}
-            />
-            <div className="flex items-center justify-between text-xs" style={{
-              color: getWordCount(employeeStatement) > 0 && getWordCount(employeeStatement) < 6
-                ? 'var(--color-error)'
-                : 'var(--color-text-secondary)'
-            }}>
-              <span>{getWordCount(employeeStatement)}/6 words minimum</span>
-              {getWordCount(employeeStatement) >= 6 && (
-                <CheckCircle className="w-4 h-4 text-green-500" />
-              )}
-            </div>
-          </div>
+          <WordCountTextareaPhase
+            value={employeeStatement}
+            onChange={setEmployeeStatement}
+            placeholder="Record the employee's response to the incident discussion..."
+            optionalNotice={!levelInfo.requiresCommitments ? { levelLabel: levelInfo.label } : null}
+          />
         );
 
       case Phase.EXPECTED_STANDARDS:
         return (
-          <div className="space-y-4">
-            {selectedCategory?.expectedStandardsTemplate && expectedBehavior === selectedCategory.expectedStandardsTemplate && (
-              <div className="flex items-center gap-1 text-xs px-2 py-1 rounded-full w-fit"
-                style={{ backgroundColor: 'var(--color-alert-info-bg)', color: 'var(--color-alert-info-text)' }}>
-                <Info className="w-3 h-3" />
-                Pre-filled from category template — edit as needed
-              </div>
-            )}
-            <textarea
-              value={expectedBehavior}
-              onChange={(e) => setExpectedBehavior(e.target.value)}
-              placeholder="Document the expected behavior, performance, or conduct standards..."
-              rows={6}
-              className="w-full px-4 py-3 rounded-lg border transition-all focus:outline-none focus:ring-2"
-              style={{
-                backgroundColor: getWordCount(expectedBehavior) > 0 && getWordCount(expectedBehavior) < 6
-                  ? 'var(--color-alert-error-bg)'
-                  : 'var(--color-background)',
-                borderColor: getWordCount(expectedBehavior) > 0 && getWordCount(expectedBehavior) < 6
-                  ? 'var(--color-alert-error-border)'
-                  : 'var(--color-border)',
-                color: 'var(--color-text-primary)'
-              }}
-            />
-            <div className="flex items-center justify-between text-xs" style={{
-              color: getWordCount(expectedBehavior) > 0 && getWordCount(expectedBehavior) < 6
-                ? 'var(--color-error)'
-                : 'var(--color-text-secondary)'
-            }}>
-              <span>{getWordCount(expectedBehavior)}/6 words minimum</span>
-              {getWordCount(expectedBehavior) >= 6 && (
-                <CheckCircle className="w-4 h-4 text-green-500" />
-              )}
-            </div>
-          </div>
+          <WordCountTextareaPhase
+            value={expectedBehavior}
+            onChange={setExpectedBehavior}
+            placeholder="Document the expected behavior, performance, or conduct standards..."
+            showTemplateBadge={
+              !!selectedCategory?.expectedStandardsTemplate &&
+              expectedBehavior === selectedCategory.expectedStandardsTemplate
+            }
+          />
         );
 
       case Phase.IMPROVEMENT_PLAN:
