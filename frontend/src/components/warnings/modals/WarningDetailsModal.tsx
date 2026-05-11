@@ -429,11 +429,11 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
     try {
       Logger.debug('📋 Generating standalone appeal report...');
 
-      // Import the PDF service
-      const { PDFGenerationService } = await import('../../../services/PDFGenerationService');
+      // Appeal-report generator was extracted from PDFGenerationService in
+      // Phase 2 Tier 3B and now lives in its own module.
+      const { generateAppealReportPDF } = await import('../../../services/pdf/AppealReportGenerator');
 
-      // Generate appeal report PDF
-      const pdfBlob = await PDFGenerationService.generateAppealReportPDF({
+      const pdfBlob = await generateAppealReportPDF({
         warningId: warning.id || 'N/A',
         employee: {
           firstName: warningData.employeeName.split(' ')[0] || 'Unknown',
