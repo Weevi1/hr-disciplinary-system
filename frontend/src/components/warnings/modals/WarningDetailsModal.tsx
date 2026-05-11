@@ -24,6 +24,28 @@ import { SignatureDisplay } from '../SignatureDisplay';
 import { useOrganization } from '../../../contexts/OrganizationContext';
 import { getLevelLabel } from '../../../services/UniversalCategories';
 
+// Local helpers + theme tokens (extracted Phase 2 Tier 3D step 2)
+import {
+  safeText,
+  safeDate,
+  safeDateTime,
+  toISODateString,
+  getWarningTheme,
+  type WarningTheme,
+  type ActionState,
+} from './warningDetailsHelpers';
+
+// Nested dialog/modal components (extracted Phase 2 Tier 3D step 2)
+import {
+  ArchiveDialog,
+  ResponseLinkPanel,
+  AudioModalSimple,
+  AudioModalFull,
+  SignaturesModalSimple,
+  SignaturesModalFull,
+  IndividualSignatureModal,
+} from './WarningDetailsDialogs';
+
 // ============================================
 // INTERFACES & TYPES
 // ============================================
@@ -44,140 +66,6 @@ interface WarningDetailsModalProps {
   // Archive functionality
   onArchive?: (warningId: string, reason: string) => Promise<void>;
 }
-
-interface WarningTheme {
-  primary: string;
-  secondary: string;
-  accent: string;
-  background: string;
-  text: string;
-  border: string;
-}
-
-interface ActionState {
-  type: 'approve' | 'reject' | null;
-  loading: boolean;
-  reason?: string;
-}
-
-// ============================================
-// SAFE HELPERS
-// ============================================
-
-const safeText = (value: any, fallback: string = 'Not specified'): string => {
-  if (value === null || value === undefined) return fallback;
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number') return value.toString();
-  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-  return fallback;
-};
-
-const safeDate = (date: any, fallback: string = 'Not set'): string => {
-  if (!date) return fallback;
-  try {
-    let dateObj: Date;
-
-    // Handle Firestore timestamp format
-    if (date.seconds !== undefined) {
-      dateObj = new Date(date.seconds * 1000);
-    } else if (date instanceof Date) {
-      dateObj = date;
-    } else {
-      dateObj = new Date(date);
-    }
-
-    // Check if date is valid
-    if (isNaN(dateObj.getTime())) {
-      return fallback;
-    }
-
-    return dateObj.toLocaleDateString('en-ZA', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  } catch {
-    return fallback;
-  }
-};
-
-const safeDateTime = (date: any, time?: string): string => {
-  const dateStr = safeDate(date, '');
-  if (!dateStr || dateStr === 'Not set') return 'Not specified';
-  if (!time) return dateStr;
-  return `${dateStr} at ${time}`;
-};
-
-// Helper to convert any date format to ISO date string (YYYY-MM-DD) for form inputs
-const toISODateString = (date: any): string => {
-  if (!date) return new Date().toISOString().split('T')[0];
-  try {
-    let dateObj: Date;
-
-    // Handle Firestore timestamp format
-    if (date.seconds !== undefined) {
-      dateObj = new Date(date.seconds * 1000);
-    } else if (date instanceof Date) {
-      dateObj = date;
-    } else if (typeof date === 'string') {
-      dateObj = new Date(date);
-    } else {
-      return new Date().toISOString().split('T')[0];
-    }
-
-    // Check if date is valid
-    if (isNaN(dateObj.getTime())) {
-      return new Date().toISOString().split('T')[0];
-    }
-
-    return dateObj.toISOString().split('T')[0];
-  } catch {
-    return new Date().toISOString().split('T')[0];
-  }
-};
-
-// ============================================
-// THEME SYSTEM
-// ============================================
-
-const getWarningTheme = (level: string, status: string): WarningTheme => {
-  const levelThemes = {
-    verbal: {
-      primary: 'bg-blue-600',
-      secondary: 'bg-blue-50',
-      accent: 'text-blue-600',
-      background: 'bg-blue-50',
-      text: 'text-blue-800',
-      border: 'border-blue-200'
-    },
-    written: {
-      primary: 'bg-yellow-600',
-      secondary: 'bg-yellow-50',
-      accent: 'text-yellow-600',
-      background: 'bg-yellow-50',
-      text: 'text-yellow-800',
-      border: 'border-amber-200'
-    },
-    final: {
-      primary: 'bg-red-600',
-      secondary: 'bg-red-50',
-      accent: 'text-red-600',
-      background: 'bg-red-50',
-      text: 'text-red-800',
-      border: 'border-red-200'
-    },
-    dismissal: {
-      primary: 'bg-red-700',
-      secondary: 'bg-red-50',
-      accent: 'text-red-700',
-      background: 'bg-red-50',
-      text: 'text-red-900',
-      border: 'border-red-300'
-    }
-  };
-
-  return levelThemes[level as keyof typeof levelThemes] || levelThemes.verbal;
-};
 
 // ============================================
 // MAIN COMPONENT
@@ -1133,87 +1021,22 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
 
               {/* Archive Confirmation Dialog */}
               {showArchiveDialog && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Archive className="w-4 h-4 text-red-600" />
-                    <span className="text-sm font-semibold text-red-900">Archive Warning</span>
-                  </div>
-                  <p className="text-xs text-red-700 mb-3">
-                    Archived warnings are removed from active views and will no longer affect future escalation levels. This action can be reversed by an administrator.
-                  </p>
-                  <div className="mb-3">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Reason for archiving</label>
-                    <select
-                      value={archiveReason}
-                      onChange={(e) => setArchiveReason(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    >
-                      <option value="">Select a reason...</option>
-                      <option value="test_data">Test data / Demo warning</option>
-                      <option value="issued_in_error">Issued in error</option>
-                      <option value="duplicate">Duplicate warning</option>
-                      <option value="overturned">Overturned on appeal</option>
-                      <option value="expired">Naturally expired</option>
-                      <option value="manual">Other (manual archive)</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2 justify-end">
-                    <button
-                      onClick={() => { setShowArchiveDialog(false); setArchiveReason(''); }}
-                      className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleArchive}
-                      disabled={!archiveReason || archiveProcessing}
-                      className="flex items-center gap-2 px-4 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                    >
-                      {archiveProcessing ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Archive className="w-3 h-3" />
-                      )}
-                      Archive Warning
-                    </button>
-                  </div>
-                </div>
+                <ArchiveDialog
+                  archiveReason={archiveReason}
+                  setArchiveReason={setArchiveReason}
+                  archiveProcessing={archiveProcessing}
+                  onCancel={() => { setShowArchiveDialog(false); setArchiveReason(''); }}
+                  onArchive={handleArchive}
+                />
               )}
 
-              {/* Response Link Display */}
+              {/* Response Link Display (within action bar) */}
               {responseLink && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Link className="w-4 h-4 text-amber-600" />
-                    <span className="text-sm font-semibold text-amber-900">Employee Response Link</span>
-                  </div>
-                  <p className="text-xs text-amber-700 mb-3">
-                    Send this link to the employee via WhatsApp or email. They can respond or appeal without needing to log in.
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={responseLink}
-                      readOnly
-                      className="flex-1 px-3 py-2 text-xs bg-white border border-amber-300 rounded-lg text-gray-800 font-mono"
-                      onClick={(e) => (e.target as HTMLInputElement).select()}
-                    />
-                    <button
-                      onClick={handleCopyResponseLink}
-                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        responseLinkCopied
-                          ? 'bg-green-600 text-white'
-                          : 'bg-amber-600 hover:bg-amber-700 text-white'
-                      }`}
-                    >
-                      {responseLinkCopied ? (
-                        <><CheckCircle className="w-4 h-4" /> Copied</>
-                      ) : (
-                        <><Copy className="w-4 h-4" /> Copy</>
-                      )}
-                    </button>
-                  </div>
-                </div>
+                <ResponseLinkPanel
+                  responseLink={responseLink}
+                  responseLinkCopied={responseLinkCopied}
+                  onCopy={handleCopyResponseLink}
+                />
               )}
             </div>
           </div>
@@ -1223,82 +1046,25 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
       </div>
 
       {/* Nested Modals - Redesigned for V2 */}
-      
-      {/* Audio Modal - Clean Design */}
+
+      {/* Audio Modal — variant A (less-featured). NOTE: variant B below renders
+          on top at same z-index, hiding this one. Preserved exactly until a
+          separate cleanup commit. */}
       {showAudioModal && warningData?.hasAudio && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50" style={{ zIndex: Z_INDEX.modalNested1 }}>
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Audio Recording</h3>
-              <button
-                onClick={() => setShowAudioModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6">
-              <AudioPlaybackWidget
-                audioRecording={warningData.audioRecording}
-                compact={false}
-              />
-            </div>
-          </div>
-        </div>
+        <AudioModalSimple
+          audioRecording={warningData.audioRecording}
+          onClose={() => setShowAudioModal(false)}
+        />
       )}
-      
-      {/* Signatures Modal - Clean Design */}
+
+      {/* Signatures Modal — variant A (less-featured). Same duplicate-render
+          situation as Audio Modal above. */}
       {showSignatureModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50" style={{ zIndex: Z_INDEX.modalNested1 }}>
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-auto">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Digital Signatures</h3>
-              <button
-                onClick={() => setShowSignatureModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6">
-              {warningData?.hasSignatures ? (
-                <div className="space-y-4">
-                  {warningData.signatures?.manager && (
-                    <div className="border border-gray-200 rounded-lg p-4">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2">Manager Signature</h4>
-                      <div className="bg-gray-50 border border-gray-200 rounded p-4 text-center">
-                        <img
-                          src={warningData.signatures.manager}
-                          alt="Manager Signature"
-                          className="max-w-full h-20 mx-auto"
-                        />
-                      </div>
-                    </div>
-                  )}
-                  
-                  {warningData.signatures?.employee && (
-                    <div className="border border-gray-200 rounded-lg p-4">
-                      <h4 className="text-sm font-semibold text-gray-900 mb-2">Employee Signature</h4>
-                      <div className="bg-gray-50 border border-gray-200 rounded p-4 text-center">
-                        <img
-                          src={warningData.signatures.employee}
-                          alt="Employee Signature"
-                          className="max-w-full h-20 mx-auto"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <FileSignature className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No signatures available</h3>
-                  <p className="text-gray-600">Digital signatures have not been collected for this warning.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <SignaturesModalSimple
+          hasSignatures={warningData?.hasSignatures}
+          signatures={warningData?.signatures || {}}
+          onClose={() => setShowSignatureModal(false)}
+        />
       )}
 
       {/* 🎯 WORKING MODALS */}
@@ -1372,146 +1138,36 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
       )}
 
 
-      {/* Audio Modal */}
+      {/* Audio Modal — variant B (with header subtitle). */}
       {showAudioModal && warningData?.hasAudio && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ zIndex: Z_INDEX.modalNested1 }}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-auto">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Audio Recording</h3>
-                <p className="text-sm text-gray-600 mt-1">Warning ID: {warningData.id} • {warningData.employeeName}</p>
-              </div>
-              <button
-                onClick={() => setShowAudioModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6">
-              <AudioPlaybackWidget
-                audioRecording={warningData.audioRecording}
-                warningId={warningData.id}
-                showDownload={true}
-                showMetadata={true}
-                className="w-full"
-              />
-            </div>
-          </div>
-        </div>
+        <AudioModalFull
+          warningId={warningData.id}
+          employeeName={warningData.employeeName}
+          audioRecording={warningData.audioRecording}
+          onClose={() => setShowAudioModal(false)}
+        />
       )}
 
-      {/* Signature Modal */}
+      {/* Signature Modal — variant B (with subtitle + per-sig buttons). */}
       {showSignatureModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ zIndex: Z_INDEX.modalNested1 }}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-auto">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Digital Signatures</h3>
-                <p className="text-sm text-gray-600 mt-1">Warning ID: {warningData.id} • {warningData.employeeName}</p>
-              </div>
-              <button
-                onClick={() => setShowSignatureModal(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6">
-              {warningData?.hasSignatures ? (
-                <>
-                  <SignatureDisplay
-                    signatures={warningData.signatures}
-                    warningId={warningData.id}
-                    showTimestamps={true}
-                    showVerification={true}
-                    allowDownload={true}
-                    className="w-full mb-4"
-                  />
-                  
-                  {/* Individual Signature Buttons */}
-                  <div className="flex gap-3">
-                    {warningData.signatures.manager && (
-                      <button
-                        onClick={() => handleViewSignature('manager')}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
-                      >
-                        <ExternalLink className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm text-blue-700 font-medium">View Manager Signature</span>
-                      </button>
-                    )}
-                    {warningData.signatures.employee && (
-                      <button
-                        onClick={() => handleViewSignature('employee')}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors"
-                      >
-                        <ExternalLink className="w-4 h-4 text-green-600" />
-                        <span className="text-sm text-green-700 font-medium">View Employee Signature</span>
-                      </button>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-12">
-                  <FileSignature className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No signatures available</h3>
-                  <p className="text-gray-600">Digital signatures have not been collected for this warning.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <SignaturesModalFull
+          warningId={warningData?.id || ''}
+          employeeName={warningData?.employeeName || ''}
+          hasSignatures={!!warningData?.hasSignatures}
+          signatures={warningData?.signatures || { manager: null, employee: null }}
+          onClose={() => setShowSignatureModal(false)}
+          onViewSignature={handleViewSignature}
+        />
       )}
 
       {/* Individual Signature View Modal */}
       {selectedSignature && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm" style={{ zIndex: Z_INDEX.modalNested2 }}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-auto">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">{selectedSignature.title}</h3>
-                {selectedSignature.subtitle && (
-                  <p className="text-sm text-gray-600 mt-1">{selectedSignature.subtitle}</p>
-                )}
-              </div>
-              <button
-                onClick={() => setSelectedSignature(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <img
-                  src={selectedSignature.signature}
-                  alt={selectedSignature.title}
-                  className="max-w-full max-h-96 mx-auto"
-                  style={{ imageRendering: 'crisp-edges' }}
-                />
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-4 border-t border-gray-200 bg-gray-50">
-              <div className="text-sm text-gray-600">
-                Digital signature • PNG format • Legally binding
-              </div>
-              <button
-                onClick={() => {
-                  const link = document.createElement('a');
-                  link.href = selectedSignature.signature;
-                  link.download = `${selectedSignature.title.toLowerCase().replace(/\s+/g, '_')}_signature.png`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                }}
-                className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Download PNG
-              </button>
-            </div>
-          </div>
-        </div>
+        <IndividualSignatureModal
+          signature={selectedSignature.signature}
+          title={selectedSignature.title}
+          subtitle={selectedSignature.subtitle}
+          onClose={() => setSelectedSignature(null)}
+        />
       )}
     </>
   );
