@@ -163,3 +163,37 @@ export function checkPageOverflow(
 
   return currentY;
 }
+
+/**
+ * Compute the rendered height (in mm) of the Incident Details section so
+ * `checkPageOverflow` and the surrounding box rect can be sized correctly.
+ * Resilient to missing description/location — returns a minimum of 45mm and
+ * adds extra space when both fields are empty (placeholder warning is shown).
+ */
+export function calculateIncidentSectionHeight(
+  doc: any,
+  data: { description?: string; incidentLocation?: string },
+  pageWidth: number,
+  margin: number
+): number {
+  let height = 25; // Base height for date/time and location
+
+  // Add height for description (or placeholder text)
+  const descriptionText = data.description && data.description.trim() !== ''
+    ? data.description
+    : '[Incident description not provided - complete in wizard]';
+
+  const descriptionLines = wrapText(doc, descriptionText, pageWidth - margin * 2 - 6);
+  height += descriptionLines.length * 4;
+
+  // Add extra height for warning message if incomplete
+  const hasDescription = data.description && data.description.trim() !== '';
+  const hasLocation = data.incidentLocation && data.incidentLocation.trim() !== '';
+  const isIncomplete = !hasDescription && !hasLocation;
+
+  if (isIncomplete) {
+    height += 10; // Space for warning message
+  }
+
+  return Math.max(height, 45); // Minimum height
+}

@@ -98,6 +98,12 @@ import {
   addInterventionDetailsSection as _addInterventionDetailsSectionImpl,
 } from './pdf/sections/correctiveSections';
 import {
+  addEmployeeSection as _addEmployeeSectionImpl,
+  addWarningDetailsSection as _addWarningDetailsSectionImpl,
+  addIncidentDetailsSection as _addIncidentDetailsSectionImpl,
+} from './pdf/sections/baseInfoSections';
+import { calculateIncidentSectionHeight as _calculateIncidentSectionHeightImpl } from './pdf/utils';
+import {
   formatDate as _formatDateImpl,
   hexToRGB as _hexToRGBImpl,
   parseColor as _parseColorImpl,
@@ -1593,202 +1599,52 @@ export class PDFGenerationService {
 
     return startY + 10;
   }
-  
-  /**
-   * Employee Information Section - RESILIENT TO MISSING DATA
-   */
+
+  // ============================================
+  // BASE INFO SECTIONS (Employee, Warning Details, Incident Details)
+  // Implementations extracted to pdf/sections/baseInfoSections.ts in
+  // Phase 2 Tier 3B step 5b. Delegates preserve internal call sites.
+  // ============================================
+
+  /** Employee Information Section — delegate. */
   private static addEmployeeSection(
-    doc: any, 
-    employee: WarningPDFData['employee'], 
-    startY: number, 
-    pageWidth: number, 
+    doc: any,
+    employee: WarningPDFData['employee'],
+    startY: number,
+    pageWidth: number,
     margin: number,
     pageHeight: number,
     bottomMargin: number
   ): number {
-    // Check if we have enough space (need about 40mm)
-    startY = this.checkPageOverflow(doc, startY, 40, pageHeight, bottomMargin);
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(51, 51, 51);
-    doc.text('EMPLOYEE INFORMATION', margin, startY);
-    
-    // Section box with conditional styling
-    const isIncomplete = employee.firstName === 'Employee' || employee.lastName === 'Not Selected';
-    if (isIncomplete) {
-      doc.setDrawColor(255, 200, 200);
-    } else {
-      doc.setDrawColor(200, 200, 200);
-    }
-    doc.setLineWidth(0.3);
-    doc.rect(margin, startY + 2, pageWidth - (margin * 2), 25);
-    
-    // Add warning if data is incomplete
-    if (isIncomplete) {
-      doc.setFillColor(255, 245, 245);
-      doc.rect(margin + 1, startY + 3, pageWidth - (margin * 2) - 2, 23, 'F');
-    }
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    if (isIncomplete) {
-      doc.setTextColor(150, 0, 0);
-    } else {
-      doc.setTextColor(0, 0, 0);
-    }
-    
-    const info = [
-      `Name: ${employee.firstName} ${employee.lastName}`,
-      `Employee ID: ${employee.employeeNumber}`,
-      `Position: ${employee.position}`,
-      `Department: ${employee.department}`
-    ];
-    
-    if (employee.email && employee.email !== '') {
-      info.push(`Email: ${employee.email}`);
-    }
-    
-    if (isIncomplete) {
-      info.push('⚠️ Complete employee selection in wizard for full details');
-    }
-    
-    let infoY = startY + 8;
-    info.forEach(line => {
-      doc.text(line, margin + 3, infoY);
-      infoY += 4;
-    });
-    
-    return startY + 35;
+    return _addEmployeeSectionImpl(doc, employee, startY, pageWidth, margin, pageHeight, bottomMargin);
   }
-  
-  /**
-   * Warning Details Section - RESILIENT TO MISSING CATEGORY
-   */
+
+  /** Warning Details Section — delegate. */
   private static addWarningDetailsSection(
-    doc: any, 
-    data: WarningPDFData, 
-    startY: number, 
-    pageWidth: number, 
+    doc: any,
+    data: WarningPDFData,
+    startY: number,
+    pageWidth: number,
     margin: number,
     pageHeight: number,
     bottomMargin: number
   ): number {
-    // Check if we have enough space (need about 25mm)
-    startY = this.checkPageOverflow(doc, startY, 25, pageHeight, bottomMargin);
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(51, 51, 51);
-    doc.text('WARNING DETAILS', margin, startY);
-    
-    const isCategoryMissing = data.category === 'Category Not Selected';
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    if (isCategoryMissing) {
-      doc.setTextColor(150, 0, 0);
-    } else {
-      doc.setTextColor(0, 0, 0);
-    }
-    
-    let detailY = startY + 8;
-    
-    doc.text(`Warning Level: ${this.getWarningLevelDisplay(data.warningLevel)}`, margin, detailY);
-    detailY += 5;
-    
-    // Use the more reliable category field if available
-    const categoryDisplay = data.category && data.category !== 'Unknown' && data.category !== 'Category Not Selected' 
-      ? data.category 
-      : 'General Misconduct';
-    
-    doc.text(`Category: ${categoryDisplay}`, margin, detailY);
-    detailY += 5;
-    
-    if (data.validityPeriod) {
-      doc.text(`Validity Period: ${data.validityPeriod} months`, margin, detailY);
-      detailY += 5;
-    }
-    
-    return detailY + 5;
+    return _addWarningDetailsSectionImpl(doc, data, startY, pageWidth, margin, pageHeight, bottomMargin);
   }
-  
-  /**
-   * Incident Details Section - RESILIENT TO EMPTY FIELDS
-   */
+
+  /** Incident Details Section — delegate. */
   private static addIncidentDetailsSection(
-    doc: any, 
-    data: WarningPDFData, 
-    startY: number, 
-    pageWidth: number, 
+    doc: any,
+    data: WarningPDFData,
+    startY: number,
+    pageWidth: number,
     margin: number,
     pageHeight: number,
     bottomMargin: number
   ): number {
-    // Calculate required height dynamically
-    const requiredHeight = this.calculateIncidentSectionHeight(doc, data, pageWidth, margin);
-    startY = this.checkPageOverflow(doc, startY, requiredHeight, pageHeight, bottomMargin);
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(51, 51, 51);
-    doc.text('INCIDENT DETAILS', margin, startY);
-    
-    // Check for missing incident data
-    const hasDescription = data.description && data.description.trim() !== '';
-    const hasLocation = data.incidentLocation && data.incidentLocation.trim() !== '';
-    const isIncomplete = !hasDescription && !hasLocation;
-    
-    // Section box with conditional styling for incomplete data
-    const sectionHeight = this.calculateIncidentSectionHeight(doc, data, pageWidth, margin);
-    if (isIncomplete) {
-      doc.setDrawColor(255, 200, 200);
-    } else {
-      doc.setDrawColor(200, 200, 200);
-    }
-    doc.setLineWidth(0.3);
-    doc.rect(margin, startY + 2, pageWidth - (margin * 2), sectionHeight);
-    
-    // Add warning background if data is incomplete
-    if (isIncomplete) {
-      doc.setFillColor(255, 245, 245);
-      doc.rect(margin + 1, startY + 3, pageWidth - (margin * 2) - 2, sectionHeight - 2, 'F');
-    }
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-    
-    let incidentY = startY + 10;
-    
-    // Date and Time
-    doc.setFont('helvetica', 'bold');
-    doc.text('Date & Time:', margin + 3, incidentY);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${this.formatDate(data.incidentDate)} at ${data.incidentTime}`, margin + 30, incidentY);
-    incidentY += 6;
-    
-    // Location
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text('Location:', margin + 3, incidentY);
-    doc.setFont('helvetica', 'normal');
-    const locationText = hasLocation ? data.incidentLocation : 'Not specified';
-    doc.text(locationText, margin + 25, incidentY);
-    incidentY += 6;
-    
-    // Description
-    doc.setFont('helvetica', 'bold');
-    doc.text('Description:', margin + 3, incidentY);
-    incidentY += 5;
-    
-    doc.setFont('helvetica', 'normal');
-    const descriptionText = hasDescription ? data.description : 'Details to be completed';
-    const descriptionLines = this.wrapText(doc, descriptionText, pageWidth - margin * 2 - 6);
-    descriptionLines.forEach(line => {
-      doc.text(line, margin + 3, incidentY);
-      incidentY += 4;
-    });
-    
-    return startY + sectionHeight + 10;
+    return _addIncidentDetailsSectionImpl(doc, data, startY, pageWidth, margin, pageHeight, bottomMargin);
   }
-  
+
   /**
    * Previous Disciplinary Action Section - NUMBERED LIST FORMAT (Template Style)
    * Shows clear numbered list of previous warnings with dates and offenses
@@ -3267,34 +3123,16 @@ export class PDFGenerationService {
   }
   
   /**
-   * Calculate incident section height - RESILIENT VERSION
+   * Calculate incident section height — delegate. Implementation extracted to
+   * `pdf/utils.ts` in Phase 2 Tier 3B step 5b.
    */
   private static calculateIncidentSectionHeight(
-    doc: any, 
-    data: WarningPDFData, 
-    pageWidth: number, 
+    doc: any,
+    data: WarningPDFData,
+    pageWidth: number,
     margin: number
   ): number {
-    let height = 25; // Base height for date/time and location
-    
-    // Add height for description (or placeholder text)
-    const descriptionText = data.description && data.description.trim() !== '' 
-      ? data.description 
-      : '[Incident description not provided - complete in wizard]';
-    
-    const descriptionLines = this.wrapText(doc, descriptionText, pageWidth - margin * 2 - 6);
-    height += descriptionLines.length * 4;
-    
-    // Add extra height for warning message if incomplete
-    const hasDescription = data.description && data.description.trim() !== '';
-    const hasLocation = data.incidentLocation && data.incidentLocation.trim() !== '';
-    const isIncomplete = !hasDescription && !hasLocation;
-    
-    if (isIncomplete) {
-      height += 10; // Space for warning message
-    }
-    
-    return Math.max(height, 45); // Minimum height
+    return _calculateIncidentSectionHeightImpl(doc, data, pageWidth, margin);
   }
   
   /**
