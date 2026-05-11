@@ -162,29 +162,8 @@ export interface EscalationValidation {
 // ENHANCED WARNING CATEGORY
 // ============================================
 
-export interface WarningCategory {
-  id: string;
-  organizationId: string;
-  name: string;
-  description: string;
-  severity: SeverityLevel;
-  escalationPath?: WarningLevel[];
-  requiredDocuments: string[];
-  charges?: string[];
-  isActive: boolean;
-  saLegalType?: SALegalType;
-  type?: string;
-  expectedStandardsTemplate?: string; // Pre-populated text for Expected Standards phase
-  createdAt?: string;
-  updatedAt?: string;
-  sectorId?: string;
-  commonInSector?: boolean;
-  exampleIncidents?: string[];
-  investigationQuestions?: string[];
-  usage: number;
-  lastUsed?: string;
-  tags?: string[];
-}
+// WarningCategory definition moved to types/core.ts (Phase 2 Tier 3D step 7).
+export type { WarningCategory } from './core';
 
 // ============================================
 // ESCALATION RULES (Enhanced)

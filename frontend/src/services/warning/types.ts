@@ -8,30 +8,14 @@
 // that historically imported these types from `@/services/WarningService`.
 
 import type { WarningLevel, UniversalCategory } from '../UniversalCategories';
-import type { Warning } from '../../types/core';
+import type { Warning, WarningCategory } from '../../types/core';
 import type { AudioRecordingData } from '../../types/warning';
 
 // Re-exports so callers can pull everything from this one module.
-export type { WarningLevel, UniversalCategory, Warning, AudioRecordingData };
+// WarningCategory unified to the canonical types/core.ts shape in Phase 2 Tier 3D step 7.
+export type { WarningLevel, UniversalCategory, Warning, AudioRecordingData, WarningCategory };
 
 export type DeliveryMethod = 'email' | 'whatsapp' | 'print' | 'hand_delivery';
-
-export interface WarningCategory {
-  id: string;
-  organizationId: string;
-  name: string;
-  description: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  icon: string;
-  escalationPath: WarningLevel[];
-  legalRequirements: string[];
-  examples: string[];
-  defaultValidityPeriod: 3 | 6 | 12;
-  isActive: boolean;
-  expectedStandardsTemplate?: string; // Pre-populated text for Expected Standards phase
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 export interface EmployeeWithContext {
   id: string;

@@ -18,7 +18,12 @@ export type DeliveryMethod = 'email' | 'whatsapp' | 'printed';
 // Phase 2 Tier 1A unified 3 prior declarations (core.ts, warning.ts, WarningService.ts)
 // into the single source-of-truth in core.ts. Imported (so it's in this module's
 // scope for internal type references below) + re-exported (back-compat).
-import type { Warning } from './core';
+import type { Warning, WarningCategory } from './core';
+
+// WarningCategory unified to types/core.ts in Phase 2 Tier 3D step 7. Re-export
+// here keeps existing `import { WarningCategory } from '../types/warning'`
+// callers working.
+export type { WarningCategory };
 export type { Warning };
 
 // 🎯 Audio recording data interface
@@ -99,42 +104,8 @@ export interface AudioDeletionRequest {
 
 
 
-export interface WarningCategory {
-  id: string;
-  organizationId: string;
-  name: string;
-  description: string;
-  severity: SeverityLevel;
-  
-  // Progressive discipline configuration
-  escalationPath: WarningLevel[];
-  defaultValidityPeriod: 3 | 6 | 12;
-  
-  // 🎯 NEW: Audio recording settings
-  audioRecordingEnabled?: boolean; // Whether to auto-record for this category
-  audioRecordingRequired?: boolean; // Whether recording is mandatory
-  
-  // Legal and compliance
-  requiredDocuments: string[];
-  legalRequirements: string[];
-  saLegalType?: string;
-  
-  // Usage and examples
-  isActive: boolean;
-  usage: number;
-  lastUsed?: Date;
-  exampleIncidents?: string[];
-  investigationQuestions?: string[];
-  
-  // Categorization
-  type?: string;
-  tags?: string[];
-  sectorId?: string;
-  
-  // Audit
-  createdAt: Date;
-  updatedAt?: Date;
-}
+// WarningCategory definition moved to types/core.ts (Phase 2 Tier 3D step 7).
+// Re-exported above for back-compat with callers importing from this file.
 
 export interface EvidenceItem {
   id: string;

@@ -761,20 +761,55 @@ export interface Warning {
   reviewLastChecked?: any; // Firestore Timestamp
 }
 
+/**
+ * Canonical WarningCategory shape. Unified in Phase 2 Tier 3D step 7
+ * from 4 previously-overlapping definitions in core, organization,
+ * warning, and services/warning/types. Optional fields cover all use
+ * sites; required fields are the minimum every consumer needs.
+ */
 export interface WarningCategory {
+  // Required identity + classification
   id: string;
   organizationId: string;
   name: string;
   description: string;
   severity: SeverityLevel;
-  escalationPath?: WarningLevel[]; // ✅ Now supports 'counselling'
-  requiredDocuments: string[];
-  charges?: string[];
   isActive: boolean;
-  saLegalType?: SALegalType;
+
+  // Progressive discipline
+  escalationPath?: WarningLevel[]; // ✅ Supports 'counselling'
+  defaultValidityPeriod?: 3 | 6 | 12;
+
+  // Visual / categorisation
+  icon?: string;
   type?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  sectorId?: string;
+  commonInSector?: boolean;
+  tags?: string[];
+
+  // Audio recording (per-category override)
+  audioRecordingEnabled?: boolean;
+  audioRecordingRequired?: boolean;
+
+  // Pre-fill for the warning wizard's Expected Standards phase
+  expectedStandardsTemplate?: string;
+
+  // Legal + compliance
+  requiredDocuments?: string[];
+  charges?: string[];
+  legalRequirements?: string[];
+  saLegalType?: SALegalType;
+
+  // Examples / guidance
+  examples?: string[];
+  exampleIncidents?: string[];
+  investigationQuestions?: string[];
+
+  // Usage / audit
+  usage?: number;
+  lastUsed?: Date;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 // ============================================
