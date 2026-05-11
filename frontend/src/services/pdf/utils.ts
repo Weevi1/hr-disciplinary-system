@@ -7,6 +7,7 @@
 
 import Logger from '../../utils/logger';
 import { getLevelLabel } from '../UniversalCategories';
+import type { WarningPDFData } from '../PDFGenerationService';
 
 /**
  * Format date consistently for PDF rendering.
@@ -196,4 +197,36 @@ export function calculateIncidentSectionHeight(
   }
 
   return Math.max(height, 45); // Minimum height
+}
+
+/**
+ * Replace inline `{{placeholder}}` tokens in custom-template text with values
+ * from the warning data. Currently supports: `{{validityPeriod}}`,
+ * `{{employee.firstName}}`, `{{employee.lastName}}`, `{{issuedDate}}`.
+ *
+ * For more general placeholder handling (heading/body templating across
+ * arbitrary fields) see `PDFPlaceholderService.replacePlaceholders` —
+ * this is the lightweight in-section variant used by Consequences and
+ * Employee Rights renderers.
+ */
+export function replacePlaceholders(text: string, data: WarningPDFData): string {
+  let result = text;
+
+  // Replace validity period
+  if (data.validityPeriod) {
+    result = result.replace(/\{\{validityPeriod\}\}/g, data.validityPeriod.toString());
+  }
+
+  // Replace employee fields
+  if (data.employee) {
+    result = result.replace(/\{\{employee\.firstName\}\}/g, data.employee.firstName || '');
+    result = result.replace(/\{\{employee\.lastName\}\}/g, data.employee.lastName || '');
+  }
+
+  // Replace issue date
+  if (data.issuedDate) {
+    result = result.replace(/\{\{issuedDate\}\}/g, formatDate(data.issuedDate));
+  }
+
+  return result;
 }

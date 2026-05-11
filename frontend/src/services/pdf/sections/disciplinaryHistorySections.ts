@@ -5,7 +5,8 @@
 // its format ("Offense" field) is byte-identical to the original.
 // Extracted in Phase 2 Tier 3B step 5c.
 
-import type { PDFSectionConfig, WarningPDFData } from '../../PDFGenerationService';
+import type { PDFSectionConfig } from '../../../types/core';
+import type { WarningPDFData } from '../../PDFGenerationService';
 import Logger from '../../../utils/logger';
 import { checkPageOverflow, formatDate, getWarningLevelDisplay } from '../utils';
 
