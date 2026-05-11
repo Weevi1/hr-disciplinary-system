@@ -23,7 +23,7 @@ import {
   FileText
 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
-import { DataService } from '../../services/DataService';
+import { AdminDataService } from '../../services/AdminDataService';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
 import { ResellerManagement } from './ResellerManagement';
 import { AudioCleanupDashboard } from './AudioCleanupDashboard';
@@ -131,8 +131,8 @@ export const SuperAdminDashboard = () => {
 
       // Load organizations and resellers in parallel
       const [orgs, allResellers] = await Promise.all([
-        DataService.loadOrganizations(),
-        DataService.getAllResellers()
+        AdminDataService.loadOrganizations(),
+        AdminDataService.getAllResellers()
       ]);
 
       // Calculate stats

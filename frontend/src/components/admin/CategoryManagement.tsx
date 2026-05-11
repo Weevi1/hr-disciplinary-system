@@ -46,6 +46,7 @@ import {
 
 // Import services and contexts
 import { API } from '@/api';
+import { AdminDataService } from '../../services/AdminDataService';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { useAuth } from '../../auth/AuthContext';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
@@ -337,7 +338,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
       
       // Load category customizations directly from Firestore
       // Note: This would require a new DataService method
-      // const customizations = await DataService.getCategoryCustomizations(organizationId);
+      // const customizations = await AdminDataService.getCategoryCustomizations(organizationId);
       // setCategoryCustomizations(customizations);
       
       // For now, we'll derive customizations from the categories
@@ -412,13 +413,13 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
       
       if (existingCustomization) {
         // Toggle disabled status
-        await DataService.customizeCategory(organizationId!, categoryId, {
+        await AdminDataService.customizeCategory(organizationId!, categoryId, {
           ...existingCustomization,
           isDisabled: !existingCustomization.isDisabled
         });
       } else {
         // Create new customization to disable
-        await DataService.customizeCategory(organizationId!, categoryId, {
+        await AdminDataService.customizeCategory(organizationId!, categoryId, {
           isDisabled: true
         });
       }
@@ -442,7 +443,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
       setSaving(true);
       setError(null);
       
-      await DataService.customizeCategory(organizationId!, categoryId, customization);
+      await AdminDataService.customizeCategory(organizationId!, categoryId, customization);
       await loadData();
       
       setEditingCategory(null);
@@ -474,7 +475,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
         expectedStandardsTemplate: newCustomCategory.expectedStandardsTemplate || '',
       };
       
-      await DataService.createCustomCategory(organizationId!, categoryData);
+      await AdminDataService.createCustomCategory(organizationId!, categoryData);
       await loadData();
       
       // Reset form
@@ -513,7 +514,7 @@ export const CategoryManagement: React.FC<CategoryManagementUIProps> = ({
       setError(null);
       
       // Note: This would require a DataService method to delete custom categories
-      // await DataService.deleteCustomCategory(organizationId!, categoryId);
+      // await AdminDataService.deleteCustomCategory(organizationId!, categoryId);
       
       await loadData();
       setSuccess('Custom category deleted successfully');

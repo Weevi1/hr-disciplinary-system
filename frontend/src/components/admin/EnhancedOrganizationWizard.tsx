@@ -26,7 +26,7 @@ import {
 import { useAuth } from '../../auth/AuthContext';
 import Logger from '../../utils/logger';
 import StripeService from '../../services/StripeService';
-import { DataService } from '../../services/DataService';
+import { AdminDataService } from '../../services/AdminDataService';
 import { ShardedOrganizationService } from '../../services/ShardedOrganizationService';
 import DepartmentService from '../../services/DepartmentService';
 import { UNIVERSAL_SA_CATEGORIES } from '../../services/UniversalCategories';
@@ -739,14 +739,14 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
 
   const loadAvailableResellers = async () => {
     try {
-      const resellers = await DataService.getAllResellers();
+      const resellers = await AdminDataService.getAllResellers();
       const activeResellers = resellers.filter(r => r.isActive);
 
       // Load real client counts for each reseller
       const resellersWithCounts = await Promise.all(
         activeResellers.map(async (reseller) => {
           try {
-            const clients = await DataService.getResellerClients(reseller.id);
+            const clients = await AdminDataService.getResellerClients(reseller.id);
             // Update the reseller object with actual client count
             return {
               ...reseller,
@@ -781,7 +781,7 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
       // Get reseller's recent deployments
-      const recentDeployments = await DataService.getResellerDeployments(
+      const recentDeployments = await AdminDataService.getResellerDeployments(
         user.id,
         monthStart
       );
@@ -1006,7 +1006,7 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
       if (isReseller && user?.id) {
         try {
           const serverTimestamp = await import('../../services/TimeService').then(m => m.TimeService.getServerTimestamp());
-          await DataService.logResellerDeployment({
+          await AdminDataService.logResellerDeployment({
             resellerId: user.id,
             organizationId,
             organizationName: formData.companyName,

@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import Logger from '../../utils/logger';
-import { DataService } from '../../services/DataService';
+import { AdminDataService } from '../../services/AdminDataService';
 import CommissionService from '../../services/CommissionService';
 import { MyClients } from './MyClients';
 import { MyDemos } from './demos/MyDemos';
@@ -79,9 +79,9 @@ export const ResellerDashboard: React.FC = () => {
 
       // Load reseller profile and metrics
       const [reseller, metrics, clients, commissions, trends] = await Promise.all([
-        DataService.getReseller(user.resellerId),
+        AdminDataService.getReseller(user.resellerId),
         CommissionService.getResellerMetrics(user.resellerId),
-        DataService.getResellerClients(user.resellerId),
+        AdminDataService.getResellerClients(user.resellerId),
         CommissionService.getRecentCommissions(user.resellerId, 5),
         CommissionService.getPerformanceTrend(user.resellerId, timeframe)
       ]);

@@ -14,7 +14,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { DataService } from './DataService';
+import { AdminDataService } from './AdminDataService';
 import { ShardedDataService } from './ShardedDataService';
 import Logger from '../utils/logger';
 import type { 
@@ -45,13 +45,13 @@ class CommissionService {
       Logger.debug('Calculating commission for payment...', params);
 
       // Get organization to find reseller
-      const organization = await DataService.getOrganization(params.organizationId);
+      const organization = await ShardedDataService.getOrganization(params.organizationId);
       if (!organization?.resellerId) {
         throw new Error('No reseller assigned to organization');
       }
 
       // Get reseller details
-      const reseller = await DataService.getReseller(organization.resellerId);
+      const reseller = await AdminDataService.getReseller(organization.resellerId);
       if (!reseller) {
         throw new Error('Reseller not found');
       }
@@ -118,7 +118,7 @@ class CommissionService {
       Logger.debug('Recording manual client payment...', params);
 
       // Get organization details
-      const organization = await DataService.getOrganization(params.organizationId);
+      const organization = await ShardedDataService.getOrganization(params.organizationId);
       if (!organization) {
         throw new Error('Organization not found');
       }
@@ -203,7 +203,7 @@ class CommissionService {
       
       for (const [resellerMonth, commissions] of Object.entries(commissionsByReseller)) {
         const [resellerId, month] = resellerMonth.split('|');
-        const reseller = await DataService.getReseller(resellerId);
+        const reseller = await AdminDataService.getReseller(resellerId);
         
         if (!reseller) continue;
 
@@ -318,11 +318,11 @@ class CommissionService {
     try {
       Logger.debug(`Getting metrics for reseller: ${resellerId}`);
       
-      const reseller = await DataService.getReseller(resellerId);
+      const reseller = await AdminDataService.getReseller(resellerId);
       if (!reseller) throw new Error('Reseller not found');
 
       // Get reseller's clients
-      const clients = await DataService.getResellerClients(resellerId);
+      const clients = await AdminDataService.getResellerClients(resellerId);
       const activeClients = clients.filter(client => client.isActive !== false);
 
       // Get all commissions for this reseller
@@ -425,7 +425,7 @@ class CommissionService {
     try {
       Logger.debug('Getting provincial metrics...');
 
-      const resellers = await DataService.getAllResellers();
+      const resellers = await AdminDataService.getAllResellers();
       const metrics = {} as any;
 
       for (const reseller of resellers) {
@@ -521,7 +521,7 @@ class CommissionService {
         // Get organization name for client name
         let clientName = 'Unknown Client';
         try {
-          const org = await DataService.getOrganization(commission.organizationId);
+          const org = await ShardedDataService.getOrganization(commission.organizationId);
           if (org) clientName = org.name;
         } catch (error) {
           Logger.warn(`Could not get organization name for ${commission.organizationId}`);
@@ -646,7 +646,7 @@ class CommissionService {
       // Use provided organization data or fetch it
       let organization = organizationData;
       if (!organization) {
-        organization = await DataService.getOrganization(organizationId);
+        organization = await ShardedDataService.getOrganization(organizationId);
         if (!organization) {
           throw new Error('Organization not found');
         }

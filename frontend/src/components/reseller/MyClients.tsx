@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import Logger from '../../utils/logger';
-import { DataService } from '../../services/DataService';
+import { AdminDataService } from '../../services/AdminDataService';
 import CommissionService from '../../services/CommissionService';
 import { ClientOrganizationManager } from './ClientOrganizationManager';
 import { ClientSummaryModal } from './ClientSummaryModal';
@@ -67,7 +67,7 @@ export const MyClients: React.FC<MyClientsProps> = ({ onDeployClient }) => {
       setLoading(true);
       Logger.debug('Loading reseller clients...', { resellerId: user.resellerId });
 
-      const clientOrgs = await DataService.getResellerClients(user.resellerId);
+      const clientOrgs = await AdminDataService.getResellerClients(user.resellerId);
 
       // Load metrics for each client (pass client data to avoid refetching)
       const clientsWithMetrics = await Promise.all(
@@ -111,7 +111,7 @@ export const MyClients: React.FC<MyClientsProps> = ({ onDeployClient }) => {
     try {
       Logger.debug('Updating client information...', { clientId, updates });
       
-      await DataService.updateOrganization(clientId, updates);
+      await AdminDataService.updateOrganization(clientId, updates);
       
       Logger.success('Client updated successfully');
       await loadClients();

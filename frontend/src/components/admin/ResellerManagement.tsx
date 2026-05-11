@@ -17,7 +17,7 @@ import {
   X
 } from 'lucide-react';
 import Logger from '../../utils/logger';
-import { DataService } from '../../services/DataService';
+import { AdminDataService } from '../../services/AdminDataService';
 import { TimeService } from '../../services/TimeService';
 import CommissionService from '../../services/CommissionService';
 import { EncryptionService } from '../../services/EncryptionService';
@@ -67,7 +67,7 @@ export const ResellerManagement: React.FC = () => {
       setLoading(true);
       Logger.debug('Loading resellers with metrics...');
 
-      const allResellers = await DataService.getAllResellers();
+      const allResellers = await AdminDataService.getAllResellers();
       
       // Load metrics for each reseller
       const resellersWithMetrics = await Promise.all(
@@ -121,7 +121,7 @@ export const ResellerManagement: React.FC = () => {
       };
 
       // Step 1: Create reseller profile
-      const resellerId = await DataService.createReseller(newReseller);
+      const resellerId = await AdminDataService.createReseller(newReseller);
       
       // Step 2: Use Cloud Function to create Firebase Auth user without disrupting session
       try {
@@ -222,7 +222,7 @@ The reseller profile has been saved successfully with ID: ${resellerId}
       // Encrypt sensitive banking details before storing
       const encryptedBankDetails = EncryptionService.encryptBankingDetails(formData.bankDetails);
 
-      await DataService.updateReseller(editingReseller.id, {
+      await AdminDataService.updateReseller(editingReseller.id, {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
@@ -305,7 +305,7 @@ The reseller profile has been saved successfully with ID: ${resellerId}
 
   const toggleResellerStatus = async (reseller: Reseller) => {
     try {
-      await DataService.updateReseller(reseller.id, {
+      await AdminDataService.updateReseller(reseller.id, {
         isActive: !reseller.isActive,
         updatedAt: TimeService.getServerTimestamp()
       });
