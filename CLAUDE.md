@@ -80,7 +80,7 @@ firebase projects:list
 **IMPORTANT**: This file is size-limited to maintain context efficiency.
 
 - **Size Limit**: 500 lines maximum (target: 400-470 lines)
-- **Current Size**: 463 lines ✅
+- **Current Size**: 530 lines ⚠️ (over 500-line target — move oldest section to RECENT_UPDATES.md before next session)
 - **Policy**: See `DOCUMENTATION_POLICY.md` for complete maintenance rules
 - **Before Adding Sessions**: Check size with `wc -l CLAUDE.md`
 - **If > 450 lines**: Move previous session to RECENT_UPDATES.md first
@@ -113,7 +113,7 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 ### Key Files to Know
 - **Core Types**: `frontend/src/types/core.ts`, `frontend/src/types/employee.ts`
 - **PDF System**: `PDFGenerationService.ts`, `PDFTemplateVersionService.ts`, `pdfDataTransformer.ts` - See `PDF_SYSTEM_ARCHITECTURE.md`
-- **Services**: `DatabaseShardingService.ts`, `EmployeeService.ts`, `WarningService.ts`
+- **Services**: `DatabaseShardingService.ts`, `ShardedDataService.ts`, `AdminDataService.ts`, `WarningService.ts`
 - **Design System**: `ThemedCard.tsx`, `UnifiedModal.tsx`, `index.css` (1,328 lines of progressive enhancement CSS)
 - **Hooks**: `useDashboardData.ts`, `usePreventBodyScroll.ts`, `useFocusTrap.ts`
 
@@ -187,8 +187,8 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 - `V2_DESIGN_PRINCIPLES.md` - Production-ready visual design language
 - `MODAL_DESIGN_STANDARDS.md` - Gold standard modal design patterns and implementation guidelines
 - `MODAL_AUDIT_REPORT.md` - **Modal system audit** - Comprehensive analysis of all 21+ modals (centering, scrolling, body scroll prevention, z-index) with fix recommendations
-- `MODAL_FIXES_IMPLEMENTATION.md` - **✅ Week 1 Complete** - Body scroll prevention hook, standardized z-index (9000-9999), all 19 modals updated
-- `MODAL_WEEK_2_3_IMPLEMENTATION.md` - **✅ Week 2-3 Complete** - Focus trap hook, ARIA labels, scroll strategy standardization, comprehensive usage guidelines
+- `docs/archive/MODAL_FIXES_IMPLEMENTATION.md` - **✅ Week 1 Complete** - Body scroll prevention hook, standardized z-index (9000-9999), all 19 modals updated
+- `docs/archive/MODAL_WEEK_2_3_IMPLEMENTATION.md` - **✅ Week 2-3 Complete** - Focus trap hook, ARIA labels, scroll strategy standardization, comprehensive usage guidelines
 - `MODAL_USAGE_GUIDELINES.md` - **Complete usage guide** - Decision tree, best practices, accessibility requirements, code examples, testing guidelines
 - `ENHANCED_WARNING_WIZARD_MOBILE_OPTIMIZATION.md` - Samsung S8+ mobile optimization details
 - `ENHANCED_WARNING_WIZARD_DESIGN_SYSTEM.md` - Unified design system implementation
@@ -362,12 +362,15 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 **For complete change history, see `RECENT_UPDATES.md` (Sessions 20-52) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Session 67 - 2026-04-24)
+### Most Recent (Pre-Launch Cleanup, 2026-05-11)
+Phase 2 (architectural debt), Phase 4 (ESLint + console scrub), Phase 5 (docs hygiene) shipped over Sessions 68–73. tsc 903 → 647 (-28%), ~10,000 LOC removed/relocated. `DataService` decomposed into `ShardedDataService` + `AdminDataService`; `EmployeeService`, `DataServiceV2`, `NestedDataService`, `CategoryService` deleted; types unified to `types/core.ts`; 7 oversized components decomposed; PDF generator 4,135→958 LOC with byte-identical v1.0.0/v1.1.0 preservation; `Logger` now sanitises all production logging; 12 real react-hooks/rules-of-hooks bugs fixed; `npm run lint` clean. Full detail in `RECENT_UPDATES.md`.
+
+### Previous (Session 67 - 2026-04-24)
 - **✅ Reseller demo organizations** — Resellers can deploy pre-populated demo orgs for prospect testing, separate from paying-client lifecycle
 - **Backend**: 4 new Cloud Functions in `functions/src/Reseller/demoManagement.ts` — `deployDemoOrganization`, `createDemoProspectLogin`, `resetDemoOrganization`, `deleteDemoOrganization`. Max 5 concurrent demos per reseller (separate quota from real deployments). Seed data in `demoSeedData.ts` (10 canonical SA employees) and `demoCategories.ts` (8 LRA categories)
 - **Frontend**: `ResellerDemoService.ts` + 5 new components under `components/reseller/demos/` (MyDemos list + 4 modals). New "My Demos" tab on ResellerDashboard, desktop + mobile
 - **Org schema**: Added `isDemo?: boolean` and `demoMetadata?: { resellerId, createdAt, lastResetAt, resetCount, activeProspectLoginIds }` to `Organization`. Added `resellerId` + `isDemoProspect` to `User`. Added `'reseller'` to `UserRoleId` (fixed pre-existing type gap)
-- **Safety rails**: Persistent amber `DEMO ORGANIZATION` banner in MainLayout. `DataService.getResellerClients` filters out `isDemo: true`. Cron/trigger guards added to `reviewFollowUpCron.ts`, `warningDelivery.ts`, and `notifyHROnAppeal.ts` so demo orgs never generate SendGrid bounces on fake `@demo.local` addresses
+- **Safety rails**: Persistent amber `DEMO ORGANIZATION` banner in MainLayout. `AdminDataService.getResellerClients` filters out `isDemo: true`. Cron/trigger guards added to `reviewFollowUpCron.ts`, `warningDelivery.ts`, and `notifyHROnAppeal.ts` so demo orgs never generate SendGrid bounces on fake `@demo.local` addresses
 - **Indexes deployed**: `organizations (resellerId, isDemo)` and `organizations (resellerId, isDemo, isActive)` in `config/firestore.indexes.json`
 - **Reset semantics**: Full re-seed to pristine template — wipes warnings, evidence, response tokens, prospect logins, employees, departments; re-seeds the 10 canonical employees + Operations/Admin departments. Reset count is tracked
 
@@ -383,7 +386,7 @@ See `RECENT_UPDATES.md` for detailed session history including Sessions 57-66.
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ org scalability, progressive enhancement for 2012-2025 devices, **unified design system**, **DashboardShell** across all dashboards, **WCAG AA compliance**, **versioned PDF generation**, **per-org PDF templates**, **SVG signatures**, **10-phase unified warning wizard**, **link-based employee response/appeal system** with token auth and PDF viewing, **HR email notifications via SendGrid**, **evidence upload on appeals with client-side image optimization**, **per-organization multi-dashboard theming** (Manager, HR, Executive views with per-view metric card colors), **optimized warning data loading with staleness detection**, **session guard with auto-logout + forced app updates**, and **CCMA-ready PDFs with section labels, continuation headers, electronic signature notation, and page initials**.*
 
-*Last Updated: 2026-04-24 - Session 67: Reseller demo organizations — deploy / reset / delete, prospect logins, demo-safe cron guards.*
+*Last Updated: 2026-05-11 - Phase 2–5 pre-launch cleanup: architectural debt, ESLint tightening, console-log scrub, documentation hygiene.*
 
 ---
 
@@ -485,7 +488,7 @@ Gaps 1-3 are done. These 2 remain from the same feedback session:
 ### Gap 5: Confirmed working — just needs testing
 > Updated by FIFO Ops, 2026-02-09
 
-Ops code review confirmed Gap 5 IS fully implemented: type definitions, DataService merge logic, admin UI textarea, auto-population in `UnifiedWarningWizard.tsx` on category select, info badge. Just needs end-to-end testing with real category data.
+Ops code review confirmed Gap 5 IS fully implemented: type definitions, AdminDataService merge logic, admin UI textarea, auto-population in `UnifiedWarningWizard.tsx` on category select, info badge. Just needs end-to-end testing with real category data.
 
 ### Active Tasks for This Project
 - [HIGH] Schedule 4-5 demo calls with HR professionals for File by FIFO (Riaan is handling outreach)

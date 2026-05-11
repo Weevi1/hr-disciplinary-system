@@ -71,15 +71,10 @@ Comprehensive file locations catalog for the HR Disciplinary System codebase.
 ## Design System & Theming
 
 ### Context Providers
-- **`frontend/src/contexts/BrandingContext.tsx`**
-  - White-label branding system
-  - Dynamic CSS variable injection
-  - Per-organization branding (logo, colors)
-
-- **`frontend/src/contexts/ThemeContext.tsx`**
-  - Theme management system
-  - localStorage persistence
-  - Theme switching (light/dark/branded)
+- **`frontend/src/contexts/ThemeBrandingContext.tsx`**
+  - Combined theme + white-label branding provider (merged from former separate `ThemeContext` + `BrandingContext` in Week 4 optimization)
+  - Dynamic CSS variable injection, per-organization branding (logo, colors)
+  - localStorage theme persistence (light/dark/branded)
 
 ### Theme Configuration
 - **`frontend/src/config/themes.ts`**
@@ -191,11 +186,7 @@ Comprehensive file locations catalog for the HR Disciplinary System codebase.
   - Default template configuration (v1.1.0 LRA-compliant)
 
 ### Employee & Manager Services
-- **`frontend/src/services/EmployeeService.ts`**
-  - Complete employee CRUD operations
-  - Multi-manager filtering with `managerIds` array support
-  - CSV import/export functionality
-  - Employee statistics calculation
+> Note: Standalone `EmployeeService.ts` was removed in Phase 2 Tier 2B (2026-05) — employee CRUD now lives on `ShardedDataService` and is exposed via `frontend/src/api/index.ts` (`API.employees.*`). Multi-manager filtering, CSV import, and stats calculation moved with it.
 
 - **`frontend/src/services/EmployeeLifecycleService.ts`**
   - Employee archive/restore system
@@ -219,10 +210,13 @@ Comprehensive file locations catalog for the HR Disciplinary System codebase.
   - Status management (draft/issued/delivered/archived)
   - Multi-organization support
 
-- **`frontend/src/services/CategoryService.ts`**
-  - Warning category management
-  - Severity levels and escalation rules
-  - Custom category creation
+> Note: Standalone `CategoryService.ts` was removed — category CRUD now lives on `AdminDataService` (`customizeCategory`, `createCustomCategory`, `deleteCustomCategory`, `getCategoryCustomizations`).
+
+### Admin & Reseller Services
+- **`frontend/src/services/AdminDataService.ts`**
+  - Extracted from former 2,630-LOC `DataService` in Phase 2 Tier 2C (2026-05)
+  - 13 cross-org admin/reseller methods: reseller CRUD, organization customization, category customization
+  - Used by admin/reseller-tier UIs only — per-tenant work goes through `ShardedDataService`
 
 ---
 
@@ -413,10 +407,10 @@ Comprehensive file locations catalog for the HR Disciplinary System codebase.
   - Department management integration
   - Ultra-compact design (inline stat badges)
 
-- **`frontend/src/components/admin/OrganizationCategoriesViewer.tsx`**
-  - Warning category management
+- **`frontend/src/components/organization/OrganizationCategoriesViewer.tsx`**
+  - Warning category management (moved from `components/admin/` in Phase 2 Tier 3D step 4)
   - Category creation/edit with severity levels
-  - Compact card design with expand/collapse
+  - Decomposed: helpers + template-selector modal split into sibling files under `components/organization/`
 
 ### PDF Template Components
 - **`frontend/src/components/admin/PDFTemplateManager.tsx`**
@@ -456,8 +450,8 @@ Comprehensive file locations catalog for the HR Disciplinary System codebase.
   - Warning workflow access
   - Historical warning entry button (60-day countdown)
 
-- **`frontend/src/components/dashboard/BusinessOwnerDashboardSection.tsx`**
-  - Business Owner dashboard (matches HR dashboard structure)
+- **`frontend/src/components/dashboard/ExecutiveManagementDashboardSection.tsx`**
+  - Executive Management dashboard (renamed from `BusinessOwnerDashboardSection`)
   - Executive Command Center theme
   - Organization, Employees, Warnings tabs
   - Department management integration
@@ -583,8 +577,8 @@ Comprehensive file locations catalog for the HR Disciplinary System codebase.
 - **`V2_DESIGN_PRINCIPLES.md`** - Production-ready visual design language
 - **`MODAL_DESIGN_STANDARDS.md`** - Gold standard modal design patterns
 - **`MODAL_AUDIT_REPORT.md`** - Modal system audit (21+ modals analyzed)
-- **`MODAL_FIXES_IMPLEMENTATION.md`** - Week 1: Body scroll prevention, z-index standardization
-- **`MODAL_WEEK_2_3_IMPLEMENTATION.md`** - Week 2-3: Focus trap, ARIA labels, scroll strategies
+- **`docs/archive/MODAL_FIXES_IMPLEMENTATION.md`** - Week 1: Body scroll prevention, z-index standardization (historical, see `MODAL_USAGE_GUIDELINES.md` for current guidance)
+- **`docs/archive/MODAL_WEEK_2_3_IMPLEMENTATION.md`** - Week 2-3: Focus trap, ARIA labels, scroll strategies (historical)
 - **`MODAL_USAGE_GUIDELINES.md`** - Complete usage guide with decision tree
 - **`ENHANCED_WARNING_WIZARD_MOBILE_OPTIMIZATION.md`** - Samsung S8+ mobile optimization
 - **`ENHANCED_WARNING_WIZARD_DESIGN_SYSTEM.md`** - Unified design system implementation

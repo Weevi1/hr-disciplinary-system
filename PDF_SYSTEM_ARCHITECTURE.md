@@ -2,6 +2,19 @@
 
 Complete documentation for the three-layer PDF generation and customization system.
 
+> **2026-05 update — Phase 2 Tier 3B decomposition.** The 4,135-LOC `PDFGenerationService.ts` was decomposed into a 958-LOC version dispatcher plus extracted modules under `frontend/src/services/pdf/`:
+> - **`pdf/versions/v1_0_0.ts`** — frozen, byte-identical
+> - **`pdf/versions/v1_1_0.ts`** — frozen, byte-identical
+> - **`pdf/versions/v1_2_0.ts`** — current, dynamic-section path
+> - **`pdf/sections/`** — section renderers (employee, incident, disciplinary, signatures, etc.)
+> - **`pdf/pageUtils/`** — headers, watermarks, page formatting
+> - **`pdf/SimplifiedPDFGenerator.ts`** — legacy-device fallback
+> - **`pdf/signatureConverter.ts`** — SVG→PNG converter
+>
+> Line numbers in this doc refer to the **pre-decomposition layout** and are no longer accurate — use the file/method names instead and grep current source for current locations. **All v1.0.0 / v1.1.0 byte-output is preserved** (Phase 2 verified via regression test).
+>
+> Also note: `EnhancedWarningWizard.tsx` referenced below is legacy/dead code; the active wizard is `frontend/src/components/warnings/enhanced/UnifiedWarningWizard.tsx`.
+
 ---
 
 ## Table of Contents
