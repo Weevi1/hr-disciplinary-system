@@ -90,6 +90,14 @@ import {
   generatePlainTextPDF as _generatePlainTextPDFImpl,
 } from './pdf/SimplifiedPDFGenerator';
 import {
+  addEmployeeStatementSection as _addEmployeeStatementSectionImpl,
+  addExpectedBehaviorSection as _addExpectedBehaviorSectionImpl,
+  addFactsLeadingToDecisionSection as _addFactsLeadingToDecisionSectionImpl,
+  addImprovementCommitmentsSection as _addImprovementCommitmentsSectionImpl,
+  addReviewDateSection as _addReviewDateSectionImpl,
+  addInterventionDetailsSection as _addInterventionDetailsSectionImpl,
+} from './pdf/sections/correctiveSections';
+import {
   formatDate as _formatDateImpl,
   hexToRGB as _hexToRGBImpl,
   parseColor as _parseColorImpl,
@@ -2178,10 +2186,14 @@ export class PDFGenerationService {
     return notesY + 5;
   }
 
-  /**
-   * Section B: Employee's Statement
-   * Employee's version of events regarding the incident
-   */
+  // ============================================
+  // CORRECTIVE DISCUSSION SECTIONS (B, C, E, F)
+  // Implementations extracted to pdf/sections/correctiveSections.ts in
+  // Phase 2 Tier 3B step 5. Delegates preserve `this.X(...)` call sites
+  // inside frozen v1.0.0/v1.1.0/v1.2.0 methods.
+  // ============================================
+
+  /** Section B: Employee's Version of Events — delegate. */
   private static addEmployeeStatementSection(
     doc: any,
     statement: string,
@@ -2191,40 +2203,10 @@ export class PDFGenerationService {
     pageHeight: number,
     bottomMargin: number
   ): number {
-    // Calculate height based on text length (increased line spacing from 4 to 5)
-    const statementLines = this.wrapText(doc, statement, pageWidth - margin * 2 - 6);
-    const requiredHeight = 20 + (statementLines.length * 5);
-    startY = this.checkPageOverflow(doc, startY, requiredHeight, pageHeight, bottomMargin);
-
-    // Section header
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(100, 100, 100);
-    doc.text("(B) EMPLOYEE'S VERSION OF EVENTS", margin, startY);
-
-    // Content
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-
-    let contentY = startY + 8;
-    statementLines.forEach(line => {
-      // Skip empty lines but preserve spacing
-      if (line.trim() === '') {
-        contentY += 3; // Half spacing for empty lines
-      } else {
-        doc.text(line, margin, contentY);
-        contentY += 5; // Increased from 4 to 5 for better readability
-      }
-    });
-
-    return contentY + 8;
+    return _addEmployeeStatementSectionImpl(doc, statement, startY, pageWidth, margin, pageHeight, bottomMargin);
   }
 
-  /**
-   * Section C: Expected Behavior & Standards
-   * Required/expected behavior, performance, conduct, and standards
-   */
+  /** Section C: Required/Expected Behavior & Standards — delegate. */
   private static addExpectedBehaviorSection(
     doc: any,
     standards: string,
@@ -2234,40 +2216,10 @@ export class PDFGenerationService {
     pageHeight: number,
     bottomMargin: number
   ): number {
-    // Calculate height based on text length (increased line spacing from 4 to 5)
-    const standardsLines = this.wrapText(doc, standards, pageWidth - margin * 2 - 6);
-    const requiredHeight = 20 + (standardsLines.length * 5);
-    startY = this.checkPageOverflow(doc, startY, requiredHeight, pageHeight, bottomMargin);
-
-    // Section header
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(100, 100, 100);
-    doc.text('(C) REQUIRED/EXPECTED BEHAVIOR & STANDARDS', margin, startY);
-
-    // Content
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-
-    let contentY = startY + 8;
-    standardsLines.forEach(line => {
-      // Skip empty lines but preserve spacing
-      if (line.trim() === '') {
-        contentY += 3; // Half spacing for empty lines
-      } else {
-        doc.text(line, margin, contentY);
-        contentY += 5; // Increased from 4 to 5 for better readability
-      }
-    });
-
-    return contentY + 8;
+    return _addExpectedBehaviorSectionImpl(doc, standards, startY, pageWidth, margin, pageHeight, bottomMargin);
   }
 
-  /**
-   * Section E: Facts Leading to Decision
-   * Facts and reasoning for the disciplinary action taken
-   */
+  /** Section E: Facts & Reasoning for Disciplinary Action — delegate. */
   private static addFactsLeadingToDecisionSection(
     doc: any,
     facts: string,
@@ -2277,40 +2229,10 @@ export class PDFGenerationService {
     pageHeight: number,
     bottomMargin: number
   ): number {
-    // Calculate height based on text length (increased line spacing from 4 to 5)
-    const factsLines = this.wrapText(doc, facts, pageWidth - margin * 2 - 6);
-    const requiredHeight = 20 + (factsLines.length * 5);
-    startY = this.checkPageOverflow(doc, startY, requiredHeight, pageHeight, bottomMargin);
-
-    // Section header
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(100, 100, 100);
-    doc.text('(E) FACTS & REASONING FOR DISCIPLINARY ACTION', margin, startY);
-
-    // Content
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-
-    let contentY = startY + 8;
-    factsLines.forEach(line => {
-      // Skip empty lines but preserve spacing
-      if (line.trim() === '') {
-        contentY += 3; // Half spacing for empty lines
-      } else {
-        doc.text(line, margin, contentY);
-        contentY += 5; // Increased from 4 to 5 for better readability
-      }
-    });
-
-    return contentY + 8;
+    return _addFactsLeadingToDecisionSectionImpl(doc, facts, startY, pageWidth, margin, pageHeight, bottomMargin);
   }
 
-  /**
-   * Section F: Improvement Commitments
-   * Action steps and improvement commitments with timelines
-   */
+  /** Section F: Action Steps & Improvement Commitments — delegate. */
   private static addImprovementCommitmentsSection(
     doc: any,
     commitments: Array<{ commitment: string; timeline: string }>,
@@ -2320,65 +2242,10 @@ export class PDFGenerationService {
     pageHeight: number,
     bottomMargin: number
   ): number {
-    // Calculate height based on number of commitments
-    let totalLines = 0;
-    commitments.forEach(item => {
-      const commitmentLines = this.wrapText(doc, item.commitment, pageWidth - margin * 2 - 12);
-      totalLines += commitmentLines.length + 1; // +1 for timeline
-    });
-    const requiredHeight = 20 + (totalLines * 4);
-    startY = this.checkPageOverflow(doc, startY, requiredHeight, pageHeight, bottomMargin);
-
-    // Section header
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(100, 100, 100);
-    doc.text('(F) ACTION STEPS & IMPROVEMENT COMMITMENTS', margin, startY);
-
-    // Content
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-
-    let contentY = startY + 8;
-    commitments.forEach((item, index) => {
-      // Commitment number
-      doc.setFont('helvetica', 'bold');
-      doc.text(`${index + 1}.`, margin, contentY);
-
-      // Commitment text
-      doc.setFont('helvetica', 'normal');
-      const commitmentLines = this.wrapText(doc, item.commitment, pageWidth - margin * 2 - 12);
-      commitmentLines.forEach((line, lineIndex) => {
-        doc.text(line, margin + 6, contentY + (lineIndex * 4));
-      });
-      contentY += commitmentLines.length * 4;
-
-      // Timeline
-      doc.setFont('helvetica', 'italic');
-      doc.setTextColor(80, 80, 80);
-      doc.text(`Timeline: ${item.timeline || 'Immediately'}`, margin + 6, contentY);
-      doc.setTextColor(0, 0, 0);
-      contentY += 6;
-    });
-
-    return contentY + 8;
+    return _addImprovementCommitmentsSectionImpl(doc, commitments, startY, pageWidth, margin, pageHeight, bottomMargin);
   }
 
-  /**
-   * Review Date and Auto-Satisfaction Clause Section
-   * Explains review date and automatic satisfaction if no follow-up action taken
-   *
-   * @param doc - jsPDF document
-   * @param reviewDate - Follow-up review date
-   * @param warningLevel - Warning level to determine clause wording
-   * @param startY - Starting Y position
-   * @param pageWidth - Page width
-   * @param margin - Page margin
-   * @param pageHeight - Page height
-   * @param bottomMargin - Bottom margin
-   * @returns New Y position after section
-   */
+  /** Review Date and Auto-Satisfaction Clause — delegate. */
   private static addReviewDateSection(
     doc: any,
     reviewDate: Date,
@@ -2389,80 +2256,10 @@ export class PDFGenerationService {
     bottomMargin: number,
     warningLevel?: string
   ): number {
-    const requiredHeight = 60; // Increased for auto-satisfaction clause
-    startY = this.checkPageOverflow(doc, startY, requiredHeight, pageHeight, bottomMargin);
-
-    // Section header
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(100, 100, 100);
-    doc.text('REVIEW DATE AND AUTO-SATISFACTION CLAUSE', margin, startY);
-
-    // Review date with green highlight background
-    const formattedDate = this.formatDate(reviewDate);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-
-    // Measure text width for highlight background
-    const dateTextWidth = doc.getTextWidth(formattedDate);
-
-    // Add green highlight background
-    doc.setFillColor(220, 252, 231); // Light green background (#dcfce7)
-    doc.rect(margin, startY + 3, dateTextWidth + 4, 6, 'F');
-
-    // Draw review date text on top of highlight
-    doc.text(formattedDate, margin + 2, startY + 8);
-
-    // Auto-satisfaction clause heading
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text('Automatic Satisfaction Clause:', margin, startY + 18);
-
-    // Auto-satisfaction clause text - varies by warning level
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 60, 60);
-
-    let clauseText: string;
-
-    // Determine clause wording based on warning level
-    // Dismissal is a terminal action - no auto-satisfaction
-    if (warningLevel === 'dismissal') {
-      // No clause for terminal actions
-      return startY + 18;
-    } else if (warningLevel === 'final_written') {
-      clauseText =
-        'If the required improvements are not demonstrated by the review date and no follow-up ' +
-        'disciplinary action is taken within 7 days thereafter, this matter will be considered ' +
-        'resolved. However, if performance or conduct issues persist, additional corrective ' +
-        'action or further disciplinary measures may be initiated.';
-    } else {
-      // Default for counselling, verbal, first_written, second_written
-      clauseText =
-        'If no follow-up action is required by management within 7 days of this review date, ' +
-        'the employee\'s performance and conduct will be deemed satisfactory, and this matter ' +
-        'will be considered resolved. If performance or conduct issues persist, additional ' +
-        'corrective action or disciplinary measures may be initiated at that time.';
-    }
-
-    // Wrap and render clause text
-    const maxWidth = pageWidth - margin * 2;
-    const clauseLines = this.wrapText(doc, clauseText, maxWidth);
-
-    let clauseY = startY + 24;
-    clauseLines.forEach(line => {
-      doc.text(line, margin, clauseY);
-      clauseY += 4;
-    });
-
-    return clauseY + 8;
+    return _addReviewDateSectionImpl(doc, reviewDate, startY, pageWidth, margin, pageHeight, bottomMargin, warningLevel);
   }
 
-  /**
-   * Intervention Details Section
-   * Training/coaching provided to support improvement
-   */
+  /** Training/Coaching Provided — delegate. */
   private static addInterventionDetailsSection(
     doc: any,
     interventionDetails: string,
@@ -2472,29 +2269,7 @@ export class PDFGenerationService {
     pageHeight: number,
     bottomMargin: number
   ): number {
-    // Calculate height based on text length
-    const interventionLines = this.wrapText(doc, interventionDetails, pageWidth - margin * 2 - 6);
-    const requiredHeight = 20 + (interventionLines.length * 4);
-    startY = this.checkPageOverflow(doc, startY, requiredHeight, pageHeight, bottomMargin);
-
-    // Section header
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(100, 100, 100);
-    doc.text('TRAINING/COACHING PROVIDED', margin, startY);
-
-    // Content
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-
-    let contentY = startY + 8;
-    interventionLines.forEach(line => {
-      doc.text(line, margin, contentY);
-      contentY += 4;
-    });
-
-    return contentY + 8;
+    return _addInterventionDetailsSectionImpl(doc, interventionDetails, startY, pageWidth, margin, pageHeight, bottomMargin);
   }
 
   /**
