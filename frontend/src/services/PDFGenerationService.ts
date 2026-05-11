@@ -12,7 +12,6 @@ import Logger from '../utils/logger';
 import { globalDeviceCapabilities, getPerformanceLimits } from '../utils/deviceDetection';
 import { PDFPlaceholderService } from './PDFPlaceholderService';
 import type { PDFSectionConfig } from '../types/core';
-import { convertSVGToPNG, isSignatureSVG } from '../utils/signatureSVG';
 
 /**
  * 🔒 PDF GENERATOR VERSION HISTORY - SECURITY CRITICAL
@@ -132,6 +131,8 @@ import {
   addBannerHeader as _addBannerHeaderImpl,
 } from './pdf/pageUtils/headers';
 import { addDocumentTitle as _addDocumentTitleImpl } from './pdf/pageUtils/documentTitle';
+import { convertSignatureToPNG as _convertSignatureToPNGImpl } from './pdf/signatureConverter';
+import { generateWarningPDF_v1_0_0 as _generateWarningPDF_v1_0_0_Impl } from './pdf/versions/v1_0_0';
 import { replacePlaceholders as _replacePlaceholdersImpl } from './pdf/utils';
 import { calculateIncidentSectionHeight as _calculateIncidentSectionHeightImpl } from './pdf/utils';
 import {
@@ -263,27 +264,13 @@ export interface WarningPDFData {
 export class PDFGenerationService {
 
   /**
-   * 🔄 SIGNATURE FORMAT CONVERTER
-   * Converts SVG signatures to PNG for PDF embedding
-   * jsPDF doesn't support SVG natively, so we convert on-the-fly
+   * 🔄 SIGNATURE FORMAT CONVERTER — delegate. Implementation extracted to
+   * `pdf/signatureConverter.ts` in Phase 2 Tier 3B step 7. Kept as an
+   * instance method for back-compat with the `new PDFGenerationService()`
+   * call sites inside the frozen version methods.
    */
   private async convertSignatureToPNG(signature: string): Promise<string> {
-    if (!signature) return signature;
-
-    // If already PNG or other format, return as-is
-    if (!isSignatureSVG(signature)) {
-      return signature;
-    }
-
-    try {
-      // Convert SVG to PNG using canvas rendering
-      const pngSignature = await convertSVGToPNG(signature, 600, 300);
-      return pngSignature;
-    } catch (error) {
-      Logger.error('Failed to convert SVG signature to PNG for PDF:', error);
-      // Return original signature (will likely fail in PDF, but better than nothing)
-      return signature;
-    }
+    return _convertSignatureToPNGImpl(signature);
   }
 
   /**
@@ -351,126 +338,13 @@ export class PDFGenerationService {
   }
 
   /**
-   * 🔒🔒🔒 VERSION 1.0.0 - FROZEN LEGACY VERSION 🔒🔒🔒
-   *
-   * ⚠️ CRITICAL WARNING: DO NOT MODIFY THIS METHOD ⚠️
-   *
-   * This method is FROZEN and must remain unchanged. It is used to regenerate
-   * all warnings created before 2025-10-14. Any changes to this method will
-   * cause historical warnings to regenerate differently, breaking legal compliance.
-   *
-   * Format:
-   * - Previous Action shows: Date | Offense (Category) | Level
-   *
-   * If you need to fix bugs or make changes:
-   * 1. DO NOT modify this method
-   * 2. Create a new version (e.g., v1.2.0)
-   * 3. Copy this method to the new version
-   * 4. Make changes in the new version only
-   * 5. Update PDF_GENERATOR_VERSION constant
-   *
-   * Used by: All warnings with pdfGeneratorVersion = '1.0.0'
-   * Created: 2025-10-14
-   * Status: FROZEN - DO NOT MODIFY
+   * 🔒 VERSION 1.0.0 — FROZEN delegate. Implementation moved verbatim to
+   * `pdf/versions/v1_0_0.ts` in Phase 2 Tier 3B step 7. The body there is
+   * byte-identical to the original; only `this.X` helper calls were swapped
+   * for direct imports of the same impls.
    */
   private static async generateWarningPDF_v1_0_0(data: WarningPDFData): Promise<Blob> {
-    try {
-      // Same implementation as v1.1.0, but with different Previous Action format
-      const capabilities = globalDeviceCapabilities || { isLegacyDevice: false };
-      const limits = getPerformanceLimits(capabilities);
-
-      if (capabilities.isLegacyDevice) {
-        Logger.warn('🚨 Legacy device detected - using simplified PDF generation');
-        return this.generateSimplifiedPDF(data);
-      }
-
-      // 🔄 Convert SVG signatures to PNG for PDF embedding
-      if (data.signatures) {
-        const service = new PDFGenerationService();
-        if (data.signatures.manager) {
-          data.signatures.manager = await service.convertSignatureToPNG(data.signatures.manager);
-        }
-        if (data.signatures.employee) {
-          data.signatures.employee = await service.convertSignatureToPNG(data.signatures.employee);
-        }
-        if ((data.signatures as any).witness) {
-          (data.signatures as any).witness = await service.convertSignatureToPNG((data.signatures as any).witness);
-        }
-      }
-
-      const startTime = Date.now();
-      const { default: jsPDF } = await import('jspdf');
-
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
-      });
-
-      doc.setFont('helvetica', 'normal');
-
-      let currentY = 15;
-      const pageWidth = doc.internal.pageSize.width;
-      const pageHeight = doc.internal.pageSize.height;
-      const margin = 20;
-      const bottomMargin = 40;
-
-      // Build PDF with all sections (same as v1.1.0)
-      currentY = this.addOrganizationHeader(doc, data.organization, currentY, pageWidth, margin);
-      currentY = this.addDocumentTitle(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
-      currentY = this.addEmployeeSection(doc, data.employee, currentY, pageWidth, margin, pageHeight, bottomMargin);
-      currentY = this.addWarningDetailsSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
-      currentY = this.addIncidentDetailsSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
-
-      // 🔒 VERSION 1.0.0 DIFFERENCE: Use old Previous Action format
-      if (data.disciplineRecommendation) {
-        currentY = this.addPreviousDisciplinaryActionSection_v1_0_0(doc, data.disciplineRecommendation, currentY, pageWidth, margin, pageHeight, bottomMargin);
-        currentY = this.addConsequencesSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
-      }
-
-      if (data.legalCompliance) {
-        currentY = this.addLegalComplianceSection(doc, data.legalCompliance, currentY, pageWidth, margin, pageHeight, bottomMargin);
-      }
-
-      if (data.additionalNotes) {
-        currentY = this.addAdditionalNotesSection(doc, data.additionalNotes, currentY, pageWidth, margin, pageHeight, bottomMargin);
-      }
-
-      currentY = this.addEmployeeRightsSection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
-      currentY = this.addSignaturesSection(doc, data.signatures, data.employee, currentY, pageWidth, margin, pageHeight, bottomMargin, data.issuedDate, data.issuedByName);
-
-      if (data.deliveryChoice) {
-        currentY = this.addDeliverySection(doc, data.deliveryChoice, currentY, pageWidth, margin, pageHeight, bottomMargin);
-      }
-
-      if (data.appealDetails || data.appealOutcome) {
-        currentY = this.addAppealHistorySection(doc, data, currentY, pageWidth, margin, pageHeight, bottomMargin);
-      }
-
-      this.addDocumentFooter(doc, data, pageWidth);
-      this.addSecurityWatermark(doc, pageWidth);
-
-      if (data.status === 'overturned') {
-        this.addOverturnedWatermark(doc, pageWidth);
-      }
-
-      const pdfBlob = doc.output('blob');
-      const endTime = Date.now();
-
-      Logger.debug('✅ v1.0.0 PDF generated:', {
-        warningId: data.warningId,
-        version: '1.0.0',
-        size: `${(pdfBlob.size / 1024).toFixed(1)} KB`,
-        time: `${endTime - startTime}ms`
-      });
-
-      return pdfBlob;
-
-    } catch (error) {
-      Logger.error('❌ v1.0.0 PDF generation failed:', error)
-      throw new Error(`PDF generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return _generateWarningPDF_v1_0_0_Impl(data);
   }
 
   /**
