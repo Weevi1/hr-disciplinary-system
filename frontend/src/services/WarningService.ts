@@ -1,168 +1,58 @@
-import Logger from '../utils/logger';
 // frontend/src/services/WarningService.ts
-// 🏆 CLEANED WARNING SERVICE - DEPENDS ON UNIVERSALCATEGORIES
-// ✅ Removed duplicate escalation path logic
-// ✅ Uses UniversalCategories as single source of truth
-// ✅ Cleaned up and streamlined code
-// ✅ Maintains all existing functionality
+//
+// Public WarningService facade. Phase 2 Tier 3A split the file into:
+//   - `services/warning/types.ts`         — type definitions
+//   - `services/warning/EscalationEngine` — progressive-discipline analysis
+//   - `services/warning/ReviewTracker`    — review-status CRUD
+//
+// This file keeps the core CRUD + cache + I/O methods that don't belong in
+// either of the specialised classes:
+//   - clearActiveWarningsCache / clearAllActiveWarningsCache
+//   - getActiveWarnings  (fraud-proof server-time lookup with caching)
+//   - saveWarning / getWarningById
+//   - normalizeWarningLevel  (small utility)
+//
+// It also re-exports types and proxies the escalation + review methods so the
+// 60+ external importers that historically did `import { ... } from
+// '@/services/WarningService'` keep working without churn.
 
-import { 
-  collection, 
-  query, 
-  where, 
-  orderBy, 
-  getDocs, 
-  doc, 
+import Logger from '../utils/logger';
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  doc,
   getDoc,
-  addDoc,
   updateDoc,
   setDoc,
-  deleteDoc,
-  limit,
   Timestamp,
-  writeBatch
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { TimeService } from './TimeService';
-import { DatabaseShardingService } from './DatabaseShardingService';
+import { EscalationEngine } from './warning/EscalationEngine';
+import { ReviewTracker } from './warning/ReviewTracker';
 
-// Import from UniversalCategories - our single source of truth
-import type { 
+// ============================================
+// PUBLIC TYPE RE-EXPORTS (back-compat for external importers)
+// ============================================
+
+export type {
   WarningLevel,
-  UniversalCategory
-} from './UniversalCategories';
-import {
-  getCategoryById,
-  getEscalationPath,
-  getNextEscalationLevel,
-  getLevelLabel,
-  isValidLevelForCategory
-} from './UniversalCategories';
+  UniversalCategory,
+  DeliveryMethod,
+  Warning,
+  AudioRecordingData,
+  WarningCategory,
+  EmployeeWithContext,
+  EnhancedWarningFormData,
+  SimplifiedWarningSummary,
+  EscalationRecommendation,
+} from './warning/types';
 
-// ============================================
-// RE-EXPORT CORE TYPES
-// ============================================
-
-export type { WarningLevel, UniversalCategory } from './UniversalCategories';
-export type DeliveryMethod = 'email' | 'whatsapp' | 'print' | 'hand_delivery';
-
-// ============================================
-// CORE INTERFACES
-// ============================================
-
-// Warning interface lives in types/core.ts as the canonical entity definition.
-// Phase 2 Tier 1A unified 3 prior declarations into the single source-of-truth.
-// Imported (so it's in this module's scope) + re-exported (back-compat with
-// code that historically imported from '@/services/WarningService').
-import type { Warning } from '../types/core';
-import type { AudioRecordingData } from '../types/warning';
-export type { Warning, AudioRecordingData };
-
-export interface WarningCategory {
-  id: string;
-  organizationId: string;
-  name: string;
-  description: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  icon: string;
-  escalationPath: WarningLevel[];
-  legalRequirements: string[];
-  examples: string[];
-  defaultValidityPeriod: 3 | 6 | 12;
-  isActive: boolean;
-  expectedStandardsTemplate?: string; // Pre-populated text for Expected Standards phase
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface EmployeeWithContext {
-  id: string;
-  firstName: string;
-  lastName: string;
-  position: string;
-  department: string;
-  email: string;
-  phone: string;
-  deliveryPreference: 'email' | 'whatsapp' | 'print';
-  recentWarnings: { count: number };
-  riskIndicators: { highRisk: boolean; reasons: string[] };
-}
-
-export interface EnhancedWarningFormData {
-  // Employee and category
-  employeeId: string;
-  categoryId: string;
-  
-  // Timing
-  issueDate: string;
-  incidentDate: string;
-  incidentTime: string;
-  
-  // Content
-  incidentLocation: string;
-  incidentDescription: string;
-  additionalNotes?: string;
-  
-  // Progressive discipline
-  level: WarningLevel;
-  validityPeriod: 3 | 6 | 12;
-  escalationReason?: string;
-  
-  // Audio recording
-  audioRecording?: AudioRecordingData;
-}
-
-/**
- * 🔥 CRITICAL: Simplified warning summary for PDF generation
- * Stores only essential fields to avoid Firestore document size limits
- * Full Warning objects with nested audio/signatures can exceed 1MB limit
- */
-export interface SimplifiedWarningSummary {
-  id: string;
-  level: WarningLevel;
-  category: string;
-  description: string;
-  issueDate: Date | string; // Support both Date and ISO string
-  incidentDate: Date | string;
-  employeeName?: string;
-  employeeNumber?: string;
-}
-
-export interface EscalationRecommendation {
-  // Core recommendation
-  suggestedLevel: WarningLevel;
-  recommendedLevel: string;
-  reason: string;
-
-  // HR Intervention System
-  requiresHRIntervention: boolean;
-  interventionReason?: string;
-  interventionLevel?: 'urgent' | 'standard';
-
-  // Context - 🔥 FIXED: Use simplified summaries instead of full Warning objects
-  activeWarnings: SimplifiedWarningSummary[];
-  escalationPath: WarningLevel[];
-  isEscalation: boolean;
-
-  // LRA Compliance
-  category: string;
-  categoryId: string;
-  legalBasis: string;
-  legalRequirements: string[];
-
-  // Progressive discipline context
-  warningCount: number; // Total active warnings across all categories
-  categoryWarningCount?: number; // Warnings in this specific category
-  nextExpiryDate: Date;
-  examples: string[];
-  explanation: string;
-  previousWarnings: SimplifiedWarningSummary[]; // 🔥 FIXED: Simplified summaries
-
-}
-
-// ============================================
-// 🎯 WARNING SERVICE CLASS - CLEANED & STREAMLINED
-// ============================================
+// Local imports of types for use within this file
+import type { Warning, WarningLevel, EscalationRecommendation } from './warning/types';
 
 // ============================================
 // 💰 COST OPTIMIZATION: Active Warnings Cache
@@ -181,7 +71,7 @@ interface ActiveWarningsCache {
 }
 
 const activeWarningsCache = new Map<string, ActiveWarningsCache>();
-const CACHE_TTL_MS = 300000; // 5 minutes (300 seconds)
+const CACHE_TTL_MS = 300000; // 5 minutes
 
 export class WarningService {
 
@@ -190,7 +80,7 @@ export class WarningService {
   // ============================================
 
   /**
-   * Clear cache for a specific employee (call after creating/updating warnings)
+   * Clear cache for a specific employee (call after creating/updating warnings).
    */
   static clearActiveWarningsCache(employeeId: string, organizationId: string): void {
     const cacheKey = `${employeeId}-${organizationId}`;
@@ -201,7 +91,7 @@ export class WarningService {
   }
 
   /**
-   * Clear all cached active warnings (call on logout or major state changes)
+   * Clear all cached active warnings (call on logout or major state changes).
    */
   static clearAllActiveWarningsCache(): void {
     const size = activeWarningsCache.size;
@@ -210,352 +100,28 @@ export class WarningService {
   }
 
   // ============================================
-  // HELPER METHODS - SIMPLIFIED WARNING SUMMARIES
+  // ESCALATION (proxied to EscalationEngine)
   // ============================================
 
   /**
-   * 🔥 CRITICAL: Convert full Warning object to simplified summary
-   * This prevents Firestore document size limit issues when storing recommendations
-   * Full warnings with audio recordings and signatures can exceed 1MB
-   */
-  private static simplifyWarning(warning: Warning): SimplifiedWarningSummary {
-    // 🔥 CRITICAL FIX: Keep dates as Date objects - Firestore handles them correctly
-    // The issue was trying to convert to ISO strings which caused timezone shifts
-    // Firestore Timestamps preserve the exact date/time when stored and retrieved
-    Logger.debug('🔍 [SIMPLIFY] Storing warning dates as Date objects:', {
-      warningId: warning.id,
-      issueDate: warning.issueDate,
-      incidentDate: warning.incidentDate
-    });
-
-    return {
-      id: warning.id || '',
-      level: warning.level,
-      category: warning.category || 'Unknown Category',
-      description: warning.description || warning.title || 'No description',
-      issueDate: warning.issueDate, // Keep as Date object - Firestore converts to Timestamp correctly
-      incidentDate: warning.incidentDate, // Keep as Date object - Firestore converts to Timestamp correctly
-      employeeName: warning.employeeName,
-      employeeNumber: warning.employeeNumber
-    };
-  }
-
-  /**
-   * Convert array of full Warning objects to simplified summaries
-   */
-  private static simplifyWarnings(warnings: Warning[]): SimplifiedWarningSummary[] {
-    return warnings.map(w => this.simplifyWarning(w));
-  }
-
-  // ============================================
-  // ESCALATION RECOMMENDATION ENGINE
-  // ============================================
-
-  /**
-   * Generate escalation recommendation based on employee history
-   * Now uses UniversalCategories as single source of truth
-   * 🔥 FIXED: Returns simplified warning summaries to avoid Firestore size limits
+   * Generate escalation recommendation. Thin proxy to EscalationEngine — kept
+   * here so existing call sites (`WarningService.getEscalationRecommendation`)
+   * continue to work without code churn.
    */
   static async getEscalationRecommendation(
     employeeId: string,
     categoryId: string,
     organizationId?: string,
-    providedCategory?: any, // 🚀 PERFORMANCE: Accept pre-loaded category to skip Firestore query
-    preloadedWarnings?: any[] // 🚀 ANTICIPATORY: Accept pre-loaded warnings for instant response
+    providedCategory?: any,
+    preloadedWarnings?: any[]
   ): Promise<EscalationRecommendation> {
-    try {
-      Logger.debug(5184)
-
-      // 🚀 PERFORMANCE OPTIMIZATION: Use preloaded data when available
-      let allActiveWarnings: any[];
-      let orgCategory: any = null;
-
-      if (preloadedWarnings && providedCategory) {
-        // ⚡⚡ FASTEST PATH: Both warnings and category preloaded - ZERO queries!
-        Logger.success('⚡⚡ [ANTICIPATORY] Using preloaded warnings AND category - instant response!');
-        allActiveWarnings = preloadedWarnings;
-        orgCategory = providedCategory;
-      } else if (preloadedWarnings) {
-        // ⚡ FAST PATH: Warnings preloaded, only need category
-        Logger.success('⚡ [ANTICIPATORY] Using preloaded warnings, fetching category only');
-        allActiveWarnings = preloadedWarnings;
-        if (organizationId) {
-          const categories = await DatabaseShardingService.queryDocuments(organizationId, 'categories', []);
-          if (categories.documents && categories.documents.length > 0) {
-            orgCategory = categories.documents.find((cat: any) => cat.id === categoryId);
-          }
-        }
-      } else if (providedCategory) {
-        // ⚡ FAST PATH: Category provided, only fetch warnings
-        Logger.debug('⚡ [PERFORMANCE] Using provided category, fetching warnings only');
-        allActiveWarnings = await this.getActiveWarnings(employeeId, organizationId);
-        orgCategory = providedCategory;
-      } else {
-        // 🔄 FALLBACK PATH: Fetch both in parallel for best performance
-        Logger.debug('🔄 [PERFORMANCE] Fetching warnings and categories in parallel');
-        const [warnings, categories] = await Promise.all([
-          this.getActiveWarnings(employeeId, organizationId),
-          organizationId
-            ? DatabaseShardingService.queryDocuments(organizationId, 'categories', [])
-            : Promise.resolve({ documents: [] })
-        ]);
-
-        allActiveWarnings = warnings;
-        if (categories.documents && categories.documents.length > 0) {
-          orgCategory = categories.documents.find((cat: any) => cat.id === categoryId);
-        }
-      }
-
-      // 🔧 Determine escalation path from category or fallback to universal
-      let categoryEscalationPath: string[] | null = null;
-      let categoryFound = false;
-      let universalCategory: any = null;
-
-      // Check if we have org category with escalation path
-      if (orgCategory?.escalationPath) {
-        categoryEscalationPath = orgCategory.escalationPath;
-        categoryFound = true;
-        Logger.debug(`📋 [ESCALATION] Using organization category escalation path:`, categoryEscalationPath);
-      }
-
-      // Fallback to UniversalCategories if no organization-specific escalation path
-      if (!categoryFound) {
-        universalCategory = getCategoryById(categoryId);
-        if (universalCategory) {
-          categoryEscalationPath = universalCategory.escalationPath || ['counselling', 'verbal', 'first_written', 'final_written'];
-          categoryFound = true;
-          Logger.debug(`📋 [ESCALATION] Using universal category escalation path:`, categoryEscalationPath);
-        }
-      }
-
-      // Set the category for use in recommendations (prefer org category, fallback to universal)
-      const categoryForRecommendation = orgCategory || universalCategory;
-
-      // If still no category found, use fallback
-      if (!categoryFound || !categoryEscalationPath) {
-        Logger.warn('⚠️ [ESCALATION] Category not found in organization or universal categories, using fallback')
-        return this.getFallbackRecommendation(categoryId, organizationId);
-      }
-
-      // 🔥 CRITICAL FIX: Filter warnings to only this category
-      const categorySpecificWarnings = allActiveWarnings.filter(warning =>
-        warning.categoryId === categoryId
-      );
-
-      Logger.debug('📋 [ESCALATION] All active warnings:', allActiveWarnings.length)
-      Logger.debug('📋 [ESCALATION] Category-specific warnings:', categorySpecificWarnings.length)
-      Logger.debug('📋 [ESCALATION] Category ID filter:', categoryId)
-
-      // Use the found escalation path
-      const escalationPath = categoryEscalationPath;
-      Logger.debug('📋 [ESCALATION] Final escalation path:', escalationPath)
-      
-      // Determine suggested level based ONLY on category-specific warnings
-      const suggestedLevel = this.determineSuggestedLevel(categorySpecificWarnings, escalationPath);
-      
-      // Check if HR intervention is required
-      const requiresHRIntervention = suggestedLevel === 'hr_intervention';
-      const isDismissalLevel = suggestedLevel === 'dismissal';
-      const finalLevel = requiresHRIntervention ? 'final_written'
-                       : isDismissalLevel ? 'dismissal' as WarningLevel
-                       : suggestedLevel as WarningLevel;
-
-      // Build comprehensive recommendation
-      const recommendation: EscalationRecommendation = {
-        // Core recommendation
-        suggestedLevel: finalLevel,
-        recommendedLevel: requiresHRIntervention ? 'HR INTERVENTION REQUIRED'
-                        : isDismissalLevel ? 'DISMISSAL — HR MUST HANDLE'
-                        : getLevelLabel(finalLevel),
-        reason: requiresHRIntervention
-          ? this.generateHRInterventionReason(categorySpecificWarnings, categoryForRecommendation)
-          : isDismissalLevel
-          ? `This offense requires immediate HR involvement. The employee's disciplinary history and the severity of this category indicate that dismissal proceedings may be appropriate. This must be handled by HR through a formal process.`
-          : this.generateEscalationReason(categorySpecificWarnings, finalLevel, categoryForRecommendation),
-
-        // HR Intervention System
-        requiresHRIntervention: requiresHRIntervention || isDismissalLevel,
-        interventionReason: requiresHRIntervention
-          ? `Employee has active final written warning for ${categoryForRecommendation?.name || 'this category'}. Next offense requires manual HR decision through dedicated intervention module.`
-          : isDismissalLevel
-          ? `This offense requires immediate HR involvement. The employee's disciplinary history and the severity of this category indicate that dismissal proceedings may be appropriate. This must be handled by HR through a formal process.`
-          : undefined,
-        interventionLevel: (requiresHRIntervention || isDismissalLevel) ? 'urgent' : undefined,
-        
-        // Context - 🔥 FIXED: Use simplified summaries to avoid Firestore size limits
-        activeWarnings: this.simplifyWarnings(categorySpecificWarnings),
-        escalationPath,
-        isEscalation: categorySpecificWarnings.length > 0,
-
-        // LRA Compliance
-        category: categoryForRecommendation?.name || 'Unknown Category',
-        categoryId: categoryForRecommendation?.id || categoryId,
-        legalBasis: categoryForRecommendation?.lraSection || 'Schedule 8 Item 3',
-        legalRequirements: categoryForRecommendation?.proceduralRequirements || [],
-
-        // Progressive discipline context - 🔥 FIXED: Now counts only category warnings
-        warningCount: allActiveWarnings.length, // Total for context
-        categoryWarningCount: categorySpecificWarnings.length, // New field for category-specific count
-        nextExpiryDate: this.calculateNextExpiryDate(suggestedLevel, categoryForRecommendation?.defaultValidityPeriod || 6),
-        examples: categoryForRecommendation?.commonExamples || [],
-        explanation: categoryForRecommendation?.escalationRationale || 'Progressive discipline according to LRA Schedule 8',
-        previousWarnings: this.simplifyWarnings(categorySpecificWarnings), // 🔥 FIXED: Simplified summaries
-        
-      };
-      
-      Logger.success(7929)
-      return recommendation;
-      
-    } catch (error) {
-      Logger.error('❌ [ESCALATION] Error generating recommendation:', error)
-      return this.getFallbackRecommendation(categoryId, organizationId);
-    }
-  }
-
-  /**
-   * Determine suggested warning level based on active warnings and escalation path
-   * 🆕 RESPECTS OVERRIDES: Uses actual issued level, whether system-recommended or manager-overridden
-   * Returns 'hr_intervention' when employee has final written warning
-   */
-  private static determineSuggestedLevel(
-    activeWarnings: Warning[],
-    escalationPath: WarningLevel[]
-  ): WarningLevel | 'hr_intervention' {
-    // If no active warnings, start with first level in path
-    if (activeWarnings.length === 0) {
-      const firstLevel = escalationPath[0] || 'counselling';
-      Logger.debug('🆕 [ESCALATION] No active warnings - starting with:', firstLevel)
-      return firstLevel;
-    }
-
-    // Check if employee already has final written warning
-    // Only trigger hr_intervention if the path has no step after final_written
-    // (paths with 'dismissal' after 'final_written' should traverse naturally)
-    const hasFinalWritten = activeWarnings.some(warning => warning.level === 'final_written');
-    if (hasFinalWritten) {
-      const finalIndex = escalationPath.indexOf('final_written');
-      const hasNextStep = finalIndex >= 0 && finalIndex < escalationPath.length - 1;
-      if (!hasNextStep) {
-        Logger.warn('🚨 [HR INTERVENTION] Employee has final written warning - HR intervention required')
-        return 'hr_intervention' as any; // Signal for HR intervention
-      }
-      // Path has a step after final_written (e.g. dismissal) — fall through to traversal
-    }
-
-    // 🆕 Find highest level in active warnings (respects overridden levels)
-    // This automatically handles custom escalation paths because it uses the ACTUAL level issued,
-    // whether that was the system recommendation or a manager override
-    let highestCurrentLevel: WarningLevel = escalationPath[0] || 'counselling';
-    let highestIndex = -1;
-    let wasOverridden = false;
-
-    for (const warning of activeWarnings) {
-      const index = escalationPath.indexOf(warning.level);
-      if (index > highestIndex) {
-        highestIndex = index;
-        highestCurrentLevel = warning.level;
-        wasOverridden = warning.wasOverridden || false;
-      }
-    }
-
-    if (wasOverridden) {
-      Logger.debug('⚖️ [ESCALATION] Highest warning was manager-overridden, respecting custom path');
-    }
-    
-    Logger.debug(9224)
-    
-    // Get next level in escalation path
-    const currentIndex = escalationPath.indexOf(highestCurrentLevel);
-    const nextIndex = currentIndex + 1;
-    
-    // If we're at or beyond the last step in path, return the last level
-    if (nextIndex >= escalationPath.length) {
-      const lastLevel = escalationPath[escalationPath.length - 1];
-      Logger.debug('⚠️ [ESCALATION] At end of escalation path, returning:', lastLevel)
-      return lastLevel;
-    }
-    
-    const nextLevel = escalationPath[nextIndex];
-    Logger.debug('⬆️ [ESCALATION] Suggested next level:', nextLevel)
-    return nextLevel;
-  }
-
-  /**
-   * Generate human-readable escalation reason
-   * 🆕 Mentions if previous warnings were overridden
-   */
-  private static generateEscalationReason(
-    activeWarnings: Warning[],
-    suggestedLevel: WarningLevel,
-    category: any
-  ): string {
-    if (activeWarnings.length === 0) {
-      return `First incident of ${category?.name || 'this category'}. Starting with ${getLevelLabel(suggestedLevel)} follows standard progressive discipline procedures.`;
-    }
-
-    const warningCount = activeWarnings.length;
-    const lastWarning = activeWarnings[0];
-    const daysSince = Math.floor((Date.now() - lastWarning.issueDate.getTime()) / (1000 * 60 * 60 * 24));
-
-    // Check if any warnings were overridden
-    const hasOverrides = activeWarnings.some(w => w.wasOverridden);
-    const overrideNote = hasOverrides ? ' Note: Previous warnings include manager-overridden levels.' : '';
-
-    return `Employee has ${warningCount} active warning${warningCount > 1 ? 's' : ''} on record. Most recent warning was issued ${daysSince} days ago. Progressive discipline policy requires escalation to ${getLevelLabel(suggestedLevel)}.${overrideNote}`;
-  }
-
-  /**
-   * Generate HR intervention reason when employee has final written warning
-   */
-  private static generateHRInterventionReason(
-    activeWarnings: Warning[],
-    category: any
-  ): string {
-    const finalWarning = activeWarnings.find(w => w.level === 'final_written');
-    if (!finalWarning) {
-      return `🚨 URGENT: Employee requires HR intervention for ${category?.name || 'this category'} violation.`;
-    }
-
-    const daysSinceFinal = Math.floor((Date.now() - finalWarning.issueDate.getTime()) / (1000 * 60 * 60 * 24));
-    const warningCount = activeWarnings.length;
-
-    return `🚨 URGENT HR INTERVENTION REQUIRED: Employee has active final written warning for ${category?.name || 'this category'} (issued ${daysSinceFinal} days ago) and has committed another offense. Total active warnings: ${warningCount}. HR must use dedicated intervention module to decide next steps. System cannot escalate beyond final written warning.`;
-  }
-
-  /**
-   * Calculate next expiry date based on warning level and category defaults
-   */
-  private static calculateNextExpiryDate(level: WarningLevel, defaultPeriod: number): Date {
-    const months = level === 'counselling' ? 3 : 
-                  level === 'verbal' ? 6 : 
-                  level === 'final_written' ? 12 : 
-                  defaultPeriod;
-    
-    const expiryDate = new Date();
-    expiryDate.setMonth(expiryDate.getMonth() + months);
-    return expiryDate;
-  }
-
-  /**
-   * Assess CCMA readiness based on escalation context
-   */
-  private static assessCCMAReadiness(
-    activeWarnings: Warning[],
-    escalationPath: WarningLevel[],
-    suggestedLevel: WarningLevel
-  ): 'high' | 'medium' | 'low' {
-    // High readiness: Following proper progressive discipline
-    if (activeWarnings.length >= 2 && suggestedLevel === 'final_written') {
-      return 'high';
-    }
-    
-    // Medium readiness: Some warnings but not final stage
-    if (activeWarnings.length >= 1) {
-      return 'medium';
-    }
-    
-    // Low readiness: First offense
-    return 'low';
+    return EscalationEngine.getEscalationRecommendation(
+      employeeId,
+      categoryId,
+      organizationId,
+      providedCategory,
+      preloadedWarnings
+    );
   }
 
   // ============================================
@@ -563,13 +129,13 @@ export class WarningService {
   // ============================================
 
   /**
-   * Get active warnings for employee using SERVER-SIDE time validation
+   * Get active warnings for employee using SERVER-SIDE time validation.
    * 🔒 FRAUD-PROOF: Uses server time to prevent device clock manipulation
    * 💰 COST-OPTIMIZED: Caches results for 5 minutes to reduce Cloud Function calls
    */
   static async getActiveWarnings(employeeId: string, organizationId: string): Promise<Warning[]> {
     try {
-      Logger.debug('📋 [WARNINGS] Getting active warnings for employee:', employeeId)
+      Logger.debug('📋 [WARNINGS] Getting active warnings for employee:', employeeId);
 
       // 💰 CHECK CACHE FIRST - reduces Cloud Function invocations by ~70% during wizard flows
       const cacheKey = `${employeeId}-${organizationId}`;
@@ -589,7 +155,7 @@ export class WarningService {
 
       const result = await getActiveWarningsServerSide({
         employeeId,
-        organizationId
+        organizationId,
       });
 
       if (result.data && typeof result.data === 'object' && 'success' in result.data && result.data.success) {
@@ -602,14 +168,14 @@ export class WarningService {
           createdAt: new Date(w.createdAt),
           updatedAt: new Date(w.updatedAt),
           deliveryDate: w.deliveryDate ? new Date(w.deliveryDate) : undefined,
-          signatureDate: w.signatureDate ? new Date(w.signatureDate) : undefined
+          signatureDate: w.signatureDate ? new Date(w.signatureDate) : undefined,
         })) as Warning[];
 
         // 💰 CACHE THE RESULT
         activeWarningsCache.set(cacheKey, {
           data: warnings,
           timestamp: Date.now(),
-          serverTime: data.serverTime
+          serverTime: data.serverTime,
         });
 
         Logger.success(`📋 [WARNINGS] Retrieved ${warnings.length} active warnings using SERVER time (${data.serverTime}) - cached for 5 min`);
@@ -620,7 +186,7 @@ export class WarningService {
       return [];
 
     } catch (error) {
-      Logger.error('❌ [WARNINGS] Error getting active warnings from server, using client fallback:', error)
+      Logger.error('❌ [WARNINGS] Error getting active warnings from server, using client fallback:', error);
 
       // Fallback to client-side query if server function fails
       try {
@@ -633,14 +199,14 @@ export class WarningService {
         );
 
         const snapshot = await getDocs(q);
-        const warnings = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          issueDate: doc.data().issueDate?.toDate() || new Date(),
-          expiryDate: doc.data().expiryDate?.toDate() || new Date(),
-          incidentDate: doc.data().incidentDate?.toDate() || new Date(),
-          createdAt: doc.data().createdAt?.toDate() || new Date(),
-          updatedAt: doc.data().updatedAt?.toDate() || new Date()
+        const warnings = snapshot.docs.map(d => ({
+          id: d.id,
+          ...d.data(),
+          issueDate: d.data().issueDate?.toDate() || new Date(),
+          expiryDate: d.data().expiryDate?.toDate() || new Date(),
+          incidentDate: d.data().incidentDate?.toDate() || new Date(),
+          createdAt: d.data().createdAt?.toDate() || new Date(),
+          updatedAt: d.data().updatedAt?.toDate() || new Date(),
         })) as Warning[];
 
         Logger.warn(`⚠️ [WARNINGS] Fallback succeeded with ${warnings.length} warnings (client time)`);
@@ -653,52 +219,15 @@ export class WarningService {
   }
 
   // ============================================
-  // HELPER METHODS
+  // HELPER UTILITIES
   // ============================================
 
   /**
-   * Fallback recommendation when errors occur
-   */
-  private static getFallbackRecommendation(
-    categoryId: string, 
-    organizationId?: string
-  ): EscalationRecommendation {
-    const defaultLevel: WarningLevel = 'counselling';
-    
-    return {
-      // Core fields
-      suggestedLevel: defaultLevel,
-      recommendedLevel: getLevelLabel(defaultLevel),
-      reason: 'Unable to analyze warning history - defaulting to counselling for safety',
-      activeWarnings: [],
-      escalationPath: ['counselling', 'verbal', 'first_written', 'final_written'],
-      isEscalation: false,
-
-      // LRA compliance
-      category: 'General Misconduct',
-      categoryId: categoryId || 'general',
-      legalBasis: 'LRA Section 188 - Fair reason and procedure',
-      legalRequirements: ['Ensure fair and consistent application of disciplinary procedures'],
-
-      // Progressive discipline context
-      warningCount: 0,
-      nextExpiryDate: this.calculateNextExpiryDate(defaultLevel, 6),
-      examples: ['System error occurred - manual review required'],
-      explanation: 'System error occurred - defaulting to safest disciplinary option',
-      previousWarnings: [],
-
-      // CCMA compliance
-      ccmaReadiness: 'low',
-      ccmaFactors: ['Follow basic progressive discipline principles']
-    };
-  }
-
-  /**
-   * Normalize warning level strings to standard format
+   * Normalize warning level strings to standard format.
    */
   static normalizeWarningLevel(level: string): WarningLevel {
     const normalized = level.toLowerCase().replace(/\s+/g, '_');
-    
+
     const mapping: Record<string, WarningLevel> = {
       'counselling': 'counselling',
       'counseling': 'counselling',
@@ -709,9 +238,9 @@ export class WarningService {
       'second_written': 'second_written',
       'second_written_warning': 'second_written',
       'final_written': 'final_written',
-      'final_written_warning': 'final_written'
+      'final_written_warning': 'final_written',
     };
-    
+
     return mapping[normalized] || 'counselling';
   }
 
@@ -720,16 +249,16 @@ export class WarningService {
   // ============================================
 
   /**
-   * Save warning to database
-   * ✅ Handles all warning fields including new corrective counselling fields
+   * Save warning to database.
+   * ✅ Handles all warning fields including new corrective counselling fields.
    */
   static async saveWarning(warningData: Partial<Warning>, organizationId: string): Promise<string> {
     try {
-      Logger.debug('💾 [SAVE] Saving warning to database...')
+      Logger.debug('💾 [SAVE] Saving warning to database...');
 
-      const warningRef = warningData.id ?
-        doc(db, 'organizations', organizationId, 'warnings', warningData.id) :
-        doc(collection(db, 'organizations', organizationId, 'warnings'));
+      const warningRef = warningData.id
+        ? doc(db, 'organizations', organizationId, 'warnings', warningData.id)
+        : doc(collection(db, 'organizations', organizationId, 'warnings'));
 
       // Convert date strings to proper Timestamps
       const issueDate = warningData.issueDate
@@ -751,7 +280,7 @@ export class WarningService {
             ? Timestamp.fromDate(warningData.reviewDate)
             : (typeof warningData.reviewDate === 'string'
                 ? Timestamp.fromDate(new Date(warningData.reviewDate))
-                : warningData.reviewDate)) // Already a Timestamp
+                : warningData.reviewDate))
         : undefined;
 
       // 🆕 Validate improvement commitments if provided
@@ -759,7 +288,7 @@ export class WarningService {
         ? warningData.improvementCommitments.map(commitment => ({
             commitment: commitment.commitment || '',
             timeline: commitment.timeline || '',
-            completedDate: commitment.completedDate || null
+            completedDate: commitment.completedDate || null,
           }))
         : undefined;
 
@@ -780,14 +309,12 @@ export class WarningService {
         ...(reviewDate && { reviewDate }),
         ...(warningData.interventionDetails && { interventionDetails: warningData.interventionDetails }),
         ...(warningData.resourcesProvided && { resourcesProvided: warningData.resourcesProvided }),
-        ...(warningData.trainingProvided && { trainingProvided: warningData.trainingProvided })
+        ...(warningData.trainingProvided && { trainingProvided: warningData.trainingProvided }),
       };
 
       if (warningData.id) {
-        // Update existing document
         await updateDoc(warningRef, dataToSave as any);
       } else {
-        // Create new document
         await setDoc(warningRef, dataToSave as any);
       }
 
@@ -796,18 +323,18 @@ export class WarningService {
         this.clearActiveWarningsCache(warningData.employeeId, organizationId);
       }
 
-      Logger.success(`💾 [SAVE] Warning saved: ${warningRef.id}`)
+      Logger.success(`💾 [SAVE] Warning saved: ${warningRef.id}`);
       return warningRef.id;
 
     } catch (error) {
-      Logger.error('❌ [SAVE] Error saving warning:', error)
+      Logger.error('❌ [SAVE] Error saving warning:', error);
       throw error;
     }
   }
 
   /**
-   * Get warning by ID
-   * ✅ Properly converts all Firestore Timestamps including counselling fields
+   * Get warning by ID.
+   * ✅ Properly converts all Firestore Timestamps including counselling fields.
    */
   static async getWarningById(warningId: string, organizationId: string): Promise<Warning | null> {
     try {
@@ -828,143 +355,46 @@ export class WarningService {
         incidentDate: data.incidentDate?.toDate() || new Date(),
         createdAt: data.createdAt?.toDate() || new Date(),
         updatedAt: data.updatedAt?.toDate() || new Date(),
-        // 🆕 Convert reviewDate if present
         reviewDate: data.reviewDate?.toDate() || undefined,
-        // 🆕 Ensure improvement commitments have proper structure
         improvementCommitments: data.improvementCommitments
           ? data.improvementCommitments.map((c: any) => ({
               commitment: c.commitment || '',
               timeline: c.timeline || '',
-              completedDate: c.completedDate?.toDate() || undefined
+              completedDate: c.completedDate?.toDate() || undefined,
             }))
-          : undefined
+          : undefined,
       } as Warning;
 
     } catch (error) {
-      Logger.error('❌ [GET] Error getting warning by ID:', error)
+      Logger.error('❌ [GET] Error getting warning by ID:', error);
       return null;
     }
   }
 
   // ============================================
-  // 🔄 REVIEW TRACKING METHODS
+  // 🔄 REVIEW TRACKING (proxied to ReviewTracker)
   // ============================================
 
   /**
-   * 📋 Get warnings needing review
-   * Returns warnings with review dates that are due, overdue, or in progress
+   * Get warnings needing review. Thin proxy to ReviewTracker.
    */
   static async getWarningsNeedingReview(organizationId: string): Promise<Warning[]> {
-    try {
-      const warningsRef = collection(db, `organizations/${organizationId}/warnings`);
-      const q = query(
-        warningsRef,
-        where('reviewDate', '!=', null),
-        where('reviewStatus', 'in', ['due_soon', 'overdue', 'in_progress']),
-        orderBy('reviewDate', 'asc')
-      );
-
-      const snapshot = await getDocs(q);
-
-      return snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-          issueDate: data.issueDate?.toDate() || new Date(),
-          expiryDate: data.expiryDate?.toDate() || new Date(),
-          incidentDate: data.incidentDate?.toDate() || new Date(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-          reviewDate: data.reviewDate?.toDate() || undefined,
-          reviewCompletedDate: data.reviewCompletedDate?.toDate() || undefined,
-          autoSatisfiedDate: data.autoSatisfiedDate?.toDate() || undefined,
-          reviewLastChecked: data.reviewLastChecked?.toDate() || undefined
-        } as Warning;
-      });
-
-    } catch (error) {
-      Logger.error('❌ [REVIEW] Error getting warnings needing review:', error);
-      throw error;
-    }
+    return ReviewTracker.getWarningsNeedingReview(organizationId);
   }
 
   /**
-   * 🔄 Update review status
-   * Updates review tracking fields for a warning
+   * Update review status. Thin proxy to ReviewTracker.
    */
   static async updateReviewStatus(
     warningId: string,
     organizationId: string,
-    statusData: {
-      reviewStatus?: string;
-      reviewCompletedDate?: Date;
-      reviewCompletedBy?: string;
-      reviewCompletedByName?: string;
-      reviewHODFeedback?: string;
-      reviewHRNotes?: string;
-      reviewOutcome?: string;
-      reviewNextSteps?: string;
-      autoSatisfiedDate?: Date;
-      escalatedToWarningId?: string;
-      reviewLastChecked?: Date;
-    }
+    statusData: Parameters<typeof ReviewTracker.updateReviewStatus>[2]
   ): Promise<void> {
-    try {
-      const warningRef = doc(db, `organizations/${organizationId}/warnings`, warningId);
-
-      const updateData: any = {
-        updatedAt: Timestamp.now()
-      };
-
-      // Convert dates to Timestamps
-      if (statusData.reviewStatus) {
-        updateData.reviewStatus = statusData.reviewStatus;
-      }
-      if (statusData.reviewCompletedDate) {
-        updateData.reviewCompletedDate = Timestamp.fromDate(statusData.reviewCompletedDate);
-      }
-      if (statusData.reviewCompletedBy) {
-        updateData.reviewCompletedBy = statusData.reviewCompletedBy;
-      }
-      if (statusData.reviewCompletedByName) {
-        updateData.reviewCompletedByName = statusData.reviewCompletedByName;
-      }
-      if (statusData.reviewHODFeedback !== undefined) {
-        updateData.reviewHODFeedback = statusData.reviewHODFeedback;
-      }
-      if (statusData.reviewHRNotes !== undefined) {
-        updateData.reviewHRNotes = statusData.reviewHRNotes;
-      }
-      if (statusData.reviewOutcome) {
-        updateData.reviewOutcome = statusData.reviewOutcome;
-      }
-      if (statusData.reviewNextSteps !== undefined) {
-        updateData.reviewNextSteps = statusData.reviewNextSteps;
-      }
-      if (statusData.autoSatisfiedDate) {
-        updateData.autoSatisfiedDate = Timestamp.fromDate(statusData.autoSatisfiedDate);
-      }
-      if (statusData.escalatedToWarningId) {
-        updateData.escalatedToWarningId = statusData.escalatedToWarningId;
-      }
-      if (statusData.reviewLastChecked) {
-        updateData.reviewLastChecked = Timestamp.fromDate(statusData.reviewLastChecked);
-      }
-
-      await updateDoc(warningRef, updateData);
-
-      Logger.info('✅ [REVIEW] Review status updated', { warningId, statusData });
-
-    } catch (error) {
-      Logger.error('❌ [REVIEW] Error updating review status:', error);
-      throw error;
-    }
+    return ReviewTracker.updateReviewStatus(warningId, organizationId, statusData);
   }
 
   /**
-   * ✅ Mark review as satisfactory
-   * Quick method for HR to complete a review positively
+   * Mark review satisfactory. Thin proxy to ReviewTracker.
    */
   static async markReviewSatisfactory(
     warningId: string,
@@ -973,28 +403,11 @@ export class WarningService {
     hrUserName: string,
     hrNotes?: string
   ): Promise<void> {
-    try {
-      await this.updateReviewStatus(warningId, organizationId, {
-        reviewStatus: 'completed_satisfactory',
-        reviewCompletedDate: new Date(),
-        reviewCompletedBy: hrUserId,
-        reviewCompletedByName: hrUserName,
-        reviewHRNotes: hrNotes || '',
-        reviewOutcome: 'satisfactory',
-        reviewLastChecked: new Date()
-      });
-
-      Logger.info('✅ [REVIEW] Review marked satisfactory', { warningId });
-
-    } catch (error) {
-      Logger.error('❌ [REVIEW] Error marking review satisfactory:', error);
-      throw error;
-    }
+    return ReviewTracker.markReviewSatisfactory(warningId, organizationId, hrUserId, hrUserName, hrNotes);
   }
 
   /**
-   * ⚠️ Mark review as unsatisfactory
-   * Requires feedback and next steps
+   * Mark review unsatisfactory. Thin proxy to ReviewTracker.
    */
   static async markReviewUnsatisfactory(
     warningId: string,
@@ -1004,96 +417,15 @@ export class WarningService {
     feedback: string,
     nextSteps: string
   ): Promise<void> {
-    try {
-      await this.updateReviewStatus(warningId, organizationId, {
-        reviewStatus: 'completed_unsatisfactory',
-        reviewCompletedDate: new Date(),
-        reviewCompletedBy: hrUserId,
-        reviewCompletedByName: hrUserName,
-        reviewHRNotes: feedback,
-        reviewOutcome: 'unsatisfactory',
-        reviewNextSteps: nextSteps,
-        reviewLastChecked: new Date()
-      });
-
-      Logger.info('⚠️ [REVIEW] Review marked unsatisfactory', { warningId });
-
-    } catch (error) {
-      Logger.error('❌ [REVIEW] Error marking review unsatisfactory:', error);
-      throw error;
-    }
+    return ReviewTracker.markReviewUnsatisfactory(warningId, organizationId, hrUserId, hrUserName, feedback, nextSteps);
   }
 
   /**
-   * 📊 Get review statistics for dashboard
-   * Returns counts of warnings by review status
+   * Get review statistics. Thin proxy to ReviewTracker.
    */
-  static async getReviewStatistics(organizationId: string): Promise<{
-    pending: number;
-    dueSoon: number;
-    overdue: number;
-    inProgress: number;
-    completedSatisfactory: number;
-    completedUnsatisfactory: number;
-    autoSatisfied: number;
-    escalated: number;
-  }> {
-    try {
-      const warningsRef = collection(db, `organizations/${organizationId}/warnings`);
-      const q = query(warningsRef, where('reviewDate', '!=', null));
-
-      const snapshot = await getDocs(q);
-
-      const stats = {
-        pending: 0,
-        dueSoon: 0,
-        overdue: 0,
-        inProgress: 0,
-        completedSatisfactory: 0,
-        completedUnsatisfactory: 0,
-        autoSatisfied: 0,
-        escalated: 0
-      };
-
-      snapshot.docs.forEach(doc => {
-        const data = doc.data();
-        const status = data.reviewStatus || 'pending';
-
-        switch (status) {
-          case 'pending':
-            stats.pending++;
-            break;
-          case 'due_soon':
-            stats.dueSoon++;
-            break;
-          case 'overdue':
-            stats.overdue++;
-            break;
-          case 'in_progress':
-            stats.inProgress++;
-            break;
-          case 'completed_satisfactory':
-            stats.completedSatisfactory++;
-            break;
-          case 'completed_unsatisfactory':
-            stats.completedUnsatisfactory++;
-            break;
-          case 'auto_satisfied':
-            stats.autoSatisfied++;
-            break;
-          case 'escalated':
-            stats.escalated++;
-            break;
-        }
-      });
-
-      Logger.info('📊 [REVIEW] Review statistics calculated', { organizationId, stats });
-      return stats;
-
-    } catch (error) {
-      Logger.error('❌ [REVIEW] Error getting review statistics:', error);
-      throw error;
-    }
+  static async getReviewStatistics(
+    organizationId: string
+  ): ReturnType<typeof ReviewTracker.getReviewStatistics> {
+    return ReviewTracker.getReviewStatistics(organizationId);
   }
 }
-
