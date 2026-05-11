@@ -63,6 +63,8 @@ import type { EvidenceItem } from '@/types/warning';
 // Wizard-local phase components (extracted Phase 2 Tier 3C)
 import { DeliveryPhase } from './phases/DeliveryPhase';
 import { SignaturesPhase } from './phases/SignaturesPhase';
+import { ReviewDocumentationPhase } from './phases/ReviewDocumentationPhase';
+import { ScriptPdfReviewPhase } from './phases/ScriptPdfReviewPhase';
 
 // Wizard-local types, constants, and helpers (extracted Phase 2 Tier 3C step 1)
 import {
@@ -1490,150 +1492,34 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
 
       case Phase.REVIEW_DOCUMENTATION:
         return (
-          <div className="space-y-4">
-            {/* Hero summary - the key facts at a glance */}
-            <div
-              className="p-4 rounded-xl text-center"
-              style={{
-                background: `linear-gradient(135deg, ${levelInfo.color}15, ${levelInfo.color}05)`,
-                border: `1px solid ${levelInfo.color}30`
-              }}
-            >
-              <p className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: levelInfo.color }}>
-                {levelInfo.label}
-              </p>
-              <p className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                {employeeName}
-              </p>
-              <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                {selectedCategory?.name} • {formData.incidentDate}
-              </p>
-            </div>
-
-            {/* Editable details list */}
-            <div className="space-y-1">
-              <ReviewRow
-                label="What happened"
-                onClick={() => goToPhase(Phase.INCIDENT_DETAILS)}
-              >
-                {formData.incidentDescription || 'No description'}
-              </ReviewRow>
-
-              <ReviewRow
-                label="When & Where"
-                onClick={() => goToPhase(Phase.INCIDENT_DETAILS)}
-              >
-                {formData.incidentDate} at {formData.incidentTime} • {formData.incidentLocation}
-              </ReviewRow>
-
-              {pendingEvidenceItems.length > 0 && (
-                <ReviewRow
-                  label="Evidence"
-                  onClick={() => goToPhase(Phase.INCIDENT_DETAILS)}
-                >
-                  <span className="flex items-center gap-1">
-                    <Paperclip className="w-3 h-3" />
-                    {pendingEvidenceItems.length} file{pendingEvidenceItems.length !== 1 ? 's' : ''} attached
-                  </span>
-                </ReviewRow>
-              )}
-
-              {levelInfo.requiresCommitments && (
-                <>
-                  <ReviewRow
-                    label="Employee said"
-                    onClick={() => goToPhase(Phase.EMPLOYEE_RESPONSE)}
-                  >
-                    "{employeeStatement || 'No response'}"
-                  </ReviewRow>
-
-                  <ReviewRow
-                    label="Expected standard"
-                    onClick={() => goToPhase(Phase.EXPECTED_STANDARDS)}
-                  >
-                    {expectedBehavior || 'Not specified'}
-                  </ReviewRow>
-
-                  <ReviewRow
-                    label="Improvement plan"
-                    onClick={() => goToPhase(Phase.IMPROVEMENT_PLAN)}
-                  >
-                    {actionCommitments.length} commitment{actionCommitments.length !== 1 ? 's' : ''} • Review: {reviewDate || 'Not set'}
-                  </ReviewRow>
-                </>
-              )}
-            </div>
-
-            {/* Footer hint */}
-            <p className="text-xs text-center" style={{ color: 'var(--color-text-muted)' }}>
-              Tap any row to edit
-            </p>
-          </div>
+          <ReviewDocumentationPhase
+            levelInfo={levelInfo}
+            employeeName={employeeName}
+            selectedCategory={selectedCategory}
+            formData={formData}
+            pendingEvidenceItems={pendingEvidenceItems}
+            employeeStatement={employeeStatement}
+            expectedBehavior={expectedBehavior}
+            actionCommitments={actionCommitments}
+            reviewDate={reviewDate}
+            goToPhase={goToPhase}
+          />
         );
 
       case Phase.SCRIPT_PDF_REVIEW:
         return (
-          <div className="space-y-4">
-            {/* Warning Script Section */}
-            <ThemedCard padding="md" className="border" style={{ borderColor: 'var(--color-border-light)' }}>
-              <p className="text-xs mb-3" style={{ color: 'var(--color-text-secondary)' }}>
-                <strong>Read this completely to ensure your employee understands their rights.</strong> This script covers all legal requirements and communicates the warning clearly.
-              </p>
-              <MultiLanguageWarningScript
-                employeeName={employeeName || 'Employee'}
-                managerName={currentManagerName}
-                categoryName={selectedCategory?.name || 'General Misconduct'}
-                incidentDescription={formData.incidentDescription || 'Workplace incident requiring disciplinary action'}
-                warningLevel={currentLevel}
-                validityPeriod={formData.validityPeriod}
-                onScriptRead={() => setScriptReadConfirmed(true)}
-                disabled={scriptReadConfirmed}
-                activeWarnings={lraRecommendation?.activeWarnings}
-                issuedDate={formData.issueDate}
-              />
-            </ThemedCard>
-
-            {/* Script read confirmation status */}
-            {scriptReadConfirmed && (
-              <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--color-alert-success-bg)' }}>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5" style={{ color: 'var(--color-success)' }} />
-                  <span className="text-sm font-medium" style={{ color: 'var(--color-alert-success-text)' }}>
-                    Script has been read to the employee
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* Employee Acknowledgment */}
-            <div
-              className="p-3 rounded-lg border transition-all"
-              style={{
-                backgroundColor: hasAcknowledged ? 'var(--color-alert-success-bg)' : 'var(--color-card-background)',
-                borderColor: hasAcknowledged ? 'var(--color-success)' : 'var(--color-border-light)',
-                opacity: scriptReadConfirmed ? 1 : 0.6
-              }}
-            >
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={hasAcknowledged}
-                  onChange={(e) => setHasAcknowledged(e.target.checked)}
-                  disabled={!scriptReadConfirmed}
-                  className="w-5 h-5 mt-0.5 rounded flex-shrink-0"
-                  style={{ accentColor: 'var(--color-success)' }}
-                />
-                <div className="flex-1">
-                  <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>
-                    I confirm the employee has reviewed and understands this warning
-                  </span>
-                  <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                    The employee understands the nature of the misconduct and their right to representation under the Labour Relations Act.
-                  </p>
-                </div>
-              </label>
-            </div>
-          </div>
+          <ScriptPdfReviewPhase
+            employeeName={employeeName}
+            currentManagerName={currentManagerName}
+            selectedCategory={selectedCategory}
+            formData={formData}
+            currentLevel={currentLevel}
+            scriptReadConfirmed={scriptReadConfirmed}
+            setScriptReadConfirmed={setScriptReadConfirmed}
+            hasAcknowledged={hasAcknowledged}
+            setHasAcknowledged={setHasAcknowledged}
+            lraRecommendation={lraRecommendation}
+          />
         );
 
       case Phase.SIGNATURES:
