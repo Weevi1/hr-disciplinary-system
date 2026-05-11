@@ -57,13 +57,28 @@ import { useAudioRecording } from '../../../hooks/warnings/useAudioRecording';
 import { API } from '@/api';
 
 // Types
-import type {
-  EscalationRecommendation,
-  EmployeeWithContext,
-  WarningCategory,
-  EnhancedWarningFormData
-} from '@/services/WarningService';
+import type { EscalationRecommendation } from '@/services/WarningService';
 import type { EvidenceItem } from '@/types/warning';
+
+// Wizard-local types, constants, and helpers (extracted Phase 2 Tier 3C step 1)
+import {
+  Phase,
+  PHASE_INFO,
+  TOTAL_PHASES,
+  type Employee,
+  type Category,
+  type FormData,
+  type SignatureData,
+  type ActionCommitment,
+  type UnifiedWarningWizardProps,
+} from './wizardTypes';
+import {
+  generateId,
+  getSouthAfricanTime,
+  getSouthAfricanDate,
+  getWordCount,
+  getWarningLevelInfo,
+} from './wizardHelpers';
 
 // PDF services
 import { PDF_GENERATOR_VERSION } from '@/services/PDFGenerationService';
@@ -72,116 +87,6 @@ import { transformWarningDataForPDF } from '@/utils/pdfDataTransformer';
 
 // Microphone permission
 import { MicrophonePermissionHandler } from './components/MicrophonePermissionHandler';
-
-// ============================================
-// TYPES
-// ============================================
-
-type Employee = EmployeeWithContext;
-type Category = WarningCategory;
-type FormData = EnhancedWarningFormData;
-
-interface SignatureData {
-  manager: string | null;
-  employee: string | null;
-  witness: string | null;
-  timestamp?: string;
-  managerName?: string;
-  employeeName?: string;
-  witnessName?: string;
-}
-
-interface ActionCommitment {
-  id: string;
-  commitment: string;
-  timeline: string;
-}
-
-// Phase definitions
-enum Phase {
-  EMPLOYEE_SELECTION = 0,
-  CATEGORY_RECOMMENDATION = 1,
-  INCIDENT_DETAILS = 2,
-  EMPLOYEE_RESPONSE = 3,
-  EXPECTED_STANDARDS = 4,
-  IMPROVEMENT_PLAN = 5,
-  REVIEW_DOCUMENTATION = 6,
-  SCRIPT_PDF_REVIEW = 7,
-  SIGNATURES = 8,
-  DELIVERY = 9
-}
-
-const PHASE_INFO = [
-  { title: 'Employee Selection', icon: User, guidance: 'Who is involved in this incident?' },
-  { title: 'Category & Recommendation', icon: Tag, guidance: 'Classify the misconduct and review the system recommendation' },
-  { title: 'Incident Details', icon: FileText, guidance: 'Document the facts: when, where, and what happened' },
-  { title: "Employee's Response", icon: MessageSquare, guidance: 'What did the employee say when you discussed the incident?' },
-  { title: 'Expected Standards', icon: Target, guidance: 'What behavior, performance, or conduct is expected?' },
-  { title: 'Improvement Plan', icon: TrendingUp, guidance: 'Record specific commitments with timelines and set follow-up' },
-  { title: 'Review Documentation', icon: CheckCircle, guidance: 'Review all information before proceeding to signatures' },
-  { title: 'Script & PDF Review', icon: FileSearch, guidance: 'Read the warning script aloud, then review the PDF together' },
-  { title: 'Signatures', icon: PenTool, guidance: 'Collect signatures to finalize and save the warning' },
-  { title: 'Delivery', icon: Send, guidance: 'Select how the warning will be delivered to the employee' }
-];
-
-const TOTAL_PHASES = 10;
-
-interface UnifiedWarningWizardProps {
-  employees: Employee[];
-  categories: Category[];
-  currentManagerName: string;
-  organizationName: string;
-  onComplete: () => void;
-  onCancel: () => void;
-  preSelectedEmployeeId?: string;
-  preSelectedCategoryId?: string;
-  isFullScreen?: boolean;
-  preloadedWarnings?: any[]; // Optional: Preloaded warnings from dashboard, used to skip Cloud Function call for employee history
-}
-
-// ============================================
-// HELPER FUNCTIONS
-// ============================================
-
-const generateId = (): string => {
-  return `commitment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
-
-// Get current time in South African timezone (Africa/Johannesburg)
-const getSouthAfricanTime = (): string => {
-  const now = new Date();
-  const saTime = new Intl.DateTimeFormat('en-ZA', {
-    timeZone: 'Africa/Johannesburg',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  }).format(now);
-  return saTime;
-};
-
-// Get current date in South African timezone
-const getSouthAfricanDate = (): string => {
-  const now = new Date();
-  const saDate = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Africa/Johannesburg',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).format(now);
-  return saDate; // Returns YYYY-MM-DD format
-};
-
-const getWarningLevelInfo = (level: string) => {
-  const levelMap: Record<string, { label: string; color: string; requiresCommitments: boolean }> = {
-    'counselling': { label: 'Counselling', color: '#0ea5e9', requiresCommitments: true },
-    'verbal': { label: 'Verbal', color: '#f59e0b', requiresCommitments: true },
-    'first_written': { label: 'Written', color: '#f97316', requiresCommitments: true },
-    'second_written': { label: 'Second Written', color: '#f97316', requiresCommitments: true },
-    'final_written': { label: 'Final Written', color: '#ef4444', requiresCommitments: false },
-    'dismissal': { label: 'Contact HR - Serious Offence', color: '#dc2626', requiresCommitments: false }
-  };
-  return levelMap[level] || { label: level, color: '#6b7280', requiresCommitments: true };
-};
 
 // ============================================
 // MAIN COMPONENT
@@ -205,9 +110,6 @@ export const UnifiedWarningWizard: React.FC<UnifiedWarningWizardProps> = ({
 
   // Check if audio recording is enabled for this organization
   const isAudioEnabled = organization?.customization?.enableAudioRecording ?? true;
-
-  // Helper function to count words in a string
-  const getWordCount = (text: string) => text.trim().split(/\s+/).filter(w => w).length;
 
   // ============================================
   // REFS & ENHANCED HOOKS
