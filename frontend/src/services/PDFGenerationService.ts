@@ -123,6 +123,15 @@ import {
   renderDynamicSection as _renderDynamicSectionImpl,
   renderTableSection as _renderTableSectionImpl,
 } from './pdf/dynamic/DynamicSectionRenderer';
+import {
+  prepareLogoForPDF as _prepareLogoForPDFImpl,
+  addLogoWithAspectRatio as _addLogoWithAspectRatioImpl,
+  addOrganizationHeader as _addOrganizationHeaderImpl,
+  addStackedHeader as _addStackedHeaderImpl,
+  addClassicHeader as _addClassicHeaderImpl,
+  addBannerHeader as _addBannerHeaderImpl,
+} from './pdf/pageUtils/headers';
+import { addDocumentTitle as _addDocumentTitleImpl } from './pdf/pageUtils/documentTitle';
 import { replacePlaceholders as _replacePlaceholdersImpl } from './pdf/utils';
 import { calculateIncidentSectionHeight as _calculateIncidentSectionHeightImpl } from './pdf/utils';
 import {
@@ -1172,46 +1181,22 @@ export class PDFGenerationService {
   }
 
   // ============================================
-  // SECTION BUILDERS - RESILIENT VERSIONS
+  // PAGE UTILITIES (logo, headers, document title)
+  // Implementations extracted to pdf/pageUtils/* in Phase 2 Tier 3B step 6.
+  // Class delegates preserve `this.X(...)` call sites inside frozen v1.0.0/
+  // v1.1.0/v1.2.0 version methods.
   // ============================================
 
-  /**
-   * Pre-process a logo URL into a PNG data URL sized for PDF embedding.
-   * Handles remote URLs, data URLs, and any image format the browser supports.
-   * Returns a PNG data URL that jsPDF can reliably render.
-   */
+  /** Prepare a logo URL into a PNG data URL for jsPDF embedding — delegate. */
   private static async prepareLogoForPDF(
     logoSrc: string,
     maxWidth = 800,
     maxHeight = 400
   ): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > maxWidth || height > maxHeight) {
-          const ratio = Math.min(maxWidth / width, maxHeight / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { reject(new Error('Canvas not supported')); return; }
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/png'));
-      };
-      img.onerror = () => reject(new Error('Failed to load logo image'));
-      img.src = logoSrc;
-    });
+    return _prepareLogoForPDFImpl(logoSrc, maxWidth, maxHeight);
   }
 
-  /**
-   * Add logo to PDF preserving aspect ratio within max bounds.
-   * Returns actual rendered { width, height } in mm.
-   */
+  /** Add a logo preserving aspect ratio — delegate. Returns rendered {w,h} in mm. */
   private static addLogoWithAspectRatio(
     doc: any,
     logo: string,
@@ -1220,29 +1205,10 @@ export class PDFGenerationService {
     maxWidth: number,
     maxHeight: number
   ): { width: number; height: number } {
-    const imgProps = doc.getImageProperties(logo);
-    const imgWidth = imgProps.width;
-    const imgHeight = imgProps.height;
-    const aspectRatio = imgWidth / imgHeight;
-
-    let finalWidth = maxWidth;
-    let finalHeight = maxWidth / aspectRatio;
-
-    if (finalHeight > maxHeight) {
-      finalHeight = maxHeight;
-      finalWidth = maxHeight * aspectRatio;
-    }
-
-    doc.addImage(logo, 'PNG', x, y, finalWidth, finalHeight);
-    return { width: finalWidth, height: finalHeight };
+    return _addLogoWithAspectRatioImpl(doc, logo, x, y, maxWidth, maxHeight);
   }
 
-  /**
-   * Organization Header with Branding — supports 3 configurable layouts.
-   *
-   * When called without headerSettings (v1.0.0 / v1.1.0 frozen callers),
-   * defaults to 'banner' layout to preserve backward compatibility.
-   */
+  /** Organization Header — dispatches to one of 3 layouts — delegate. */
   private static addOrganizationHeader(
     doc: any,
     organization: WarningPDFData['organization'],
@@ -1252,48 +1218,13 @@ export class PDFGenerationService {
     headerSettings?: {
       headerLayout?: 'stacked' | 'classic' | 'banner';
       logoMaxHeight?: number;
-      processedLogo?: string; // Pre-processed PNG data URL ready for jsPDF
+      processedLogo?: string;
     }
   ): number {
-    const layout = headerSettings?.headerLayout || 'banner';
-    const logoMaxHeight = headerSettings?.logoMaxHeight || 20;
-    const headerColor = this.parseColor(organization.branding?.colors?.primary) || { r: 59, g: 130, b: 246 };
-    const companyName = organization.branding?.companyName || organization.name || 'Organization Name';
-    const contentWidth = pageWidth - margin * 2;
-
-    // Use pre-processed logo (PNG data URL) if available
-    if (headerSettings?.processedLogo) {
-      organization = {
-        ...organization,
-        branding: { ...organization.branding, logo: headerSettings.processedLogo }
-      };
-    }
-
-    // Build contact details — collapse multi-line addresses into single line
-    const details: string[] = [];
-    if (organization.address) {
-      // Replace newlines/carriage returns with ", " for compact single-line display
-      const flatAddress = organization.address.replace(/[\r\n]+/g, ', ').replace(/,\s*,/g, ',').trim();
-      if (flatAddress) details.push(flatAddress);
-    }
-    if (organization.phone) details.push(`Tel: ${organization.phone}`);
-    if (organization.email) details.push(`Email: ${organization.email}`);
-    if (organization.branding?.website) details.push(organization.branding.website);
-    const detailsLine = details.join(' | ');
-    const regLine = organization.registrationNumber ? `Registration: ${organization.registrationNumber}` : '';
-
-    if (layout === 'stacked') {
-      return this.addStackedHeader(doc, organization, companyName, detailsLine, regLine, headerColor, startY, pageWidth, margin, contentWidth, logoMaxHeight);
-    } else if (layout === 'classic') {
-      return this.addClassicHeader(doc, organization, companyName, detailsLine, regLine, headerColor, startY, pageWidth, margin, contentWidth, logoMaxHeight);
-    } else {
-      return this.addBannerHeader(doc, organization, companyName, detailsLine, regLine, headerColor, startY, pageWidth, margin, contentWidth, logoMaxHeight);
-    }
+    return _addOrganizationHeaderImpl(doc, organization, startY, pageWidth, margin, headerSettings);
   }
 
-  /**
-   * Layout A: "Stacked" — logo centered above name, white background, colored divider
-   */
+  /** Layout A: Stacked header — delegate. */
   private static addStackedHeader(
     doc: any,
     organization: WarningPDFData['organization'],
@@ -1307,67 +1238,10 @@ export class PDFGenerationService {
     contentWidth: number,
     logoMaxHeight: number
   ): number {
-    let currentY = startY;
-    const centerX = pageWidth / 2;
-
-    // Logo: centered, aspect-ratio aware
-    if (organization.branding?.logo) {
-      try {
-        const maxLogoWidth = contentWidth * 0.4; // Max 40% of content width
-        const imgProps = doc.getImageProperties(organization.branding.logo);
-        const aspectRatio = imgProps.width / imgProps.height;
-
-        let finalWidth = maxLogoWidth;
-        let finalHeight = maxLogoWidth / aspectRatio;
-        if (finalHeight > logoMaxHeight) {
-          finalHeight = logoMaxHeight;
-          finalWidth = logoMaxHeight * aspectRatio;
-        }
-
-        const logoX = centerX - finalWidth / 2;
-        doc.addImage(organization.branding.logo, 'PNG', logoX, currentY, finalWidth, finalHeight);
-        currentY += finalHeight + 4;
-      } catch (error) {
-        Logger.warn('Failed to add organization logo to stacked header:', error);
-      }
-    }
-
-    // Company name — centered, brand color
-    doc.setTextColor(headerColor.r, headerColor.g, headerColor.b);
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text(companyName, centerX, currentY, { align: 'center' });
-    currentY += 6;
-
-    // Contact details — centered, gray, with word-wrap for long lines
-    doc.setTextColor(100, 100, 100);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    const lineHeight = 4; // mm per line
-    if (detailsLine) {
-      const wrappedDetails = doc.splitTextToSize(detailsLine, contentWidth);
-      doc.text(wrappedDetails, centerX, currentY, { align: 'center' });
-      currentY += wrappedDetails.length * lineHeight;
-    }
-    if (regLine) {
-      doc.text(regLine, centerX, currentY, { align: 'center' });
-      currentY += lineHeight;
-    }
-
-    // Colored divider line (1mm)
-    currentY += 2;
-    doc.setDrawColor(headerColor.r, headerColor.g, headerColor.b);
-    doc.setLineWidth(1);
-    doc.line(margin, currentY, pageWidth - margin, currentY);
-    currentY += 5;
-
-    doc.setTextColor(0, 0, 0);
-    return currentY;
+    return _addStackedHeaderImpl(doc, organization, companyName, detailsLine, regLine, headerColor, startY, pageWidth, margin, contentWidth, logoMaxHeight);
   }
 
-  /**
-   * Layout B: "Classic Letterhead" — logo left, text right, colored divider
-   */
+  /** Layout B: Classic Letterhead — delegate. */
   private static addClassicHeader(
     doc: any,
     organization: WarningPDFData['organization'],
@@ -1381,65 +1255,10 @@ export class PDFGenerationService {
     contentWidth: number,
     logoMaxHeight: number
   ): number {
-    let logoEndX = margin;
-    let logoHeight = 0;
-
-    // Logo: left-aligned, aspect-ratio aware
-    if (organization.branding?.logo) {
-      try {
-        const maxLogoWidth = contentWidth * 0.25; // Max 25% of content width
-        const dims = this.addLogoWithAspectRatio(
-          doc, organization.branding.logo,
-          margin, startY,
-          maxLogoWidth, logoMaxHeight
-        );
-        logoEndX = margin + dims.width + 6; // 6mm gap between logo and text
-        logoHeight = dims.height;
-      } catch (error) {
-        Logger.warn('Failed to add organization logo to classic header:', error);
-      }
-    }
-
-    // Text block — right of logo
-    let textY = startY + 5;
-
-    doc.setTextColor(headerColor.r, headerColor.g, headerColor.b);
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text(companyName, logoEndX, textY);
-    textY += 6;
-
-    doc.setTextColor(80, 80, 80);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    const textAreaWidth = pageWidth - margin - logoEndX; // available width for text
-    if (detailsLine) {
-      const wrappedDetails = doc.splitTextToSize(detailsLine, textAreaWidth);
-      doc.text(wrappedDetails, logoEndX, textY);
-      textY += wrappedDetails.length * 4;
-    }
-    if (regLine) {
-      doc.text(regLine, logoEndX, textY);
-      textY += 4;
-    }
-
-    // Dynamic height = max(logo height, text block height) + padding
-    const textBlockHeight = textY - startY;
-    let currentY = startY + Math.max(logoHeight, textBlockHeight) + 3;
-
-    // Colored divider line (1mm)
-    doc.setDrawColor(headerColor.r, headerColor.g, headerColor.b);
-    doc.setLineWidth(1);
-    doc.line(margin, currentY, pageWidth - margin, currentY);
-    currentY += 5;
-
-    doc.setTextColor(0, 0, 0);
-    return currentY;
+    return _addClassicHeaderImpl(doc, organization, companyName, detailsLine, regLine, headerColor, startY, pageWidth, margin, contentWidth, logoMaxHeight);
   }
 
-  /**
-   * Layout C: "Banner" — colored background band (matches original/frozen behavior)
-   */
+  /** Layout C: Banner (default, matches frozen v1.0.0/v1.1.0 output) — delegate. */
   private static addBannerHeader(
     doc: any,
     organization: WarningPDFData['organization'],
@@ -1450,154 +1269,23 @@ export class PDFGenerationService {
     startY: number,
     pageWidth: number,
     margin: number,
-    _contentWidth: number,
+    contentWidth: number,
     logoMaxHeight: number
   ): number {
-    // Calculate band height dynamically based on content
-    const bandPadding = 5; // mm padding top & bottom
-    const nameY = bandPadding + 10; // company name baseline
-    let detailY = nameY + 8; // details start below name
-    const detailLineHeight = 4;
-
-    // Pre-calculate detail line count for band height
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    const detailMaxWidth = pageWidth - margin * 2;
-    const wrappedDetails = detailsLine ? doc.splitTextToSize(detailsLine, detailMaxWidth) : [];
-    const detailLines = wrappedDetails.length || 0;
-
-    let bandHeight = detailY + (detailLines * detailLineHeight);
-    if (regLine) bandHeight += detailLineHeight;
-    bandHeight += bandPadding; // bottom padding
-
-    // Colored background band
-    doc.setFillColor(headerColor.r, headerColor.g, headerColor.b);
-    doc.rect(0, 0, pageWidth, bandHeight, 'F');
-
-    let logoWidth = 0;
-    if (organization.branding?.logo) {
-      try {
-        const maxLogoWidth = 40;
-        const logoY = bandPadding + 2;
-        const dims = this.addLogoWithAspectRatio(
-          doc, organization.branding.logo,
-          margin, logoY,
-          maxLogoWidth, Math.min(logoMaxHeight, 20)
-        );
-        logoWidth = dims.width;
-      } catch (error) {
-        Logger.warn('Failed to add organization logo to banner header:', error);
-        logoWidth = 0;
-      }
-    }
-
-    // Company name — white text on colored band
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'bold');
-    doc.text(companyName, margin + logoWidth + (logoWidth > 0 ? 10 : 0), nameY);
-
-    // Details — white text, word-wrapped
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    if (wrappedDetails.length > 0) {
-      doc.text(wrappedDetails, margin, detailY);
-      detailY += wrappedDetails.length * detailLineHeight;
-    }
-    if (regLine) {
-      doc.text(regLine, margin, detailY);
-    }
-
-    doc.setTextColor(0, 0, 0);
-    return bandHeight + 10; // 10mm gap below band
+    return _addBannerHeaderImpl(doc, organization, companyName, detailsLine, regLine, headerColor, startY, pageWidth, margin, contentWidth, logoMaxHeight);
   }
-  
-  /**
-   * Document Title Section - WITH DRAFT INDICATOR
-   */
+
+  /** Document Title block (title + validity + draft indicator + doc ID) — delegate. */
   private static addDocumentTitle(
-    doc: any, 
-    data: WarningPDFData, 
-    startY: number, 
-    pageWidth: number, 
+    doc: any,
+    data: WarningPDFData,
+    startY: number,
+    pageWidth: number,
     margin: number,
     pageHeight: number,
     bottomMargin: number
   ): number {
-    // Check if we have enough space (need about 30mm)
-    startY = this.checkPageOverflow(doc, startY, 30, pageHeight, bottomMargin);
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-
-    const title = this.getWarningLevelTitle(data.warningLevel);
-    const titleWidth = doc.getTextWidth(title);
-    const titleX = (pageWidth - titleWidth) / 2;
-
-    startY += 4; // Breathing room above title (18pt text ascends ~5mm from baseline)
-    doc.text(title, titleX, startY);
-    startY += 4; // Tighter gap below title to underline
-
-    // ✨ VALIDITY PERIOD DISPLAY - Prominent display below title
-    if (data.validityPeriod && data.expiryDate) {
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100, 100, 100); // Gray text
-
-      const expiryDateFormatted = this.formatDate(data.expiryDate);
-      const validityText = `Valid for ${data.validityPeriod} months | Expires: ${expiryDateFormatted}`;
-      const validityWidth = doc.getTextWidth(validityText);
-      const validityX = (pageWidth - validityWidth) / 2;
-      doc.text(validityText, validityX, startY);
-      startY += 5; // Extra spacing after validity
-
-      // Reset to black for rest of document
-      doc.setTextColor(0, 0, 0);
-    }
-
-    // Check if this is a draft (missing employee or category)
-    const isDraft = data.employee?.firstName === 'Employee' ||
-                   data.category === 'Category Not Selected' ||
-                   !data.description?.trim();
-
-    if (isDraft) {
-      doc.setFontSize(12);
-      doc.setTextColor(200, 50, 50);
-      const draftText = '[DRAFT - INCOMPLETE DATA]';
-      const draftWidth = doc.getTextWidth(draftText);
-      const draftX = (pageWidth - draftWidth) / 2;
-      doc.text(draftText, draftX, startY + 1);
-      startY += 6; // Extra space for draft indicator
-    }
-
-    // Underline (below everything)
-    doc.setTextColor(0, 0, 0);
-    doc.setLineWidth(0.5);
-    doc.line(margin, startY + 2, pageWidth - margin, startY + 2);
-    
-    // Document ID and date
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    const docInfo = `Document ID: ${data.warningId} | Issue Date: ${this.formatDate(data.issuedDate)}`;
-    const infoWidth = doc.getTextWidth(docInfo);
-    const infoX = (pageWidth - infoWidth) / 2;
-    doc.text(docInfo, infoX, startY + 8);
-    startY += 10;
-
-    // 📋 CODE OF CONDUCT REFERENCE - If organization has one configured
-    if (data.organization?.settings?.codeOfConductReference) {
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'italic');
-      doc.setTextColor(80, 80, 80); // Dark gray
-      const codeRef = `Issued in terms of: ${data.organization.settings.codeOfConductReference}`;
-      const codeRefWidth = doc.getTextWidth(codeRef);
-      const codeRefX = (pageWidth - codeRefWidth) / 2;
-      doc.text(codeRef, codeRefX, startY + 5);
-      startY += 5;
-      doc.setTextColor(0, 0, 0); // Reset to black
-    }
-
-    return startY + 10;
+    return _addDocumentTitleImpl(doc, data, startY, pageWidth, margin, pageHeight, bottomMargin);
   }
 
   // ============================================
