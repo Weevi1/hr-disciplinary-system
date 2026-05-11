@@ -11,7 +11,6 @@ import Logger from '../utils/logger';
 
 import { globalDeviceCapabilities, getPerformanceLimits } from '../utils/deviceDetection';
 import { PDFPlaceholderService } from './PDFPlaceholderService';
-import { getLevelLabel } from './UniversalCategories';
 import type { PDFSectionConfig } from '../types/core';
 import { convertSVGToPNG, isSignatureSVG } from '../utils/signatureSVG';
 
@@ -82,7 +81,15 @@ export const PDF_GENERATOR_VERSION = '1.2.0';
 // proxies below resolve without circulars (the moved code does not import
 // back into this file).
 import { generateAppealReportPDF as _generateAppealReportPDF, type AppealReportData } from './pdf/AppealReportGenerator';
-import { formatDate as _formatDateImpl } from './pdf/utils';
+import {
+  formatDate as _formatDateImpl,
+  hexToRGB as _hexToRGBImpl,
+  parseColor as _parseColorImpl,
+  getWarningLevelDisplay as _getWarningLevelDisplayImpl,
+  getWarningLevelTitle as _getWarningLevelTitleImpl,
+  wrapText as _wrapTextImpl,
+  checkPageOverflow as _checkPageOverflowImpl,
+} from './pdf/utils';
 
 // ============================================
 // INTERFACES MATCHING YOUR WARNING WIZARD DATA
@@ -3248,21 +3255,13 @@ export class PDFGenerationService {
    * Check if content will fit on current page, add new page if needed
    */
   private static checkPageOverflow(
-    doc: any, 
-    currentY: number, 
-    requiredHeight: number, 
-    pageHeight: number, 
+    doc: any,
+    currentY: number,
+    requiredHeight: number,
+    pageHeight: number,
     bottomMargin: number
   ): number {
-    const maxY = pageHeight - bottomMargin;
-    
-    if (currentY + requiredHeight > maxY) {
-      Logger.debug(29714)
-      doc.addPage();
-      return 20; // Start new page with top margin
-    }
-    
-    return currentY;
+    return _checkPageOverflowImpl(doc, currentY, requiredHeight, pageHeight, bottomMargin);
   }
   
   /**
@@ -3503,15 +3502,7 @@ export class PDFGenerationService {
    * Convert hex color to RGB values for jsPDF
    */
   private static hexToRGB(hex: string): { r: number; g: number; b: number } {
-    // Remove # if present
-    hex = hex.replace('#', '');
-
-    // Parse hex values
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-
-    return { r, g, b };
+    return _hexToRGBImpl(hex);
   }
 
   // ============================================
@@ -3522,23 +3513,14 @@ export class PDFGenerationService {
    * Get warning level display name
    */
   private static getWarningLevelDisplay(level: string): string {
-    return getLevelLabel(level);
+    return _getWarningLevelDisplayImpl(level);
   }
 
   /**
    * Get warning level document title
    */
   private static getWarningLevelTitle(level: string): string {
-    const titleMap: Record<string, string> = {
-      'counselling': 'COUNSELLING SESSION RECORD',
-      'verbal': 'VERBAL WARNING NOTICE',
-      'first_written': 'WRITTEN WARNING',
-      'second_written': 'SECOND WRITTEN WARNING',
-      'final_written': 'FINAL WRITTEN WARNING',
-      'dismissal': 'CONTACT HR - SERIOUS OFFENCE'
-    };
-
-    return titleMap[level] || 'WARNING NOTICE';
+    return _getWarningLevelTitleImpl(level);
   }
   
   /**
@@ -3555,45 +3537,7 @@ export class PDFGenerationService {
    * 🔥 HANDLES NEWLINES: Preserves paragraph structure and bullet points
    */
   private static wrapText(doc: any, text: string, maxWidth: number): string[] {
-    const allLines: string[] = [];
-
-    // Step 1: Split on newlines first to preserve paragraph/bullet structure
-    const paragraphs = text.split('\n');
-
-    // Step 2: Wrap each paragraph individually
-    paragraphs.forEach(paragraph => {
-      const trimmedParagraph = paragraph.trim();
-
-      // Empty line - preserve it for spacing
-      if (!trimmedParagraph) {
-        allLines.push('');
-        return;
-      }
-
-      // Wrap this paragraph to fit width
-      const words = trimmedParagraph.split(' ');
-      let currentLine = '';
-
-      words.forEach(word => {
-        const testLine = currentLine + (currentLine ? ' ' : '') + word;
-        const testWidth = doc.getTextWidth(testLine);
-
-        if (testWidth <= maxWidth) {
-          currentLine = testLine;
-        } else {
-          if (currentLine) {
-            allLines.push(currentLine);
-          }
-          currentLine = word;
-        }
-      });
-
-      if (currentLine) {
-        allLines.push(currentLine);
-      }
-    });
-
-    return allLines;
+    return _wrapTextImpl(doc, text, maxWidth);
   }
   
   /**
@@ -3631,21 +3575,7 @@ export class PDFGenerationService {
    * Parse color string to RGB
    */
   private static parseColor(colorString?: string): { r: number; g: number; b: number } | null {
-    if (!colorString) return null;
-    
-    // Handle hex colors
-    if (colorString.startsWith('#')) {
-      const hex = colorString.substring(1);
-      if (hex.length === 6) {
-        return {
-          r: parseInt(hex.substring(0, 2), 16),
-          g: parseInt(hex.substring(2, 4), 16),
-          b: parseInt(hex.substring(4, 6), 16)
-        };
-      }
-    }
-    
-    return null;
+    return _parseColorImpl(colorString);
   }
 
   /**
