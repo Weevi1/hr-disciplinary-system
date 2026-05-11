@@ -102,6 +102,10 @@ import {
   addWarningDetailsSection as _addWarningDetailsSectionImpl,
   addIncidentDetailsSection as _addIncidentDetailsSectionImpl,
 } from './pdf/sections/baseInfoSections';
+import {
+  addPreviousDisciplinaryActionSection as _addPreviousDisciplinaryActionSectionImpl,
+  addPreviousDisciplinaryActionSection_v1_0_0 as _addPreviousDisciplinaryActionSection_v1_0_0_Impl,
+} from './pdf/sections/disciplinaryHistorySections';
 import { calculateIncidentSectionHeight as _calculateIncidentSectionHeightImpl } from './pdf/utils';
 import {
   formatDate as _formatDateImpl,
@@ -1645,20 +1649,14 @@ export class PDFGenerationService {
     return _addIncidentDetailsSectionImpl(doc, data, startY, pageWidth, margin, pageHeight, bottomMargin);
   }
 
-  /**
-   * Previous Disciplinary Action Section - NUMBERED LIST FORMAT (Template Style)
-   * Shows clear numbered list of previous warnings with dates and offenses
-   *
-   * 🎨 EDITABLE CONTENT SYSTEM (v1.2.0+):
-   * - Accepts optional sectionConfig parameter with custom heading/body
-   * - Warning list format is FIXED (cannot be customized for consistency)
-   * - If custom heading provided: Uses custom heading text
-   * - If custom body provided: Shows body text above warning list
-   * - If no custom content: Falls back to hardcoded v1.1.0 text
-   * - Maintains ALL v1.1.0 styling: gray box, fonts, spacing
-   *
-   * @param sectionConfig - Optional PDFSectionConfig with custom heading/body
-   */
+  // ============================================
+  // DISCIPLINARY HISTORY SECTIONS
+  // Implementations extracted to pdf/sections/disciplinaryHistorySections.ts
+  // in Phase 2 Tier 3B step 5c. The v1_0_0 variant is FROZEN and must
+  // remain byte-identical to its original — the delegate guarantees that.
+  // ============================================
+
+  /** Previous Disciplinary Action Section (v1.1.0+ format: shows Incident) — delegate. */
   private static addPreviousDisciplinaryActionSection(
     doc: any,
     recommendation: WarningPDFData['disciplineRecommendation'],
@@ -1667,110 +1665,14 @@ export class PDFGenerationService {
     margin: number,
     pageHeight: number,
     bottomMargin: number,
-    sectionConfig?: PDFSectionConfig  // 🆕 OPTIONAL: Custom content from PDF template settings
+    sectionConfig?: PDFSectionConfig
   ): number {
-    if (!recommendation) {
-      Logger.warn('⚠️ No recommendation data provided to addPreviousDisciplinaryActionSection');
-      return startY;
-    }
-
-    // 🔥 CRITICAL FIX: Support both field names (activeWarnings and previousWarnings)
-    // Firestore may store the data as either field name depending on when the warning was created
-    const warnings = recommendation.activeWarnings || recommendation.previousWarnings || [];
-
-    // 📋 PRE-CALCULATE HEIGHT - Must calculate BEFORE rendering to avoid orphaned headings
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-
-    let contentHeight = 8; // Top padding
-    const boxWidth = pageWidth - (margin * 2) - 10; // Box width minus padding
-    const lineHeight = 5;
-
-    if (warnings && warnings.length > 0) {
-      warnings.forEach((warning: any, index: number) => {
-        const warningDate = this.formatDate(warning.issuedDate || warning.issueDate || new Date());
-        const description = warning.description || warning.incidentDescription || 'No description available';
-        const level = this.getWarningLevelDisplay(warning.level || warning.warningLevel || 'verbal');
-
-        const line = `${index + 1}) Date: ${warningDate} | Incident: ${description} | Level: ${level}`;
-        const wrappedLines = doc.splitTextToSize(line, boxWidth);
-        contentHeight += wrappedLines.length * lineHeight + 2; // Add spacing between warnings
-      });
-    } else {
-      contentHeight += lineHeight;
-    }
-
-    contentHeight += 4; // Bottom padding
-    const warningHeight = contentHeight;
-    const totalHeight = 28 + warningHeight;
-
-    // 🔥 CHECK PAGE OVERFLOW BEFORE RENDERING HEADING - Keeps heading and content together
-    startY = this.checkPageOverflow(doc, startY, totalHeight, pageHeight, bottomMargin);
-
-    // 📋 SECTION HEADER - Render AFTER page overflow check
-    const sectionHeading = sectionConfig?.content?.heading || 'PREVIOUS DISCIPLINARY ACTION (Still Valid on File)';
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(51, 51, 51);
-    doc.text(sectionHeading, margin, startY);
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-
-    // Gray box for section - DYNAMIC HEIGHT
-    doc.setDrawColor(200, 200, 200);
-    doc.setFillColor(248, 248, 248);
-    doc.setLineWidth(0.3);
-    doc.rect(margin, startY + 4, pageWidth - (margin * 2), warningHeight, 'FD');
-
-    let listY = startY + 12;
-
-    // Display warnings with text wrapping
-    if (warnings && warnings.length > 0) {
-      warnings.forEach((warning: any, index: number) => {
-        const warningDate = this.formatDate(warning.issuedDate || warning.issueDate || new Date());
-        const description = warning.description || warning.incidentDescription || 'No description available';
-        const level = this.getWarningLevelDisplay(warning.level || warning.warningLevel || 'verbal');
-
-        const line = `${index + 1}) Date: ${warningDate} | Incident: ${description} | Level: ${level}`;
-        const wrappedLines = doc.splitTextToSize(line, boxWidth);
-
-        wrappedLines.forEach((wrappedLine: string) => {
-          doc.text(wrappedLine, margin + 5, listY);
-          listY += lineHeight;
-        });
-        listY += 2; // Extra spacing between warnings
-      });
-    } else {
-      // No previous warnings
-      doc.text('No previous disciplinary action on file', margin + 5, listY);
-    }
-
-    return startY + warningHeight + 12;
+    return _addPreviousDisciplinaryActionSectionImpl(
+      doc, recommendation, startY, pageWidth, margin, pageHeight, bottomMargin, sectionConfig
+    );
   }
 
-  /**
-   * 🔒🔒🔒 VERSION 1.0.0 - Previous Disciplinary Action Section (FROZEN) 🔒🔒🔒
-   *
-   * ⚠️ CRITICAL WARNING: DO NOT MODIFY THIS METHOD ⚠️
-   *
-   * This is a FROZEN legacy method used by generateWarningPDF_v1_0_0().
-   * It must remain unchanged to ensure historical warnings regenerate identically.
-   *
-   * Format: Date | Offense (Category) | Level
-   * Example: "1) Date: 2025-01-15 | Offense: Tardiness | Level: Verbal Warning"
-   *
-   * DO NOT:
-   * - Change the format string on line 865
-   * - Modify the field names (Offense, Date, Level)
-   * - Change spacing, punctuation, or separators
-   * - "Fix" any perceived issues
-   *
-   * If changes needed: Create new version (v1.2.0) with new method
-   *
-   * Status: FROZEN - DO NOT MODIFY
-   */
+  /** 🔒 FROZEN v1.0.0 Previous Disciplinary Action (shows Offense=category) — delegate. */
   private static addPreviousDisciplinaryActionSection_v1_0_0(
     doc: any,
     recommendation: WarningPDFData['disciplineRecommendation'],
@@ -1780,52 +1682,9 @@ export class PDFGenerationService {
     pageHeight: number,
     bottomMargin: number
   ): number {
-    if (!recommendation) return startY;
-
-    // Calculate height dynamically based on number of warnings
-    const baseHeight = 28;
-    const warningCount = recommendation.activeWarnings?.length || 0;
-    const warningHeight = warningCount > 0 ? warningCount * 6 + 20 : 20;
-    const totalHeight = baseHeight + warningHeight;
-
-    startY = this.checkPageOverflow(doc, startY, totalHeight, pageHeight, bottomMargin);
-
-    // Section title - REDUCED FONT SIZE for A4
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(51, 51, 51);
-    doc.text('PREVIOUS DISCIPLINARY ACTION (Still Valid on File)', margin, startY);
-
-    // Gray box for section - INCREASED PADDING
-    doc.setDrawColor(200, 200, 200);
-    doc.setFillColor(248, 248, 248);
-    doc.setLineWidth(0.3);
-    doc.rect(margin, startY + 4, pageWidth - (margin * 2), warningHeight, 'FD');
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-
-    let listY = startY + 12;
-
-    // Display warnings in numbered format - INCREASED LINE SPACING
-    // 🔒 v1.0.0 FORMAT: Shows "Offense" (category) instead of incident description
-    if (recommendation.activeWarnings && recommendation.activeWarnings.length > 0) {
-      recommendation.activeWarnings.forEach((warning: any, index: number) => {
-        const warningDate = this.formatDate(warning.issuedDate || warning.issueDate || new Date());
-        const category = warning.category || warning.categoryName || 'General Misconduct';
-        const level = this.getWarningLevelDisplay(warning.level || warning.warningLevel || 'verbal');
-
-        const line = `${index + 1}) Date: ${warningDate} | Offense: ${category} | Level: ${level}`;
-        doc.text(line, margin + 5, listY);
-        listY += 6;
-      });
-    } else {
-      // No previous warnings
-      doc.text('No previous disciplinary action on file', margin + 5, listY);
-    }
-
-    return startY + warningHeight + 12;
+    return _addPreviousDisciplinaryActionSection_v1_0_0_Impl(
+      doc, recommendation, startY, pageWidth, margin, pageHeight, bottomMargin
+    );
   }
 
   /**
