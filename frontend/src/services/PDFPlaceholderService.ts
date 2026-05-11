@@ -6,6 +6,7 @@
 
 import type { WarningPDFData } from './PDFGenerationService';
 import { getLevelLabel } from './UniversalCategories';
+import Logger from '../utils/logger';
 
 /**
  * 🔄 PLACEHOLDER REPLACEMENT SERVICE
@@ -143,7 +144,7 @@ export class PDFPlaceholderService {
       return '';
 
     } catch (error) {
-      console.warn(`Failed to resolve placeholder: ${path}`, error);
+      Logger.warn(`Failed to resolve placeholder: ${path}`, error);
       return '';
     }
   }
@@ -187,7 +188,7 @@ export class PDFPlaceholderService {
 
       return `${day} ${month} ${year}`;
     } catch (error) {
-      console.warn('Failed to format date:', date, error);
+      Logger.warn('Failed to format date:', { date, error });
       return '';
     }
   }

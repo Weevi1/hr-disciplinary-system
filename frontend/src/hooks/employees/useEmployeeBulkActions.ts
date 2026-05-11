@@ -50,7 +50,7 @@ export const useEmployeeBulkActions = () => {
               await API.employees.delete(employeeId, organizationId);
               break;
               
-            case 'updateDepartment':
+            case 'updateDepartment': {
               if (!action.value) throw new Error('Department not specified');
               // Get employee, update department field, then save
               const employeeForDept = await API.employees.getById(employeeId, organizationId);
@@ -59,6 +59,7 @@ export const useEmployeeBulkActions = () => {
                 await API.employees.update(employeeId, organizationId, employeeForDept);
               }
               break;
+            }
               
               
             default:

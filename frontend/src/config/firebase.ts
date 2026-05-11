@@ -55,6 +55,7 @@ export { app };
 export const isDevelopment = import.meta.env.DEV;
 
 // Helper to use emulators in development (temporarily disabled to test us-east1 region)
+// eslint-disable-next-line no-constant-condition
 if (isDevelopment && false) { // Temporarily disabled to test us-east1 region
   Logger.debug('🔧 Development mode: Using Firebase Functions emulator to bypass CORS')
   

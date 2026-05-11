@@ -616,7 +616,7 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
 };
 
 export const MainLayout = ({ children, onNavigate, currentView }: MainLayoutProps) => {
-  const { user } = useAuth();
+  const { user, organization: authOrganization, categories: authCategories } = useAuth();
 
   // Super users and resellers don't have organizations, so we need to handle this case
   // 🔧 FIX: Support both 'super-user' and 'superuser' role ID formats
@@ -635,7 +635,6 @@ export const MainLayout = ({ children, onNavigate, currentView }: MainLayoutProp
   // For regular users with organizations, use OrganizationProvider + ThemeBrandingProvider
   // 🚀 WEEK 4 OPTIMIZATION PHASE 1: Pass prefetched organization AND categories from AuthContext
   // 🚀 WEEK 4 OPTIMIZATION PHASE 2: Combined Theme + Branding into single provider (reduces nesting 4→3)
-  const { organization: authOrganization, categories: authCategories } = useAuth();
 
   return (
     <OrganizationProvider

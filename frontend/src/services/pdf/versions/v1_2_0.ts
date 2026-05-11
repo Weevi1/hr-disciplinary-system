@@ -118,7 +118,7 @@ export async function generateWarningPDF_v1_2_0(data: WarningPDFData, customSett
     };
 
     // 🔍 DEBUG: Log what customSettings we received
-    console.log('🎨 PDF TEMPLATE DEBUG - customSettings received:', {
+    Logger.debug('🎨 PDF TEMPLATE DEBUG - customSettings received:', {
       hasCustomSettings: !!customSettings,
       customSettingsKeys: customSettings ? Object.keys(customSettings) : 'none',
       hasSections: !!customSettings?.sections,
@@ -134,7 +134,7 @@ export async function generateWarningPDF_v1_2_0(data: WarningPDFData, customSett
     } : defaultSettings;
 
     // 🔍 DEBUG: Log the final merged settings
-    console.log('🎨 PDF TEMPLATE DEBUG - final settings:', {
+    Logger.debug('🎨 PDF TEMPLATE DEBUG - final settings:', {
       usedCustomSettings: !!customSettings,
       finalSectionCount: settings.sections?.length || 0,
       finalSectionIds: settings.sections?.map((s: any) => s.id) || [],

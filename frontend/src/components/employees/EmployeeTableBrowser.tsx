@@ -154,7 +154,7 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
 
   // Filter and sort employees
   const filteredAndSortedEmployees = useMemo(() => {
-    let filtered = employees.filter(employee => {
+    const filtered = employees.filter(employee => {
       const searchFields = [
         employee.profile.firstName,
         employee.profile.lastName,
@@ -190,14 +190,15 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
           aValue = a.employment.position || '';
           bValue = b.employment.position || '';
           break;
-        case 'manager':
+        case 'manager': {
           // 🔧 UPDATED: Sort by first manager name
           const aManagers = getManagerNames(a.employment);
           const bManagers = getManagerNames(b.employment);
           aValue = aManagers[0] || '';
           bValue = bManagers[0] || '';
           break;
-        case 'startDate':
+        }
+        case 'startDate': {
           // Handle various date formats for sorting
           const getDateValue = (emp: Employee) => {
             const startDate = emp.employment?.startDate || emp.profile?.startDate;
@@ -225,6 +226,7 @@ export const EmployeeTableBrowser: React.FC<EmployeeTableBrowserProps> = ({
           aValue = getDateValue(a);
           bValue = getDateValue(b);
           break;
+        }
         case 'status':
           aValue = a.isActive ? 'Active' : 'Inactive';
           bValue = b.isActive ? 'Active' : 'Inactive';

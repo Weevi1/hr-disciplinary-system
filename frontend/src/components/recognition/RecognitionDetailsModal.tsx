@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { Recognition, RecognitionType } from '../../types/core';
 import { ThemedCard } from '../common/ThemedCard';
+import Logger from '../../utils/logger';
 
 interface RecognitionDetailsModalProps {
   recognition: Recognition | null;
@@ -138,7 +139,7 @@ export const RecognitionDetailsModal: React.FC<RecognitionDetailsModalProps> = (
       setGeneratingCertificate(true);
       await onGenerateCertificate(recognition.id);
     } catch (error) {
-      console.error('Failed to generate certificate:', error);
+      Logger.error('Failed to generate certificate:', error);
     } finally {
       setGeneratingCertificate(false);
     }

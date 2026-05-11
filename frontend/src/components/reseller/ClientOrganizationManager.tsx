@@ -119,9 +119,6 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
 
   // Update form data when client changes
   useEffect(() => {
-    console.log('📊 Client data received:', client);
-    console.log('📊 Client.industry:', client.industry);
-    console.log('📊 Client.sector:', (client as any).sector);
     setFormData({
       name: client.name || '',
       contactEmail: client.contactEmail || '',
@@ -323,7 +320,7 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
       // Clear the success message after 6 seconds
       setTimeout(() => setLogoStatus({ state: 'idle' }), 6000);
     } catch (error) {
-      console.error('Logo optimization failed, using original:', error);
+      Logger.error('Logo optimization failed, using original:', error);
       setLogoFile(file);
       const reader = new FileReader();
       reader.onload = (ev) => setLogoPreview(ev.target?.result as string);

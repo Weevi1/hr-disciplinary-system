@@ -14,6 +14,7 @@ import { db } from '../config/firebase';
 import { useAuth } from '../auth/AuthContext';
 import type { Warning } from '../services/WarningService';
 import type { Employee } from '../types/employee';
+import Logger from '../utils/logger';
 
 export interface WarningWithReview extends Warning {
   // Review metadata
@@ -177,7 +178,7 @@ export const useReviewFollowUps = (): UseReviewFollowUpsReturn => {
 
       setWarnings(warningsWithReviews);
     } catch (err) {
-      console.error('Error fetching review follow-ups:', err);
+      Logger.error('Error fetching review follow-ups:', err);
       setError('Failed to load review follow-ups');
     } finally {
       setLoading(false);
@@ -209,7 +210,7 @@ export const useReviewFollowUps = (): UseReviewFollowUpsReturn => {
       // Refresh warnings list
       await fetchWarningsWithReviews();
     } catch (err) {
-      console.error('Error updating review:', err);
+      Logger.error('Error updating review:', err);
       throw new Error('Failed to update review');
     }
   }, [organization?.id, fetchWarningsWithReviews]);

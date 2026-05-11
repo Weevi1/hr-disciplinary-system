@@ -366,7 +366,7 @@ export class SuperUserSessionService {
   /**
    * Throttle function utility
    */
-  private static throttle(func: Function, limit: number) {
+  private static throttle(func: (...args: unknown[]) => unknown, limit: number) {
     let inThrottle: boolean;
     return function(this: any, ...args: any[]) {
       if (!inThrottle) {

@@ -81,31 +81,34 @@ export const IncidentDetailsForm: React.FC<IncidentDetailsFormProps> = ({
   // Real-time validation
   const validateField = useCallback((field: keyof EnhancedWarningFormData, value: any): string | null => {
     switch (field) {
-      case 'incidentDate':
+      case 'incidentDate': {
         if (!value) return 'Incident date is required';
         const date = new Date(value);
         const today = new Date();
         if (date > today) return 'Incident date cannot be in the future';
         return null;
-      
-      case 'incidentTime':
+      }
+
+      case 'incidentTime': {
         if (!value) return 'Incident time is required';
         const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
         if (!timeRegex.test(value)) return 'Please enter time in HH:MM format';
         return null;
-      
+      }
+
       case 'incidentLocation':
         if (!value || value.trim().length < 3) return 'Please provide a specific location (minimum 3 characters)';
         return null;
-      
-      case 'incidentDescription':
+
+      case 'incidentDescription': {
         // Word-based validation (minimum 6 words, maximum 500 words)
-        const words = value.trim().split(/\s+/).filter(word => word.length > 0);
+        const words = value.trim().split(/\s+/).filter((word: string) => word.length > 0);
         const wordCount = words.length;
         if (wordCount === 0) return 'Description is required';
         if (wordCount < 6) return `Description must be at least 6 words (currently ${wordCount} word${wordCount === 1 ? '' : 's'})`;
         if (wordCount > 500) return `Description is too long (maximum 500 words, currently ${wordCount} words)`;
         return null;
+      }
       
       default:
         return null;

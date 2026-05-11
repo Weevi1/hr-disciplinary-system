@@ -139,7 +139,7 @@ export const getCurrentLocationWeather = async () => {
         const weatherData = await getWeatherByCoords(latitude, longitude);
         resolve(weatherData);
       },
-      async (error) => {
+      async (_error) => {
         Logger.debug('Location denied, using default city')
         // Fallback to Cape Town if location denied
         const weatherData = await getWeatherByCity('Cape Town');

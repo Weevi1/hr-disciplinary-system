@@ -364,10 +364,7 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
 
       Logger.success('✅ Appeal report downloaded');
     } catch (error) {
-      Logger.error('❌ Failed to generate appeal report:', error);
-      console.error('Full error details:', error);
-      console.error('Warning data:', warningData);
-      console.error('Organization:', organization);
+      Logger.error('❌ Failed to generate appeal report:', error, { warningData, organization } as any);
       alert(`Failed to generate appeal report: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }, [warningData, warning, organization]);

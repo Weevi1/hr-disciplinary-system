@@ -8,6 +8,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../config/firebase';
 import type { EvidenceItem } from '../../types/warning';
 import { optimizeImage, createOptimizedThumbnail, isOptimizableImage } from '../../utils/imageOptimizer';
+import Logger from '../../utils/logger';
 import {
   Upload,
   Camera,
@@ -199,7 +200,7 @@ export const EvidenceUploader: React.FC<EvidenceUploaderProps> = ({
     } catch (err) {
       setError('Failed to upload file. Please try again.');
       setUploadStatus(null);
-      console.error('Evidence upload error:', err);
+      Logger.error('Evidence upload error:', err);
     } finally {
       setIsUploading(false);
     }

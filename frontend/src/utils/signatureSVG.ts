@@ -5,6 +5,8 @@
 // ✅ Infinite resolution, perfect quality at any zoom level
 // ✅ Backward compatible with PNG signatures
 
+import Logger from './logger';
+
 interface SignatureStroke {
   points: { x: number; y: number }[];
   timestamp: number;
@@ -171,7 +173,7 @@ export function applyWitnessWatermarkToSVG(svgDataURL: string): string {
   const heightMatch = svgString.match(/height="(\d+)"/);
 
   if (!widthMatch || !heightMatch) {
-    console.error('Failed to parse SVG dimensions for watermark');
+    Logger.error('Failed to parse SVG dimensions for watermark');
     return svgDataURL;
   }
 

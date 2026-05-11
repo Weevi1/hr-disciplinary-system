@@ -56,7 +56,7 @@ export class ShardedOrganizationService {
     success: boolean
     error?: string
   }> {
-    let batch = writeBatch(db)
+    const batch = writeBatch(db)
     const organizationId = organizationData.id
     
     try {

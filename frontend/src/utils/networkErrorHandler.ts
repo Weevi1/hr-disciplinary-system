@@ -1,4 +1,4 @@
-import Logger from 'logger';
+import Logger from './logger';
 /**
  * Network Error Handler for Multi-Tenant HR System
  * 
@@ -272,12 +272,15 @@ export class NetworkErrorHandler {
       url: window.location.href
     };
     
-    // Console logging with context
-    const logLevel = error.severity === 'critical' ? 'error' : 
-                    error.severity === 'high' ? 'error' :
-                    error.severity === 'medium' ? 'warn' : 'info';
-                    
-    console[logLevel](`🚨 [${error.severity.toUpperCase()}] ${error.type} error:`, logData);
+    // Logger routing with context (sanitized in production)
+    const msg = `🚨 [${error.severity.toUpperCase()}] ${error.type} error:`;
+    if (error.severity === 'critical' || error.severity === 'high') {
+      Logger.error(msg, logData);
+    } else if (error.severity === 'medium') {
+      Logger.warn(msg, logData);
+    } else {
+      Logger.info(msg, logData);
+    }
     
     // In production, send to monitoring service (async, non-blocking)
     if (process.env.NODE_ENV === 'production') {

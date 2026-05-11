@@ -137,7 +137,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
         const depts = await DepartmentService.getDepartments(organization.id);
         setDepartmentCount(depts.length);
       } catch (error) {
-        console.error('Failed to fetch departments:', error);
+        Logger.error('Failed to fetch departments:', error);
         setDepartmentCount(0);
       }
     };
@@ -151,7 +151,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
         const skipped = orgDoc.data()?.setupSkipped || {};
         setSkippedSetupTasks(skipped);
       } catch (error) {
-        console.error('Failed to fetch skipped tasks:', error);
+        Logger.error('Failed to fetch skipped tasks:', error);
       }
     };
 
@@ -176,9 +176,9 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
 
       // Update local state immediately
       setSkippedSetupTasks(prev => ({ ...prev, [taskType]: true }));
-      console.log(`✅ Skipped ${taskType} setup task`);
+      Logger.success(`✅ Skipped ${taskType} setup task`);
     } catch (error) {
-      console.error('Failed to skip setup task:', error);
+      Logger.error('Failed to skip setup task:', error);
     }
   }, [organization?.id]);
 

@@ -155,22 +155,8 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
   className = ''
 }) => {
 
-  // Early return if no audio recording provided
-  if (!audioRecording) {
-    return (
-      <div className={`bg-gray-50 border border-gray-200 rounded-lg p-4 ${className}`}>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
-            <FileAudio className="w-5 h-5 text-gray-400" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">No audio recording available</p>
-            <p className="text-xs text-gray-500">Audio recording not found or not provided</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // NOTE: Hooks must run unconditionally — do NOT early-return before this block.
+  // The "no audio recording" UI is rendered AFTER all hooks have been declared (below).
 
   // ============================================
   // REFS & STATE
@@ -371,6 +357,23 @@ export const AudioPlaybackWidget: React.FC<AudioPlaybackWidgetProps> = ({
       setState(prev => ({ ...prev, isMuted: newMuted }));
     }
   }, [state.isMuted]);
+
+  // Early return AFTER hooks — rules-of-hooks compliant.
+  if (!audioRecording) {
+    return (
+      <div className={`bg-gray-50 border border-gray-200 rounded-lg p-4 ${className}`}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center">
+            <FileAudio className="w-5 h-5 text-gray-400" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-600">No audio recording available</p>
+            <p className="text-xs text-gray-500">Audio recording not found or not provided</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ============================================
   // UTILITY FUNCTIONS

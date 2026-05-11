@@ -266,7 +266,7 @@ class WizardLoggingService {
       return { isValid: true, errors: [], warnings: [], missingFields: [], undefinedFields: [] };
     }
 
-    let combinedResult: ValidationResult = {
+    const combinedResult: ValidationResult = {
       isValid: true,
       errors: [],
       warnings: [],
@@ -554,7 +554,11 @@ class WizardLoggingService {
     const style = this.styles[entry.level];
 
     if (entry.data) {
-      console.groupCollapsed(`${prefix} (${sessionId.slice(-6)})`, style);
+      // Development-only console grouping; Logger.debug is tree-shaken in production
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.groupCollapsed(`${prefix} (${sessionId.slice(-6)})`, style);
+      }
       Logger.debug('%cData:', this.styles.data, entry.data)
       if (entry.validation) {
         Logger.debug('%cValidation:', this.styles.validation, entry.validation)
@@ -562,7 +566,10 @@ class WizardLoggingService {
       if (entry.metadata) {
         Logger.debug('%cMetadata:', this.styles.debug, entry.metadata)
       }
-      console.groupEnd();
+      if (import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.groupEnd();
+      }
     } else {
       Logger.debug(`${prefix} (${sessionId.slice(-6)})`, style);
       if (entry.metadata) {

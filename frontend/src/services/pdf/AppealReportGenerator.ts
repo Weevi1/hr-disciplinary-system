@@ -303,8 +303,6 @@ export async function generateAppealReportPDF(data: AppealReportData): Promise<B
     return doc.output('blob');
   } catch (error) {
     Logger.error('❌ Failed to generate appeal report:', error);
-    console.error('Appeal report generation error details:', error);
-    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
     throw error instanceof Error ? error : new Error('Failed to generate appeal report PDF');
   }
 }

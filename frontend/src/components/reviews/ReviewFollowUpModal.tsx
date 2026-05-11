@@ -20,6 +20,7 @@ import { ThemedButton } from '../common/ThemedButton';
 import type { WarningWithReview } from '../../hooks/useReviewFollowUps';
 import { useAuth } from '../../auth/AuthContext';
 import { getLevelLabel } from '../../services/UniversalCategories';
+import Logger from '../../utils/logger';
 
 interface ReviewFollowUpModalProps {
   isOpen: boolean;
@@ -65,7 +66,7 @@ export const ReviewFollowUpModal: React.FC<ReviewFollowUpModalProps> = ({
 
       onClose();
     } catch (err) {
-      console.error('Error completing review:', err);
+      Logger.error('Error completing review:', err);
       setError('Failed to save review. Please try again.');
     } finally {
       setSaving(false);

@@ -166,7 +166,7 @@ export class FirebaseService {
       Logger.debug('Getting collection', { collection: collectionName });
       const collectionRef = collection(db, collectionName);
       
-      let q = queryConstraints 
+      const q = queryConstraints
         ? query(collectionRef, ...queryConstraints)
         : collectionRef;
       

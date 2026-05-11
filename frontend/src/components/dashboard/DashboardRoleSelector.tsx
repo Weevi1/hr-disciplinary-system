@@ -64,12 +64,8 @@ export const DashboardRoleSelector = memo<DashboardRoleSelectorProps>(({
     });
   }
 
-  // Don't render if user has less than 2 roles
-  if (availableRoles.length < 2) {
-    return null;
-  }
-
   // Close dropdown when clicking outside
+  // Hooks must run unconditionally — see rules-of-hooks
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -88,6 +84,11 @@ export const DashboardRoleSelector = memo<DashboardRoleSelectorProps>(({
     localStorage.setItem(STORAGE_KEY, roleId);
     setIsOpen(false);
   }, [onRoleChange]);
+
+  // Don't render if user has less than 2 roles
+  if (availableRoles.length < 2) {
+    return null;
+  }
 
   const selectedRoleData = availableRoles.find(r => r.id === selectedRole);
   const SelectedIcon = selectedRoleData?.icon || Briefcase;
