@@ -19,3 +19,17 @@ To re-run: revert the move, restore the DataService methods it depends on
 from git history (`getAllOrganizations`, `loadEmployees`, `getWarningCategories`,
 `getWarningsForOrganization`), and execute from a dev console with admin
 credentials.
+
+## migrateUserOrgIndex.ts
+
+One-time migration that backfilled the `userOrgIndex` collection with O(1)
+user→organization lookup entries for users that pre-dated the index. Ran
+successfully in 2025; new users have written to the index ever since via
+`UserOrgIndexService`.
+
+Archived 2026-05-11 as part of Phase 6 — contributed 22 tsc errors against
+stale `User`/`Organization` shapes (the canonical types moved on without it).
+Kept in case a future re-shard or backfill is needed.
+
+To re-run: revert the move, refresh imports against current types, and
+execute via a dev console (browser or Node) with admin credentials.
