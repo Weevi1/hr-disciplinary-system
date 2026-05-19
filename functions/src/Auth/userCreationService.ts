@@ -219,6 +219,22 @@ if (isReseller && request.data.role !== 'executive-management') {
       throw new Error('Failed to create user profile. Auth user rolled back.');
     }
 
+    // 🔖 UserOrgIndex entry — fast org lookup. Best-effort, don't roll back on failure
+    // (the index can be backfilled; the user creation is what matters).
+    // Mirrors the shape used in createOrganizationUser.ts:230-237.
+    try {
+      await admin.firestore().doc(`userOrgIndex/${userRecord.uid}`).set({
+        organizationId,
+        role,
+        email,
+        dataStructure: 'flat',
+        createdAt: new Date().toISOString()
+      });
+      console.log(`✅ UserOrgIndex entry created: ${userRecord.uid} → ${organizationId}`);
+    } catch (indexError) {
+      console.error(`⚠️ Failed to create UserOrgIndex entry for ${userRecord.uid}:`, indexError);
+    }
+
     // Development mode - log credentials for testing
     if (sendWelcomeEmail) {
       console.log(`📧 [DEVELOPMENT] Welcome email would be sent to: ${email}`);
@@ -394,6 +410,19 @@ export const createOrganizationUsers = onCall({
         } catch (claimsError) {
           console.error(`⚠️ Failed to set claims for ${userRecord.uid}:`, claimsError);
           // Don't fail entire operation - can be fixed with refreshUserClaims
+        }
+
+        // 🔖 UserOrgIndex entry — fast org lookup. Best-effort, don't fail user creation.
+        try {
+          await admin.firestore().doc(`userOrgIndex/${userRecord.uid}`).set({
+            organizationId,
+            role: userToCreate.role,
+            email: userToCreate.email,
+            dataStructure: 'flat',
+            createdAt: new Date().toISOString()
+          });
+        } catch (indexError) {
+          console.error(`⚠️ Failed to create UserOrgIndex for ${userRecord.uid}:`, indexError);
         }
 
         // Log audit event
@@ -596,6 +625,22 @@ export const createResellerUser = onCall({
     } catch (claimsError) {
       console.error(`⚠️ Failed to set custom claims for ${userRecord.uid}:`, claimsError);
       console.log(`Reseller ${userRecord.uid} created but requires manual claims refresh`);
+    }
+
+    // 🔖 UserOrgIndex entry — resellers have organizationId='system' sentinel
+    // (per UserOrgIndexService.ts:234, AuthContext.tsx:192/260). Best-effort.
+    try {
+      await admin.firestore().doc(`userOrgIndex/${userRecord.uid}`).set({
+        organizationId: 'system',
+        role: 'reseller',
+        email,
+        resellerId,
+        dataStructure: 'flat',
+        createdAt: new Date().toISOString()
+      });
+      console.log(`✅ UserOrgIndex entry created for reseller: ${userRecord.uid}`);
+    } catch (indexError) {
+      console.error(`⚠️ Failed to create UserOrgIndex for reseller ${userRecord.uid}:`, indexError);
     }
 
     // Log audit event

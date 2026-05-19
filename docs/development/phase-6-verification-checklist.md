@@ -6,7 +6,7 @@ Items 1, 2, and 5 below are **done** (automated/static checks I ran). Items 3 an
 
 ---
 
-## ✅ 1. Orphan / inconsistency audit — DETECTED (extended)
+## ✅ 1. Orphan / inconsistency audit — DETECTED + CLEANED
 
 Script: `scripts/dev/find-orphan-users.js` (read-only). Initial scan caught only 6 issues (Firestore-only docs); extended scan covers six categories and surfaced **18 real issues** vs the original plan's "4 orphan docs" estimate. The original count was understated.
 
@@ -76,7 +76,35 @@ Looks like test users deleted from `robertson-spur` (5) and `insitu-demo` (2) �
 3. **The 7 pure index orphans** in `robertson-spur`/`insitu-demo` — purely index-only cleanup, no other data to touch.
 4. **Real bug surfaced**: user deletion flow doesn't call `UserOrgIndexService.removeMapping()`. Worth tracking down and fixing so this doesn't keep accumulating.
 
-**Destructive cleanup needs your authorisation — flag when ready and I'll write the cleanup script + we'll review entries before deletion.**
+### Cleanup status (2026-05-19)
+
+**Executed via `scripts/dev/cleanup-orphan-users.js --apply`. All 18 records deleted; re-audit confirms post-state below.**
+
+```
+A=0  B=0  C=0  D=0  F=0    (down from A=6, C=12)
+E=1                          (known residual — see below)
+```
+
+The single E-residual is `resellers/reseller_1769505345579` ("Test Reseller", `test@reseller.com`, `clientIds=[]`) — became orphan once the linked `users/ma2V…` doc was deleted. Per the targeted-cleanup scope, this was left intentionally; clean it up with a one-liner if/when desired:
+
+```bash
+GOOGLE_APPLICATION_CREDENTIALS=./hr-disciplinary-system-firebase-adminsdk-fbsvc-e1bb9c1772.json \
+  NODE_PATH=./functions/node_modules \
+  node -e "require('firebase-admin').initializeApp({projectId:'hr-disciplinary-system'}); require('firebase-admin').firestore().doc('resellers/reseller_1769505345579').delete().then(() => process.exit(0))"
+```
+
+### Prevention — drift sources patched
+
+To stop the same drift accumulating again, the following creation/deletion paths in `functions/src/` were patched to write/delete `userOrgIndex/{uid}` consistently:
+
+- **`createOrganizationAdmin`** — writes index entry after profile + claims
+- **`createOrganizationUsers`** (bulk) — writes index entry per user in the loop
+- **`createResellerUser`** — writes index entry with `organizationId: 'system'` sentinel
+- **`createDemoProspectLogin`** — writes index entry as part of the parallel provisioning Promise.all
+- **`deleteProspectLogins`** (called by `resetDemoOrganization` and `deleteDemoOrganization`) — deletes index entry per uid
+- **`deleteDemoOrganization`** — additionally calls new `wipeUserOrgIndexForOrg(orgId)` helper to catch any non-prospect users in the org
+
+Each write is best-effort (own try/catch); failure logs but doesn't roll back user creation. The next deploy of these functions activates the protection.
 
 ---
 

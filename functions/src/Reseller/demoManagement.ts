@@ -300,6 +300,27 @@ async function wipeSubcollection(orgId: string, collectionName: string): Promise
 }
 
 /**
+ * Delete every userOrgIndex entry mapped to the given org.
+ * Used during demo-org teardown so deleted users don't leave routing stains.
+ * (Phase 6 — fixes drift category C found by find-orphan-users.js.)
+ */
+async function wipeUserOrgIndexForOrg(orgId: string): Promise<number> {
+  const db = admin.firestore();
+  const snap = await db
+    .collection('userOrgIndex')
+    .where('organizationId', '==', orgId)
+    .get();
+  if (snap.empty) return 0;
+
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = db.batch();
+    snap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+    await batch.commit();
+  }
+  return snap.size;
+}
+
+/**
  * Delete every response token tied to the demo org.
  */
 async function wipeResponseTokens(orgId: string): Promise<number> {
@@ -356,6 +377,13 @@ async function deleteProspectLogins(orgId: string, uids: string[]): Promise<void
         await db.doc(`organizations/${orgId}/users/${uid}`).delete();
       } catch {
         // org-scoped user doc may or may not exist
+      }
+      // Clean up userOrgIndex entry so deleted prospects don't leave routing stains.
+      // (Phase 6 — fixes the drift category C found by find-orphan-users.js)
+      try {
+        await db.doc(`userOrgIndex/${uid}`).delete();
+      } catch {
+        // index entry may or may not exist
       }
     })
   );
@@ -552,7 +580,16 @@ export const createDemoProspectLogin = onCall(
           org: orgId,
           r: 'executive-management',
           v: claimsVersion
-        })
+        }),
+        // UserOrgIndex entry — fast org lookup. Errors here don't fail the create.
+        db.doc(`userOrgIndex/${userRecord.uid}`).set({
+          organizationId: orgId,
+          role: 'executive-management',
+          email: profile.email,
+          dataStructure: 'sharded',
+          isDemoProspect: true,
+          createdAt: new Date().toISOString()
+        }).catch(err => console.error(`⚠️ Failed to create UserOrgIndex for prospect ${userRecord.uid}:`, err))
       ]);
     } catch (err) {
       // Rollback on failure
@@ -688,7 +725,10 @@ export const deleteDemoOrganization = onCall(
 
     console.log(`🗑️  [DEMO] Deleting demo org ${orgId}`);
 
-    // Wipe all subcollections (parallel where safe)
+    // Wipe all subcollections (parallel where safe) + clean userOrgIndex for any
+    // users mapped to this org (defensive — deleteProspectLogins below also does
+    // this per-prospect, but this query catches any non-prospect users that
+    // may have been added to the org and would otherwise leave userOrgIndex stains).
     await Promise.all([
       wipeSubcollection(orgId, 'warnings'),
       wipeSubcollection(orgId, 'employees'),
@@ -698,7 +738,8 @@ export const deleteDemoOrganization = onCall(
       wipeSubcollection(orgId, 'users'),
       wipeResponseTokens(orgId),
       deleteStoragePrefix(`warnings/${orgId}/`),
-      deleteStoragePrefix(`temp-downloads/${orgId}/`)
+      deleteStoragePrefix(`temp-downloads/${orgId}/`),
+      wipeUserOrgIndexForOrg(orgId)
     ]);
     await wipeSubcollection(orgId, 'departments').catch(() => 0);
 
