@@ -1,6 +1,6 @@
 // functions/src/timeService.ts
 // Server time service for fraud-proof timestamp validation
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 
 /**
@@ -9,9 +9,9 @@ import * as admin from 'firebase-admin';
  *
  * @returns Current server time as ISO string and Unix timestamp
  */
-export const getServerTime = functions
-  .region('us-central1')
-  .https.onCall(async (data, context) => {
+export const getServerTime = onCall(
+  { region: 'us-central1', cors: true, invoker: 'public' },
+  async (_request: CallableRequest) => {
     try {
       const now = admin.firestore.Timestamp.now();
 
@@ -25,12 +25,19 @@ export const getServerTime = functions
       };
     } catch (error) {
       console.error('Error getting server time:', error);
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'internal',
         'Failed to get server time'
       );
     }
-  });
+  }
+);
+
+interface ActiveWarningsRequest {
+  employeeId: string;
+  organizationId: string;
+  categoryId?: string;
+}
 
 /**
  * Get active warnings for employee using server-side time validation
@@ -41,14 +48,14 @@ export const getServerTime = functions
  * @param data.categoryId - Optional: filter by category
  * @returns Active warnings that haven't expired (based on server time)
  */
-export const getActiveWarningsServerSide = functions
-  .region('us-central1')
-  .https.onCall(async (data, context) => {
+export const getActiveWarningsServerSide = onCall(
+  { region: 'us-central1', cors: true, invoker: 'public' },
+  async (request: CallableRequest<ActiveWarningsRequest>) => {
     try {
-      const { employeeId, organizationId, categoryId } = data;
+      const { employeeId, organizationId, categoryId } = request.data || ({} as ActiveWarningsRequest);
 
       if (!employeeId || !organizationId) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'invalid-argument',
           'Employee ID and Organization ID are required'
         );
@@ -102,9 +109,11 @@ export const getActiveWarningsServerSide = functions
       };
     } catch (error) {
       console.error('Error getting active warnings:', error);
-      throw new functions.https.HttpsError(
+      if (error instanceof HttpsError) throw error;
+      throw new HttpsError(
         'internal',
         'Failed to get active warnings'
       );
     }
-  });
+  }
+);

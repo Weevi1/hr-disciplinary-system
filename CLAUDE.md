@@ -57,7 +57,8 @@ firebase projects:list
 ## Architecture Summary
 
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS
-- **Backend**: Firebase Cloud Functions + Firestore + Storage
+- **Backend**: Firebase Cloud Functions (Node.js 22, 2nd Gen) + Firestore + Storage
+- **SDK versions**: `firebase-admin` ^13.x, `firebase-functions` ^7.x (all functions on v2 API)
 - **Firebase Regions**:
   - **Primary**: `us-central1` (most functions, main server)
   - **Secondary**: `us-east1` (super user functions only - new server)
@@ -362,7 +363,13 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 **For complete change history, see `RECENT_UPDATES.md` (Sessions 20-52) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Pre-Launch Cleanup, 2026-05-11)
+### Most Recent (Node 22 + firebase-functions v7 upgrade, 2026-05-19)
+- **✅ Cloud Functions runtime bumped Node 20 → 22** ahead of the 2026-10-30 decommission deadline. All 47 functions redeployed on `nodejs22` / 2nd Gen.
+- **✅ SDK bump**: `firebase-functions` 4.9.0 → 7.2.5; `firebase-admin` 11.x → 13.10.0. All deploy warnings about deprecated/outdated SDKs are gone.
+- **✅ Full v1 → v2 migration of 3 residual files**: `timeService.ts`, `audioCleanup.ts`, `temporaryDownload.ts`. Removed manual CORS middleware + manual `CallableContext` shimming inside `onRequest` handlers.
+- **Migration gotcha**: `firebase functions:delete` required for the 12 functions previously deployed as 1st gen — `firebase deploy` refuses to upgrade gen in-place. After delete+recreate, public IAM had to be set explicitly via `gcloud run services add-iam-policy-binding ... --member=allUsers --role=roles/run.invoker`. Recorded in `lessons.md`.
+
+### Previous (Pre-Launch Cleanup, 2026-05-11)
 Phase 2 (architectural debt), Phase 4 (ESLint + console scrub), Phase 5 (docs hygiene) shipped over Sessions 68–73. tsc 903 → 647 (-28%), ~10,000 LOC removed/relocated. `DataService` decomposed into `ShardedDataService` + `AdminDataService`; `EmployeeService`, `DataServiceV2`, `NestedDataService`, `CategoryService` deleted; types unified to `types/core.ts`; 7 oversized components decomposed; PDF generator 4,135→958 LOC with byte-identical v1.0.0/v1.1.0 preservation; `Logger` now sanitises all production logging; 12 real react-hooks/rules-of-hooks bugs fixed; `npm run lint` clean. Full detail in `RECENT_UPDATES.md`.
 
 ### Previous (Session 67 - 2026-04-24)
@@ -386,7 +393,7 @@ See `RECENT_UPDATES.md` for detailed session history including Sessions 57-66.
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ org scalability, progressive enhancement for 2012-2025 devices, **unified design system**, **DashboardShell** across all dashboards, **WCAG AA compliance**, **versioned PDF generation**, **per-org PDF templates**, **SVG signatures**, **10-phase unified warning wizard**, **link-based employee response/appeal system** with token auth and PDF viewing, **HR email notifications via SendGrid**, **evidence upload on appeals with client-side image optimization**, **per-organization multi-dashboard theming** (Manager, HR, Executive views with per-view metric card colors), **optimized warning data loading with staleness detection**, **session guard with auto-logout + forced app updates**, and **CCMA-ready PDFs with section labels, continuation headers, electronic signature notation, and page initials**.*
 
-*Last Updated: 2026-05-11 - Phase 2–5 pre-launch cleanup: architectural debt, ESLint tightening, console-log scrub, documentation hygiene.*
+*Last Updated: 2026-05-19 - Cloud Functions Node 22 + firebase-functions v7 + firebase-admin v13 upgrade; 3 residual v1 files fully migrated to v2.*
 
 ---
 

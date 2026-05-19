@@ -1,5 +1,10 @@
 "use strict";
-// REPLACE ENTIRE FILE: functions/src/audioCleanup.ts
+// functions/src/audioCleanup.ts
+//
+// Audio (and temporary-PDF) cleanup. All callable surfaces are v2 onRequest
+// with native CORS handling — the frontend (AudioCleanupService.ts) hits these
+// as raw `fetch` POSTs that include a Bearer-token header, so they need to be
+// HTTP endpoints rather than the callable wire protocol.
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -35,51 +40,92 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.previewAudioCleanup = exports.getGlobalAudioStats = exports.getCleanupStats = exports.manualAudioCleanup = exports.cleanupExpiredAudio = void 0;
-const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
-const cors = __importStar(require("cors"));
+const https_1 = require("firebase-functions/v2/https");
+const scheduler_1 = require("firebase-functions/v2/scheduler");
 // Initialize Firebase Admin if not already done
 if (!admin.apps.length) {
     admin.initializeApp();
 }
 const db = admin.firestore();
 const storage = admin.storage();
-// 🎯 CORS CONFIGURATION - MOVE THIS TO TOP LEVEL
-const corsHandler = cors.default({
-    origin: [
-        'https://hr-disciplinary-system.web.app',
-        'https://hr-disciplinary-system.firebaseapp.com',
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'http://localhost:5173'
-    ],
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
-});
+// CORS allow-list — v2 onRequest handles the preflight + headers natively.
+const CORS_ORIGINS = [
+    'https://hr-disciplinary-system.web.app',
+    'https://hr-disciplinary-system.firebaseapp.com',
+    'https://file.fifo.systems',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:5173',
+];
 /**
- * Verify user has super-user privileges
+ * Verify Bearer token on the request and return the authenticated uid.
+ * Throws on missing / invalid token.
  */
-async function verifySuperUser(context) {
-    var _a;
-    if (!context.auth) {
-        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated to access audio cleanup functions');
+async function verifyAuthAndGetUid(req) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        throw new Error('UNAUTHENTICATED:Missing or invalid authentication token');
     }
-    const userDoc = await db.collection('users').doc(context.auth.uid).get();
+    const idToken = authHeader.split('Bearer ')[1];
+    try {
+        const decoded = await admin.auth().verifyIdToken(idToken);
+        return decoded.uid;
+    }
+    catch (_a) {
+        throw new Error('UNAUTHENTICATED:Invalid authentication token');
+    }
+}
+/**
+ * Verify the caller is a super-user (Firestore role check).
+ */
+async function verifySuperUser(uid) {
+    var _a;
+    const userDoc = await db.collection('users').doc(uid).get();
     if (!userDoc.exists) {
-        throw new functions.https.HttpsError('permission-denied', 'User record not found');
+        throw new Error('PERMISSION_DENIED:User record not found');
     }
     const userData = userDoc.data();
     const userRole = ((_a = userData === null || userData === void 0 ? void 0 : userData.role) === null || _a === void 0 ? void 0 : _a.id) || (userData === null || userData === void 0 ? void 0 : userData.role);
     if (userRole !== 'super-user') {
-        throw new functions.https.HttpsError('permission-denied', `Audio cleanup is restricted to super-users only. Current role: ${userRole}`);
+        throw new Error(`PERMISSION_DENIED:Audio cleanup is restricted to super-users only. Current role: ${userRole}`);
     }
-    console.log(`✅ Super-user access verified for ${context.auth.uid}`);
+    console.log(`✅ Super-user access verified for ${uid}`);
+}
+/**
+ * Run the authenticated super-user guard and convert thrown errors into
+ * the appropriate HTTP response. Returns the uid on success, or undefined
+ * if the response has already been sent (auth failed).
+ */
+async function requireSuperUser(req, res) {
+    try {
+        const uid = await verifyAuthAndGetUid(req);
+        await verifySuperUser(uid);
+        return uid;
+    }
+    catch (error) {
+        const message = String((error === null || error === void 0 ? void 0 : error.message) || error);
+        if (message.startsWith('UNAUTHENTICATED:')) {
+            res.status(401).json({
+                error: { status: 'UNAUTHENTICATED', message: message.replace('UNAUTHENTICATED:', '') }
+            });
+            return undefined;
+        }
+        if (message.startsWith('PERMISSION_DENIED:')) {
+            res.status(403).json({
+                error: { status: 'PERMISSION_DENIED', message: message.replace('PERMISSION_DENIED:', '') }
+            });
+            return undefined;
+        }
+        res.status(500).json({ error: { status: 'INTERNAL', message } });
+        return undefined;
+    }
 }
 /**
  * Core cleanup logic - works across ALL organizations
  */
 async function performGlobalAudioCleanup(triggerMethod, triggeredBy) {
+    var _a;
     const startTime = Date.now();
     console.log(`🧹 Starting ${triggerMethod} audio cleanup at:`, new Date().toISOString());
     const result = {
@@ -99,6 +145,10 @@ async function performGlobalAudioCleanup(triggerMethod, triggeredBy) {
         for (const orgDoc of orgsSnapshot.docs) {
             const organizationId = orgDoc.id;
             const organizationName = orgDoc.data().name || 'Unknown';
+            // Phase 6: skip demo orgs — they're transient and have fake audio
+            if (((_a = orgDoc.data()) === null || _a === void 0 ? void 0 : _a.isDemo) === true) {
+                continue;
+            }
             result.organizationsProcessed.push(organizationId);
             console.log(`🏢 Processing organization: ${organizationName} (${organizationId})`);
             try {
@@ -293,7 +343,7 @@ async function logGlobalCleanupAudit(result) {
             version: '1.0',
             scope: 'global',
             systemTriggered: result.triggerMethod === 'scheduled',
-            superUserTriggered: result.triggerMethod === 'manual' && result.triggeredBy,
+            superUserTriggered: result.triggerMethod === 'manual' && !!result.triggeredBy,
             triggeredBy: result.triggeredBy || 'system'
         });
         console.log('📋 Global cleanup audit logged successfully');
@@ -308,10 +358,7 @@ async function logGlobalCleanupAudit(result) {
 /**
  * Daily scheduled function - runs at 2 AM UTC (now includes PDF cleanup!)
  */
-exports.cleanupExpiredAudio = functions.pubsub
-    .schedule('0 2 * * *')
-    .timeZone('UTC')
-    .onRun(async (context) => {
+exports.cleanupExpiredAudio = (0, scheduler_1.onSchedule)({ schedule: '0 2 * * *', timeZone: 'UTC', region: 'us-central1' }, async (_event) => {
     console.log('🧹 Starting scheduled cleanup (audio + PDFs)...');
     // Clean up audio files
     const audioResult = await performGlobalAudioCleanup('scheduled');
@@ -321,272 +368,141 @@ exports.cleanupExpiredAudio = functions.pubsub
         audio: audioResult,
         pdfs: pdfResult
     });
-    return {
-        audio: audioResult,
-        pdfs: pdfResult,
-        completedAt: new Date().toISOString()
-    };
 });
 /**
- * Manual cleanup function - super user only (WITH CORS)
+ * Manual cleanup function - super user only
  */
-exports.manualAudioCleanup = functions.https.onRequest(async (req, res) => {
-    return corsHandler(req, res, async () => {
-        try {
-            // Auth verification
-            const context = {
-                auth: undefined,
-                app: undefined,
-                instanceIdToken: undefined,
-                rawRequest: req
-            };
-            const authHeader = req.headers.authorization;
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                return res.status(401).json({
-                    error: {
-                        status: 'UNAUTHENTICATED',
-                        message: 'Missing or invalid authentication token'
-                    }
-                });
-            }
-            const idToken = authHeader.split('Bearer ')[1];
-            try {
-                const decodedToken = await admin.auth().verifyIdToken(idToken);
-                context.auth = {
-                    uid: decodedToken.uid,
-                    token: decodedToken
-                };
-            }
-            catch (error) {
-                return res.status(401).json({
-                    error: {
-                        status: 'UNAUTHENTICATED',
-                        message: 'Invalid authentication token'
-                    }
-                });
-            }
-            await verifySuperUser(context);
-            console.log('🔧 Manual audio cleanup triggered by super-user:', context.auth.uid);
-            const result = await performGlobalAudioCleanup('manual', context.auth.uid);
-            const response = {
+exports.manualAudioCleanup = (0, https_1.onRequest)({ region: 'us-central1', cors: CORS_ORIGINS, invoker: 'public' }, async (req, res) => {
+    const uid = await requireSuperUser(req, res);
+    if (!uid)
+        return;
+    try {
+        console.log('🔧 Manual audio cleanup triggered by super-user:', uid);
+        const result = await performGlobalAudioCleanup('manual', uid);
+        res.status(200).json({
+            data: {
                 success: true,
-                result: result,
-                triggeredBy: context.auth.uid,
+                result,
+                triggeredBy: uid,
                 triggeredAt: new Date().toISOString()
-            };
-            res.set({
-                'Access-Control-Allow-Origin': req.get('Origin') || '*',
-                'Access-Control-Allow-Credentials': 'true'
-            });
-            return res.status(200).json({ data: response });
-        }
-        catch (error) {
-            console.error('❌ Manual cleanup failed:', error);
-            res.set({
-                'Access-Control-Allow-Origin': req.get('Origin') || '*',
-                'Access-Control-Allow-Credentials': 'true'
-            });
-            return res.status(500).json({
-                error: {
-                    status: 'INTERNAL',
-                    message: `Cleanup failed: ${error.message}`
-                }
-            });
-        }
-    });
+            }
+        });
+    }
+    catch (error) {
+        console.error('❌ Manual cleanup failed:', error);
+        res.status(500).json({
+            error: { status: 'INTERNAL', message: `Cleanup failed: ${error.message}` }
+        });
+    }
 });
 /**
- * Get cleanup statistics - super user only (WITH CORS)
+ * Get cleanup statistics - super user only
  */
-exports.getCleanupStats = functions.https.onRequest(async (req, res) => {
-    return corsHandler(req, res, async () => {
-        try {
-            // Create context from request
-            const context = {
-                auth: undefined,
-                app: undefined,
-                instanceIdToken: undefined,
-                rawRequest: req
+exports.getCleanupStats = (0, https_1.onRequest)({ region: 'us-central1', cors: CORS_ORIGINS, invoker: 'public' }, async (req, res) => {
+    const uid = await requireSuperUser(req, res);
+    if (!uid)
+        return;
+    try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const auditsSnapshot = await db
+            .collection('audioCleanupAudits')
+            .where('timestamp', '>=', thirtyDaysAgo)
+            .orderBy('timestamp', 'desc')
+            .limit(30)
+            .get();
+        const audits = auditsSnapshot.docs.map(doc => {
+            var _a, _b;
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                timestamp: ((_b = (_a = data.timestamp) === null || _a === void 0 ? void 0 : _a.toDate) === null || _b === void 0 ? void 0 : _b.call(_a)) || data.timestamp
             };
-            // Verify authentication manually
-            const authHeader = req.headers.authorization;
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                return res.status(401).json({
-                    error: {
-                        status: 'UNAUTHENTICATED',
-                        message: 'Missing or invalid authentication token'
-                    }
-                });
-            }
-            const idToken = authHeader.split('Bearer ')[1];
-            try {
-                const decodedToken = await admin.auth().verifyIdToken(idToken);
-                context.auth = {
-                    uid: decodedToken.uid,
-                    token: decodedToken
-                };
-            }
-            catch (error) {
-                return res.status(401).json({
-                    error: {
-                        status: 'UNAUTHENTICATED',
-                        message: 'Invalid authentication token'
-                    }
-                });
-            }
-            // Verify super user
-            await verifySuperUser(context);
-            // Your existing logic
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            const auditsSnapshot = await db
-                .collection('audioCleanupAudits')
-                .where('timestamp', '>=', thirtyDaysAgo)
-                .orderBy('timestamp', 'desc')
-                .limit(30)
-                .get();
-            const audits = auditsSnapshot.docs.map(doc => {
-                var _a, _b;
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    ...data,
-                    timestamp: ((_b = (_a = data.timestamp) === null || _a === void 0 ? void 0 : _a.toDate) === null || _b === void 0 ? void 0 : _b.call(_a)) || data.timestamp
-                };
-            });
-            const result = {
+        });
+        res.status(200).json({
+            data: {
                 success: true,
                 recentAudits: audits,
                 totalAudits: audits.length,
                 lastCleanup: audits.length > 0 ? audits[0].timestamp : null
-            };
-            // Set CORS headers and return
-            res.set({
-                'Access-Control-Allow-Origin': req.get('Origin') || '*',
-                'Access-Control-Allow-Credentials': 'true'
-            });
-            return res.status(200).json({ data: result });
-        }
-        catch (error) {
-            console.error('❌ Error fetching cleanup stats:', error);
-            res.set({
-                'Access-Control-Allow-Origin': req.get('Origin') || '*',
-                'Access-Control-Allow-Credentials': 'true'
-            });
-            if (error.code === 'permission-denied') {
-                return res.status(403).json({
-                    error: {
-                        status: 'PERMISSION_DENIED',
-                        message: error.message
-                    }
-                });
             }
-            return res.status(500).json({
-                error: {
-                    status: 'INTERNAL',
-                    message: `Failed to fetch stats: ${error.message}`
-                }
-            });
-        }
-    });
+        });
+    }
+    catch (error) {
+        console.error('❌ Error fetching cleanup stats:', error);
+        res.status(500).json({
+            error: { status: 'INTERNAL', message: `Failed to fetch stats: ${error.message}` }
+        });
+    }
 });
 /**
- * Get global audio statistics - super user only (WITH CORS)
+ * Get global audio statistics - super user only
  */
-exports.getGlobalAudioStats = functions.https.onRequest(async (req, res) => {
-    return corsHandler(req, res, async () => {
-        try {
-            // Similar auth verification as above
-            const context = {
-                auth: undefined,
-                app: undefined,
-                instanceIdToken: undefined,
-                rawRequest: req
-            };
-            const authHeader = req.headers.authorization;
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                return res.status(401).json({
-                    error: {
-                        status: 'UNAUTHENTICATED',
-                        message: 'Missing or invalid authentication token'
+exports.getGlobalAudioStats = (0, https_1.onRequest)({ region: 'us-central1', cors: CORS_ORIGINS, invoker: 'public' }, async (req, res) => {
+    const uid = await requireSuperUser(req, res);
+    if (!uid)
+        return;
+    try {
+        console.log('📊 Fetching global audio statistics...');
+        let totalAudioRecordings = 0;
+        let totalExpiredRecordings = 0;
+        let totalStorageUsed = 0;
+        const organizationStats = [];
+        const orgsSnapshot = await db.collection('organizations').get();
+        console.log(`🏢 Found ${orgsSnapshot.size} organizations to analyze for audio`);
+        for (const orgDoc of orgsSnapshot.docs) {
+            const organizationId = orgDoc.id;
+            const organizationName = orgDoc.data().name || 'Unknown';
+            try {
+                const warningsWithAudioQuery = db
+                    .collection(`organizations/${organizationId}/warnings`)
+                    .where('audioRecording', '!=', null);
+                const warningsSnapshot = await warningsWithAudioQuery.get();
+                console.log(`📄 Organization ${organizationName}: Found ${warningsSnapshot.size} warnings with audio`);
+                let orgAudioCount = 0;
+                let orgExpiredCount = 0;
+                let orgStorageUsed = 0;
+                const now = new Date();
+                warningsSnapshot.docs.forEach(doc => {
+                    const warningData = doc.data();
+                    const audioRecording = warningData.audioRecording;
+                    if (audioRecording && !audioRecording.deleted) {
+                        orgAudioCount++;
+                        totalAudioRecordings++;
+                        if (audioRecording.size) {
+                            orgStorageUsed += audioRecording.size;
+                            totalStorageUsed += audioRecording.size;
+                        }
+                        if (audioRecording.autoDeleteDate &&
+                            new Date(audioRecording.autoDeleteDate.toDate()) <= now) {
+                            orgExpiredCount++;
+                            totalExpiredRecordings++;
+                        }
                     }
                 });
-            }
-            const idToken = authHeader.split('Bearer ')[1];
-            try {
-                const decodedToken = await admin.auth().verifyIdToken(idToken);
-                context.auth = {
-                    uid: decodedToken.uid,
-                    token: decodedToken
-                };
+                organizationStats.push({
+                    organizationId,
+                    organizationName,
+                    audioRecordings: orgAudioCount,
+                    expiredRecordings: orgExpiredCount,
+                    storageUsed: orgStorageUsed
+                });
             }
             catch (error) {
-                return res.status(401).json({
-                    error: {
-                        status: 'UNAUTHENTICATED',
-                        message: 'Invalid authentication token'
-                    }
-                });
+                console.error(`Error processing organization ${organizationName}:`, error);
             }
-            await verifySuperUser(context);
-            console.log('📊 Fetching global audio statistics...');
-            let totalAudioRecordings = 0;
-            let totalExpiredRecordings = 0;
-            let totalStorageUsed = 0;
-            const organizationStats = [];
-            const orgsSnapshot = await db.collection('organizations').get();
-            console.log(`🏢 Found ${orgsSnapshot.size} organizations to analyze for audio`);
-            for (const orgDoc of orgsSnapshot.docs) {
-                const organizationId = orgDoc.id;
-                const organizationName = orgDoc.data().name || 'Unknown';
-                try {
-                    const warningsWithAudioQuery = db
-                        .collection(`organizations/${organizationId}/warnings`)
-                        .where('audioRecording', '!=', null);
-                    const warningsSnapshot = await warningsWithAudioQuery.get();
-                    console.log(`📄 Organization ${organizationName}: Found ${warningsSnapshot.size} warnings with audio`);
-                    let orgAudioCount = 0;
-                    let orgExpiredCount = 0;
-                    let orgStorageUsed = 0;
-                    const now = new Date();
-                    warningsSnapshot.docs.forEach(doc => {
-                        const warningData = doc.data();
-                        const audioRecording = warningData.audioRecording;
-                        if (audioRecording && !audioRecording.deleted) {
-                            orgAudioCount++;
-                            totalAudioRecordings++;
-                            if (audioRecording.size) {
-                                orgStorageUsed += audioRecording.size;
-                                totalStorageUsed += audioRecording.size;
-                            }
-                            if (audioRecording.autoDeleteDate &&
-                                new Date(audioRecording.autoDeleteDate.toDate()) <= now) {
-                                orgExpiredCount++;
-                                totalExpiredRecordings++;
-                            }
-                        }
-                    });
-                    organizationStats.push({
-                        organizationId,
-                        organizationName,
-                        audioRecordings: orgAudioCount,
-                        expiredRecordings: orgExpiredCount,
-                        storageUsed: orgStorageUsed
-                    });
-                }
-                catch (error) {
-                    console.error(`Error processing organization ${organizationName}:`, error);
-                }
-            }
-            const formatBytes = (bytes) => {
-                if (bytes === 0)
-                    return '0 B';
-                const k = 1024;
-                const sizes = ['B', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            };
-            const result = {
+        }
+        const formatBytes = (bytes) => {
+            if (bytes === 0)
+                return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        };
+        res.status(200).json({
+            data: {
                 success: true,
                 globalStats: {
                     totalOrganizations: orgsSnapshot.size,
@@ -598,136 +514,92 @@ exports.getGlobalAudioStats = functions.https.onRequest(async (req, res) => {
                 },
                 organizationBreakdown: organizationStats,
                 generatedAt: new Date().toISOString()
-            };
-            res.set({
-                'Access-Control-Allow-Origin': req.get('Origin') || '*',
-                'Access-Control-Allow-Credentials': 'true'
-            });
-            return res.status(200).json({ data: result });
-        }
-        catch (error) {
-            console.error('❌ Error fetching global audio stats:', error);
-            res.set({
-                'Access-Control-Allow-Origin': req.get('Origin') || '*',
-                'Access-Control-Allow-Credentials': 'true'
-            });
-            return res.status(500).json({
-                error: {
-                    status: 'INTERNAL',
-                    message: `Failed to fetch global stats: ${error.message}`
-                }
-            });
-        }
-    });
+            }
+        });
+    }
+    catch (error) {
+        console.error('❌ Error fetching global audio stats:', error);
+        res.status(500).json({
+            error: { status: 'INTERNAL', message: `Failed to fetch global stats: ${error.message}` }
+        });
+    }
 });
 /**
- * Preview audio cleanup - super user only (WITH CORS)
+ * Preview audio cleanup - super user only
  * Shows what would be deleted without actually deleting
  */
-exports.previewAudioCleanup = functions.https.onRequest(async (req, res) => {
-    return corsHandler(req, res, async () => {
-        try {
-            // Auth verification
-            const context = {
-                auth: undefined,
-                app: undefined,
-                instanceIdToken: undefined,
-                rawRequest: req
-            };
-            const authHeader = req.headers.authorization;
-            if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                return res.status(401).json({
-                    error: {
-                        status: 'UNAUTHENTICATED',
-                        message: 'Missing or invalid authentication token'
-                    }
-                });
-            }
-            const idToken = authHeader.split('Bearer ')[1];
+exports.previewAudioCleanup = (0, https_1.onRequest)({ region: 'us-central1', cors: CORS_ORIGINS, invoker: 'public' }, async (req, res) => {
+    const uid = await requireSuperUser(req, res);
+    if (!uid)
+        return;
+    try {
+        console.log('👁️ previewAudioCleanup called');
+        const formatBytes = (bytes) => {
+            if (bytes === 0)
+                return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        };
+        let totalScanned = 0;
+        let totalExpired = 0;
+        let estimatedSpaceFreed = 0;
+        let oldestExpiredDateStr = null;
+        let newestExpiredDateStr = null;
+        const organizationsAffected = [];
+        const orgsSnapshot = await db.collection('organizations').get();
+        for (const orgDoc of orgsSnapshot.docs) {
+            const organizationId = orgDoc.id;
+            const organizationName = orgDoc.data().name || 'Unknown';
             try {
-                const decodedToken = await admin.auth().verifyIdToken(idToken);
-                context.auth = {
-                    uid: decodedToken.uid,
-                    token: decodedToken
-                };
+                const warningsQuery = db
+                    .collection(`organizations/${organizationId}/warnings`)
+                    .where('audioRecording', '!=', null)
+                    .where('audioRecording.autoDeleteDate', '<=', new Date());
+                const warningsSnapshot = await warningsQuery.get();
+                if (warningsSnapshot.size > 0) {
+                    let orgExpiredCount = 0;
+                    let orgEstimatedSpaceFreed = 0;
+                    warningsSnapshot.docs.forEach(doc => {
+                        const warningData = doc.data();
+                        const audioRecording = warningData.audioRecording;
+                        if (audioRecording && !audioRecording.deleted && audioRecording.autoDeleteDate) {
+                            totalScanned++;
+                            totalExpired++;
+                            orgExpiredCount++;
+                            // Estimate file size (5MB default if not specified)
+                            const fileSize = audioRecording.size || (5 * 1024 * 1024);
+                            estimatedSpaceFreed += fileSize;
+                            orgEstimatedSpaceFreed += fileSize;
+                            // Track date range - convert to string immediately
+                            const expiredDate = audioRecording.autoDeleteDate.toDate();
+                            const expiredDateStr = expiredDate.toISOString();
+                            if (oldestExpiredDateStr === null || expiredDateStr < oldestExpiredDateStr) {
+                                oldestExpiredDateStr = expiredDateStr;
+                            }
+                            if (newestExpiredDateStr === null || expiredDateStr > newestExpiredDateStr) {
+                                newestExpiredDateStr = expiredDateStr;
+                            }
+                        }
+                    });
+                    if (orgExpiredCount > 0) {
+                        organizationsAffected.push({
+                            organizationId,
+                            organizationName,
+                            expiredCount: orgExpiredCount,
+                            estimatedSpaceFreed: orgEstimatedSpaceFreed,
+                            estimatedSpaceFreedFormatted: formatBytes(orgEstimatedSpaceFreed)
+                        });
+                    }
+                }
             }
             catch (error) {
-                return res.status(401).json({
-                    error: {
-                        status: 'UNAUTHENTICATED',
-                        message: 'Invalid authentication token'
-                    }
-                });
+                console.error(`Error processing organization ${organizationName}:`, error);
             }
-            await verifySuperUser(context);
-            console.log('👁️ previewAudioCleanup called');
-            // Helper function to format bytes
-            const formatBytes = (bytes) => {
-                if (bytes === 0)
-                    return '0 B';
-                const k = 1024;
-                const sizes = ['B', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            };
-            // Find all warnings with audio that are expired across all organizations
-            let totalScanned = 0;
-            let totalExpired = 0;
-            let estimatedSpaceFreed = 0;
-            let oldestExpiredDateStr = null;
-            let newestExpiredDateStr = null;
-            const organizationsAffected = [];
-            const orgsSnapshot = await db.collection('organizations').get();
-            for (const orgDoc of orgsSnapshot.docs) {
-                const organizationId = orgDoc.id;
-                const organizationName = orgDoc.data().name || 'Unknown';
-                try {
-                    const warningsQuery = db
-                        .collection(`organizations/${organizationId}/warnings`)
-                        .where('audioRecording', '!=', null)
-                        .where('audioRecording.autoDeleteDate', '<=', new Date());
-                    const warningsSnapshot = await warningsQuery.get();
-                    if (warningsSnapshot.size > 0) {
-                        let orgExpiredCount = 0;
-                        let orgEstimatedSpaceFreed = 0;
-                        warningsSnapshot.docs.forEach(doc => {
-                            const warningData = doc.data();
-                            const audioRecording = warningData.audioRecording;
-                            if (audioRecording && !audioRecording.deleted && audioRecording.autoDeleteDate) {
-                                totalScanned++;
-                                totalExpired++;
-                                orgExpiredCount++;
-                                // Estimate file size (5MB default if not specified)
-                                const fileSize = audioRecording.size || (5 * 1024 * 1024);
-                                estimatedSpaceFreed += fileSize;
-                                orgEstimatedSpaceFreed += fileSize;
-                                // Track date range - convert to string immediately
-                                const expiredDate = audioRecording.autoDeleteDate.toDate();
-                                const expiredDateStr = expiredDate.toISOString();
-                                if (oldestExpiredDateStr === null || expiredDateStr < oldestExpiredDateStr) {
-                                    oldestExpiredDateStr = expiredDateStr;
-                                }
-                                if (newestExpiredDateStr === null || expiredDateStr > newestExpiredDateStr) {
-                                    newestExpiredDateStr = expiredDateStr;
-                                }
-                            }
-                        });
-                        if (orgExpiredCount > 0) {
-                            organizationsAffected.push({
-                                organizationId,
-                                organizationName,
-                                expiredCount: orgExpiredCount,
-                                estimatedSpaceFreed: orgEstimatedSpaceFreed,
-                                estimatedSpaceFreedFormatted: formatBytes(orgEstimatedSpaceFreed)
-                            });
-                        }
-                    }
-                }
-                catch (error) {
-                    console.error(`Error processing organization ${organizationName}:`, error);
-                }
-            }
-            const result = {
+        }
+        res.status(200).json({
+            data: {
                 success: true,
                 preview: {
                     totalScanned,
@@ -740,26 +612,14 @@ exports.previewAudioCleanup = functions.https.onRequest(async (req, res) => {
                 },
                 generatedAt: new Date().toISOString(),
                 note: 'This is a preview only. No files will be deleted.'
-            };
-            res.set({
-                'Access-Control-Allow-Origin': req.get('Origin') || '*',
-                'Access-Control-Allow-Credentials': 'true'
-            });
-            return res.status(200).json({ data: result });
-        }
-        catch (error) {
-            console.error('❌ previewAudioCleanup error:', error);
-            res.set({
-                'Access-Control-Allow-Origin': req.get('Origin') || '*',
-                'Access-Control-Allow-Credentials': 'true'
-            });
-            return res.status(500).json({
-                error: {
-                    status: 'INTERNAL',
-                    message: `Failed to preview cleanup: ${error.message}`
-                }
-            });
-        }
-    });
+            }
+        });
+    }
+    catch (error) {
+        console.error('❌ previewAudioCleanup error:', error);
+        res.status(500).json({
+            error: { status: 'INTERNAL', message: `Failed to preview cleanup: ${error.message}` }
+        });
+    }
 });
 //# sourceMappingURL=audioCleanup.js.map

@@ -4,9 +4,10 @@
 // ✅ Validates user authentication and permissions
 // ✅ Stores and manages temporary file access
 
-import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import * as jwt from 'jsonwebtoken';
+import { onRequest, HttpsError, Request } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 
 // Initialize Firebase Admin if not already done
 if (!admin.apps.length) {
@@ -15,8 +16,6 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 const storage = admin.storage();
-
-// Manual CORS configuration - bypassing the problematic cors library
 
 // ============================================
 // INTERFACES
@@ -63,19 +62,19 @@ function getJWTSecret(): string {
 /**
  * Verify user authentication
  */
-async function verifyAuth(req: functions.https.Request): Promise<admin.auth.DecodedIdToken> {
+async function verifyAuth(req: Request): Promise<admin.auth.DecodedIdToken> {
   const authHeader = req.headers.authorization as string;
-  
+
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new functions.https.HttpsError('unauthenticated', 'Missing or invalid authorization header');
+    throw new HttpsError('unauthenticated', 'Missing or invalid authorization header');
   }
 
   const idToken = authHeader.split('Bearer ')[1];
-  
+
   try {
     return await admin.auth().verifyIdToken(idToken);
-  } catch (error) {
-    throw new functions.https.HttpsError('unauthenticated', 'Invalid authentication token');
+  } catch {
+    throw new HttpsError('unauthenticated', 'Invalid authentication token');
   }
 }
 
@@ -86,11 +85,11 @@ async function storeTemporaryFile(fileData: string, filename: string, tokenId: s
   try {
     // Convert base64 to buffer
     const buffer = Buffer.from(fileData, 'base64');
-    
+
     // Create storage path
     const storagePath = `temp-downloads/${tokenId}/${filename}`;
     const file = storage.bucket().file(storagePath);
-    
+
     // Upload with metadata
     await file.save(buffer, {
       metadata: {
@@ -104,12 +103,16 @@ async function storeTemporaryFile(fileData: string, filename: string, tokenId: s
     });
 
     return storagePath;
-    
+
   } catch (error) {
     console.error('❌ File storage failed:', error);
-    throw new functions.https.HttpsError('internal', 'Failed to store temporary file');
+    throw new HttpsError('internal', 'Failed to store temporary file');
   }
 }
+
+// v2 onRequest options shared by the CORS-enabled callable surfaces.
+// v2 native CORS handles OPTIONS preflight + headers; no manual res.set() needed.
+const HTTP_OPTS = { region: 'us-central1', cors: true, invoker: 'public' as const };
 
 // ============================================
 // CLOUD FUNCTIONS
@@ -118,26 +121,11 @@ async function storeTemporaryFile(fileData: string, filename: string, tokenId: s
 /**
  * Generate temporary download link with token
  */
-export const generateTemporaryDownloadLink = functions.https.onRequest(async (req, res) => {
+export const generateTemporaryDownloadLink = onRequest(HTTP_OPTS, async (req, res) => {
   console.log('🔧 Function called, method:', req.method, 'origin:', req.headers.origin);
-  
-  // Set CORS headers manually for maximum control
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.set('Access-Control-Max-Age', '86400');
-  
-  // Handle preflight OPTIONS request
-  if (req.method === 'OPTIONS') {
-    console.log('🔧 Handling CORS preflight request');
-    res.status(200).end();
-    return;
-  }
-  
+
   try {
-    console.log('🔧 Processing request, method:', req.method);
-    
-    // Only allow POST requests
+    // Only allow POST requests (cors: true handles OPTIONS preflight already)
     if (req.method !== 'POST') {
       res.status(405).json({ error: { message: 'Method not allowed' } });
       return;
@@ -145,21 +133,21 @@ export const generateTemporaryDownloadLink = functions.https.onRequest(async (re
 
     // Verify authentication
     const decodedToken = await verifyAuth(req);
-    
+
     // Parse request data
     const requestData: LinkGenerationRequest = req.body.data;
-    
+
     if (!requestData || !requestData.filename || !requestData.fileData || !requestData.tokenId) {
-      res.status(400).json({ 
-        error: { message: 'Missing required fields: filename, fileData, tokenId' } 
+      res.status(400).json({
+        error: { message: 'Missing required fields: filename, fileData, tokenId' }
       });
       return;
     }
 
     // Store temporary file
     const storagePath = await storeTemporaryFile(
-      requestData.fileData, 
-      requestData.filename, 
+      requestData.fileData,
+      requestData.filename,
       requestData.tokenId
     );
 
@@ -211,14 +199,14 @@ export const generateTemporaryDownloadLink = functions.https.onRequest(async (re
 
   } catch (error: any) {
     console.error('❌ Generate temporary link error:', error);
-    
-    if (error instanceof functions.https.HttpsError) {
+
+    if (error instanceof HttpsError) {
       res.status(error.httpErrorCode.status).json({
         error: { message: error.message }
       });
       return;
     }
-    
+
     res.status(500).json({
       error: { message: 'Internal server error' }
     });
@@ -228,11 +216,11 @@ export const generateTemporaryDownloadLink = functions.https.onRequest(async (re
 /**
  * Download temporary file using JWT token
  */
-export const downloadTempFile = functions.https.onRequest(async (req, res) => {
+export const downloadTempFile = onRequest(HTTP_OPTS, async (req, res) => {
   try {
     // Get token from query parameters
     const token = req.query.token as string;
-    
+
     if (!token) {
       res.status(400).json({ error: 'Missing token parameter' });
       return;
@@ -242,21 +230,21 @@ export const downloadTempFile = functions.https.onRequest(async (req, res) => {
     let decoded: TemporaryTokenPayload;
     try {
       decoded = jwt.verify(token, getJWTSecret()) as TemporaryTokenPayload;
-    } catch (error) {
+    } catch {
       res.status(401).json({ error: 'Invalid or expired token' });
       return;
     }
 
     // Check if token is revoked
     const tokenDoc = await db.collection('temporaryDownloadTokens').doc(decoded.tokenId).get();
-    
+
     if (!tokenDoc.exists) {
       res.status(404).json({ error: 'Token not found' });
       return;
     }
 
     const tokenData = tokenDoc.data()!;
-    
+
     if (tokenData.isRevoked) {
       res.status(403).json({ error: 'Token has been revoked' });
       return;
@@ -270,10 +258,10 @@ export const downloadTempFile = functions.https.onRequest(async (req, res) => {
 
     // Get file from storage
     const file = storage.bucket().file(decoded.fileStoragePath);
-    
+
     try {
       const [exists] = await file.exists();
-      
+
       if (!exists) {
         res.status(404).json({ error: 'File not found' });
         return;
@@ -297,7 +285,7 @@ export const downloadTempFile = functions.https.onRequest(async (req, res) => {
       // Stream file to response
       const stream = file.createReadStream();
       stream.pipe(res);
-      
+
       // Don't return anything after streaming starts
       return;
 
@@ -317,60 +305,46 @@ export const downloadTempFile = functions.https.onRequest(async (req, res) => {
 /**
  * Validate temporary token (without downloading)
  */
-export const validateTemporaryToken = functions.https.onRequest(async (req, res) => {
+export const validateTemporaryToken = onRequest(HTTP_OPTS, async (req, res) => {
   console.log('🔧 ValidateToken called, method:', req.method, 'origin:', req.headers.origin);
-  
-  // Set CORS headers manually
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.set('Access-Control-Max-Age', '86400');
-  
-  // Handle preflight OPTIONS request
-  if (req.method === 'OPTIONS') {
-    console.log('🔧 Handling CORS preflight request');
-    res.status(200).end();
-    return;
-  }
-  
+
   try {
-    
     if (req.method !== 'POST') {
       res.status(405).json({ error: { message: 'Method not allowed' } });
       return;
     }
 
     const { token } = req.body.data;
-    
+
     if (!token) {
-      res.status(400).json({ 
-        error: { message: 'Missing token' } 
+      res.status(400).json({
+        error: { message: 'Missing token' }
       });
       return;
     }
 
-      try {
-        const decoded = jwt.verify(token, getJWTSecret()) as TemporaryTokenPayload;
-        
-        // Check if token exists and is not revoked
-        const tokenDoc = await db.collection('temporaryDownloadTokens').doc(decoded.tokenId).get();
-        
-        const isValid = tokenDoc.exists && 
-                       !tokenDoc.data()?.isRevoked && 
-                       Date.now() < decoded.exp * 1000;
+    try {
+      const decoded = jwt.verify(token, getJWTSecret()) as TemporaryTokenPayload;
 
-        res.status(200).json({ 
-          data: { 
-            valid: isValid,
-            expiresAt: isValid ? new Date(decoded.exp * 1000).toISOString() : null
-          } 
-        });
-        return;
+      // Check if token exists and is not revoked
+      const tokenDoc = await db.collection('temporaryDownloadTokens').doc(decoded.tokenId).get();
 
-      } catch (error) {
-        res.status(200).json({ data: { valid: false } });
-        return;
-      }
+      const isValid = tokenDoc.exists &&
+                     !tokenDoc.data()?.isRevoked &&
+                     Date.now() < decoded.exp * 1000;
+
+      res.status(200).json({
+        data: {
+          valid: isValid,
+          expiresAt: isValid ? new Date(decoded.exp * 1000).toISOString() : null
+        }
+      });
+      return;
+
+    } catch {
+      res.status(200).json({ data: { valid: false } });
+      return;
+    }
 
   } catch (error) {
     console.error('❌ Token validation error:', error);
@@ -383,24 +357,10 @@ export const validateTemporaryToken = functions.https.onRequest(async (req, res)
 /**
  * Revoke temporary token
  */
-export const revokeTemporaryToken = functions.https.onRequest(async (req, res) => {
+export const revokeTemporaryToken = onRequest(HTTP_OPTS, async (req, res) => {
   console.log('🔧 RevokeToken called, method:', req.method, 'origin:', req.headers.origin);
-  
-  // Set CORS headers manually
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.set('Access-Control-Max-Age', '86400');
-  
-  // Handle preflight OPTIONS request
-  if (req.method === 'OPTIONS') {
-    console.log('🔧 Handling CORS preflight request');
-    res.status(200).end();
-    return;
-  }
-  
+
   try {
-    
     if (req.method !== 'POST') {
       res.status(405).json({ error: { message: 'Method not allowed' } });
       return;
@@ -408,31 +368,31 @@ export const revokeTemporaryToken = functions.https.onRequest(async (req, res) =
 
     // Verify authentication
     const decodedToken = await verifyAuth(req);
-    
+
     const { tokenId } = req.body.data;
-    
+
     if (!tokenId) {
-      res.status(400).json({ 
-        error: { message: 'Missing tokenId' } 
+      res.status(400).json({
+        error: { message: 'Missing tokenId' }
       });
       return;
     }
 
     // Check if token exists and belongs to user
     const tokenDoc = await db.collection('temporaryDownloadTokens').doc(tokenId).get();
-    
+
     if (!tokenDoc.exists) {
-      res.status(404).json({ 
-        error: { message: 'Token not found' } 
+      res.status(404).json({
+        error: { message: 'Token not found' }
       });
       return;
     }
 
     const tokenData = tokenDoc.data()!;
-    
+
     if (tokenData.userId !== decodedToken.uid) {
-      res.status(403).json({ 
-        error: { message: 'Unauthorized to revoke this token' } 
+      res.status(403).json({
+        error: { message: 'Unauthorized to revoke this token' }
       });
       return;
     }
@@ -452,20 +412,20 @@ export const revokeTemporaryToken = functions.https.onRequest(async (req, res) =
       console.warn('⚠️ Failed to delete temporary file:', error);
     }
 
-    res.status(200).json({ 
-      data: { revoked: true } 
+    res.status(200).json({
+      data: { revoked: true }
     });
 
   } catch (error: any) {
     console.error('❌ Token revocation error:', error);
-    
-    if (error instanceof functions.https.HttpsError) {
+
+    if (error instanceof HttpsError) {
       res.status(error.httpErrorCode.status).json({
         error: { message: error.message }
       });
       return;
     }
-    
+
     res.status(500).json({
       error: { message: 'Internal server error' }
     });
@@ -475,12 +435,12 @@ export const revokeTemporaryToken = functions.https.onRequest(async (req, res) =
 /**
  * Cleanup expired tokens and files (scheduled function)
  */
-export const cleanupExpiredTokens = functions.pubsub
-  .schedule('every 6 hours')
-  .onRun(async (context) => {
+export const cleanupExpiredTokens = onSchedule(
+  { schedule: 'every 6 hours', region: 'us-central1' },
+  async (_event) => {
     try {
       const now = new Date();
-      
+
       // Find expired tokens
       const expiredTokensSnapshot = await db
         .collection('temporaryDownloadTokens')
@@ -494,10 +454,10 @@ export const cleanupExpiredTokens = functions.pubsub
 
       expiredTokensSnapshot.docs.forEach(doc => {
         const data = doc.data();
-        
+
         // Mark for deletion
         batch.delete(doc.ref);
-        
+
         // Add file to cleanup list
         if (data.fileStoragePath) {
           filesToDelete.push(data.fileStoragePath);
@@ -520,15 +480,10 @@ export const cleanupExpiredTokens = functions.pubsub
       await Promise.allSettled(deletePromises);
 
       console.log(`✅ Cleaned up ${expiredTokensSnapshot.size} expired tokens and files`);
-
-      return { 
-        cleanedUp: expiredTokensSnapshot.size,
-        filesDeleted: filesToDelete.length,
-        timestamp: now.toISOString()
-      };
-
     } catch (error) {
       console.error('❌ Cleanup failed:', error);
-      throw new functions.https.HttpsError('internal', 'Cleanup operation failed');
+      // Re-throw to mark the scheduled run as failed (Cloud Scheduler will retry)
+      throw error;
     }
-  });
+  }
+);

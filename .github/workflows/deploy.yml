@@ -26,7 +26,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   FIREBASE_PROJECT_ID: ${{ github.event.inputs.environment == 'staging' && 'hr-system-staging' || 'hr-disciplinary-system' }}
 
 jobs:
