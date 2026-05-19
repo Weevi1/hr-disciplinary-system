@@ -86,7 +86,11 @@ async function main() {
   ]);
 
   const allFsDocs = [...rootDocs, ...orgDocs];
-  const orphans = allFsDocs.filter(d => !authUids.has(d.id));
+  // Filter out `_metadata` sentinel docs — these are written by
+  // DatabaseShardingService to track shard health, not user records.
+  // They have no UID and won't match any Auth record, but they are NOT orphans.
+  const orphans = allFsDocs.filter(d => !authUids.has(d.id) && d.id !== '_metadata');
+  const sentinelCount = allFsDocs.filter(d => d.id === '_metadata').length;
 
   const report = {
     scannedAt: new Date().toISOString(),
@@ -96,6 +100,7 @@ async function main() {
       firestoreUserDocs: allFsDocs.length,
       rootDocs: rootDocs.length,
       orgScopedDocs: orgDocs.length,
+      metadataSentinels: sentinelCount,
       orphans: orphans.length,
     },
     orphans: orphans.map(o => ({
