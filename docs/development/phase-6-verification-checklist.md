@@ -6,9 +6,9 @@ Items 1, 2, and 5 below are **done** (automated/static checks I ran). Items 3 an
 
 ---
 
-## ✅ 1. Orphan Firestore user docs — DETECTED
+## ✅ 1. Orphan / inconsistency audit — DETECTED (extended)
 
-Script: `scripts/dev/find-orphan-users.js` (read-only)
+Script: `scripts/dev/find-orphan-users.js` (read-only). Initial scan caught only 6 issues (Firestore-only docs); extended scan covers six categories and surfaced **18 real issues** vs the original plan's "4 orphan docs" estimate. The original count was understated.
 
 Run command:
 ```bash
@@ -17,29 +17,66 @@ GOOGLE_APPLICATION_CREDENTIALS=./hr-disciplinary-system-firebase-adminsdk-fbsvc-
   node scripts/dev/find-orphan-users.js
 ```
 
+### Categories scanned
+- **A** — Firestore user doc has no Auth record (root + per-org)
+- **B** — Auth user has no Firestore profile doc (reverse direction — would crash app on login)
+- **C** — `userOrgIndex/{uid}` entry points to deleted Auth user
+- **D** — `userOrgIndex/{uid}` entry points to non-existent organization (excluding `'system'` sentinel for super-users/resellers — intentional design)
+- **E** — Reseller in `resellers/` with no user pointing at them
+- **F** — User doc with `role=reseller` and broken `resellerId` link
+
+Sentinel handling: `_metadata` per-org shard records and `organizationId='system'` are recognised as intentional and excluded.
+
 ### Results (2026-05-11)
-- **20** Auth UIDs in production
-- **37** Firestore user docs (10 root + 27 org-scoped)
-- **6** `_metadata` sentinel docs (legitimate, one per org — written by `DatabaseShardingService` for shard health; NOT orphans)
-- **6** real orphan candidates (Firestore-only, no Auth match)
+- Auth users: **20** · Firestore user docs: **31** (+6 `_metadata` sentinels) · Organizations: **6** · userOrgIndex entries: **32** · Resellers: **4**
 
-### The 6 candidates
+| Category | Count | Severity |
+|---|---|---|
+| A. Firestore user doc without Auth | **6** | low — can't log in, just storage clutter |
+| B. Auth user without Firestore doc | **0** | ✅ |
+| C. userOrgIndex pointing to deleted Auth | **12** | medium — stale routing entries |
+| D. userOrgIndex pointing to missing org | **0** | ✅ |
+| E. Reseller without linked user | **0** | ✅ |
+| F. User with broken resellerId | **0** | ✅ |
 
-| Path | Email | Role | Notes |
-|---|---|---|---|
-| `users/HbDs1QKnAudP22g8iGubvN2worl2` | piet@spur.com | executive-management | Looks like test user (Spur reference?) |
-| `users/ma2VqihAcCPOkJnBiy0ZDGSHOPE3` | test@reseller.com | reseller | Test reseller |
-| `users/t2d4FBfoLMaEQB0r3yIjfiumJQp2` | michelle@demo.com | executive-management | Demo user |
-| `users/uM6SDwnToNdIzTd5aODHCi78AZh2` | test@bakery.com | executive-management | Test user (also has org-scoped duplicate) |
-| `organizations/test-reseller/users/Z3V5qiD1lRgRYgH1kWk8A4I1JgO2` | hr@bakery.com | hr-manager | Inside "Test Reseller" org |
-| `organizations/test-reseller/users/uM6SDwnToNdIzTd5aODHCi78AZh2` | test@bakery.com | executive-management | Inside "Test Reseller" org (same UID as #4) |
+### Category A — 6 Firestore-only user docs
 
-### Recommended next step
-All 6 look like test data from internal QA. Before deleting, confirm:
-- The "Test Reseller" org (`organizations/test-reseller`) is itself test data — if so, archive/delete the whole org instead of just the user subdocs.
-- Cross-check `userOrgIndex/{uid}` entries for the 4 root-level orphans — if those exist, delete them too.
+| Path | Email | Role |
+|---|---|---|
+| `users/HbDs1QKnAudP22g8iGubvN2worl2` | piet@spur.com | executive-management |
+| `users/ma2VqihAcCPOkJnBiy0ZDGSHOPE3` | test@reseller.com | reseller (resellerId: `reseller_1769505345579`) |
+| `users/t2d4FBfoLMaEQB0r3yIjfiumJQp2` | michelle@demo.com | executive-management |
+| `users/uM6SDwnToNdIzTd5aODHCi78AZh2` | test@bakery.com | executive-management |
+| `organizations/test-reseller/users/Z3V5qiD1lRgRYgH1kWk8A4I1JgO2` | hr@bakery.com | hr-manager |
+| `organizations/test-reseller/users/uM6SDwnToNdIzTd5aODHCi78AZh2` | test@bakery.com | executive-management |
 
-**This is a destructive operation — flag when you want me to write the cleanup script and we'll authorise it explicitly.**
+### Category C — 12 stale userOrgIndex entries
+
+**5 overlap with category A** (same UID — Firestore profile AND index both stale):
+`HbDs…`, `ma2V…`, `t2d4…`, `uM6S…`, `Z3V5…`
+
+**7 are PURE index orphans** (Auth gone, Firestore profile also gone, only the index remains):
+
+| Path | Maps to org |
+|---|---|
+| `userOrgIndex/2N7keBUEcXcGeeGKnZRV8K1dDWb2` | robertson-spur |
+| `userOrgIndex/3bXjz72vPKZOo3pv9gnslBkgIAx2` | robertson-spur |
+| `userOrgIndex/8D7EdZ06yLViuAoNGVy7AhkFs312` | robertson-spur |
+| `userOrgIndex/aZ0m1OcE7CTpz4XQPfn5PerFmTC3` | robertson-spur |
+| `userOrgIndex/cEv1D3njFSTNhMlRZ2XZ6uKDFXk2` | robertson-spur |
+| `userOrgIndex/RJ4UqOK4FvNLsIjJfu7SgpdQkkk1` | insitu-demo |
+| `userOrgIndex/tUeEnnMbsqf68wIqpeuExRGo8VK2` | insitu-demo |
+
+Looks like test users deleted from `robertson-spur` (5) and `insitu-demo` (2) — Auth + profile cleaned up but `userOrgIndex/{uid}` never written. Suggests `UserOrgIndexService.removeMapping()` was never called during deletion flows.
+
+### Cleanup considerations
+
+1. **`test-reseller` is itself a test org** — likely simplest to delete the whole org (catches 2 user subdocs + 2 index entries + the `_metadata` sentinel + the reseller's user record at root level).
+2. **`reseller_1769505345579`** referenced by orphan `ma2V…` — check whether this reseller doc still exists and clean up if it's also orphan test data.
+3. **The 7 pure index orphans** in `robertson-spur`/`insitu-demo` — purely index-only cleanup, no other data to touch.
+4. **Real bug surfaced**: user deletion flow doesn't call `UserOrgIndexService.removeMapping()`. Worth tracking down and fixing so this doesn't keep accumulating.
+
+**Destructive cleanup needs your authorisation — flag when ready and I'll write the cleanup script + we'll review entries before deletion.**
 
 ---
 
