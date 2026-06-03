@@ -24,7 +24,7 @@ const ReviewRow: React.FC<ReviewRowProps> = ({ label, onClick, children }) => (
     aria-label={`Edit ${label}`}
   >
     <span
-      className="text-xs font-medium w-24 flex-shrink-0 pt-0.5"
+      className="text-xs font-medium w-20 md:w-24 flex-shrink-0 pt-0.5"
       style={{ color: 'var(--color-text-secondary)' }}
     >
       {label}

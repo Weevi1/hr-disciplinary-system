@@ -1,5 +1,6 @@
 // frontend/src/components/admin/EnhancedOrganizationWizard.tsx
-// Revenue-first Organization Wizard with Stripe payment integration
+// Organization Wizard — auto-activates orgs on creation. Billing is handled via
+// manual invoicing (built-in Stripe integration removed 2026-06).
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -25,7 +26,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import Logger from '../../utils/logger';
-import StripeService from '../../services/StripeService';
 import { AdminDataService } from '../../services/AdminDataService';
 import { ShardedOrganizationService } from '../../services/ShardedOrganizationService';
 import DepartmentService from '../../services/DepartmentService';
@@ -49,6 +49,16 @@ import {
   INDUSTRY_OPTIONS,
 } from './wizardConstants';
 import { CategoryEditor } from './CategoryEditor';
+
+// Recommend a subscription tier from employee count. Pure pricing logic — kept
+// local here after the built-in Stripe billing integration was removed (the org
+// wizard auto-activates orgs; billing is handled via manual invoicing).
+const getRecommendedTier = (employeeCount: number): SubscriptionTier => {
+  if (employeeCount <= 10) return 'starter';
+  if (employeeCount <= 50) return 'professional';
+  if (employeeCount <= 200) return 'enterprise';
+  return 'enterprise-plus';
+};
 
 
 interface WizardFormData {
@@ -726,7 +736,7 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
                           const num = parseInt(value);
                           if (!isNaN(num) && num > 0) {
                             // Auto-select appropriate plan based on employee count
-                            const recommendedPlan = StripeService.getRecommendedTier(num);
+                            const recommendedPlan = getRecommendedTier(num);
                             Logger.debug(`Employee count changed: ${num} → Recommended plan: ${recommendedPlan}`);
                             updateFormData({
                               employeeCount: num,
@@ -739,7 +749,7 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
                         // Ensure valid value when user leaves the field
                         const value = e.target.value;
                         if (value === '' || isNaN(parseInt(value))) {
-                          const recommendedPlan = StripeService.getRecommendedTier(1);
+                          const recommendedPlan = getRecommendedTier(1);
                           updateFormData({
                             employeeCount: 1,
                             selectedPlan: recommendedPlan

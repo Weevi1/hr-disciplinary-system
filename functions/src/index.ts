@@ -32,14 +32,6 @@ import {
 // 🔗 ADD TEMPORARY DOWNLOAD FUNCTIONS
 export { generateTemporaryDownloadLink, downloadTempFile, validateTemporaryToken, revokeTemporaryToken, cleanupExpiredTokens } from './temporaryDownload';
 
-// 💰 ADD BILLING FUNCTIONS
-import {
-  createCheckoutSession,
-  stripeWebhook,
-  processMonthlyCommissions,
-  createPortalSession
-} from './billing';
-
 // 🔐 ADD CUSTOM CLAIMS FUNCTIONS
 import {
   refreshUserClaims,
@@ -107,12 +99,6 @@ export {
   getCleanupStats,
   getGlobalAudioStats,
   previewAudioCleanup,
-
-  // Billing & subscription functions
-  createCheckoutSession,
-  stripeWebhook,
-  processMonthlyCommissions,
-  createPortalSession,
 
   // Custom claims & sharded auth functions
   refreshUserClaims,

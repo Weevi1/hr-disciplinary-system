@@ -319,7 +319,7 @@ export const MultiLanguageWarningScript: React.FC<MultiLanguageWarningScriptProp
       {/* Compact Script Section - Subtle Design */}
       {!showFullScript ? (
         /* Minimal Inline Controls */
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Language Selector */}
           <div className="relative flex-1 max-w-[140px]">
             <select

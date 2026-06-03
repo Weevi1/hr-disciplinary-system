@@ -70,11 +70,14 @@ export const notifyHROnAppeal = onDocumentUpdated(
         return;
       }
 
-      // Find HR managers and executive management in this organization
-      const usersSnapshot = await db.collection('users')
-        .where('organizationId', '==', orgId)
-        .get();
+      // Find HR managers and executive management in this organization.
+      // Read the sharded per-org user collection (source of truth) and filter in
+      // code: the sharded `role` field is stored inconsistently — sometimes a
+      // string, sometimes an object { id } — so a Firestore `role.id` where-clause
+      // would silently miss string-role users. Org user collections are small.
+      const usersSnapshot = await db.collection(`organizations/${orgId}/users`).get();
 
+      const HR_ROLES = ['hr-manager', 'executive-management'];
       const hrEmails: string[] = [];
       usersSnapshot.forEach(doc => {
         const userData = doc.data();
@@ -82,15 +85,9 @@ export const notifyHROnAppeal = onDocumentUpdated(
         // subsequently promoted, or any user flagged as demo-only.
         if (userData.isDemoProspect === true) return;
 
-        const roles = userData.roles || [];
-        const role = userData.role || '';
-        // Include HR managers and executive management
-        if (
-          role === 'hr-manager' ||
-          role === 'executive-management' ||
-          roles.includes('hr-manager') ||
-          roles.includes('executive-management')
-        ) {
+        const roleId = typeof userData.role === 'string' ? userData.role : userData.role?.id;
+        const roles: string[] = userData.roles || [];
+        if (HR_ROLES.includes(roleId) || roles.some((r: string) => HR_ROLES.includes(r))) {
           if (userData.email) {
             hrEmails.push(userData.email);
           }

@@ -16,14 +16,12 @@
     "cors": "^2.8.5",
     "firebase-admin": "^13.0.0",
     "firebase-functions": "^7.0.0",
-    "jsonwebtoken": "^9.0.2",
-    "stripe": "^18.5.0"
+    "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.0.0",
-    "@types/stripe": "^8.0.416",
     "typescript": "^5.6.0"
   }
 }

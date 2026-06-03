@@ -8,6 +8,11 @@ import * as admin from 'firebase-admin';
 import * as jwt from 'jsonwebtoken';
 import { onRequest, HttpsError, Request } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { defineString } from 'firebase-functions/params';
+
+// Signing secret for temporary-download JWTs. Sourced via firebase-functions params
+// (set TEMP_LINK_SECRET in functions/.env). No insecure hardcoded fallback — see getJWTSecret.
+const tempLinkSecret = defineString('TEMP_LINK_SECRET');
 
 // Initialize Firebase Admin if not already done
 if (!admin.apps.length) {
@@ -53,9 +58,13 @@ interface LinkGenerationRequest {
  * Generate JWT secret from Firebase project config
  */
 function getJWTSecret(): string {
-  // Use Firebase project ID and a secret from environment
+  // Use Firebase project ID and a secret from environment.
+  // Fail closed: no predictable default — TEMP_LINK_SECRET must be configured.
   const projectId = process.env.GCLOUD_PROJECT;
-  const secretSuffix = process.env.TEMP_LINK_SECRET || 'temp-download-secret-2024';
+  const secretSuffix = tempLinkSecret.value();
+  if (!secretSuffix) {
+    throw new Error('TEMP_LINK_SECRET is not configured — set it in functions/.env');
+  }
   return `${projectId}-${secretSuffix}`;
 }
 

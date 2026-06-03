@@ -38,19 +38,19 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md mx-auto min-h-[80vh] flex items-center">
+      <div className="w-full max-w-md mx-auto md:min-h-[80vh] flex items-center">
         {/* Login Card */}
         <div className="w-full bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
           
           {/* Header */}
-          <div className="bg-white px-8 pt-8 pb-6 text-center border-b border-gray-100">
+          <div className="bg-white px-6 sm:px-8 pt-8 pb-6 text-center border-b border-gray-100">
             <div className="mb-4">
               <Logo size="xlarge" showText={true} />
             </div>
           </div>
 
           {/* Form */}
-          <div className="px-8 py-6">
+          <div className="px-6 sm:px-8 py-6">
             <form onSubmit={handleSubmit} className="space-y-6">
               
               {/* Email Field */}
@@ -138,7 +138,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
           </div>
           
           {/* Footer */}
-          <div className="px-8 py-4 bg-gray-50 border-t border-gray-100">
+          <div className="px-6 sm:px-8 py-4 bg-gray-50 border-t border-gray-100">
             <p className="text-xs text-center text-gray-500">
               Fully Integrated Fully Online
             </p>

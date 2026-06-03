@@ -68,21 +68,21 @@ function setCorsHeaders(res: any, origin?: string): void {
 }
 
 async function getHREmails(orgId: string): Promise<string[]> {
-  const usersSnapshot = await db.collection('users')
-    .where('organizationId', '==', orgId)
-    .get();
+  // Read the sharded per-org user collection (source of truth). Filter in code:
+  // the sharded `role` field is stored inconsistently — sometimes a string,
+  // sometimes an object { id } — so a Firestore `role.id` where-clause would
+  // silently miss string-role users. Org user collections are small, so reading
+  // all and filtering in memory is cheap and correct.
+  const usersSnapshot = await db.collection(`organizations/${orgId}/users`).get();
 
+  const HR_ROLES = ['hr-manager', 'executive-management'];
   const emails: string[] = [];
   usersSnapshot.forEach(doc => {
     const userData = doc.data();
-    const roles = userData.roles || [];
-    const role = userData.role || '';
-    if (
-      role === 'hr-manager' ||
-      role === 'executive-management' ||
-      roles.includes('hr-manager') ||
-      roles.includes('executive-management')
-    ) {
+    if (userData.isDemoProspect === true) return;
+    const roleId = typeof userData.role === 'string' ? userData.role : userData.role?.id;
+    const roles: string[] = userData.roles || [];
+    if (HR_ROLES.includes(roleId) || roles.some((r: string) => HR_ROLES.includes(r))) {
       if (userData.email) emails.push(userData.email);
     }
   });

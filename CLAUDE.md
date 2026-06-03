@@ -81,7 +81,7 @@ firebase projects:list
 **IMPORTANT**: This file is size-limited to maintain context efficiency.
 
 - **Size Limit**: 500 lines maximum (target: 400-470 lines)
-- **Current Size**: 530 lines ⚠️ (over 500-line target — move oldest section to RECENT_UPDATES.md before next session)
+- **Current Size**: 538 lines ⚠️ (over 500-line target — move oldest "Most Recent" entry to RECENT_UPDATES.md before next session)
 - **Policy**: See `DOCUMENTATION_POLICY.md` for complete maintenance rules
 - **Before Adding Sessions**: Check size with `wc -l CLAUDE.md`
 - **If > 450 lines**: Move previous session to RECENT_UPDATES.md first
@@ -112,6 +112,7 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 **For complete file locations catalog with descriptions, see `QUICK_REFERENCE.md`**
 
 ### Key Files to Know
+- **Warning Wizard**: `warnings/enhanced/UnifiedWarningWizard.tsx` (v1, 10-phase) is the **production default**. `warnings/v2/UnifiedWarningWizardV2.tsx` (6-phase) is the **active migration target / next-gen wizard** — wired into HODDashboardSection behind a "Beta" CTA; not yet the production cutover. New mobile/UX work goes into v2.
 - **Core Types**: `frontend/src/types/core.ts`, `frontend/src/types/employee.ts`
 - **PDF System**: `PDFGenerationService.ts`, `PDFTemplateVersionService.ts`, `pdfDataTransformer.ts` - See `PDF_SYSTEM_ARCHITECTURE.md`
 - **Services**: `DatabaseShardingService.ts`, `ShardedDataService.ts`, `AdminDataService.ts`, `WarningService.ts`
@@ -368,6 +369,7 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 - **✅ SDK bump**: `firebase-functions` 4.9.0 → 7.2.5; `firebase-admin` 11.x → 13.10.0. All deploy warnings about deprecated/outdated SDKs are gone.
 - **✅ Full v1 → v2 migration of 3 residual files**: `timeService.ts`, `audioCleanup.ts`, `temporaryDownload.ts`. Removed manual CORS middleware + manual `CallableContext` shimming inside `onRequest` handlers.
 - **Migration gotcha**: `firebase functions:delete` required for the 12 functions previously deployed as 1st gen — `firebase deploy` refuses to upgrade gen in-place. After delete+recreate, public IAM had to be set explicitly via `gcloud run services add-iam-policy-binding ... --member=allUsers --role=roles/run.invoker`. Recorded in `lessons.md`.
+- **Post-deploy audit catch**: 3 functions (`deliverWarningByEmail`, `uploadResponseEvidence`, `notifyHROnAppeal`) hit CPU-quota during deploy; `firebase functions:list` listed them as `nodejs22` but `gcloud run services describe` showed them still serving 9-day-old Node 20 revisions. Re-deployed those three explicitly; now `Ready=True` on the new revisions. Verification pattern recorded in `lessons.md` — always cross-check Cloud Run service state after deploys with partial failures.
 
 ### Previous (Pre-Launch Cleanup, 2026-05-11)
 Phase 2 (architectural debt), Phase 4 (ESLint + console scrub), Phase 5 (docs hygiene) shipped over Sessions 68–73. tsc 903 → 647 (-28%), ~10,000 LOC removed/relocated. `DataService` decomposed into `ShardedDataService` + `AdminDataService`; `EmployeeService`, `DataServiceV2`, `NestedDataService`, `CategoryService` deleted; types unified to `types/core.ts`; 7 oversized components decomposed; PDF generator 4,135→958 LOC with byte-identical v1.0.0/v1.1.0 preservation; `Logger` now sanitises all production logging; 12 real react-hooks/rules-of-hooks bugs fixed; `npm run lint` clean. Full detail in `RECENT_UPDATES.md`.
@@ -525,6 +527,11 @@ Add notes for FIFO Ops here. Format:
 Items will be processed and removed by FIFO Ops sync.
 -->
 
+<!--
+- [2026-06-03] [PROJECT: file] [PRIORITY: high] BILLING-MODEL PIVOT. Built-in Stripe card billing removed from File (Tier 0 — billing.ts + frontend StripeService.ts deleted; checkout/portal/webhook/processMonthlyCommissions gone). Riaan is switching to manual ANNUAL / SEMI-ANNUAL invoicing (monthly = too much admin). NEW PROJECT to scope: where invoicing lives — strong candidate is Fin by FIFO / `invoiced`. Note: reseller commission CREATION now relies on the manual `CommissionService.recordClientPayment` path (FinancialDashboard) until an invoicing flow exists; commission DISPLAY/reporting is unaffected. Org creation already auto-activates (never depended on Stripe).
+-->
+
+
 <!-- Processed by FIFO Ops on 2026-02-02:
 - All 5 HR practitioner feedback gaps COMPLETED (Sessions 57-58)
 - Gap 1: link-based response, Gap 2: evidence on appeals, Gap 3: HR email notification
@@ -534,4 +541,10 @@ Items will be processed and removed by FIFO Ops sync.
 -->
 
 <!-- Processed by FIFO Ops on 2026-02-11: Gap 4 correction acknowledged. Ops investigated legacy wizard by mistake. Active wizard (UnifiedWarningWizard) has evidence fully wired. Both gaps confirmed done. -->
+
+<!--
+- [2026-06-03] [PROJECT: file] [PRIORITY: high] Pre-mass-production audit completed — see PRE_LAUNCH_AUDIT_2026-06.md. Verdict: GO for first ~50 clients after 3 small Tier 0 fixes; not yet tuned for 2,700 orgs (well-understood Tier 2 work).
+- [2026-06-03] [PROJECT: file] [PRIORITY: high] Tier 0 pre-launch fixes (do before first paying client, ~1 day): (0.1) TEMP_LINK_SECRET defaults to hardcoded predictable string in functions/src/temporaryDownload.ts:58 — move to Secret Manager; (0.2) remove Stripe secret/webhook fallbacks in billing.ts + verify webhook signature before taking real money; (0.3) getHREmails() reads legacy global users collection — repoint to sharded path.
+- [2026-06-03] [PROJECT: file] [PRIORITY: medium] Headline vision gap: app is responsive, not truly mobile-first. Tier 1.1 in audit doc — mobile-first the 3-4 hot-path screens at 320px on real low-end Android.
+-->
 
