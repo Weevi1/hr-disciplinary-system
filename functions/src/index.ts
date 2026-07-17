@@ -32,6 +32,9 @@ import {
 // 🔗 ADD TEMPORARY DOWNLOAD FUNCTIONS
 export { generateTemporaryDownloadLink, downloadTempFile, validateTemporaryToken, revokeTemporaryToken, cleanupExpiredTokens } from './temporaryDownload';
 
+// 🎯 LEAD CAPTURE (public demo-request form on the landing page)
+export { submitDemoRequest } from './leads';
+
 // 🔐 ADD CUSTOM CLAIMS FUNCTIONS
 import {
   refreshUserClaims,

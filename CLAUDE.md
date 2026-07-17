@@ -364,13 +364,15 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 **For complete change history, see `RECENT_UPDATES.md` (Sessions 20-52) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Step 5 delivery completed — WhatsApp + Printed, 2026-06-04)
-- **✅ All four Step 5 delivery methods now functional.** WhatsApp and Printed were silent stubs (recorded `pending` forever, nothing sent); both now work. Deployed to production 2026-06-04.
-- **WhatsApp**: opens `wa.me/<number>` on the manager's device with a message + the durable **respond link** (the PDF can't be pre-attached to a click-to-chat URL). Number pre-filled from `profile.whatsappNumber || profile.phoneNumber`, editable, gated by a "confirmed with employee" checkbox. Respond token (`generateResponseToken`) now takes optional `expiryDays` — WhatsApp passes **180** (6 months). New shared `frontend/src/utils/phone.ts`.
-- **Printed (collect from HR)**: records `deliveryStatus: 'awaiting_collection'` + emails HR via new callable `notifyHRPrintedCollection`. HR completes it from the Review dashboard via the existing **Deliver → EnhancedDeliveryWorkflow → PrintDeliveryGuide** flow.
-- **Bug fixed**: `ReviewDashboard` HR-side completion wrote `status` not `deliveryStatus`, so delivered warnings stayed stuck in the undelivered queue — now writes `deliveryStatus: 'delivered'` + `deliveryHistory` proof. Affected all HR-side deliveries.
-- **Pattern**: Email/WhatsApp/Printed are *self-finalizing* panels (each writes its own delivery fields + fires the celebration) → excluded from the generic DELIVERY validation + `handleFinalize` guard; only QR uses the shared Finalize button.
-- Full detail + the 2026-06-03 V2 cutover note moved to `RECENT_UPDATES.md`.
+### Most Recent (Go-To-Market Hardening, 2026-07-17) — ⚠️ NOT YET DEPLOYED
+- **Onboarding wizard**: hardcoded `temp123` replaced with a crypto-random one-time password shown once on a new success screen (copy button); admin creation confirmed server-side (no logout bug — stale comments removed); `requirePasswordChange` honored server-side.
+- **Suspend kill-switch + trials**: `subscriptionStatus` `active`/`trial`(+`trialEndsAt` Timestamp)/`suspended` enforced in rules (`activeOrgMember()`, 42 sharded call sites) + `MainLayout` lock screen/trial banner (`utils/subscription.ts`); SuperAdminDashboard Status column + Suspend/Reactivate; wizard step 1 offers Active vs Free trial (14–90d).
+- **Lead capture**: public `submitDemoRequest` fn (honeypot, per-IP 5/hr) → `leads` collection + email to Riaan; landing page "Book a Demo" form (`#demo`) replaces the dead "Start Free Trial"→login CTAs; landing CSP updated.
+- **Respond endpoints throttled** (submit/appeal/upload — per-token 20/hr). **Repo**: June-4 prod code finally committed, merged to master, pushed; dead `lib/billing.js` deleted; corrupt-git dir evicted. **Monitoring**: frontend Sentry DSN verified in prod bundle; **backend error alerting needs Riaan** — see `MONITORING_SETUP.md`.
+- Full detail in `RECENT_UPDATES.md`.
+
+### Previous (Step 5 delivery completed — WhatsApp + Printed, 2026-06-04)
+All four Step 5 delivery methods functional (WhatsApp = wa.me + durable 180-day respond link; Printed = `awaiting_collection` + `notifyHRPrintedCollection`, HR completes via PrintDeliveryGuide); fixed `ReviewDashboard` writing `status` instead of `deliveryStatus`. Self-finalizing-panel pattern: Email/WhatsApp/Printed excluded from generic Finalize; only QR uses it. Deployed 2026-06-04. Detail in `RECENT_UPDATES.md`.
 
 ### Previous (Node 22 + firebase-functions v7 upgrade, 2026-05-19)
 Runtime Node 20 → 22; `firebase-functions` → 7.2.5, `firebase-admin` → 13.x; 3 residual files migrated v1→v2. Gen-1→gen-2 in-place upgrade is blocked (delete+recreate + explicit public IAM). `firebase functions:list` reports configured runtime, not what's serving — cross-check `gcloud run services describe` after partial-failure deploys. Full detail + gotchas in `lessons.md` and `RECENT_UPDATES.md`.
@@ -390,7 +392,7 @@ See `RECENT_UPDATES.md` for detailed session history including Sessions 57-66.
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ org scalability, progressive enhancement for 2012-2025 devices, **unified design system**, **DashboardShell** across all dashboards, **WCAG AA compliance**, **versioned PDF generation**, **per-org PDF templates**, **SVG signatures**, **10-phase unified warning wizard**, **link-based employee response/appeal system** with token auth and PDF viewing, **HR email notifications via SendGrid**, **evidence upload on appeals with client-side image optimization**, **per-organization multi-dashboard theming** (Manager, HR, Executive views with per-view metric card colors), **optimized warning data loading with staleness detection**, **session guard with auto-logout + forced app updates**, and **CCMA-ready PDFs with section labels, continuation headers, electronic signature notation, and page initials**.*
 
-*Last Updated: 2026-06-04 - Step 5 delivery completed: WhatsApp (durable respond link) + Printed (collect-from-HR) made functional; HR-side `deliveryStatus` write bug fixed. Deployed to production.*
+*Last Updated: 2026-07-17 - Go-to-market hardening: onboarding wizard password fix, suspend/trial kill-switch (rules + UI), landing-page lead capture, respond-endpoint throttling. NOT yet deployed — deploy functions + hosting + firestore:rules after review.*
 
 ---
 

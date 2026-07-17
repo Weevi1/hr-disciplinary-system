@@ -34,6 +34,7 @@ import { PDFTemplateManager } from './PDFTemplateManager';
 import Logger from '../../utils/logger';
 import type { Organization } from '../../types/core';
 import { ThemeSelector } from '../common/ThemeSelector';
+import { getTrialDaysLeft, isTrialExpired } from '../../utils/subscription';
 import { QuotesSection } from '../dashboard/QuotesSection';
 import { ref, listAll, getMetadata } from 'firebase/storage';
 import { storage } from '../../config/firebase';
@@ -242,6 +243,42 @@ export const SuperAdminDashboard = () => {
     Logger.success('Organization deployed successfully!', result);
     setShowWizard(false);
     await loadDashboardData();
+  };
+
+  // 💳 Subscription kill-switch (manual EFT billing): suspend locks the org's
+  // members out (enforced by Firestore rules activeOrgMember); activate restores
+  // access / converts a trial to a paying client.
+  const handleSetSubscriptionStatus = async (org: Organization, status: 'active' | 'suspended') => {
+    const confirmMsg = status === 'suspended'
+      ? `Suspend "${org.name}"? All its users will be locked out until reactivated.`
+      : `Activate "${org.name}" as a paying client? Its users regain full access.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await AdminDataService.updateOrganization(org.id, { subscriptionStatus: status });
+      Logger.success(`Organization ${org.name} set to ${status}`);
+      await loadDashboardData();
+    } catch (error) {
+      Logger.error('Failed to update subscription status:', error);
+      alert('Failed to update subscription status. See console for details.');
+    }
+  };
+
+  const renderSubscriptionBadge = (org: Organization) => {
+    if (org.isDemo) {
+      return <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-700">Demo</span>;
+    }
+    if (org.subscriptionStatus === 'suspended') {
+      return <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-50 text-red-700">Suspended</span>;
+    }
+    if (org.subscriptionStatus === 'trial') {
+      if (isTrialExpired(org)) {
+        return <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-50 text-red-700">Trial expired</span>;
+      }
+      const daysLeft = getTrialDaysLeft(org);
+      return <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-700">Trial{daysLeft !== null ? ` · ${daysLeft}d` : ''}</span>;
+    }
+    return <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-50 text-green-700">Active</span>;
   };
 
   // 📱 MOBILE VIEW
@@ -617,6 +654,10 @@ export const SuperAdminDashboard = () => {
                       </th>
                       <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider"
                           style={{ color: 'var(--color-text-secondary)' }}>
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider"
+                          style={{ color: 'var(--color-text-secondary)' }}>
                         Actions
                       </th>
                     </tr>
@@ -658,6 +699,9 @@ export const SuperAdminDashboard = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
+                          {renderSubscriptionBadge(org)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
                           <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => handleCategoryManagement(org)}
@@ -665,6 +709,33 @@ export const SuperAdminDashboard = () => {
                             >
                               Categories
                             </button>
+                            {!org.isDemo && (
+                              org.subscriptionStatus === 'suspended' ? (
+                                <button
+                                  onClick={() => handleSetSubscriptionStatus(org, 'active')}
+                                  className="text-xs px-3 py-1 rounded font-semibold bg-green-600 text-white hover:bg-green-700"
+                                >
+                                  Reactivate
+                                </button>
+                              ) : (
+                                <>
+                                  {org.subscriptionStatus === 'trial' && (
+                                    <button
+                                      onClick={() => handleSetSubscriptionStatus(org, 'active')}
+                                      className="text-xs px-3 py-1 rounded font-semibold bg-green-600 text-white hover:bg-green-700"
+                                    >
+                                      Activate
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleSetSubscriptionStatus(org, 'suspended')}
+                                    className="text-xs px-3 py-1 rounded font-semibold bg-red-600 text-white hover:bg-red-700"
+                                  >
+                                    Suspend
+                                  </button>
+                                </>
+                              )
+                            )}
                           </div>
                         </td>
                       </tr>

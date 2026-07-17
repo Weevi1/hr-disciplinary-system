@@ -29,6 +29,7 @@ import { DatabaseShardingService } from '../services/DatabaseShardingService';
 import { FirebaseService } from '../services/FirebaseService';
 import Logger from '../utils/logger';
 import { useSessionGuard } from '../hooks/useSessionGuard';
+import { getOrgAccessState, getTrialDaysLeft } from '../utils/subscription';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -493,6 +494,43 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
 
 
 
+  // 💳 Subscription kill-switch: suspended orgs and expired trials are locked
+  // out (Firestore rules enforce this server-side via activeOrgMember; this is
+  // the matching UX). Super-users and resellers keep access to administer.
+  const roleId = typeof user?.role === 'string' ? user.role : user?.role?.id;
+  const isPlatformRole = roleId === 'super-user' || roleId === 'reseller';
+  const orgAccessState = getOrgAccessState(organization);
+  const trialDaysLeft = getTrialDaysLeft(organization);
+
+  if (orgAccessState !== 'ok' && !isPlatformRole) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: 'var(--color-background)' }}>
+        <div className="max-w-md w-full text-center rounded-xl border p-8" style={{ backgroundColor: 'var(--color-card-background)', borderColor: 'var(--color-border)' }}>
+          <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-amber-500" />
+          <h1 className="text-xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>
+            {orgAccessState === 'trial_expired' ? 'Your trial has ended' : 'Account suspended'}
+          </h1>
+          <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>
+            {orgAccessState === 'trial_expired'
+              ? `The free trial for ${organization?.name || 'your organization'} has expired. To keep using File and retain access to your records, please contact FIFO Solutions to activate your subscription.`
+              : `Access for ${organization?.name || 'your organization'} is currently suspended. Please contact FIFO Solutions to restore access.`}
+          </p>
+          <div className="space-y-2 mb-6 text-sm">
+            <a href="mailto:riaan@fifo.systems" className="block font-medium text-blue-600 hover:underline">riaan@fifo.systems</a>
+            <a href="https://wa.me/27825254011" target="_blank" rel="noopener noreferrer" className="block font-medium text-green-600 hover:underline">WhatsApp: +27 82 525 4011</a>
+          </div>
+          <button
+            onClick={logout}
+            className="px-4 py-2 rounded-lg text-sm font-medium border"
+            style={{ color: 'var(--color-text-secondary)', borderColor: 'var(--color-border)' }}
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--dash-page-bg, var(--color-background))', fontFamily: 'var(--dash-font-family)' }}>
       {/* Modern Top Navigation */}
@@ -503,6 +541,15 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
         <div className="bg-amber-500 text-white text-center text-xs sm:text-sm font-medium px-4 py-1.5 shadow-sm">
           <span role="img" aria-label="test tube" className="mr-1.5">🧪</span>
           DEMO ORGANIZATION — data will be reset when the reseller chooses. Not for production use.
+        </div>
+      )}
+
+      {/* 💳 Trial countdown banner — persistent while the org is on a trial */}
+      {trialDaysLeft !== null && !organization?.isDemo && (
+        <div className="bg-blue-600 text-white text-center text-xs sm:text-sm font-medium px-4 py-1.5 shadow-sm">
+          {trialDaysLeft > 0
+            ? `Free trial — ${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} remaining. Contact FIFO Solutions to activate your subscription.`
+            : 'Free trial ends today. Contact FIFO Solutions to activate your subscription.'}
         </div>
       )}
 

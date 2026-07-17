@@ -1,7 +1,7 @@
 // frontend/src/services/ShardedOrganizationService.ts
 // Organization creation service compatible with sharded database architecture
 
-import { doc, setDoc, collection, writeBatch, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, collection, writeBatch, serverTimestamp, Timestamp } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import { db, auth, functions } from '../config/firebase'
 import { DatabaseShardingService } from './DatabaseShardingService'
@@ -20,6 +20,7 @@ interface ShardedOrganizationData extends Partial<Organization> {
   contactEmail: string
   subscriptionTier: string
   subscriptionStatus: string
+  trialEndsAt?: Date // required when subscriptionStatus === 'trial'
   resellerId?: string
   
   // Admin user data
@@ -85,6 +86,9 @@ export class ShardedOrganizationService {
 
         subscriptionTier: organizationData.subscriptionTier,
         subscriptionStatus: organizationData.subscriptionStatus,
+        // Stored as a Firestore Timestamp so security rules can compare it
+        // against request.time (see orgOperational in config/firestore.rules)
+        ...(organizationData.trialEndsAt ? { trialEndsAt: Timestamp.fromDate(organizationData.trialEndsAt) } : {}),
 
         resellerId: organizationData.resellerId || null,
 
@@ -98,7 +102,7 @@ export class ShardedOrganizationService {
 
         createdAt: TimeService.getServerTimestamp(),
         updatedAt: TimeService.getServerTimestamp(),
-        isActive: organizationData.subscriptionStatus === 'active',
+        isActive: ['active', 'trial'].includes(organizationData.subscriptionStatus),
 
         // Sharded database metadata
         databaseVersion: '2.0',
@@ -288,7 +292,7 @@ export class ShardedOrganizationService {
         role: adminData.role,
         organizationId: organizationId,
         sendWelcomeEmail: false,
-        requirePasswordChange: false
+        requirePasswordChange: true // One-time generated password — admin must change it on first login
       })
 
       const response = result.data as { uid: string; email: string; success: boolean; message: string }

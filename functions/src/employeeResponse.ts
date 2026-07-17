@@ -26,6 +26,7 @@ const storage = getStorage();
 const TOKEN_LENGTH = 32; // 32 bytes = 64 hex chars
 const DEFAULT_EXPIRY_DAYS = 30;
 const MAX_VIEWS_PER_HOUR = 20;
+const MAX_WRITES_PER_HOUR = 20; // submit/appeal/upload combined, per token
 const MAX_RESPONSE_LENGTH = 5000;
 const MAX_APPEAL_DETAILS_LENGTH = 5000;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -65,6 +66,34 @@ function setCorsHeaders(res: any, origin?: string): void {
   res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
   res.set('Access-Control-Max-Age', '3600');
+}
+
+/**
+ * Per-token throttle for the public WRITE endpoints (submit response, submit
+ * appeal, upload evidence). Rolling 1-hour window tracked on the token doc
+ * (writeCount / writeWindowStart) — separate from the view counter so PDF
+ * views don't consume the write budget. Sends a 429 and returns false when
+ * the budget is exhausted; increments and returns true otherwise.
+ */
+async function enforceWriteRateLimit(
+  tokenRef: FirebaseFirestore.DocumentReference,
+  tokenData: FirebaseFirestore.DocumentData,
+  res: any
+): Promise<boolean> {
+  const windowStartMs = tokenData.writeWindowStart?.toDate?.().getTime() ?? 0;
+  const inWindow = Date.now() - windowStartMs < 60 * 60 * 1000;
+
+  if (inWindow && (tokenData.writeCount ?? 0) >= MAX_WRITES_PER_HOUR) {
+    res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    return false;
+  }
+
+  await tokenRef.update(
+    inWindow
+      ? { writeCount: FieldValue.increment(1) }
+      : { writeCount: 1, writeWindowStart: Timestamp.now() }
+  );
+  return true;
 }
 
 async function getHREmails(orgId: string): Promise<string[]> {
@@ -437,6 +466,8 @@ export const submitEmployeeResponse = onRequest(
         return;
       }
 
+      if (!(await enforceWriteRateLimit(tokenDoc.ref, tokenData, res))) return;
+
       const sanitizedResponse = sanitizeText(responseText, MAX_RESPONSE_LENGTH);
       if (!sanitizedResponse) {
         res.status(400).json({ error: 'Response text cannot be empty' });
@@ -551,6 +582,8 @@ export const submitEmployeeAppeal = onRequest(
         res.status(409).json({ error: 'An appeal has already been submitted' });
         return;
       }
+
+      if (!(await enforceWriteRateLimit(tokenDoc.ref, tokenData, res))) return;
 
       const sanitizedDetails = sanitizeText(details, MAX_APPEAL_DETAILS_LENGTH);
       const sanitizedOutcome = sanitizeText(requestedOutcome, MAX_RESPONSE_LENGTH);
@@ -673,6 +706,8 @@ export const uploadResponseEvidence = onRequest(
         res.status(410).json({ error: 'Response link is expired or revoked' });
         return;
       }
+
+      if (!(await enforceWriteRateLimit(tokenDoc.ref, tokenData, res))) return;
 
       // Validate MIME type
       if (!ALLOWED_MIME_TYPES.includes(mimeType)) {

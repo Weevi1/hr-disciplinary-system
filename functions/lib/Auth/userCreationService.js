@@ -148,7 +148,7 @@ exports.createOrganizationAdmin = (0, https_2.onCall)({
             role: role, // Store as simple string to match current format
             organizationId: organizationId,
             isActive: true,
-            mustChangePassword: password === 'temp123', // Auto-detect temp password
+            mustChangePassword: requirePasswordChange || password === 'temp123', // Explicit flag, or legacy temp-password detection
             hasSeenWelcome: false, // New users should see welcome modal
             // Default HOD permissions (all features enabled by default, HR can configure)
             ...(role === 'hod-manager' && {

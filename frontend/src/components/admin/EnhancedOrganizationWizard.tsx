@@ -60,12 +60,24 @@ const getRecommendedTier = (employeeCount: number): SubscriptionTier => {
   return 'enterprise-plus';
 };
 
+// Generate a one-time admin password: three 4-char groups from an unambiguous
+// charset (no 0/O/1/l/I), e.g. "Kx7m-Rp4v-Wn9q". ~62 bits of entropy.
+const generateAdminPassword = (): string => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  const raw = Array.from(bytes, b => chars[b % chars.length]).join('');
+  return `${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}`;
+};
+
 
 interface WizardFormData {
   // Step 1: Subscription & Payment
   companyName: string;
   employeeCount: number;
   selectedPlan: SubscriptionTier;
+  billingMode: 'active' | 'trial'; // 'trial' deploys time-boxed; 'active' = invoiced client
+  trialDays: number;
   
   // Step 2: Company Details
   industry: string;
@@ -117,6 +129,8 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
   const [error, setError] = useState<string | null>(null);
   const [availableResellers, setAvailableResellers] = useState<Reseller[]>([]);
   const [showCategoryTemplateSelector, setShowCategoryTemplateSelector] = useState(false);
+  const [deployResult, setDeployResult] = useState<{ companyName: string; adminEmail: string; adminPassword: string } | null>(null);
+  const [credentialsCopied, setCredentialsCopied] = useState(false);
 
   // Reseller-specific deployment status
   const [deploymentStatus, setDeploymentStatus] = useState<{
@@ -150,6 +164,8 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
     companyName: '',
     employeeCount: 15,
     selectedPlan: 'professional', // Default to most popular
+    billingMode: 'active',
+    trialDays: 30,
 
     // Step 2: Company Details
     industry: '',
@@ -431,7 +447,7 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
         if (!formData.adminFirstName.trim()) return { isValid: false, message: 'Admin first name is required' };
         if (!formData.adminLastName.trim()) return { isValid: false, message: 'Admin last name is required' };
         if (!formData.adminEmail.trim()) return { isValid: false, message: 'Admin email is required' };
-        // Password validation removed - temp123 is set automatically
+        // Password is generated automatically at deploy time
         return { isValid: true };
 
       case 'customize': // Customization
@@ -494,9 +510,8 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
       setIsProcessing(true);
       setError(null);
 
-      Logger.debug('🚀 [DEV MODE] Starting organization deployment with auto-approval...');
+      Logger.debug('🚀 Starting organization deployment...');
 
-      // Step 1: Skip Stripe - Auto-approve organization
       const organizationId = formData.companyName.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
       // Upload logo if provided
@@ -511,8 +526,9 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
         }
       }
 
-      // Use predefined password 'temp123' for development
-      const devPassword = 'temp123';
+      // One-time password for the client admin — shown once on the success
+      // screen; the admin must change it on first login (mustChangePassword).
+      const adminPassword = generateAdminPassword();
 
       // Step 2: Create organization with sharded structure - ACTIVE from start
       const orgResult = await ShardedOrganizationService.createOrganization({
@@ -529,7 +545,10 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
         employeeCount: formData.employeeCount,
 
         subscriptionTier: formData.selectedPlan,
-        subscriptionStatus: 'active', // Auto-approve instead of 'pending_payment'
+        subscriptionStatus: formData.billingMode, // 'active' (invoiced/EFT) or 'trial' (time-boxed)
+        ...(formData.billingMode === 'trial'
+          ? { trialEndsAt: new Date(Date.now() + formData.trialDays * 24 * 60 * 60 * 1000) }
+          : {}),
         resellerId: formData.resellerId,
 
         branding: {
@@ -547,7 +566,7 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
           firstName: formData.adminFirstName,
           lastName: formData.adminLastName,
           email: formData.adminEmail,
-          password: devPassword, // Use predefined password
+          password: adminPassword,
           role: 'executive-management'
         },
         
@@ -559,23 +578,15 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
       }
 
       Logger.success(`✅ Organization '${formData.companyName}' deployed successfully!`);
-      Logger.success(`📧 Admin email: ${formData.adminEmail}`);
-      Logger.success(`🔑 Admin password: ${devPassword}`);
 
-      // ⚠️ NOTE: createUserWithEmailAndPassword() auto-signs in the new admin user
-      // This means the super-user is no longer authenticated, which may cause
-      // permission errors for subsequent operations. The organization IS created successfully.
-      //
-      // TODO: Move department creation to a cloud function trigger (onCreate organization)
-      // to avoid this auth state issue entirely.
-
-      // Create default departments for the new organization
-      // Expected to fail due to auth state change (new admin user is now signed in)
+      // Create default departments for the new organization. Admin creation runs
+      // server-side (createOrganizationAdmin Cloud Function), so the deployer's
+      // session is preserved and this is expected to succeed.
       try {
         await DepartmentService.createDefaultDepartments(organizationId);
         Logger.success('✅ Default departments created successfully');
       } catch (deptError) {
-        Logger.warn('⚠️ Could not create default departments (expected due to auth state)');
+        Logger.error('⚠️ Could not create default departments', deptError);
         Logger.info('💡 Business owner will be prompted to create departments on first login');
         // Don't fail the whole deployment - organization was created successfully
       }
@@ -599,14 +610,13 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
         }
       }
 
-      // Show success message
-      alert(`🎉 Organization '${formData.companyName}' created successfully!\n\n` +
-            `📧 Admin Login: ${formData.adminEmail}\n` +
-            `🔑 Password: ${devPassword}`);
-
-      // Close wizard and refresh (reseller/super-user stays signed in)
-      onClose();
-      onComplete();
+      // Show the success screen with the one-time credentials (shown once —
+      // the password is not stored anywhere else in plaintext).
+      setDeployResult({
+        companyName: formData.companyName,
+        adminEmail: formData.adminEmail,
+        adminPassword
+      });
 
     } catch (error) {
       Logger.error('❌ Deployment failed:', error);
@@ -625,6 +635,67 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
   };
 
   if (!isOpen) return null;
+
+  // Success screen — shown after deployment completes. The generated password is
+  // only available here; the deployer must copy/record it before closing.
+  if (deployResult) {
+    const credentialsText = `File by FIFO — login details\nURL: https://file.fifo.systems/login\nEmail: ${deployResult.adminEmail}\nTemporary password: ${deployResult.adminPassword}`;
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.modal }}>
+        <div className="bg-white rounded-xl max-w-lg w-full p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <Check className="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Organization deployed</h2>
+              <p className="text-sm text-gray-600">{deployResult.companyName} is ready to use</p>
+            </div>
+          </div>
+
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500">Admin login</span>
+              <span className="text-sm font-medium text-gray-900">{deployResult.adminEmail}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-500">Temporary password</span>
+              <span className="text-base font-mono font-semibold text-gray-900">{deployResult.adminPassword}</span>
+            </div>
+          </div>
+
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
+            <p className="text-sm text-amber-800">
+              This password is shown <strong>once only</strong> — copy it and share it securely with the administrator.
+              They will be required to change it on first login.
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(credentialsText).then(() => setCredentialsCopied(true));
+              }}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+            >
+              {credentialsCopied ? '✓ Copied' : 'Copy login details'}
+            </button>
+            <button
+              onClick={() => {
+                setDeployResult(null);
+                setCredentialsCopied(false);
+                onClose();
+                onComplete();
+              }}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: Z_INDEX.modal }}>
@@ -800,6 +871,58 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
                     );
                   })}
                 </div>
+              </div>
+
+              {/* Billing mode — paying client vs time-boxed free trial */}
+              <div>
+                <h4 className="text-md font-semibold mb-2">Billing Status</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => updateFormData({ billingMode: 'active' })}
+                    className={`text-left border rounded-lg p-4 transition-all ${
+                      formData.billingMode === 'active'
+                        ? 'border-green-500 bg-green-50 ring-2 ring-green-500'
+                        : 'border-gray-200 bg-gray-50'
+                    }`}
+                  >
+                    <div className="font-semibold text-gray-900">Active (invoiced client)</div>
+                    <div className="text-sm text-gray-600 mt-1">
+                      Full access from day one. Billing handled via manual invoice / EFT.
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateFormData({ billingMode: 'trial' })}
+                    className={`text-left border rounded-lg p-4 transition-all ${
+                      formData.billingMode === 'trial'
+                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-500'
+                        : 'border-gray-200 bg-gray-50'
+                    }`}
+                  >
+                    <div className="font-semibold text-gray-900">Free trial</div>
+                    <div className="text-sm text-gray-600 mt-1">
+                      Time-boxed evaluation. Access locks automatically when the trial ends;
+                      activate from the admin dashboard once they sign up.
+                    </div>
+                  </button>
+                </div>
+
+                {formData.billingMode === 'trial' && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <label className="text-sm font-medium text-gray-700">Trial length</label>
+                    <select
+                      value={formData.trialDays}
+                      onChange={e => updateFormData({ trialDays: parseInt(e.target.value) })}
+                      className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value={14}>14 days</option>
+                      <option value={30}>30 days</option>
+                      <option value={60}>60 days</option>
+                      <option value={90}>90 days</option>
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1149,10 +1272,10 @@ export const EnhancedOrganizationWizard: React.FC<EnhancedOrganizationWizardProp
                       i
                     </div>
                     <div className="flex-1">
-                      <h4 className="text-sm font-semibold text-blue-900 mb-1">Default Password</h4>
+                      <h4 className="text-sm font-semibold text-blue-900 mb-1">Temporary Password</h4>
                       <p className="text-sm text-blue-800">
-                        A temporary password <span className="font-mono font-semibold">temp123</span> will be set for this administrator.
-                        They will be prompted to change it on first login.
+                        A secure one-time password will be generated automatically and shown to you after deployment.
+                        The administrator must change it on first login.
                       </p>
                     </div>
                   </div>

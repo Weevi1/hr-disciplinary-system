@@ -274,8 +274,8 @@
           Login
           <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,4 14,12 6,20"/></svg>
         </a>
-        <a href="/login" class="inline-flex items-center justify-center px-8 py-4 rounded-xl border border-white/10 hover:border-white/20 hover:bg-white/5 text-white font-medium text-base transition-all min-h-[52px] w-full sm:w-auto">
-          Start Free Trial
+        <a href="#demo" class="inline-flex items-center justify-center px-8 py-4 rounded-xl border border-white/10 hover:border-white/20 hover:bg-white/5 text-white font-medium text-base transition-all min-h-[52px] w-full sm:w-auto">
+          Book a Free Demo
         </a>
       </div>
     </div>
@@ -501,9 +501,75 @@
 
         <p class="text-xs text-white/30 mb-8">Pricing varies by organisation size. Contact us for a tailored quote.</p>
 
-        <a href="/login" class="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-base transition-all hover:shadow-lg hover:shadow-brand-500/20 min-h-[52px]">
-          Start Free Trial
+        <a href="#demo" class="inline-flex items-center justify-center px-8 py-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-base transition-all hover:shadow-lg hover:shadow-brand-500/20 min-h-[52px]">
+          Book a Free Demo
         </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- DEMO REQUEST FORM                                       -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <section id="demo" class="relative py-20 sm:py-28">
+    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="reveal glass rounded-2xl sm:rounded-3xl p-8 sm:p-12">
+        <p class="text-brand-500 font-semibold text-sm uppercase tracking-widest mb-4 text-center">Book a Demo</p>
+        <h2 class="text-3xl sm:text-4xl font-bold mb-4 text-center">See File in action</h2>
+        <p class="text-white/50 text-center mb-10 text-base">Leave your details and we'll contact you to arrange a free, no-obligation demo — usually within one business day.</p>
+
+        <form id="demo-form" novalidate>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label for="df-name" class="block text-sm text-white/60 mb-1.5">Your name *</label>
+              <input id="df-name" name="name" type="text" required autocomplete="name"
+                class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-brand-500 focus:outline-none" placeholder="Jane Mokoena" />
+            </div>
+            <div>
+              <label for="df-company" class="block text-sm text-white/60 mb-1.5">Company *</label>
+              <input id="df-company" name="company" type="text" required autocomplete="organization"
+                class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-brand-500 focus:outline-none" placeholder="Company (Pty) Ltd" />
+            </div>
+            <div>
+              <label for="df-email" class="block text-sm text-white/60 mb-1.5">Work email *</label>
+              <input id="df-email" name="email" type="email" required autocomplete="email"
+                class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-brand-500 focus:outline-none" placeholder="jane@company.co.za" />
+            </div>
+            <div>
+              <label for="df-phone" class="block text-sm text-white/60 mb-1.5">Phone / WhatsApp</label>
+              <input id="df-phone" name="phone" type="tel" autocomplete="tel"
+                class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-brand-500 focus:outline-none" placeholder="082 123 4567" />
+            </div>
+          </div>
+          <div class="mb-4">
+            <label for="df-employees" class="block text-sm text-white/60 mb-1.5">Number of employees</label>
+            <select id="df-employees" name="employeeCount"
+              class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-brand-500 focus:outline-none">
+              <option value="" class="bg-slate-900">Select…</option>
+              <option value="1-20" class="bg-slate-900">1 – 20</option>
+              <option value="21-50" class="bg-slate-900">21 – 50</option>
+              <option value="51-100" class="bg-slate-900">51 – 100</option>
+              <option value="101-300" class="bg-slate-900">101 – 300</option>
+              <option value="300+" class="bg-slate-900">300+</option>
+            </select>
+          </div>
+          <div class="mb-6">
+            <label for="df-message" class="block text-sm text-white/60 mb-1.5">Anything specific you'd like to see?</label>
+            <textarea id="df-message" name="message" rows="3"
+              class="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:border-brand-500 focus:outline-none" placeholder="Optional"></textarea>
+          </div>
+          <!-- Honeypot: hidden from humans; bots that fill it are silently dropped -->
+          <div class="absolute -left-[9999px]" aria-hidden="true">
+            <label for="df-website">Website</label>
+            <input id="df-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+          </div>
+          <button id="df-submit" type="submit"
+            class="w-full inline-flex items-center justify-center px-8 py-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-base transition-all hover:shadow-lg hover:shadow-brand-500/20 min-h-[52px]">
+            Request my demo
+          </button>
+          <p id="df-status" class="hidden mt-4 text-center text-sm" role="status"></p>
+          <p class="mt-4 text-center text-xs text-white/30">We'll only use these details to contact you about File. No spam, ever.</p>
+        </form>
       </div>
     </div>
   </section>
@@ -642,6 +708,64 @@
       document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
     } else {
       document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+    }
+
+    // Demo request form → submitDemoRequest Cloud Function
+    const demoForm = document.getElementById('demo-form');
+    if (demoForm) {
+      const statusEl = document.getElementById('df-status');
+      const submitBtn = document.getElementById('df-submit');
+
+      const showStatus = (msg, ok) => {
+        statusEl.textContent = msg;
+        statusEl.classList.remove('hidden', 'text-red-400', 'text-brand-400');
+        statusEl.classList.add(ok ? 'text-brand-400' : 'text-red-400');
+      };
+
+      demoForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const data = {
+          name: demoForm.name.value.trim(),
+          company: demoForm.company.value.trim(),
+          email: demoForm.email.value.trim(),
+          phone: demoForm.phone.value.trim(),
+          employeeCount: demoForm.employeeCount.value,
+          message: demoForm.message.value.trim(),
+          website: demoForm.website.value  // honeypot
+        };
+
+        if (!data.name || !data.company || !data.email) {
+          showStatus('Please fill in your name, company and email.', false);
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending…';
+
+        try {
+          const res = await fetch('https://us-central1-hr-disciplinary-system.cloudfunctions.net/submitDemoRequest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          const body = await res.json().catch(() => ({}));
+
+          if (res.ok) {
+            demoForm.reset();
+            submitBtn.textContent = 'Request sent ✓';
+            showStatus("Thanks! We'll be in touch within one business day.", true);
+          } else {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Request my demo';
+            showStatus(body.error || 'Something went wrong. Please try again or WhatsApp us instead.', false);
+          }
+        } catch (err) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Request my demo';
+          showStatus('Could not reach the server. Please try again or WhatsApp us instead.', false);
+        }
+      });
     }
   </script>
 </body>

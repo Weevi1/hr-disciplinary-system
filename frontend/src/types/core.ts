@@ -344,6 +344,16 @@ export interface Organization {
   // 🎨 Dashboard Theme Settings - Per-organization dashboard visual customization
   dashboardTheme?: DashboardThemeSettings;
 
+  // 💳 Subscription state (manual invoicing / EFT — no payment gateway)
+  // 'active'    — paying client (or comped), full access
+  // 'trial'     — time-boxed trial; access ends at trialEndsAt (treated as suspended)
+  // 'suspended' — locked out (non-payment / offboarding); super-admin can reactivate
+  // 'demo'      — reseller demo org (separate lifecycle, see isDemo)
+  subscriptionTier?: string;
+  subscriptionStatus?: 'active' | 'trial' | 'suspended' | 'demo';
+  trialEndsAt?: unknown; // Firestore Timestamp (or ISO string on older docs) — parse via utils/subscription.ts
+  isActive?: boolean;
+
   // 🧪 Demo Organization — deployed by a reseller for prospect testing
   // Not billable, not counted in reseller commission, reset-on-demand
   isDemo?: boolean;

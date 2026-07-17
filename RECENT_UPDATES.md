@@ -6,6 +6,24 @@ Latest session updates and recent changes to the HR Disciplinary System.
 
 ---
 
+## Go-To-Market Hardening — commercial-path gaps closed (2026-07-17)
+
+Pre-launch session ahead of the email campaign (direct invoicing + EFT). Full assessment + remaining owner-tasks in `MONITORING_SETUP.md` and the session summary. **Not yet deployed** — needs `firebase deploy` (functions + hosting + firestore:rules) after review.
+
+**Repo safety.** The 2026-06-04 production-deployed working tree (35 files) was finally committed; `prelaunch-tier0-tier1` merged → `master`, both pushed. Stale dead `functions/lib/billing.js` removed. `.git.corrupt-laptop/` (120MB) moved out to `~/development/backups/`.
+
+**Onboarding wizard fixed** (`EnhancedOrganizationWizard.tsx`). The hardcoded `temp123` admin password is gone — a strong one-time password (`Xxxx-Xxxx-Xxxx`, crypto-random) is generated per deployment and shown once on a new success screen with a copy button. Admin creation was already server-side (`createOrganizationAdmin` callable) so the "logout mid-flow" comments were stale — removed; default departments are now expected to succeed. `createOrganizationAdmin` now honors `requirePasswordChange` (sets `mustChangePassword` regardless of password value).
+
+**Suspend kill-switch + real trials.** New `subscriptionStatus` semantics: `active` / `trial` (with `trialEndsAt` Timestamp) / `suspended`. Enforced server-side in `config/firestore.rules` via new `orgOperational()`/`activeOrgMember()` (42 sharded-collection call sites; org doc itself stays readable so the app can show the lock screen) and client-side via `frontend/src/utils/subscription.ts` + a full-screen suspended/trial-expired screen and a trial-countdown banner in `MainLayout` (platform roles exempt). SuperAdminDashboard org table gained a Status column + Suspend/Reactivate/Activate buttons (`AdminDataService.updateOrganization`). The org wizard step 1 now offers **Active (invoiced client)** vs **Free trial (14/30/60/90 days)**. Demo orgs unaffected.
+
+**Public endpoint throttling.** `submitEmployeeResponse`, `submitEmployeeAppeal`, `uploadResponseEvidence` now share a per-token rolling-hour write limit (`enforceWriteRateLimit`, 20/hr, separate `writeCount`/`writeWindowStart` fields) — previously only the view endpoint was rate-limited.
+
+**Lead capture.** New public function `submitDemoRequest` (`functions/src/leads.ts`): validates + sanitizes, honeypot field, per-IP 5/hr Firestore rate limit, writes `leads/{id}`, emails riaan@fifo.systems via SendGrid. Landing page gained a "Book a Demo" form section (`#demo`); both dead-end "Start Free Trial" CTAs (previously → `/login` wall) now point at it. Landing CSP `connect-src` allows the function origin.
+
+**Monitoring.** Frontend Sentry DSN confirmed present in production bundles (lives in gitignored `frontend/.env.local` — build-machine dependency). Cloud Functions error alerting still needs a 5-minute one-time setup with Riaan's owner account — exact steps in `MONITORING_SETUP.md`.
+
+---
+
 ## Step 5 Delivery — WhatsApp + Printed made real (2026-06-04)
 
 Wizard Step 5 offered four delivery cards (Email, QR, WhatsApp, Printed); only Email and QR worked. WhatsApp and Printed were silent stubs that recorded `deliveryStatus: 'pending'` forever with nothing sent. Both are now functional.

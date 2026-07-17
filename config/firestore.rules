@@ -51,6 +51,26 @@ service cloud.firestore {
       return isAuthenticated() && getUserOrgId() == orgId;
     }
 
+    function orgOperational(orgId) {
+      // Suspension / trial-expiry kill-switch (manual EFT billing — no gateway).
+      // Suspended orgs and expired trials are locked out of all sharded tenant
+      // data. The org document itself stays readable via plain membership so
+      // the app can load it and show the "account suspended" screen.
+      // Mirrored client-side in frontend/src/utils/subscription.ts.
+      let org = get(/databases/$(database)/documents/organizations/$(orgId)).data;
+      return org.get('subscriptionStatus', 'active') != 'suspended' &&
+             !(org.get('subscriptionStatus', 'active') == 'trial' &&
+               org.get('trialEndsAt', null) != null &&
+               org.trialEndsAt < request.time);
+    }
+
+    function activeOrgMember(orgId) {
+      // Org membership + org not suspended/expired. Use for all sharded
+      // tenant-data rules; use bare belongsToOrganization only where a
+      // suspended org's members still need access (org doc, own user doc).
+      return belongsToOrganization(orgId) && orgOperational(orgId);
+    }
+
     function resellerManagesOrganization(orgId) {
       // Check if current user is a reseller who manages this organization
       // Resellers have custom claim 'res' with their resellerId (e.g., 'reseller_1761284938413')
@@ -545,23 +565,23 @@ service cloud.firestore {
       // Allow list/query for managers to see user listings in their org
       allow list: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager()) ||
+        (activeOrgMember(organizationId) && isManager()) ||
         resellerManagesOrganization(organizationId)
       );
 
       allow read: if isAuthenticated() && (
         isSuperUser() ||
         request.auth.uid == userId ||
-        (belongsToOrganization(organizationId) && isManager()) ||
+        (activeOrgMember(organizationId) && isManager()) ||
         resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
         request.auth.uid == userId ||
-        (belongsToOrganization(organizationId) && isExecutiveManagement()) ||
+        (activeOrgMember(organizationId) && isExecutiveManagement()) ||
         // Allow HR managers to update user department assignments and manager-related fields
-        (belongsToOrganization(organizationId) && isHRManager()) ||
+        (activeOrgMember(organizationId) && isHRManager()) ||
         resellerManagesOrganization(organizationId) ||
         (isReseller() && resource == null)  // Allow resellers to create during deployment
       );
@@ -571,13 +591,13 @@ service cloud.firestore {
     match /organizations/{organizationId}/employees/{employeeId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId) ||
+        activeOrgMember(organizationId) ||
         resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager())
+        (activeOrgMember(organizationId) && isManager())
       );
     }
 
@@ -586,13 +606,13 @@ service cloud.firestore {
       // Allow list and get for authenticated users who can access the org
       allow list, get: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId) ||
+        activeOrgMember(organizationId) ||
         resellerManagesOrganization(organizationId)
       );
 
       allow create, update, delete: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isHRManager()) ||
+        (activeOrgMember(organizationId) && isHRManager()) ||
         resellerManagesOrganization(organizationId)
       );
     }
@@ -601,13 +621,13 @@ service cloud.firestore {
     match /organizations/{organizationId}/sectors/{sectorId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId) ||
+        activeOrgMember(organizationId) ||
         resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isHRManager()) ||
+        (activeOrgMember(organizationId) && isHRManager()) ||
         resellerManagesOrganization(organizationId) ||
         (isReseller() && resource == null)  // Allow resellers to create during deployment
       );
@@ -628,13 +648,13 @@ service cloud.firestore {
     match /organizations/{organizationId}/warnings/{warningId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId) ||
+        activeOrgMember(organizationId) ||
         resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager())
+        (activeOrgMember(organizationId) && isManager())
       );
     }
 
@@ -643,13 +663,13 @@ service cloud.firestore {
     match /organizations/{organizationId}/pdfTemplateVersions/{version} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId) ||
+        activeOrgMember(organizationId) ||
         resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager())
+        (activeOrgMember(organizationId) && isManager())
       );
     }
 
@@ -657,9 +677,9 @@ service cloud.firestore {
     match /organizations/{organizationId}/deliveryNotifications/{notificationId} {
       allow read, write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager()) ||
+        (activeOrgMember(organizationId) && isManager()) ||
         // Allow HR managers to read delivery notifications
-        (belongsToOrganization(organizationId) && isHRManager())
+        (activeOrgMember(organizationId) && isHRManager())
       );
     }
 
@@ -667,13 +687,13 @@ service cloud.firestore {
     match /organizations/{organizationId}/escalationRules/{ruleId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId) ||
+        activeOrgMember(organizationId) ||
         resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isHRManager()) ||
+        (activeOrgMember(organizationId) && isHRManager()) ||
         resellerManagesOrganization(organizationId) ||
         (isReseller() && resource == null)  // Allow resellers to create during deployment
       );
@@ -683,13 +703,13 @@ service cloud.firestore {
     match /organizations/{organizationId}/settings/{settingId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId) ||
+        activeOrgMember(organizationId) ||
         resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isExecutiveManagement()) ||
+        (activeOrgMember(organizationId) && isExecutiveManagement()) ||
         resellerManagesOrganization(organizationId) ||
         (isReseller() && resource == null)  // Allow resellers to create during deployment
       );
@@ -699,12 +719,12 @@ service cloud.firestore {
     match /organizations/{organizationId}/meetings/{meetingId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId)
+        activeOrgMember(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager())
+        (activeOrgMember(organizationId) && isManager())
       );
     }
 
@@ -712,13 +732,13 @@ service cloud.firestore {
     match /organizations/{organizationId}/departments/{departmentId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId) ||
+        activeOrgMember(organizationId) ||
         resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isHRManager()) ||
+        (activeOrgMember(organizationId) && isHRManager()) ||
         resellerManagesOrganization(organizationId) ||
         (isReseller() && resource == null)  // Allow resellers to create during deployment
       );
@@ -730,12 +750,12 @@ service cloud.firestore {
     match /organizations/{organizationId}/reports/{reportId} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId)
+        activeOrgMember(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager())
+        (activeOrgMember(organizationId) && isManager())
       );
     }
 
@@ -743,13 +763,13 @@ service cloud.firestore {
     match /organizations/{organizationId}/{collection}/_metadata {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId) ||
+        activeOrgMember(organizationId) ||
         resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isExecutiveManagement()) ||
+        (activeOrgMember(organizationId) && isExecutiveManagement()) ||
         resellerManagesOrganization(organizationId) ||
         (isReseller() && resource == null)  // Allow resellers to create during deployment
       );
@@ -856,27 +876,27 @@ service cloud.firestore {
     match /organizations/{organizationId}/employees/{employeeId}/warnings/{warningId} {
       allow read, list: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId) ||
+        activeOrgMember(organizationId) ||
         resellerManagesOrganization(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager())
+        (activeOrgMember(organizationId) && isManager())
       );
     }
 
     match /organizations/{organizationId}/employees/{employeeId}/meetings/{meetingId} {
       allow read, list, write: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId)
+        activeOrgMember(organizationId)
       );
     }
 
     match /organizations/{organizationId}/employees/{employeeId}/absences/{absenceId} {
       allow read, list, write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager())
+        (activeOrgMember(organizationId) && isManager())
       );
     }
 
@@ -884,12 +904,12 @@ service cloud.firestore {
     match /organizations/{organizationId}/employees/{employeeId}/summary/{document} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId)
+        activeOrgMember(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager())
+        (activeOrgMember(organizationId) && isManager())
       );
     }
 
@@ -897,36 +917,36 @@ service cloud.firestore {
     match /organizations/{organizationId}/indexes/activeWarnings/{entryId} {
       allow read, list: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId)
+        activeOrgMember(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager())
+        (activeOrgMember(organizationId) && isManager())
       );
     }
 
     match /organizations/{organizationId}/indexes/upcomingMeetings/{entryId} {
       allow read, list: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId)
+        activeOrgMember(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager())
+        (activeOrgMember(organizationId) && isManager())
       );
     }
 
     match /organizations/{organizationId}/indexes/recentAbsences/{entryId} {
       allow read, list: if isAuthenticated() && (
         isSuperUser() ||
-        belongsToOrganization(organizationId)
+        activeOrgMember(organizationId)
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager())
+        (activeOrgMember(organizationId) && isManager())
       );
     }
 
@@ -934,12 +954,12 @@ service cloud.firestore {
     match /organizations/{organizationId}/analytics/{document} {
       allow read: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isManager())
+        (activeOrgMember(organizationId) && isManager())
       );
 
       allow write: if isAuthenticated() && (
         isSuperUser() ||
-        (belongsToOrganization(organizationId) && isHRManager())
+        (activeOrgMember(organizationId) && isHRManager())
       );
     }
 
