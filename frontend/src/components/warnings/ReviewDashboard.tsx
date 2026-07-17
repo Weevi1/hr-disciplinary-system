@@ -1077,7 +1077,7 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
               alert('Failed to update delivery method. Please try again.');
             }
           }}
-          employeeRequestedMethod={(deliveryWarning as any).employeeRequestedDeliveryMethod}
+          employeeRequestedMethod={(deliveryWarning as any).employeeRequestedDeliveryMethod || deliveryWarning.deliveryMethod}
           employeeName={deliveryWarning.employeeName || 'Unknown'}
           employeeEmail={employeeContactDetails.email}
           employeePhone={employeeContactDetails.phone}
@@ -1111,13 +1111,34 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
             try {
               Logger.debug('✅ Delivery completed:', proofData);
 
-              // Update warning status
-              await API.warnings.update(deliveryWarning.id, {
+              // Record completion. Write deliveryStatus (the field the queue +
+              // badges actually read) — previously only `status` was written, so
+              // delivered warnings stayed stuck in the undelivered queue. Persist
+              // the proof the guide captured into deliveryHistory.
+              const collectionEntry: any = {
+                method: proofData.deliveryMethod || selectedDeliveryMethod,
+                timestamp: new Date().toISOString(),
                 status: 'delivered',
+                deliveredBy: user?.uid || '',
+                deliveredByName: (user as any)?.firstName
+                  ? `${(user as any).firstName} ${(user as any).lastName || ''}`.trim()
+                  : (user as any)?.email || '',
+              };
+              if (proofData.deliveryLocation) collectionEntry.deliveryLocation = proofData.deliveryLocation;
+              if (proofData.witnessName) collectionEntry.witnessName = proofData.witnessName;
+              if (proofData.additionalNotes) collectionEntry.notes = proofData.additionalNotes;
+
+              const updatePayload: any = {
+                deliveryStatus: 'delivered',
+                deliveryDate: proofData.deliveredAt,
                 deliveredAt: proofData.deliveredAt,
+                deliveredBy: user?.uid || '',
                 deliveryMethod: proofData.deliveryMethod,
-                proofImage: proofData.proofImage
-              }, organization?.id);
+                deliveryHistory: [...((deliveryWarning as any).deliveryHistory || []), collectionEntry],
+              };
+              if (proofData.proofImage) updatePayload.proofImage = proofData.proofImage;
+
+              await API.warnings.update(deliveryWarning.id, updatePayload, organization?.id);
 
               // Refresh warnings list
               await loadWarnings(true); // Force refresh after mutation

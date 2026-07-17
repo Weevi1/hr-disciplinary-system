@@ -132,10 +132,15 @@ export const SignaturesPhase: React.FC<SignaturesPhaseProps> = ({
       onTap={() => setActiveSignatureModal('manager')}
     />
 
-    {/* Step 2: PDF Preview - Only show after manager signs */}
+    {/* Show-PDF tile — tap = manager opens the document so the employee can read it
+        before signing. The tap itself flags `employeeViewedPDF`; the (formerly
+        standalone) confirmation checkbox is no longer needed. */}
     {signatures.manager && (
       <button
-        onClick={() => setShowPDFPreview(true)}
+        onClick={() => {
+          setEmployeeViewedPDF(true);
+          setShowPDFPreview(true);
+        }}
         className="w-full p-4 rounded-xl border-2 border-dashed transition-all hover:border-solid active:scale-[0.98]"
         style={{
           borderColor: employeeViewedPDF ? 'var(--color-success)' : 'var(--color-primary)',
@@ -154,35 +159,16 @@ export const SignaturesPhase: React.FC<SignaturesPhaseProps> = ({
           </div>
           <div className="flex-1 text-left">
             <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-              Step 2: Review PDF with Employee
+              {employeeViewedPDF ? 'Warning shown to employee' : 'Show the warning to the employee'}
             </p>
             <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-              {employeeViewedPDF ? 'Document reviewed' : 'Tap to preview document'}
+              {employeeViewedPDF
+                ? 'Document was reviewed. Capture their signature below.'
+                : 'Tap to open the warning so the employee can read it before signing.'}
             </p>
           </div>
         </div>
       </button>
-    )}
-
-    {/* Employee viewed checkbox */}
-    {signatures.manager && (
-      <label
-        className="flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors"
-        style={{
-          backgroundColor: employeeViewedPDF ? 'var(--color-alert-success-bg)' : 'transparent',
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={employeeViewedPDF}
-          onChange={(e) => setEmployeeViewedPDF(e.target.checked)}
-          className="w-5 h-5 rounded"
-          style={{ accentColor: 'var(--color-success)' }}
-        />
-        <span className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
-          Employee has reviewed the document
-        </span>
-      </label>
     )}
 
     {/* Step 3: Employee OR Witness Signature */}

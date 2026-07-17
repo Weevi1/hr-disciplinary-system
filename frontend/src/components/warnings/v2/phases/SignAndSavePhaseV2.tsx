@@ -176,6 +176,15 @@ export const SignAndSavePhaseV2: React.FC<SignAndSavePhaseV2Props> = (props) => 
         handleEmployeeSignature={props.handleEmployeeSignature}
         handleWitnessSignature={props.handleWitnessSignature}
       />
+
+      {/* Manager confirmation footer — reinforces that the manager owns the
+          decision and the company's policy backs it. */}
+      <p
+        className="text-xs italic text-center mt-4 px-4"
+        style={{ color: 'var(--color-text-tertiary)' }}
+      >
+        By signing, you confirm this warning was issued in line with your company's code of conduct and disciplinary procedures.
+      </p>
     </div>
   </div>
 );

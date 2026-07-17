@@ -5,6 +5,7 @@ import { API } from '../../api';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { createEmployeeFromForm } from '../../types';
 import type { CSVImportRow, CSVImportResult, EmployeeFormData } from '../../types';
+import { formatPhoneNumber } from '../../utils/phone';
 
 export const useEmployeeImport = () => {
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -14,34 +15,7 @@ export const useEmployeeImport = () => {
   const [importProgress, setImportProgress] = useState(0);
   const [currentImportStep, setCurrentImportStep] = useState('');
 
-  // Helper function to format South African phone numbers to international format
-  // Handles multiple formats:
-  // - 0825254011 (local format with leading 0) → +27825254011
-  // - 825254011 (missing leading 0 - common when Excel/Sheets strips leading zeros) → +27825254011
-  // - 27825254011 (country code without +) → +27825254011
-  // - +27825254011 (already formatted) → +27825254011
-  const formatPhoneNumber = (phone: string): string => {
-    if (!phone) return '';
-
-    // Remove all spaces, dashes, and parentheses
-    let cleaned = phone.replace(/[\s\-\(\)]/g, '');
-
-    // If it starts with 0, replace with +27
-    if (cleaned.startsWith('0')) {
-      cleaned = '+27' + cleaned.substring(1);
-    }
-    // If it starts with 27 (but not +27), add the +
-    else if (cleaned.startsWith('27') && !cleaned.startsWith('+27')) {
-      cleaned = '+' + cleaned;
-    }
-    // If it doesn't start with + or 27, assume it's local and add +27
-    // This handles the Excel/Google Sheets edge case where leading zeros are stripped (825254011 → +27825254011)
-    else if (!cleaned.startsWith('+') && !cleaned.startsWith('27')) {
-      cleaned = '+27' + cleaned;
-    }
-
-    return cleaned;
-  };
+  // Phone normalisation now lives in utils/phone.ts (shared with WhatsApp delivery).
 
   // Helper function to parse South African date formats to YYYY-MM-DD
   // Handles multiple formats for maximum user convenience:

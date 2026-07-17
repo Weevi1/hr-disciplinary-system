@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteDemoOrganization = exports.resetDemoOrganization = exports.createDemoProspectLogin = exports.deployDemoOrganization = exports.cleanupExpiredResponseTokens = exports.revokeResponseToken = exports.uploadResponseEvidence = exports.submitEmployeeAppeal = exports.submitEmployeeResponse = exports.getWarningPDFForResponse = exports.getWarningForResponse = exports.generateResponseToken = exports.deliverWarningByEmail = exports.notifyHROnAppeal = exports.manualReviewCheckAll = exports.testReviewFollowUp = exports.checkDueReviewsDaily = exports.getActiveWarningsServerSide = exports.getServerTime = exports.getApiVersionInfo = exports.updateUserPermissions = exports.refreshOrganizationUserClaims = exports.getUserClaims = exports.refreshUserClaims = exports.createPortalSession = exports.processMonthlyCommissions = exports.stripeWebhook = exports.createCheckoutSession = exports.previewAudioCleanup = exports.getGlobalAudioStats = exports.getCleanupStats = exports.manualAudioCleanup = exports.cleanupExpiredAudio = exports.createOrganizationUser = exports.createResellerUser = exports.resetUserPassword = exports.createOrganizationUsers = exports.createOrganizationAdmin = exports.cleanupExpiredTokens = exports.revokeTemporaryToken = exports.validateTemporaryToken = exports.downloadTempFile = exports.generateTemporaryDownloadLink = void 0;
+exports.deleteDemoOrganization = exports.resetDemoOrganization = exports.createDemoProspectLogin = exports.deployDemoOrganization = exports.cleanupExpiredResponseTokens = exports.revokeResponseToken = exports.uploadResponseEvidence = exports.submitEmployeeAppeal = exports.submitEmployeeResponse = exports.getWarningPDFForResponse = exports.getWarningForResponse = exports.generateResponseToken = exports.notifyHRPrintedCollection = exports.deliverWarningByEmail = exports.notifyHROnAppeal = exports.manualReviewCheckAll = exports.testReviewFollowUp = exports.checkDueReviewsDaily = exports.getActiveWarningsServerSide = exports.getServerTime = exports.getApiVersionInfo = exports.updateUserPermissions = exports.refreshOrganizationUserClaims = exports.getUserClaims = exports.refreshUserClaims = exports.previewAudioCleanup = exports.getGlobalAudioStats = exports.getCleanupStats = exports.manualAudioCleanup = exports.cleanupExpiredAudio = exports.createOrganizationUser = exports.createResellerUser = exports.resetUserPassword = exports.createOrganizationUsers = exports.createOrganizationAdmin = exports.cleanupExpiredTokens = exports.revokeTemporaryToken = exports.validateTemporaryToken = exports.downloadTempFile = exports.generateTemporaryDownloadLink = void 0;
 // functions/src/index.ts
 // Main Firebase Functions entry point
 const v2_1 = require("firebase-functions/v2");
@@ -33,12 +33,6 @@ Object.defineProperty(exports, "downloadTempFile", { enumerable: true, get: func
 Object.defineProperty(exports, "validateTemporaryToken", { enumerable: true, get: function () { return temporaryDownload_1.validateTemporaryToken; } });
 Object.defineProperty(exports, "revokeTemporaryToken", { enumerable: true, get: function () { return temporaryDownload_1.revokeTemporaryToken; } });
 Object.defineProperty(exports, "cleanupExpiredTokens", { enumerable: true, get: function () { return temporaryDownload_1.cleanupExpiredTokens; } });
-// 💰 ADD BILLING FUNCTIONS
-const billing_1 = require("./billing");
-Object.defineProperty(exports, "createCheckoutSession", { enumerable: true, get: function () { return billing_1.createCheckoutSession; } });
-Object.defineProperty(exports, "stripeWebhook", { enumerable: true, get: function () { return billing_1.stripeWebhook; } });
-Object.defineProperty(exports, "processMonthlyCommissions", { enumerable: true, get: function () { return billing_1.processMonthlyCommissions; } });
-Object.defineProperty(exports, "createPortalSession", { enumerable: true, get: function () { return billing_1.createPortalSession; } });
 // 🔐 ADD CUSTOM CLAIMS FUNCTIONS
 const customClaims_1 = require("./customClaims");
 Object.defineProperty(exports, "refreshUserClaims", { enumerable: true, get: function () { return customClaims_1.refreshUserClaims; } });
@@ -68,6 +62,7 @@ Object.defineProperty(exports, "notifyHROnAppeal", { enumerable: true, get: func
 // 📧 ADD WARNING DELIVERY
 const warningDelivery_1 = require("./warningDelivery");
 Object.defineProperty(exports, "deliverWarningByEmail", { enumerable: true, get: function () { return warningDelivery_1.deliverWarningByEmail; } });
+Object.defineProperty(exports, "notifyHRPrintedCollection", { enumerable: true, get: function () { return warningDelivery_1.notifyHRPrintedCollection; } });
 // 🔗 ADD EMPLOYEE RESPONSE SYSTEM
 const employeeResponse_1 = require("./employeeResponse");
 Object.defineProperty(exports, "generateResponseToken", { enumerable: true, get: function () { return employeeResponse_1.generateResponseToken; } });

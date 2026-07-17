@@ -390,3 +390,69 @@ export const deliverWarningByEmail = onCall(
     }
   }
 );
+
+// ============================================
+// NOTIFY HR — PRINTED COPY AWAITING COLLECTION
+// ============================================
+// Called from the wizard when a manager picks "Printed" delivery. The employee
+// will collect a physical copy from HR, so HR managers are emailed to print it
+// and have it ready. Best-effort: the wizard already records the warning as
+// 'awaiting_collection' before calling this.
+export const notifyHRPrintedCollection = onCall(
+  { region: 'us-central1', memory: '256MiB' },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Authentication required');
+    }
+
+    const { warningId, organizationId } = request.data;
+    if (!warningId || !organizationId) {
+      throw new HttpsError('invalid-argument', 'warningId and organizationId are required');
+    }
+
+    try {
+      const warningDoc = await db
+        .collection('organizations').doc(organizationId)
+        .collection('warnings').doc(warningId)
+        .get();
+
+      if (!warningDoc.exists) {
+        throw new HttpsError('not-found', 'Warning not found');
+      }
+      const warningData = warningDoc.data()!;
+
+      const orgDoc = await db.collection('organizations').doc(organizationId).get();
+      const orgName = orgDoc.data()?.name || 'Your Organization';
+
+      // Demo organizations use prospect accounts — don't email them.
+      if (orgDoc.data()?.isDemo === true) {
+        logger.info(`⏭️  Skipping printed-collection HR notice for demo org ${organizationId}`);
+        return { success: true, hrNotified: false, demo: true };
+      }
+
+      const hrEmails = await getHREmails(organizationId);
+      if (hrEmails.length === 0) {
+        return { success: true, hrNotified: false };
+      }
+
+      const hrNotificationData: WarningDeliveryHRNotificationData = {
+        employeeName: warningData.employeeName || 'Employee',
+        employeeEmail: warningData.employeeEmail || 'Not on record',
+        warningLevel: warningData.level || 'unknown',
+        warningCategory: warningData.categoryName || warningData.category || 'General',
+        issueDate: warningData.issueDate || new Date().toISOString().split('T')[0],
+        organizationName: orgName,
+        issuedByName: warningData.issuedByName || request.auth.token.name || 'Manager',
+        deliveryType: 'printed_collection',
+      };
+
+      const hrNotified = await sendWarningDeliveryHRNotification(hrEmails, hrNotificationData);
+      logger.info(`Printed-collection HR notice for warning ${warningId}: notified=${hrNotified}`);
+      return { success: true, hrNotified };
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      logger.error('Failed to notify HR of printed collection:', error);
+      throw new HttpsError('internal', 'Failed to notify HR');
+    }
+  }
+);

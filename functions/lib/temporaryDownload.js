@@ -43,6 +43,10 @@ const admin = __importStar(require("firebase-admin"));
 const jwt = __importStar(require("jsonwebtoken"));
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
+const params_1 = require("firebase-functions/params");
+// Signing secret for temporary-download JWTs. Sourced via firebase-functions params
+// (set TEMP_LINK_SECRET in functions/.env). No insecure hardcoded fallback — see getJWTSecret.
+const tempLinkSecret = (0, params_1.defineString)('TEMP_LINK_SECRET');
 // Initialize Firebase Admin if not already done
 if (!admin.apps.length) {
     admin.initializeApp();
@@ -56,9 +60,13 @@ const storage = admin.storage();
  * Generate JWT secret from Firebase project config
  */
 function getJWTSecret() {
-    // Use Firebase project ID and a secret from environment
+    // Use Firebase project ID and a secret from environment.
+    // Fail closed: no predictable default — TEMP_LINK_SECRET must be configured.
     const projectId = process.env.GCLOUD_PROJECT;
-    const secretSuffix = process.env.TEMP_LINK_SECRET || 'temp-download-secret-2024';
+    const secretSuffix = tempLinkSecret.value();
+    if (!secretSuffix) {
+        throw new Error('TEMP_LINK_SECRET is not configured — set it in functions/.env');
+    }
     return `${projectId}-${secretSuffix}`;
 }
 /**

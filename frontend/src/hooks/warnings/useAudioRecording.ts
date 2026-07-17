@@ -21,9 +21,9 @@ const AUDIO_CONFIG = {
   CHANNELS: 1, // Mono
 
   // Safety limits
-  MAX_DURATION_MS: 5 * 60 * 1000, // 5 minutes
-  MAX_SIZE_BYTES: 1024 * 1024, // 1MB - accommodates improved quality (~900KB for 5 min)
-  WARNING_THRESHOLD_MS: 4 * 60 * 1000, // Warn at 4 minutes
+  MAX_DURATION_MS: 60 * 60 * 1000, // 1 hour
+  MAX_SIZE_BYTES: 25 * 1024 * 1024, // 25MB — 1 hr at 24 kbps Opus ≈ 10.8 MB, headroom for variable bitrate
+  WARNING_THRESHOLD_MS: 55 * 60 * 1000, // Warn at 55 minutes
 
   // Quality settings
   ECHO_CANCELLATION: true,
@@ -307,9 +307,9 @@ export const useAudioRecording = (): UseAudioRecordingReturn => {
       return;
     }
 
-    // Warning at 4 minutes
+    // Warning at WARNING_THRESHOLD_MS (currently 55 min)
     if (elapsedMs >= AUDIO_CONFIG.WARNING_THRESHOLD_MS && !warningShownRef.current) {
-      Logger.debug('⚠️ Recording will auto-stop in 1 minute')
+      Logger.debug('⚠️ Recording will auto-stop in 5 minutes')
       warningShownRef.current = true;
     }
   }, []); // No dependencies needed - uses refs and functional setState

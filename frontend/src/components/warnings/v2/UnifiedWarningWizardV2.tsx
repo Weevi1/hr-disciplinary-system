@@ -45,6 +45,9 @@ import { MicrophonePermissionHandler } from '../enhanced/components/MicrophonePe
 // Signature watermark utility
 import { applyWitnessWatermarkToSVG } from '../../../utils/signatureSVG';
 
+// Phone helpers (shared with employee CSV import)
+import { toWhatsAppNumber, isValidPhoneNumber } from '../../../utils/phone';
+
 // Themed components
 import { ThemedCard } from '../../common/ThemedCard';
 import { ThemedButton } from '../../common/ThemedButton';
@@ -92,6 +95,35 @@ import {
 } from './wizardTypesV2';
 
 // ============================================
+// PRACTICE MODE — SAMPLE EMPLOYEE
+// ============================================
+// Local-only. NEVER written to Firestore. Used only when the wizard is in
+// practice mode so a new manager can rehearse the flow with realistic-looking
+// data. The email domain is RFC-2606 reserved (example.com is safe — it can't
+// be a real address).
+const TEST_EMPLOYEE = {
+  id: 'TEST-PRACTICE-EMPLOYEE',
+  firstName: 'Test',
+  lastName: 'Employee',
+  employeeNumber: 'TEST-PRACTICE-001',
+  position: 'Team Member',
+  department: 'Operations',
+  email: 'sample.employee@example.com',
+  phone: '+27 00 000 0000',
+  whatsappNumber: '+27 00 000 0000',
+  profile: {
+    firstName: 'Test',
+    lastName: 'Employee',
+    employeeNumber: 'TEST-PRACTICE-001',
+    position: 'Team Member',
+    department: 'Operations',
+    email: 'sample.employee@example.com',
+    phoneNumber: '+27 00 000 0000',
+    whatsappNumber: '+27 00 000 0000',
+  },
+} as any;
+
+// ============================================
 // MAIN COMPONENT
 // ============================================
 
@@ -99,7 +131,7 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
   employees,
   categories,
   currentManagerName,
-  organizationName: _organizationName,
+  organizationName,
   onComplete,
   onCancel,
   preSelectedEmployeeId,
@@ -142,6 +174,11 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
   const [evidenceUploadWarning, setEvidenceUploadWarning] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  // Practice mode: full UX rehearsal with a sample employee, nothing is saved
+  // or sent. Toggled on from the Phase 0 "Try a test warning" card and cleared
+  // when the manager steps back to Phase 0.
+  const [isTestMode, setIsTestMode] = useState(false);
+
   // Form data
   const [formData, setFormData] = useState<FormData>(() => ({
     employeeId: preSelectedEmployeeId || '',
@@ -171,6 +208,11 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
   // Corrective discussion
   const [employeeStatement, setEmployeeStatement] = useState('');
   const [expectedBehavior, setExpectedBehavior] = useState('');
+  // Tracks the last category template auto-applied to `expectedBehavior` so we
+  // can tell whether the field is "untouched" (still equal to that template)
+  // and safe to refresh when the user switches category, vs user-typed text
+  // that we must preserve.
+  const previousCategoryTemplateRef = useRef<string | undefined>(undefined);
   const [actionCommitments, setActionCommitments] = useState<ActionCommitment[]>([]);
   const [reviewDate, setReviewDate] = useState('');
   const [interventionDetails] = useState('');
@@ -207,6 +249,28 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
   const [alternativeEmail, setAlternativeEmail] = useState('');
   const [emailDeliveryError, setEmailDeliveryError] = useState<string | null>(null);
 
+  // WhatsApp delivery state. The PDF can't be pre-attached to a click-to-chat
+  // link, so we send the durable respond/appeal link (180-day token) in the
+  // message text. Manager confirms the number with the employee (present in the
+  // meeting) before WhatsApp opens, then attests they sent it.
+  const [whatsappNumber, setWhatsappNumber] = useState('');
+  const [whatsappConfirmed, setWhatsappConfirmed] = useState(false);
+  const [isWhatsAppDelivering, setIsWhatsAppDelivering] = useState(false);
+  const [whatsappDeliveryStatus, setWhatsappDeliveryStatus] = useState<
+    'idle' | 'generating_link' | 'opened' | 'sent' | 'failed'
+  >('idle');
+  const [whatsappDeliveryError, setWhatsappDeliveryError] = useState<string | null>(null);
+  const [whatsappResponseUrl, setWhatsappResponseUrl] = useState('');
+
+  // Printed delivery state. Printed means "the employee will collect a physical
+  // copy from HR" — the warning is recorded as awaiting collection and HR is
+  // emailed to print it and have it ready.
+  const [isPrintedDelivering, setIsPrintedDelivering] = useState(false);
+  const [printedDeliveryStatus, setPrintedDeliveryStatus] = useState<
+    'idle' | 'sending' | 'sent' | 'failed'
+  >('idle');
+  const [printedDeliveryError, setPrintedDeliveryError] = useState<string | null>(null);
+
   // UI state
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -236,6 +300,18 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
     const firstName = selectedEmployee.profile?.firstName || selectedEmployee.firstName || '';
     const lastName = selectedEmployee.profile?.lastName || selectedEmployee.lastName || '';
     return `${firstName} ${lastName}`.trim();
+  }, [selectedEmployee]);
+
+  // Pre-fill the WhatsApp number from the employee's record (WhatsApp number
+  // preferred, falling back to their phone number). Manager can still edit it.
+  useEffect(() => {
+    const onRecord =
+      selectedEmployee?.profile?.whatsappNumber ||
+      selectedEmployee?.profile?.phoneNumber ||
+      selectedEmployee?.whatsappNumber ||
+      selectedEmployee?.phoneNumber ||
+      '';
+    setWhatsappNumber(onRecord);
   }, [selectedEmployee]);
 
   // ============================================
@@ -291,7 +367,12 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
         );
 
       case PhaseV2.DELIVERY:
-        return !!selectedDeliveryMethod && selectedDeliveryMethod !== 'email';
+        // Email, WhatsApp and Printed self-finalize inside their own panels, so
+        // the shared Finalize button stays disabled for them.
+        return !!selectedDeliveryMethod
+          && selectedDeliveryMethod !== 'email'
+          && selectedDeliveryMethod !== 'whatsapp'
+          && selectedDeliveryMethod !== 'printed';
 
       default:
         return false;
@@ -373,14 +454,26 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
     }
   }, [formData.employeeId, employees, organization?.id, preloadedWarnings]);
 
-  // Load category when selected
+  // Load category when selected. Auto-fill Expected Standards from the
+  // category's template — and refresh that fill if the user switches category
+  // later, as long as they haven't typed custom text.
   useEffect(() => {
     if (formData.categoryId) {
       const category = categories.find((c) => c.id === formData.categoryId);
       setSelectedCategory(category);
-      if (category?.expectedStandardsTemplate && !expectedBehavior) {
-        setExpectedBehavior(category.expectedStandardsTemplate);
+
+      const newTemplate = category?.expectedStandardsTemplate;
+      const prevTemplate = previousCategoryTemplateRef.current;
+
+      if (newTemplate) {
+        // Replace if field is empty OR it still holds the previous category's
+        // template (untouched). Preserve user-typed customisations.
+        if (!expectedBehavior || expectedBehavior === prevTemplate) {
+          setExpectedBehavior(newTemplate);
+        }
       }
+
+      previousCategoryTemplateRef.current = newTemplate;
     }
   }, [formData.categoryId, categories]);
 
@@ -391,17 +484,19 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
     }
   }, [formData.employeeId, formData.categoryId, organization?.id]);
 
-  // V2: Start audio recording when permission granted AND permission handler dismissed.
-  // (Same effect as V1 — the trigger differs because in V2 the permission handler
-  // is launched from the Overview Continue button instead of pre-wizard.)
+  // V2: Primary start path runs inline in onPermissionGranted (see render below).
+  // This effect is a backstop for cases where permission was already cached (singleton
+  // fired the callback before we mounted) or where the user reached the Setup phase
+  // through some other path without recording having started.
   useEffect(() => {
     if (!isAudioEnabled) return;
-    if (microphonePermissionGranted && !audioRecording.isRecording && !showPermissionHandler) {
-      audioRecording.startRecording().catch((err) => {
-        Logger.error('Failed to start audio recording:', err);
-      });
-    }
-  }, [isAudioEnabled, microphonePermissionGranted, showPermissionHandler, audioRecording.isRecording, audioRecording.startRecording]);
+    if (currentPhase < PhaseV2.SETUP) return;
+    if (!microphonePermissionGranted) return;
+    if (audioRecording.isRecording) return;
+    audioRecording.startRecording().catch((err) => {
+      Logger.error('Failed to start audio recording (backstop):', err);
+    });
+  }, [isAudioEnabled, currentPhase, microphonePermissionGranted, audioRecording.isRecording]);
 
   // ============================================
   // HANDLERS
@@ -506,9 +601,19 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
 
   const handlePreviousPhase = useCallback(() => {
     if (currentPhase > 0) {
+      // Stepping back to the Overview cancels a practice run — clear the dummy
+      // employee so the manager can either re-enter practice mode or take the
+      // real Continue path with a clean slate.
+      if (currentPhase === PhaseV2.SETUP && isTestMode) {
+        setIsTestMode(false);
+        setSelectedEmployee(undefined);
+        setSelectedCategory(undefined);
+        setLraRecommendation(null);
+        setFormData((prev) => ({ ...prev, employeeId: '', employeeName: '', categoryId: '' }));
+      }
       setCurrentPhase((currentPhase - 1) as PhaseV2);
     }
-  }, [currentPhase]);
+  }, [currentPhase, isTestMode]);
 
   const handleNextPhase = useCallback(() => {
     if (!isPhaseValid || currentPhase >= TOTAL_PHASES_V2 - 1) return;
@@ -525,9 +630,37 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
       return;
     }
 
+    // In practice mode, finishing Phase 4 (Sign & Save) is the end of the
+    // rehearsal — Phase 5 (Delivery) is skipped because it would call real
+    // Cloud Functions. The Phase 4 footer reroutes to handleFinishTestRun
+    // (see PhaseNavigation wiring below), so this guard is belt-and-braces.
+    if (isTestMode && currentPhase === PhaseV2.SIGN_AND_SAVE) {
+      setShowSuccessCelebration(true);
+      return;
+    }
+
     setCompletedPhases((prev) => new Set([...prev, currentPhase]));
     setCurrentPhase((currentPhase + 1) as PhaseV2);
-  }, [currentPhase, isPhaseValid, isAudioEnabled, microphonePermissionGranted]);
+  }, [currentPhase, isPhaseValid, isAudioEnabled, microphonePermissionGranted, isTestMode]);
+
+  const handleStartTestRun = useCallback(() => {
+    setIsTestMode(true);
+    setSelectedEmployee(TEST_EMPLOYEE);
+    setFormData((prev) => ({
+      ...prev,
+      employeeId: TEST_EMPLOYEE.id,
+      employeeName: `${TEST_EMPLOYEE.firstName} ${TEST_EMPLOYEE.lastName}`,
+    }));
+    setCompletedPhases((prev) => new Set([...prev, PhaseV2.OVERVIEW]));
+    setCurrentPhase(PhaseV2.SETUP);
+    // Deliberately skip the audio permission flow — practice is a UX rehearsal,
+    // not a compliance recording, and a browser permission prompt mid-tutorial
+    // is noisy.
+  }, []);
+
+  const handleFinishTestRun = useCallback(() => {
+    setShowSuccessCelebration(true);
+  }, []);
 
   const goToPhase = useCallback((phase: PhaseV2) => {
     if (phase <= currentPhase || completedPhases.has(phase)) {
@@ -549,6 +682,16 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
   });
 
   const handleSaveWarning = async () => {
+    // Belt-and-braces: the Phase 4 footer reroutes practice runs to
+    // handleFinishTestRun, but if anything (keyboard shortcut, future
+    // refactor, regression) calls this path while in practice mode the save
+    // still must NOT reach Firestore or any Cloud Function.
+    if (isTestMode) {
+      Logger.warn('handleSaveWarning called in practice mode — short-circuiting');
+      setShowSuccessCelebration(true);
+      return;
+    }
+
     if (!organization?.id) { Logger.error('Cannot save warning: No organization ID'); return; }
     if (!selectedEmployee) { Logger.error('Cannot save warning: No employee selected'); return; }
     if (!selectedCategory) { Logger.error('Cannot save warning: No category selected'); return; }
@@ -749,7 +892,12 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
 
   const handleFinalize = async () => {
     if (!selectedDeliveryMethod || !finalWarningId || !organization?.id) return;
-    if (selectedDeliveryMethod === 'email') return;
+    // Email, WhatsApp and Printed record their own delivery inside their panels.
+    if (
+      selectedDeliveryMethod === 'email' ||
+      selectedDeliveryMethod === 'whatsapp' ||
+      selectedDeliveryMethod === 'printed'
+    ) return;
     setIsLoading(true);
     try {
       const warningRef = doc(db, 'organizations', organization.id, 'warnings', finalWarningId);
@@ -901,6 +1049,127 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
     }
   };
 
+  // WhatsApp delivery — mint the durable respond link (180-day token) and open
+  // WhatsApp pointed at the confirmed number with the message + link pre-filled.
+  // WhatsApp can't pre-attach the PDF, so the employee taps the link to view/
+  // download it and submit a response or appeal on the respond page.
+  const handleWhatsAppDelivery = async () => {
+    if (!organization?.id || !finalWarningId) return;
+    if (!isValidPhoneNumber(whatsappNumber) || !whatsappConfirmed) return;
+    setIsWhatsAppDelivering(true);
+    setWhatsappDeliveryError(null);
+    setWhatsappDeliveryStatus('generating_link');
+    try {
+      let responseUrl = whatsappResponseUrl;
+      if (!responseUrl) {
+        const generateFn = httpsCallable(functions, 'generateResponseToken');
+        const result = await generateFn({
+          warningId: finalWarningId,
+          organizationId: organization.id,
+          expiryDays: 180,
+        });
+        responseUrl = (result.data as any)?.responseUrl || '';
+        if (!responseUrl) throw new Error('Could not generate a response link.');
+        setWhatsappResponseUrl(responseUrl);
+      }
+
+      const firstName = selectedEmployee?.profile?.firstName || employeeName || 'there';
+      const orgName = organization?.name || 'your employer';
+      const categoryName = selectedCategory?.name || 'a workplace matter';
+      const levelLabel = (levelInfo?.label || currentLevel || 'formal warning').toLowerCase();
+      const message =
+        `Hi ${firstName}, this is ${currentManagerName} from ${orgName}. ` +
+        `A formal ${levelLabel} has been issued regarding ${categoryName}. ` +
+        `Please review the document and submit any response or appeal here: ${responseUrl}`;
+
+      const waUrl = `https://wa.me/${toWhatsAppNumber(whatsappNumber)}?text=${encodeURIComponent(message)}`;
+      window.open(waUrl, '_blank', 'noopener,noreferrer');
+      setWhatsappDeliveryStatus('opened');
+    } catch (error: any) {
+      Logger.error('WhatsApp delivery failed:', error);
+      setWhatsappDeliveryStatus('failed');
+      setWhatsappDeliveryError(error?.message || 'Something went wrong. Please try again.');
+    } finally {
+      setIsWhatsAppDelivering(false);
+    }
+  };
+
+  // Manager attests they sent the WhatsApp message → record honest delivery.
+  const handleConfirmWhatsAppSent = async () => {
+    if (!organization?.id || !finalWarningId) return;
+    setIsLoading(true);
+    try {
+      const warningRef = doc(db, 'organizations', organization.id, 'warnings', finalWarningId);
+      const historyEntry = {
+        method: 'whatsapp',
+        whatsappNumber,
+        timestamp: new Date().toISOString(),
+        status: 'delivered',
+        attemptedBy: user?.uid || '',
+        attemptedByName: currentManagerName,
+        type: 'whatsapp',
+        responseUrl: whatsappResponseUrl,
+      };
+      await updateDoc(warningRef, {
+        deliveryMethod: 'whatsapp',
+        deliveryStatus: 'delivered',
+        deliveryHistory: [historyEntry],
+        updatedAt: new Date(),
+      });
+      setWhatsappDeliveryStatus('sent');
+      setShowSuccessCelebration(true);
+    } catch (error) {
+      Logger.error('Failed to record WhatsApp delivery:', error);
+      setWhatsappDeliveryError('Failed to record delivery. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Printed delivery — record the warning as awaiting collection from HR and
+  // email HR to print it and have it ready. The employee collects it later;
+  // HR records the hand-over from the Review dashboard.
+  const handlePrintedDelivery = async () => {
+    if (!organization?.id || !finalWarningId) return;
+    setIsPrintedDelivering(true);
+    setPrintedDeliveryError(null);
+    setPrintedDeliveryStatus('sending');
+    try {
+      const warningRef = doc(db, 'organizations', organization.id, 'warnings', finalWarningId);
+      const historyEntry = {
+        method: 'printed',
+        timestamp: new Date().toISOString(),
+        status: 'awaiting_collection',
+        attemptedBy: user?.uid || '',
+        attemptedByName: currentManagerName,
+        type: 'printed',
+      };
+      await updateDoc(warningRef, {
+        deliveryMethod: 'printed',
+        deliveryStatus: 'awaiting_collection',
+        deliveryHistory: [historyEntry],
+        updatedAt: new Date(),
+      });
+
+      // Best-effort HR email — don't fail the finalize if the notice errors.
+      try {
+        const notifyFn = httpsCallable(functions, 'notifyHRPrintedCollection');
+        await notifyFn({ warningId: finalWarningId, organizationId: organization.id });
+      } catch (notifyError) {
+        Logger.warn('HR printed-collection notice failed (non-critical):', notifyError);
+      }
+
+      setPrintedDeliveryStatus('sent');
+      setShowSuccessCelebration(true);
+    } catch (error) {
+      Logger.error('Failed to record printed delivery:', error);
+      setPrintedDeliveryStatus('failed');
+      setPrintedDeliveryError('Failed to record delivery. Please try again.');
+    } finally {
+      setIsPrintedDelivering(false);
+    }
+  };
+
   // Signature handlers (identical to V1)
   const handleManagerSignature = useCallback((signature: string | null) => {
     setSignatures((prev) => ({ ...prev, manager: signature }));
@@ -942,7 +1211,13 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
   const renderPhaseContent = () => {
     switch (currentPhase) {
       case PhaseV2.OVERVIEW:
-        return <WizardOverviewPhase isAudioEnabled={isAudioEnabled} />;
+        return (
+          <WizardOverviewPhase
+            isAudioEnabled={isAudioEnabled}
+            organizationName={organizationName || organization?.name || ''}
+            onStartTestRun={handleStartTestRun}
+          />
+        );
 
       case PhaseV2.SETUP:
         return (
@@ -962,6 +1237,7 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
             expectedBehavior={expectedBehavior}
             setExpectedBehavior={setExpectedBehavior}
             setSelectedWarningDetails={setSelectedWarningDetails}
+            isTestMode={isTestMode}
           />
         );
 
@@ -1048,6 +1324,20 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
             isGeneratingQRPdf={isGeneratingQRPdf}
             handleQRCodeDelivery={handleQRCodeDelivery}
             handleEmailDelivery={handleEmailDelivery}
+            whatsappNumber={whatsappNumber}
+            setWhatsappNumber={setWhatsappNumber}
+            whatsappConfirmed={whatsappConfirmed}
+            setWhatsappConfirmed={setWhatsappConfirmed}
+            isWhatsAppDelivering={isWhatsAppDelivering}
+            whatsappDeliveryStatus={whatsappDeliveryStatus}
+            whatsappDeliveryError={whatsappDeliveryError}
+            isValidWhatsappNumber={isValidPhoneNumber(whatsappNumber)}
+            handleWhatsAppDelivery={handleWhatsAppDelivery}
+            handleConfirmWhatsAppSent={handleConfirmWhatsAppSent}
+            isPrintedDelivering={isPrintedDelivering}
+            printedDeliveryStatus={printedDeliveryStatus}
+            printedDeliveryError={printedDeliveryError}
+            handlePrintedDelivery={handlePrintedDelivery}
           />
         );
 
@@ -1070,8 +1360,12 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
     <>
       <SuccessCelebration
         isVisible={showSuccessCelebration}
-        message="Warning Issued Successfully!"
-        subMessage={`${employeeName} has been notified via ${selectedDeliveryMethod}`}
+        message={isTestMode ? 'Practice Complete!' : 'Warning Issued Successfully!'}
+        subMessage={
+          isTestMode
+            ? "Nice work. When you're ready, start a real warning from the dashboard."
+            : `${employeeName} has been notified via ${selectedDeliveryMethod}`
+        }
         onComplete={handleCelebrationComplete}
         duration={3000}
         showConfetti={true}
@@ -1095,7 +1389,7 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
             bg-white shadow-2xl w-full
             ${isMobile
               ? 'h-full rounded-none wizard-mobile-enter'
-              : 'max-w-2xl max-h-[90vh] rounded-xl'
+              : 'max-w-2xl h-[90vh] rounded-xl'
             }
             overflow-hidden flex flex-col
           `}
@@ -1111,12 +1405,6 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
                 >
                   Issue Warning
                 </h2>
-                <span
-                  className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
-                  style={{ backgroundColor: 'var(--color-primary-light)', color: 'var(--color-primary)' }}
-                >
-                  Beta
-                </span>
                 {isAudioEnabled && audioRecording.isRecording && (
                   <div
                     className="flex items-center gap-2 px-2.5 py-1 rounded-full wizard-recording-indicator"
@@ -1161,20 +1449,42 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
             )}
           </div>
 
+          {/* Persistent practice-mode banner — pinned above scroll area so the
+              manager can never lose track of the fact that nothing is being
+              saved. Amber palette so it's clearly distinct from real-flow chrome. */}
+          {isTestMode && (
+            <div
+              className="px-4 py-2 flex items-center gap-2 text-xs font-semibold border-b"
+              style={{
+                backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                borderBottomColor: 'rgba(245, 158, 11, 0.3)',
+                color: '#92400e',
+              }}
+              role="status"
+              aria-live="polite"
+            >
+              <span aria-hidden>🧪</span>
+              <span>
+                <strong>Practice run</strong> — Sample employee. Nothing will be saved or sent.
+              </span>
+            </div>
+          )}
+
           {/* Scrollable content. Inline overflow rules so this works reliably
               under any compiled-CSS ordering. overscroll-contain stops wheel
               events from scrolling the page behind the backdrop at scroll-end. */}
           <div
             ref={contentContainerRef}
-            className="flex-1 min-h-0"
             style={{
+              flex: '1 1 0%',
+              minHeight: 0,
               overflowY: 'auto',
               overflowX: 'hidden',
               overscrollBehavior: 'contain',
               WebkitOverflowScrolling: 'touch',
             }}
           >
-            <div className="enhanced-warning-wizard-container p-4">
+            <div className="p-4">
               <ThemedCard padding="md">
                 <PhaseHeader
                   title={phaseInfo.title}
@@ -1236,15 +1546,19 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
                 isValid={isPhaseValid}
                 isLoading={isSaving || isLoading}
                 onPrevious={handlePreviousPhase}
-                onNext={currentPhase === PhaseV2.SIGN_AND_SAVE ? handleSaveWarning : handleNextPhase}
+                onNext={
+                  currentPhase === PhaseV2.SIGN_AND_SAVE
+                    ? (isTestMode ? handleFinishTestRun : handleSaveWarning)
+                    : handleNextPhase
+                }
                 customNextText={
                   currentPhase === PhaseV2.OVERVIEW
-                    ? (isAudioEnabled ? 'Continue & start recording' : 'Continue')
+                    ? (isAudioEnabled && !isTestMode ? 'Continue & start recording' : 'Continue')
                     : currentPhase === PhaseV2.SIGN_AND_SAVE
-                      ? 'Save Warning'
+                      ? (isTestMode ? 'Finish Practice' : 'Save Warning')
                       : undefined
                 }
-                showFinalize={currentPhase === PhaseV2.DELIVERY}
+                showFinalize={currentPhase === PhaseV2.DELIVERY && !isTestMode}
                 onFinalize={handleFinalize}
               />
             )}
@@ -1311,9 +1625,16 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9100] flex items-center justify-center p-4">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
               <MicrophonePermissionHandler
+                organizationName={organization?.name || ''}
+                managerName={currentManagerName || ''}
                 onPermissionGranted={() => {
                   setMicrophonePermissionGranted(true);
                   setShowPermissionHandler(false);
+                  if (!audioRecording.isRecording) {
+                    audioRecording.startRecording().catch((err) => {
+                      Logger.error('Failed to start audio recording after permission grant:', err);
+                    });
+                  }
                 }}
                 onPermissionDenied={() => setShowPermissionHandler(false)}
                 onSkip={() => setShowPermissionHandler(false)}

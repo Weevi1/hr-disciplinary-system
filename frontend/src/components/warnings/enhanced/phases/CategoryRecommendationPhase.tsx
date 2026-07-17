@@ -36,6 +36,7 @@ export const CategoryRecommendationPhase: React.FC<CategoryRecommendationPhasePr
   categories,
   formData,
   setFormData,
+  selectedCategory,
   setSelectedCategory,
   lraRecommendation,
   setLraRecommendation,
@@ -84,6 +85,11 @@ export const CategoryRecommendationPhase: React.FC<CategoryRecommendationPhasePr
             <h4 className="font-semibold mb-1" style={{ color: 'var(--color-text-primary)' }}>
               Recommended: {lraRecommendation.recommendedLevel || getWarningLevelInfo(lraRecommendation.suggestedLevel).label}
             </h4>
+            {selectedCategory?.name && (
+              <p className="text-xs italic mb-2" style={{ color: 'var(--color-text-tertiary)' }}>
+                Based on your "{selectedCategory.name}" escalation path
+              </p>
+            )}
             <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
               {lraRecommendation.reason}
             </p>
@@ -155,6 +161,16 @@ export const CategoryRecommendationPhase: React.FC<CategoryRecommendationPhasePr
                 Escalation from previous warning
               </div>
             )}
+
+            {/* Manager-owns-the-decision reassurance — the recommendation
+                applies the company's category settings, but the manager makes
+                the call. */}
+            <p
+              className="text-xs italic mt-3 pt-3 border-t"
+              style={{ color: 'var(--color-text-tertiary)', borderColor: 'var(--color-border-light)' }}
+            >
+              You can adjust this if your assessment of the incident differs from the suggestion.
+            </p>
           </div>
         </div>
       </ThemedCard>

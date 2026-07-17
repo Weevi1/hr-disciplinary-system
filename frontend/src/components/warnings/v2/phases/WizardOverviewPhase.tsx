@@ -16,10 +16,14 @@ import {
   PenLine,
   ScrollText,
   Clock,
+  PlayCircle,
+  BookOpen,
 } from 'lucide-react';
 
 interface WizardOverviewPhaseProps {
   isAudioEnabled: boolean;
+  organizationName: string;
+  onStartTestRun?: () => void;
 }
 
 const steps = [
@@ -30,8 +34,28 @@ const steps = [
   { num: 5, label: 'Deliver', icon: Send, desc: 'Choose how the warning reaches the employee.' },
 ];
 
-export const WizardOverviewPhase: React.FC<WizardOverviewPhaseProps> = ({ isAudioEnabled }) => (
+export const WizardOverviewPhase: React.FC<WizardOverviewPhaseProps> = ({ isAudioEnabled, organizationName, onStartTestRun }) => (
   <div className="space-y-5">
+    {/* Authority/source framing — the rules being applied here are the
+        company's, not the app's. Sets the tone for the whole wizard. */}
+    <div
+      className="flex items-start gap-3 p-3 rounded-lg border-l-4"
+      style={{
+        borderLeftColor: '#475569',
+        backgroundColor: 'rgba(71, 85, 105, 0.06)',
+      }}
+    >
+      <BookOpen className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#475569' }} />
+      <div>
+        <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+          You're applying {organizationName ? `${organizationName}'s` : "your company's"} disciplinary procedures.
+        </p>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+          This wizard uses your company's warning categories, escalation paths, and conduct standards. You're in charge — it just keeps things organised and consistent.
+        </p>
+      </div>
+    </div>
+
     {/* Time + step count summary */}
     <div
       className="flex items-center gap-3 p-3 rounded-lg"
@@ -102,8 +126,11 @@ export const WizardOverviewPhase: React.FC<WizardOverviewPhaseProps> = ({ isAudi
       <ul className="space-y-2">
         {isAudioEnabled && (
           <li
-            className="flex items-start gap-3 p-3 rounded-lg"
-            style={{ backgroundColor: 'rgba(239, 68, 68, 0.06)' }}
+            className="flex items-start gap-3 p-3 rounded-lg border"
+            style={{
+              borderColor: 'rgba(239, 68, 68, 0.25)',
+              backgroundColor: 'rgba(239, 68, 68, 0.06)',
+            }}
           >
             <Mic className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#dc2626' }} />
             <div className="text-xs" style={{ color: 'var(--color-text-primary)' }}>
@@ -113,26 +140,68 @@ export const WizardOverviewPhase: React.FC<WizardOverviewPhaseProps> = ({ isAudi
           </li>
         )}
         <li
-          className="flex items-start gap-3 p-3 rounded-lg"
-          style={{ backgroundColor: 'var(--color-alert-info-bg)' }}
+          className="flex items-start gap-3 p-3 rounded-lg border"
+          style={{
+            borderColor: 'var(--color-border-light)',
+            backgroundColor: 'var(--color-card-background)',
+          }}
         >
-          <PenLine className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-alert-info-text)' }} />
-          <div className="text-xs" style={{ color: 'var(--color-alert-info-text)' }}>
+          <PenLine className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-primary)' }} />
+          <div className="text-xs" style={{ color: 'var(--color-text-primary)' }}>
             <strong>Two or three signatures required.</strong> Manager signs, then employee (or a
             witness if the employee refuses). A signature pad opens when you tap each slot.
           </div>
         </li>
         <li
-          className="flex items-start gap-3 p-3 rounded-lg"
-          style={{ backgroundColor: 'var(--color-alert-info-bg)' }}
+          className="flex items-start gap-3 p-3 rounded-lg border"
+          style={{
+            borderColor: 'var(--color-border-light)',
+            backgroundColor: 'var(--color-card-background)',
+          }}
         >
-          <ScrollText className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-alert-info-text)' }} />
-          <div className="text-xs" style={{ color: 'var(--color-alert-info-text)' }}>
+          <ScrollText className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-primary)' }} />
+          <div className="text-xs" style={{ color: 'var(--color-text-primary)' }}>
             <strong>You'll preview the full PDF before signing.</strong> Nothing is saved until you
             tap Save Warning on Step 4.
           </div>
         </li>
       </ul>
     </div>
+
+    {/* First-time? Practice run card */}
+    {onStartTestRun && (
+      <div
+        className="p-4 rounded-lg border-2 border-dashed"
+        style={{
+          borderColor: 'var(--color-border-light)',
+          backgroundColor: 'var(--color-card-background)',
+        }}
+      >
+        <div className="flex items-start gap-3">
+          <PlayCircle className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: 'var(--color-primary)' }} />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              First time? Try a test warning.
+            </p>
+            <p className="text-xs mt-0.5 mb-3" style={{ color: 'var(--color-text-secondary)' }}>
+              Practice with a sample employee. Nothing is saved or sent.
+            </p>
+            <button
+              type="button"
+              onClick={onStartTestRun}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border transition-colors"
+              style={{
+                borderColor: 'var(--color-primary)',
+                color: 'var(--color-primary)',
+                backgroundColor: 'transparent',
+              }}
+            >
+              Start test run
+              <span aria-hidden>→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   </div>
 );

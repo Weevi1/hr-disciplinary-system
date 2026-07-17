@@ -357,21 +357,39 @@ export function warningDeliveryHRNotificationTemplate(data: {
   issueDate: string;
   organizationName: string;
   issuedByName: string;
-  deliveryType: 'automated' | 'manual_requested';
+  deliveryType: 'automated' | 'manual_requested' | 'printed_collection';
   alternativeEmail?: string;
 }): string {
   const isAutomated = data.deliveryType === 'automated';
+  const isPrintedCollection = data.deliveryType === 'printed_collection';
 
-  const statusBanner = isAutomated
-    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+  let statusBanner: string;
+  let heading: string;
+  let intro: string;
+  if (isAutomated) {
+    statusBanner = `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
         <tr>
           <td style="background-color:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:12px 16px;">
             <p style="color:#166534;font-size:13px;margin:0;font-weight:600;">Warning emailed successfully</p>
             <p style="color:#15803d;font-size:12px;margin:4px 0 0;">Sent to ${data.employeeEmail} with PDF attached and response link included.</p>
           </td>
         </tr>
-      </table>`
-    : `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+      </table>`;
+    heading = 'Warning Delivered via Email';
+    intro = `${data.issuedByName} has delivered a warning to ${data.employeeName}.`;
+  } else if (isPrintedCollection) {
+    statusBanner = `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+        <tr>
+          <td style="background-color:#eff6ff;border:1px solid #93c5fd;border-radius:6px;padding:12px 16px;">
+            <p style="color:#1e40af;font-size:13px;margin:0;font-weight:600;">Printed copy awaiting collection</p>
+            <p style="color:#1d4ed8;font-size:12px;margin:4px 0 0;">${data.employeeName} will collect a printed copy from HR. Please print the warning and have it ready to hand over, then record the collection in the dashboard.</p>
+          </td>
+        </tr>
+      </table>`;
+    heading = 'Printed Warning Awaiting Collection';
+    intro = `${data.issuedByName} issued a warning to ${data.employeeName} for collection from HR.`;
+  } else {
+    statusBanner = `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
         <tr>
           <td style="background-color:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:12px 16px;">
             <p style="color:#92400e;font-size:13px;margin:0;font-weight:600;">Manual delivery required</p>
@@ -379,11 +397,14 @@ export function warningDeliveryHRNotificationTemplate(data: {
           </td>
         </tr>
       </table>`;
+    heading = 'Manual Warning Delivery Required';
+    intro = `${data.issuedByName} has requested delivery of a warning to ${data.employeeName}.`;
+  }
 
   const content = `
-    <h2 style="color:#1e293b;margin:0 0 16px;font-size:18px;">${isAutomated ? 'Warning Delivered via Email' : 'Manual Warning Delivery Required'}</h2>
+    <h2 style="color:#1e293b;margin:0 0 16px;font-size:18px;">${heading}</h2>
     <p style="color:#475569;font-size:14px;line-height:1.6;margin:0 0 24px;">
-      ${data.issuedByName} has ${isAutomated ? 'delivered' : 'requested delivery of'} a warning to ${data.employeeName}.
+      ${intro}
     </p>
 
     ${statusBanner}

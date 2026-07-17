@@ -81,7 +81,7 @@ firebase projects:list
 **IMPORTANT**: This file is size-limited to maintain context efficiency.
 
 - **Size Limit**: 500 lines maximum (target: 400-470 lines)
-- **Current Size**: 538 lines ⚠️ (over 500-line target — move oldest "Most Recent" entry to RECENT_UPDATES.md before next session)
+- **Current Size**: 545 lines ⚠️ (over 500-line target — 2026-06-04 moved the V2-cutover "Most Recent" block to RECENT_UPDATES.md and condensed the Node 22 + Pre-Launch "Previous" blocks to pointers; still ~45 over. Next session should condense the "Priority 0: FIFO Business Launch" pricing tables into a pointer to `BUSINESS_LAUNCH_TRACKER.md` to get under target)
 - **Policy**: See `DOCUMENTATION_POLICY.md` for complete maintenance rules
 - **Before Adding Sessions**: Check size with `wc -l CLAUDE.md`
 - **If > 450 lines**: Move previous session to RECENT_UPDATES.md first
@@ -112,7 +112,7 @@ us-east1:    getSuperUserInfo, manageSuperUser (super user functions only)
 **For complete file locations catalog with descriptions, see `QUICK_REFERENCE.md`**
 
 ### Key Files to Know
-- **Warning Wizard**: `warnings/enhanced/UnifiedWarningWizard.tsx` (v1, 10-phase) is the **production default**. `warnings/v2/UnifiedWarningWizardV2.tsx` (6-phase) is the **active migration target / next-gen wizard** — wired into HODDashboardSection behind a "Beta" CTA; not yet the production cutover. New mobile/UX work goes into v2.
+- **Warning Wizard**: `warnings/v2/UnifiedWarningWizardV2.tsx` (intro + 5 steps) is the **production default** (V1 `enhanced/UnifiedWarningWizard.tsx` was retired/deleted 2026-06-03). It reuses phase components still living under `warnings/enhanced/phases/*` + `shared/*`. **Step 5 (Delivery)** = `enhanced/phases/DeliveryPhase.tsx` (rendered via `v2/phases/DeliveryPhaseV2.tsx`), with self-finalizing panels for Email/WhatsApp/Printed and a shared Finalize for QR.
 - **Core Types**: `frontend/src/types/core.ts`, `frontend/src/types/employee.ts`
 - **PDF System**: `PDFGenerationService.ts`, `PDFTemplateVersionService.ts`, `pdfDataTransformer.ts` - See `PDF_SYSTEM_ARCHITECTURE.md`
 - **Services**: `DatabaseShardingService.ts`, `ShardedDataService.ts`, `AdminDataService.ts`, `WarningService.ts`
@@ -364,24 +364,19 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 **For complete change history, see `RECENT_UPDATES.md` (Sessions 20-52) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Node 22 + firebase-functions v7 upgrade, 2026-05-19)
-- **✅ Cloud Functions runtime bumped Node 20 → 22** ahead of the 2026-10-30 decommission deadline. All 47 functions redeployed on `nodejs22` / 2nd Gen.
-- **✅ SDK bump**: `firebase-functions` 4.9.0 → 7.2.5; `firebase-admin` 11.x → 13.10.0. All deploy warnings about deprecated/outdated SDKs are gone.
-- **✅ Full v1 → v2 migration of 3 residual files**: `timeService.ts`, `audioCleanup.ts`, `temporaryDownload.ts`. Removed manual CORS middleware + manual `CallableContext` shimming inside `onRequest` handlers.
-- **Migration gotcha**: `firebase functions:delete` required for the 12 functions previously deployed as 1st gen — `firebase deploy` refuses to upgrade gen in-place. After delete+recreate, public IAM had to be set explicitly via `gcloud run services add-iam-policy-binding ... --member=allUsers --role=roles/run.invoker`. Recorded in `lessons.md`.
-- **Post-deploy audit catch**: 3 functions (`deliverWarningByEmail`, `uploadResponseEvidence`, `notifyHROnAppeal`) hit CPU-quota during deploy; `firebase functions:list` listed them as `nodejs22` but `gcloud run services describe` showed them still serving 9-day-old Node 20 revisions. Re-deployed those three explicitly; now `Ready=True` on the new revisions. Verification pattern recorded in `lessons.md` — always cross-check Cloud Run service state after deploys with partial failures.
+### Most Recent (Step 5 delivery completed — WhatsApp + Printed, 2026-06-04)
+- **✅ All four Step 5 delivery methods now functional.** WhatsApp and Printed were silent stubs (recorded `pending` forever, nothing sent); both now work. Deployed to production 2026-06-04.
+- **WhatsApp**: opens `wa.me/<number>` on the manager's device with a message + the durable **respond link** (the PDF can't be pre-attached to a click-to-chat URL). Number pre-filled from `profile.whatsappNumber || profile.phoneNumber`, editable, gated by a "confirmed with employee" checkbox. Respond token (`generateResponseToken`) now takes optional `expiryDays` — WhatsApp passes **180** (6 months). New shared `frontend/src/utils/phone.ts`.
+- **Printed (collect from HR)**: records `deliveryStatus: 'awaiting_collection'` + emails HR via new callable `notifyHRPrintedCollection`. HR completes it from the Review dashboard via the existing **Deliver → EnhancedDeliveryWorkflow → PrintDeliveryGuide** flow.
+- **Bug fixed**: `ReviewDashboard` HR-side completion wrote `status` not `deliveryStatus`, so delivered warnings stayed stuck in the undelivered queue — now writes `deliveryStatus: 'delivered'` + `deliveryHistory` proof. Affected all HR-side deliveries.
+- **Pattern**: Email/WhatsApp/Printed are *self-finalizing* panels (each writes its own delivery fields + fires the celebration) → excluded from the generic DELIVERY validation + `handleFinalize` guard; only QR uses the shared Finalize button.
+- Full detail + the 2026-06-03 V2 cutover note moved to `RECENT_UPDATES.md`.
+
+### Previous (Node 22 + firebase-functions v7 upgrade, 2026-05-19)
+Runtime Node 20 → 22; `firebase-functions` → 7.2.5, `firebase-admin` → 13.x; 3 residual files migrated v1→v2. Gen-1→gen-2 in-place upgrade is blocked (delete+recreate + explicit public IAM). `firebase functions:list` reports configured runtime, not what's serving — cross-check `gcloud run services describe` after partial-failure deploys. Full detail + gotchas in `lessons.md` and `RECENT_UPDATES.md`.
 
 ### Previous (Pre-Launch Cleanup, 2026-05-11)
-Phase 2 (architectural debt), Phase 4 (ESLint + console scrub), Phase 5 (docs hygiene) shipped over Sessions 68–73. tsc 903 → 647 (-28%), ~10,000 LOC removed/relocated. `DataService` decomposed into `ShardedDataService` + `AdminDataService`; `EmployeeService`, `DataServiceV2`, `NestedDataService`, `CategoryService` deleted; types unified to `types/core.ts`; 7 oversized components decomposed; PDF generator 4,135→958 LOC with byte-identical v1.0.0/v1.1.0 preservation; `Logger` now sanitises all production logging; 12 real react-hooks/rules-of-hooks bugs fixed; `npm run lint` clean. Full detail in `RECENT_UPDATES.md`.
-
-### Previous (Session 67 - 2026-04-24)
-- **✅ Reseller demo organizations** — Resellers can deploy pre-populated demo orgs for prospect testing, separate from paying-client lifecycle
-- **Backend**: 4 new Cloud Functions in `functions/src/Reseller/demoManagement.ts` — `deployDemoOrganization`, `createDemoProspectLogin`, `resetDemoOrganization`, `deleteDemoOrganization`. Max 5 concurrent demos per reseller (separate quota from real deployments). Seed data in `demoSeedData.ts` (10 canonical SA employees) and `demoCategories.ts` (8 LRA categories)
-- **Frontend**: `ResellerDemoService.ts` + 5 new components under `components/reseller/demos/` (MyDemos list + 4 modals). New "My Demos" tab on ResellerDashboard, desktop + mobile
-- **Org schema**: Added `isDemo?: boolean` and `demoMetadata?: { resellerId, createdAt, lastResetAt, resetCount, activeProspectLoginIds }` to `Organization`. Added `resellerId` + `isDemoProspect` to `User`. Added `'reseller'` to `UserRoleId` (fixed pre-existing type gap)
-- **Safety rails**: Persistent amber `DEMO ORGANIZATION` banner in MainLayout. `AdminDataService.getResellerClients` filters out `isDemo: true`. Cron/trigger guards added to `reviewFollowUpCron.ts`, `warningDelivery.ts`, and `notifyHROnAppeal.ts` so demo orgs never generate SendGrid bounces on fake `@demo.local` addresses
-- **Indexes deployed**: `organizations (resellerId, isDemo)` and `organizations (resellerId, isDemo, isActive)` in `config/firestore.indexes.json`
-- **Reset semantics**: Full re-seed to pristine template — wipes warnings, evidence, response tokens, prospect logins, employees, departments; re-seeds the 10 canonical employees + Operations/Admin departments. Reset count is tracked
+Phases 2/4/5 over Sessions 68–73: tsc 903 → 647, ~10,000 LOC removed; `DataService` → `ShardedDataService` + `AdminDataService`; `EmployeeService`/`DataServiceV2`/`NestedDataService`/`CategoryService` deleted; types unified to `types/core.ts`; PDF generator 4,135→958 LOC (byte-identical v1.0.0/v1.1.0); `npm run lint` clean. Full detail in `RECENT_UPDATES.md`.
 
 ### Previous Sessions (52-66)
 See `RECENT_UPDATES.md` for detailed session history including Sessions 57-66.
@@ -395,7 +390,7 @@ See `RECENT_UPDATES.md` for detailed session history including Sessions 57-66.
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ org scalability, progressive enhancement for 2012-2025 devices, **unified design system**, **DashboardShell** across all dashboards, **WCAG AA compliance**, **versioned PDF generation**, **per-org PDF templates**, **SVG signatures**, **10-phase unified warning wizard**, **link-based employee response/appeal system** with token auth and PDF viewing, **HR email notifications via SendGrid**, **evidence upload on appeals with client-side image optimization**, **per-organization multi-dashboard theming** (Manager, HR, Executive views with per-view metric card colors), **optimized warning data loading with staleness detection**, **session guard with auto-logout + forced app updates**, and **CCMA-ready PDFs with section labels, continuation headers, electronic signature notation, and page initials**.*
 
-*Last Updated: 2026-05-19 - Cloud Functions Node 22 + firebase-functions v7 + firebase-admin v13 upgrade; 3 residual v1 files fully migrated to v2.*
+*Last Updated: 2026-06-04 - Step 5 delivery completed: WhatsApp (durable respond link) + Printed (collect-from-HR) made functional; HR-side `deliveryStatus` write bug fixed. Deployed to production.*
 
 ---
 

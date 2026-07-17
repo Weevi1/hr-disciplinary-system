@@ -6,6 +6,64 @@ Latest session updates and recent changes to the HR Disciplinary System.
 
 ---
 
+## Step 5 Delivery — WhatsApp + Printed made real (2026-06-04)
+
+Wizard Step 5 offered four delivery cards (Email, QR, WhatsApp, Printed); only Email and QR worked. WhatsApp and Printed were silent stubs that recorded `deliveryStatus: 'pending'` forever with nothing sent. Both are now functional.
+
+**WhatsApp delivery.** Manager picks WhatsApp → panel pre-fills the employee's number (`profile.whatsappNumber || profile.phoneNumber`, editable) and requires an "I confirmed this number with the employee" checkbox → opens `https://wa.me/<digits>?text=…` on the manager's device with a professional message + a durable respond link. WhatsApp's click-to-chat can't pre-attach a file, so the PDF is delivered as the existing **respond/appeal link** (`generateResponseToken`, bumped to a **6-month** lifetime via a new optional `expiryDays` param) rather than a native attachment. Manager attests "I've sent it" → records honest delivery. New shared `frontend/src/utils/phone.ts` (`formatPhoneNumber` extracted out of `useEmployeeImport.ts`, plus `toWhatsAppNumber`/`isValidPhoneNumber`).
+
+**Printed delivery (collect from HR).** Manager picks Printed → panel explains the employee collects a printed copy from HR → "Notify HR & Finalize" records `deliveryStatus: 'awaiting_collection'` and calls a new callable `notifyHRPrintedCollection` that emails HR managers (new `printed_collection` branch in the HR-notification email template). The warning surfaces in HR's Review-dashboard queue as **Awaiting Collection**; HR uses the existing **Deliver → EnhancedDeliveryWorkflow → PrintDeliveryGuide** (print → hand over with date/location/witness → file) to complete it.
+
+**Bug fixed.** `ReviewDashboard` `onDeliveryComplete` wrote `status: 'delivered'` but **not** `deliveryStatus` — so HR-delivered warnings stayed stuck in the undelivered queue and the captured proof (location/witness) was discarded. Now writes `deliveryStatus: 'delivered'` + appends a `deliveryHistory` entry with `deliveredBy` + proof. Fixes Email/WhatsApp HR-side delivery too.
+
+**Pattern.** Email, WhatsApp and Printed are *self-finalizing* panels — each writes its own `deliveryMethod`/`deliveryStatus`/`deliveryHistory` and fires the celebration, so all three are excluded from the generic DELIVERY-phase validation and `handleFinalize` guard. Only QR uses the shared Finalize button. New `DeliveryStatus` value `'awaiting_collection'` added (safe — the codebase only does `=== 'delivered'`/`!== 'delivered'` checks).
+
+**Deployed (2026-06-04):** `generateResponseToken` (expiryDays), `notifyHRPrintedCollection` (new), and frontend hosting. Both features live in production.
+
+---
+
+## V2 Warning Wizard — Build, Iteration & Cutover (2026-06-03)
+
+### Cutover note (moved from CLAUDE.md)
+- **✅ V2 is now THE warning wizard.** Every entry point (HOD Dashboard "Issue Warning" button + `/warnings/create` route) opens V2. The dashed "Beta" button and BETA chip are gone. Saved warnings carry `wizardVersion: 'v2'`.
+- **Deleted**: `enhanced/UnifiedWarningWizard.tsx` (V1, 1645 lines), `enhanced/EnhancedWarningWizard.tsx` (already unused), `enhanced/modals/AudioConsentModal.tsx` (V1-only).
+- **Kept under `enhanced/`** because V2 still imports them: `phases/*`, `shared/*`, `steps/components/*`, `wizardHelpers.ts`, `wizardTypes.ts`, `PDFPreviewModal.tsx`, `components/MicrophonePermissionHandler.tsx`.
+- **Follow-up reorg ideas (not done)**: drop the `V2` suffix; flatten `warnings/enhanced/` into `warnings/`; audit `modal-system.css` for dead `.enhanced-warning-wizard-container` `!important` rules.
+
+
+A full day of work consolidated. Started as a parallel test build, iterated through 7 UX patches based on Riaan's testing, finished with a cutover that retires V1.
+
+**Build.** New `frontend/src/components/warnings/v2/` folder with `UnifiedWarningWizardV2.tsx` orchestrator + 6 phase components (`WizardOverviewPhase`, `SetupPhaseV2`, `IncidentPhaseV2`, `ConversationPhaseV2`, `SignAndSavePhaseV2`, `DeliveryPhaseV2`) + `wizardTypesV2.ts`. Composition over rewrite: V2 reuses every V1 phase component (`WordCountTextareaPhase`, `ImprovementPlanPhase`, `CategoryRecommendationPhase`, `IncidentDetailsForm`, `ReviewDocumentationPhase`, `ScriptPdfReviewPhase`, `SignaturesPhase`, `DeliveryPhase`) plus the LRA engine, PDF generator, signature canvas, Firestore schema, and Cloud Functions. V2 collapses V1's 10 phases into a 10-second intro overview + 5 working steps along natural conversation lines.
+
+**Surprise eliminations.** Audio recording now starts only when the user clicks Continue on the intro (not silently on wizard open). Escalation risk surfaces immediately after employee picked, before category. "Conversation" sections grey out (don't vanish) for Final Written level. PDF preview button announced upfront on the intro.
+
+**Iteration patches (all in `lessons.md` for future-self):**
+1. **Modal scroll trap.** `flex-1 min-h-0 overflow-y-auto` inside `max-h-[90vh] flex flex-col` silently fails to engage scroll in Chrome — the flex child can't compute a definite height under a max constraint. Fix: definite `h-[90vh]` on modal + inline `flex: '1 1 0%'` + `minHeight: 0` on the scroll container. Recorded in `memory/modal_scroll_trap.md`.
+2. **Evidence "Optional" badge.** Added to shared `EvidenceUploader.tsx` label — accurate for all callers (V1/V2/appeals) since evidence is never required. Plus a framing hint at the top of the V2 Incident phase.
+3. **Early escalation badge.** Setup phase shows active-warning count immediately after employee selected, before category — so the HR Intervention gate isn't an ambush later.
+4. **Expected Standards refresh on category switch.** Bug: pre-population fired only when textarea empty, so switching category left stale text. Fix: dirty-check ref tracks previous category's template; refresh if untouched, preserve user edits.
+5. **Improvement Plan clarity.** Bare admin form (`Action Commitments`, `Validity Period`) replaced with intro line, helper subtitles, empty-state example commitment card, and a grouped "Warning record" cluster for Date issued + Stays active for.
+6. **"+ Add Commitment" → "+ Another Commitment"** when list isn't empty + shrunk to `text-xs` so it sits visually subordinate to commitment cards.
+7. **PDF-review tile + checkbox cleanup.** "Step 2: Review PDF with Employee" + standalone "Employee has reviewed the document" checkbox → single tile reading "Show the warning to the employee" / "Tap to open the warning so the employee can read it before signing." Tapping the tile auto-flips `employeeViewedPDF`. Redundant checkbox deleted.
+
+**Cutover (final).** [App.tsx:15](frontend/src/App.tsx#L15) lazy import retargeted from `enhanced/UnifiedWarningWizard` to `v2/UnifiedWarningWizardV2`. [HODDashboardSection.tsx](frontend/src/components/dashboard/HODDashboardSection.tsx) collapsed: dual lazy imports → one, dual state vars → one, dual handlers → one, dashed beta button → deleted, dual render block → one. BETA chip removed from V2 header. Deleted files: `enhanced/UnifiedWarningWizard.tsx` (1645 lines), `enhanced/EnhancedWarningWizard.tsx` (legacy/unused), `enhanced/modals/AudioConsentModal.tsx` (no consumers). Kept everything else in `enhanced/` since V2 imports those (phases, shared chrome, steps, helpers, types, `PDFPreviewModal`, `MicrophonePermissionHandler`).
+
+Saved warnings still carry `wizardVersion: 'v2'` as a harmless historical marker. Firestore schema unchanged. Cloud Functions unchanged.
+
+---
+
+## Session 67 (2026-04-24) — Reseller Demo Organizations
+
+- **✅ Reseller demo organizations** — Resellers can deploy pre-populated demo orgs for prospect testing, separate from paying-client lifecycle
+- **Backend**: 4 new Cloud Functions in `functions/src/Reseller/demoManagement.ts` — `deployDemoOrganization`, `createDemoProspectLogin`, `resetDemoOrganization`, `deleteDemoOrganization`. Max 5 concurrent demos per reseller (separate quota from real deployments). Seed data in `demoSeedData.ts` (10 canonical SA employees) and `demoCategories.ts` (8 LRA categories)
+- **Frontend**: `ResellerDemoService.ts` + 5 new components under `components/reseller/demos/` (MyDemos list + 4 modals). New "My Demos" tab on ResellerDashboard, desktop + mobile
+- **Org schema**: Added `isDemo?: boolean` and `demoMetadata?: { resellerId, createdAt, lastResetAt, resetCount, activeProspectLoginIds }` to `Organization`. Added `resellerId` + `isDemoProspect` to `User`. Added `'reseller'` to `UserRoleId` (fixed pre-existing type gap)
+- **Safety rails**: Persistent amber `DEMO ORGANIZATION` banner in MainLayout. `AdminDataService.getResellerClients` filters out `isDemo: true`. Cron/trigger guards added to `reviewFollowUpCron.ts`, `warningDelivery.ts`, and `notifyHROnAppeal.ts` so demo orgs never generate SendGrid bounces on fake `@demo.local` addresses
+- **Indexes deployed**: `organizations (resellerId, isDemo)` and `organizations (resellerId, isDemo, isActive)` in `config/firestore.indexes.json`
+- **Reset semantics**: Full re-seed to pristine template — wipes warnings, evidence, response tokens, prospect logins, employees, departments; re-seeds the 10 canonical employees + Operations/Admin departments. Reset count is tracked
+
+---
+
 ## Session 66 (2026-03-09) — PDF Quality Improvements & HR Intervention UX
 
 - **✅ Unified HR intervention messages** — Merged `hasFinalWarningBlock`/`hasDismissalRedirect` into a single `hrInterventionRequired` state in `UnifiedWarningWizard.tsx` with context-aware UI and a graceful "I Understand" close

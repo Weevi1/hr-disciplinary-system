@@ -842,7 +842,11 @@ const WarningDetailsModal: React.FC<WarningDetailsModalProps> = ({
                       <span className={`font-medium ${
                         warningData.deliveryStatus === 'delivered' ? 'text-green-600' : 'text-orange-600'
                       }`}>
-                        {warningData.deliveryStatus === 'delivered' ? 'Delivered' : 'Pending Delivery'}
+                        {warningData.deliveryStatus === 'delivered'
+                          ? 'Delivered'
+                          : (warningData.deliveryMethod === 'printed' && warningData.deliveryStatus !== 'delivered')
+                            ? 'Awaiting Collection'
+                            : 'Pending Delivery'}
                       </span>
                     </div>
                   </div>

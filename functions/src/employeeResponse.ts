@@ -101,10 +101,18 @@ export const generateResponseToken = onCall(
       throw new HttpsError('unauthenticated', 'Authentication required');
     }
 
-    const { warningId, organizationId } = request.data;
+    const { warningId, organizationId, expiryDays } = request.data;
     if (!warningId || !organizationId) {
       throw new HttpsError('invalid-argument', 'warningId and organizationId are required');
     }
+
+    // Optional caller-supplied lifetime (e.g. WhatsApp delivery uses 180 days so
+    // the durable link survives the warning's active period). Clamp to a sane
+    // range; fall back to the default when absent or invalid.
+    const requestedExpiryDays =
+      typeof expiryDays === 'number' && expiryDays > 0
+        ? Math.min(Math.round(expiryDays), 365)
+        : DEFAULT_EXPIRY_DAYS;
 
     try {
       // Get warning data for the summary snapshot
@@ -148,7 +156,7 @@ export const generateResponseToken = onCall(
       const tokenId = generateToken();
       const now = new Date();
       const expiresAt = new Date(now);
-      expiresAt.setDate(expiresAt.getDate() + DEFAULT_EXPIRY_DAYS);
+      expiresAt.setDate(expiresAt.getDate() + requestedExpiryDays);
 
       const tokenData = {
         warningId,

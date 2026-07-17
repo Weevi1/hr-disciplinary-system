@@ -7,7 +7,7 @@
 // gate isn't a surprise later.
 
 import React from 'react';
-import { AlertTriangle, CheckCircle, ChevronDown } from 'lucide-react';
+import { AlertTriangle, CheckCircle, ChevronDown, User } from 'lucide-react';
 import { EmployeeSelector } from '../../enhanced/steps/components/EmployeeSelector';
 import { CategoryRecommendationPhase } from '../../enhanced/phases/CategoryRecommendationPhase';
 import type { Category, FormData } from '../wizardTypesV2';
@@ -35,6 +35,11 @@ interface SetupPhaseV2Props {
   expectedBehavior: string;
   setExpectedBehavior: (value: string) => void;
   setSelectedWarningDetails: (warning: any) => void;
+
+  // Practice mode — when true, swap the live employee picker for a locked
+  // "Test Employee" tile. The wizard has already pre-filled formData with the
+  // sample employee id, so the rest of Setup behaves normally.
+  isTestMode?: boolean;
 }
 
 export const SetupPhaseV2: React.FC<SetupPhaseV2Props> = ({
@@ -53,6 +58,7 @@ export const SetupPhaseV2: React.FC<SetupPhaseV2Props> = ({
   expectedBehavior,
   setExpectedBehavior,
   setSelectedWarningDetails,
+  isTestMode = false,
 }) => {
   const employeeSelected = !!formData.employeeId;
   const activeWarningCount = warningHistory.length;
@@ -61,12 +67,46 @@ export const SetupPhaseV2: React.FC<SetupPhaseV2Props> = ({
     <div className="space-y-5">
       {/* === Section A: Employee === */}
       <div>
-        <EmployeeSelector
-          employees={employees}
-          selectedEmployeeId={formData.employeeId}
-          onEmployeeSelect={(id) => setFormData((prev) => ({ ...prev, employeeId: id }))}
-          warningHistory={warningHistory}
-        />
+        {isTestMode ? (
+          <div
+            className="rounded-lg border p-3 flex items-start gap-3"
+            style={{
+              borderColor: 'var(--color-border-light)',
+              backgroundColor: 'var(--color-card-background)',
+            }}
+          >
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: 'var(--color-primary-light)' }}
+            >
+              <User className="w-4 h-4" style={{ color: 'var(--color-primary)' }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p
+                className="text-[11px] font-semibold uppercase tracking-wide"
+                style={{ color: 'var(--color-text-secondary)' }}
+              >
+                Employee
+              </p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                Test Employee
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+                Operations · Team Member
+              </p>
+              <p className="text-[11px] mt-1.5 italic" style={{ color: 'var(--color-text-secondary)' }}>
+                🧪 Sample employee for this practice run.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <EmployeeSelector
+            employees={employees}
+            selectedEmployeeId={formData.employeeId}
+            onEmployeeSelect={(id) => setFormData((prev) => ({ ...prev, employeeId: id }))}
+            warningHistory={warningHistory}
+          />
+        )}
       </div>
 
       {/* === Early escalation indicator (only after employee picked, before category) === */}

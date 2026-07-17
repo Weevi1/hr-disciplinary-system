@@ -17,9 +17,6 @@ import {
 
 // 🚀 LAZY LOADED HEAVY COMPONENTS
 const UnifiedWarningWizard = React.lazy(() =>
-  import('../warnings/enhanced/UnifiedWarningWizard').then(m => ({ default: m.UnifiedWarningWizard }))
-);
-const UnifiedWarningWizardV2 = React.lazy(() =>
   import('../warnings/v2/UnifiedWarningWizardV2').then(m => ({ default: m.UnifiedWarningWizardV2 }))
 );
 const UnifiedBookHRMeeting = React.lazy(() =>
@@ -76,7 +73,6 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
   } = useDashboardData({ role: 'hod' });
 
   const [showWarningWizard, setShowWarningWizard] = useState(false);
-  const [showWarningWizardV2, setShowWarningWizardV2] = useState(false);
   const [showBookHRMeeting, setShowBookHRMeeting] = useState(false);
   const [showReportAbsence, setShowReportAbsence] = useState(false);
   const [showRecognitionEntry, setShowRecognitionEntry] = useState(false);
@@ -131,28 +127,6 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
     }
 
     setShowWarningWizard(true);
-  }, [canCreateWarnings, isReady, employees.length, categories.length, dashboardLoading, organization?.id, refreshData]);
-
-  // V2 beta: same readiness checks as V1, then open V2 instead.
-  const handleIssueWarningV2 = useCallback(async () => {
-    if (!canCreateWarnings()) return;
-    if (!isReady || dashboardLoading.overall) {
-      Logger.warn('Please wait for data to load...');
-      return;
-    }
-    if (employees.length === 0) {
-      alert('You have no team members assigned. Please contact HR to have employees assigned to your team.');
-      return;
-    }
-    if (categories.length === 0) {
-      alert('No warning categories found. Please contact your system administrator.');
-      return;
-    }
-    if (organization?.id) {
-      const isStale = await API.warnings.isWarningsDataStale(organization.id);
-      if (isStale) refreshData();
-    }
-    setShowWarningWizardV2(true);
   }, [canCreateWarnings, isReady, employees.length, categories.length, dashboardLoading, organization?.id, refreshData]);
 
   return (
@@ -258,39 +232,6 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
             </div>
           </button>
         </div>
-
-        {/* Beta: Try the new wizard. Sits between action buttons and nav cards
-            so HODs see it but the primary CTAs stay dominant. */}
-        {hodPermissions.canIssueWarnings && canCreateWarnings() && (
-          <button
-            type="button"
-            onClick={handleIssueWarningV2}
-            className="w-full transition-all duration-200 active:scale-[0.99] hover:shadow-md focus:outline-none focus:ring-2"
-            style={{
-              backgroundColor: 'var(--color-primary-light)',
-              color: 'var(--color-primary)',
-              border: '1px dashed var(--color-primary)',
-              borderRadius: '10px',
-              padding: '10px 14px',
-              cursor: 'pointer',
-            }}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 min-w-0">
-                <span
-                  className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0"
-                  style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
-                >
-                  Beta
-                </span>
-                <span className="text-sm font-semibold truncate">
-                  Try the new warning wizard
-                </span>
-              </div>
-              <ChevronRight className="w-4 h-4 flex-shrink-0" />
-            </div>
-          </button>
-        )}
 
         {/* Navigation Cards */}
         <div className="space-y-3">
@@ -429,7 +370,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
       {showWarningWizard && (
         <React.Suspense fallback={<LoadingSkeleton />}>
           <UnifiedWarningWizard
-            key="enhanced-warning-wizard"
+            key="warning-wizard"
             employees={employees}
             categories={categories}
             currentManagerName={currentManagerName}
@@ -437,21 +378,6 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
             preloadedWarnings={dashboardWarnings}
             onComplete={() => { setShowWarningWizard(false); refreshData(); }}
             onCancel={() => setShowWarningWizard(false)}
-          />
-        </React.Suspense>
-      )}
-
-      {showWarningWizardV2 && (
-        <React.Suspense fallback={<LoadingSkeleton />}>
-          <UnifiedWarningWizardV2
-            key="warning-wizard-v2"
-            employees={employees}
-            categories={categories}
-            currentManagerName={currentManagerName}
-            organizationName={organizationName}
-            preloadedWarnings={dashboardWarnings}
-            onComplete={() => { setShowWarningWizardV2(false); refreshData(); }}
-            onCancel={() => setShowWarningWizardV2(false)}
           />
         </React.Suspense>
       )}

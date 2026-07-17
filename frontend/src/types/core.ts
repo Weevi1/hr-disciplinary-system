@@ -15,7 +15,7 @@ export type UserRoleId = 'super-user' | 'executive-management' | 'hr-manager' | 
 // Industry type - accepts any string to support 90+ industry categories
 export type IndustryType = string;
 export type DeliveryMethod = 'email' | 'whatsapp' | 'printed';
-export type DeliveryStatus = 'pending' | 'delivered' | 'failed';
+export type DeliveryStatus = 'pending' | 'delivered' | 'failed' | 'awaiting_collection';
 
 // 🔧 ENHANCED: Added 'counselling' as first level in progressive discipline
 export type WarningLevel =
@@ -478,7 +478,7 @@ export interface Warning {
   issuedBy: string;
   issuedByName?: string;
   deliveryMethod?: DeliveryMethod;
-  deliveryStatus?: DeliveryStatus | 'pending' | 'delivered' | 'failed' | 'cancelled';
+  deliveryStatus?: DeliveryStatus | 'pending' | 'delivered' | 'failed' | 'cancelled' | 'awaiting_collection';
   deliveryDate?: Date;
   deliveryChoice?: any; // Captured from delivery modal
   signatures?: {

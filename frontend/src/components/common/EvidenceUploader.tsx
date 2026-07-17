@@ -229,8 +229,11 @@ export const EvidenceUploader: React.FC<EvidenceUploaderProps> = ({
     <div className="space-y-3">
       {/* Label */}
       <div className="flex items-center justify-between">
-        <label className="block text-sm font-semibold text-gray-900">
+        <label className="text-sm font-semibold text-gray-900 flex items-center gap-2">
           Supporting Evidence
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wide bg-gray-100 text-gray-500">
+            Optional
+          </span>
         </label>
         <span className="text-xs text-gray-500">
           {items.length}/{maxItems} files

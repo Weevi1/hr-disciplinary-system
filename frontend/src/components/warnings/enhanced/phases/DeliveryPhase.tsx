@@ -17,6 +17,7 @@ import {
   Info,
   Lock,
   RefreshCw,
+  MessageCircle,
 } from 'lucide-react';
 import { ThemedAlert } from '../../../common/ThemedCard';
 import { ThemedButton } from '../../../common/ThemedButton';
@@ -49,6 +50,20 @@ interface DeliveryPhaseProps {
   isGeneratingQRPdf: boolean;
   handleQRCodeDelivery: () => void;
   handleEmailDelivery: () => void;
+  whatsappNumber: string;
+  setWhatsappNumber: (value: string) => void;
+  whatsappConfirmed: boolean;
+  setWhatsappConfirmed: (value: boolean) => void;
+  isWhatsAppDelivering: boolean;
+  whatsappDeliveryStatus: 'idle' | 'generating_link' | 'opened' | 'sent' | 'failed';
+  whatsappDeliveryError: string | null;
+  isValidWhatsappNumber: boolean;
+  handleWhatsAppDelivery: () => void;
+  handleConfirmWhatsAppSent: () => void;
+  isPrintedDelivering: boolean;
+  printedDeliveryStatus: 'idle' | 'sending' | 'sent' | 'failed';
+  printedDeliveryError: string | null;
+  handlePrintedDelivery: () => void;
 }
 
 export const DeliveryPhase: React.FC<DeliveryPhaseProps> = ({
@@ -70,9 +85,26 @@ export const DeliveryPhase: React.FC<DeliveryPhaseProps> = ({
   isGeneratingQRPdf,
   handleQRCodeDelivery,
   handleEmailDelivery,
+  whatsappNumber,
+  setWhatsappNumber,
+  whatsappConfirmed,
+  setWhatsappConfirmed,
+  isWhatsAppDelivering,
+  whatsappDeliveryStatus,
+  whatsappDeliveryError,
+  isValidWhatsappNumber,
+  handleWhatsAppDelivery,
+  handleConfirmWhatsAppSent,
+  isPrintedDelivering,
+  printedDeliveryStatus,
+  printedDeliveryError,
+  handlePrintedDelivery,
 }) => {
   const employeeEmailOnRecord = selectedEmployee?.profile?.email || (selectedEmployee as any)?.email || '';
   const showEmailPanel = selectedDeliveryMethod === 'email';
+  const showWhatsAppPanel = selectedDeliveryMethod === 'whatsapp';
+  const showPrintedPanel = selectedDeliveryMethod === 'printed';
+  const employeeFirstName = selectedEmployee?.profile?.firstName || 'the employee';
   const needsAlternativeEmail = !employeeEmailOnRecord || useAlternativeEmail;
   const isValidAlternativeEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(alternativeEmail);
 
@@ -131,11 +163,11 @@ export const DeliveryPhase: React.FC<DeliveryPhaseProps> = ({
                 }
               }
             }}
-            disabled={(key === 'qr' && isGeneratingQRPdf) || isEmailDelivering}
+            disabled={(key === 'qr' && isGeneratingQRPdf) || isEmailDelivering || isWhatsAppDelivering || isPrintedDelivering}
             className={`
               p-4 rounded-lg border text-center transition-all flex flex-col items-center gap-2
               ${selectedDeliveryMethod === key ? 'ring-2' : ''}
-              ${(key === 'qr' && isGeneratingQRPdf) || isEmailDelivering ? 'opacity-50 cursor-wait' : ''}
+              ${(key === 'qr' && isGeneratingQRPdf) || isEmailDelivering || isWhatsAppDelivering || isPrintedDelivering ? 'opacity-50 cursor-wait' : ''}
             `}
             style={{
               borderColor: selectedDeliveryMethod === key
@@ -297,6 +329,172 @@ export const DeliveryPhase: React.FC<DeliveryPhaseProps> = ({
               ? `HR has been notified to deliver the warning to ${alternativeEmail}`
               : `Email sent to ${employeeEmailOnRecord}`
             }
+          </p>
+        </div>
+      )}
+
+      {/* WhatsApp expanded panel */}
+      {showWhatsAppPanel && whatsappDeliveryStatus !== 'sent' && (
+        <div
+          className="rounded-lg border p-4 space-y-4"
+          style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-background)' }}
+        >
+          <ThemedAlert variant="info">
+            <div className="flex items-start gap-2">
+              <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span className="text-xs">
+                WhatsApp can't attach the PDF directly, so the employee receives a secure link to
+                view the warning and submit a response or appeal. The link stays valid for 6 months.
+              </span>
+            </div>
+          </ThemedAlert>
+
+          {/* Editable, verified number */}
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>
+              Employee WhatsApp number
+            </label>
+            <input
+              type="tel"
+              value={whatsappNumber}
+              onChange={(e) => setWhatsappNumber(e.target.value)}
+              disabled={whatsappDeliveryStatus === 'opened' || isWhatsAppDelivering}
+              placeholder="+27 82 555 1234"
+              className="w-full px-3 py-2 rounded-lg border text-sm"
+              style={{
+                borderColor: 'var(--color-border)',
+                backgroundColor: 'var(--color-input-bg)',
+                color: 'var(--color-text-primary)',
+              }}
+            />
+            {whatsappNumber.length > 0 && !isValidWhatsappNumber && (
+              <p className="text-xs mt-1" style={{ color: '#dc2626' }}>
+                Enter a valid number (e.g. 082 555 1234 or +27 82 555 1234).
+              </p>
+            )}
+          </div>
+
+          {/* Verification checkbox */}
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={whatsappConfirmed}
+              onChange={(e) => setWhatsappConfirmed(e.target.checked)}
+              disabled={whatsappDeliveryStatus === 'opened' || isWhatsAppDelivering}
+              className="mt-0.5"
+            />
+            <span className="text-xs" style={{ color: 'var(--color-text-primary)' }}>
+              I confirmed this number with the employee.
+            </span>
+          </label>
+
+          {/* Error state */}
+          {whatsappDeliveryStatus === 'failed' && whatsappDeliveryError && (
+            <ThemedAlert variant="error">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm">{whatsappDeliveryError}</span>
+              </div>
+            </ThemedAlert>
+          )}
+
+          {/* Step 1: open WhatsApp */}
+          {whatsappDeliveryStatus !== 'opened' ? (
+            <ThemedButton
+              onClick={handleWhatsAppDelivery}
+              disabled={!isValidWhatsappNumber || !whatsappConfirmed || isWhatsAppDelivering}
+              loading={isWhatsAppDelivering}
+              icon={MessageCircle}
+              className="w-full"
+            >
+              {isWhatsAppDelivering ? 'Generating link...' : 'Open WhatsApp'}
+            </ThemedButton>
+          ) : (
+            /* Step 2: confirm it was sent */
+            <div className="space-y-3">
+              <ThemedAlert variant="info">
+                <div className="flex items-start gap-2">
+                  <Send className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span className="text-xs">
+                    WhatsApp should have opened with the message ready. Press send there, then
+                    confirm below. Didn't open?{' '}
+                    <button onClick={handleWhatsAppDelivery} className="underline" style={{ color: 'var(--color-primary)' }}>
+                      Try again
+                    </button>
+                  </span>
+                </div>
+              </ThemedAlert>
+              <ThemedButton
+                onClick={handleConfirmWhatsAppSent}
+                icon={CheckCircle}
+                className="w-full"
+              >
+                I've sent it on WhatsApp
+              </ThemedButton>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* WhatsApp success state */}
+      {showWhatsAppPanel && whatsappDeliveryStatus === 'sent' && (
+        <div
+          className="rounded-lg border p-4 text-center space-y-2"
+          style={{ borderColor: '#86efac', backgroundColor: '#f0fdf4' }}
+        >
+          <CheckCircle className="w-8 h-8 mx-auto" style={{ color: '#16a34a' }} />
+          <p className="text-sm font-medium" style={{ color: '#166534' }}>
+            Warning sent to {whatsappNumber} via WhatsApp
+          </p>
+        </div>
+      )}
+
+      {/* Printed expanded panel */}
+      {showPrintedPanel && printedDeliveryStatus !== 'sent' && (
+        <div
+          className="rounded-lg border p-4 space-y-4"
+          style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-background)' }}
+        >
+          <ThemedAlert variant="info">
+            <div className="flex items-start gap-2">
+              <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span className="text-xs">
+                The employee collects a printed copy from HR. HR will be emailed that a copy is
+                awaiting collection — they print it, hand it over, and record the collection.
+              </span>
+            </div>
+          </ThemedAlert>
+
+          {printedDeliveryStatus === 'failed' && printedDeliveryError && (
+            <ThemedAlert variant="error">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span className="text-sm">{printedDeliveryError}</span>
+              </div>
+            </ThemedAlert>
+          )}
+
+          <ThemedButton
+            onClick={handlePrintedDelivery}
+            disabled={isPrintedDelivering}
+            loading={isPrintedDelivering}
+            icon={FileText}
+            className="w-full"
+          >
+            {isPrintedDelivering ? 'Notifying HR...' : 'Notify HR & Finalize'}
+          </ThemedButton>
+        </div>
+      )}
+
+      {/* Printed success state */}
+      {showPrintedPanel && printedDeliveryStatus === 'sent' && (
+        <div
+          className="rounded-lg border p-4 text-center space-y-2"
+          style={{ borderColor: '#86efac', backgroundColor: '#f0fdf4' }}
+        >
+          <CheckCircle className="w-8 h-8 mx-auto" style={{ color: '#16a34a' }} />
+          <p className="text-sm font-medium" style={{ color: '#166534' }}>
+            HR notified — {employeeFirstName} can collect their printed copy from HR.
           </p>
         </div>
       )}

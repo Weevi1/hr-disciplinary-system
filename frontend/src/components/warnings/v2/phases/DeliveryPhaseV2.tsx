@@ -36,6 +36,20 @@ interface DeliveryPhaseV2Props {
   isGeneratingQRPdf: boolean;
   handleQRCodeDelivery: () => void;
   handleEmailDelivery: () => void;
+  whatsappNumber: string;
+  setWhatsappNumber: (value: string) => void;
+  whatsappConfirmed: boolean;
+  setWhatsappConfirmed: (value: boolean) => void;
+  isWhatsAppDelivering: boolean;
+  whatsappDeliveryStatus: 'idle' | 'generating_link' | 'opened' | 'sent' | 'failed';
+  whatsappDeliveryError: string | null;
+  isValidWhatsappNumber: boolean;
+  handleWhatsAppDelivery: () => void;
+  handleConfirmWhatsAppSent: () => void;
+  isPrintedDelivering: boolean;
+  printedDeliveryStatus: 'idle' | 'sending' | 'sent' | 'failed';
+  printedDeliveryError: string | null;
+  handlePrintedDelivery: () => void;
 }
 
 export const DeliveryPhaseV2: React.FC<DeliveryPhaseV2Props> = (props) => (

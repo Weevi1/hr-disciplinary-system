@@ -62,7 +62,7 @@ import {
 import { notifyHROnAppeal } from './notifyHROnAppeal';
 
 // 📧 ADD WARNING DELIVERY
-import { deliverWarningByEmail } from './warningDelivery';
+import { deliverWarningByEmail, notifyHRPrintedCollection } from './warningDelivery';
 
 // 🔗 ADD EMPLOYEE RESPONSE SYSTEM
 import {
@@ -123,6 +123,7 @@ export {
   // Email notification functions
   notifyHROnAppeal,
   deliverWarningByEmail,
+  notifyHRPrintedCollection,
 
   // Employee response system
   generateResponseToken,

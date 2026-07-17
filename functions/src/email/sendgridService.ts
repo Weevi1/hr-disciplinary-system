@@ -221,7 +221,7 @@ export interface WarningDeliveryHRNotificationData {
   issueDate: string;
   organizationName: string;
   issuedByName: string;
-  deliveryType: 'automated' | 'manual_requested';
+  deliveryType: 'automated' | 'manual_requested' | 'printed_collection';
   alternativeEmail?: string;
 }
 
@@ -240,7 +240,9 @@ export async function sendWarningDeliveryHRNotification(
   const html = warningDeliveryHRNotificationTemplate(data);
   const subjectPrefix = data.deliveryType === 'automated'
     ? 'Warning Delivered'
-    : 'Manual Delivery Required';
+    : data.deliveryType === 'printed_collection'
+      ? 'Printed Warning Awaiting Collection'
+      : 'Manual Delivery Required';
   return sendEmail({
     to: hrEmails,
     subject: `${subjectPrefix}: ${data.employeeName} - ${data.warningCategory}`,
