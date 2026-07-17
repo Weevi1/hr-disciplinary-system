@@ -29,20 +29,18 @@ firebase deploy
 ### Firebase CLI Authentication
 Firebase CLI uses **service account authentication** (OAuth login deprecated/broken as of Dec 2024).
 
-**Setup** (already configured in `~/.bashrc`):
+**This machine ("cat")**: the key file lives at the repo root and `gcloud` is already authenticated with it (`gcloud auth activate-service-account`, done 2026-07-17). `GOOGLE_APPLICATION_CREDENTIALS` is NOT exported in `~/.bashrc` — set it per-command if a tool needs it:
 ```bash
-export GOOGLE_APPLICATION_CREDENTIALS="/home/aiguy/projects/hr-disciplinary-system/hr-disciplinary-system-firebase-adminsdk-fbsvc-e1bb9c1772.json"
+export GOOGLE_APPLICATION_CREDENTIALS="/home/cat/development/projects/hr-disciplinary-system/hr-disciplinary-system-firebase-adminsdk-fbsvc-e1bb9c1772.json"
 ```
 
-**Verify it works**:
-```bash
-firebase projects:list
-```
+**Verify it works**: `firebase projects:list`
 
+**⚠️ Limits**: The service account can deploy/administer Firebase but has NO Cloud Monitoring permissions (can't create alert policies — see `MONITORING_SETUP.md`).
 **⚠️ Security**: The service account JSON file is in `.gitignore` - never commit it.
 
 ### Current System Status
-- **✅ Landing Page**: `frontend/public/landing.html` — dark-themed marketing page served at `/` via Firebase rewrite. Tailwind CDN, no build step. Login/trial CTAs link to `/login`. Has its own CSP header in `firebase.json`.
+- **✅ Landing Page**: `frontend/public/landing.html` — dark-themed marketing page served at `/` via Firebase rewrite. Tailwind CDN, no build step. Login CTA → `/login`; "Book a Free Demo" CTAs → `#demo` lead form (POSTs to `submitDemoRequest` function → `leads` collection + email to Riaan). Has its own CSP header in `firebase.json` (allows the function origin in `connect-src`).
 - **✅ Production**: Online at https://file.fifo.systems (custom domain) and https://hr-disciplinary-system.web.app
 - **✅ Development**: Ubuntu environment at http://localhost:3003/ (dev server running)
 - **✅ Enterprise Ready**: A-grade security, production monitoring, 2,700+ org scalability
@@ -81,7 +79,7 @@ firebase projects:list
 **IMPORTANT**: This file is size-limited to maintain context efficiency.
 
 - **Size Limit**: 500 lines maximum (target: 400-470 lines)
-- **Current Size**: 545 lines ⚠️ (over 500-line target — 2026-06-04 moved the V2-cutover "Most Recent" block to RECENT_UPDATES.md and condensed the Node 22 + Pre-Launch "Previous" blocks to pointers; still ~45 over. Next session should condense the "Priority 0: FIFO Business Launch" pricing tables into a pointer to `BUSINESS_LAUNCH_TRACKER.md` to get under target)
+- **Current Size**: 470 lines ✅ (2026-07-17 condensed the "Priority 0: FIFO Business Launch" pricing tables/GTM detail into a pointer to `legal/BUSINESS_LAUNCH_TRACKER.md`)
 - **Policy**: See `DOCUMENTATION_POLICY.md` for complete maintenance rules
 - **Before Adding Sessions**: Check size with `wc -l CLAUDE.md`
 - **If > 450 lines**: Move previous session to RECENT_UPDATES.md first
@@ -208,95 +206,20 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 ## 📋 CURRENT FOCUS / PENDING TASKS
 
-### **🚀 Priority 0: FIFO Business Launch (Session 54 - 2026-01-26)**
+### **🚀 Priority 0: FIFO Business Launch — GO TO MARKET (updated 2026-07-17)**
 
-**STATUS: COMPANY REGISTERED ✅ — Ready for first client**
+**Full detail (pricing tables, GTM strategy, checklists): `legal/BUSINESS_LAUNCH_TRACKER.md`**
 
-#### Company Details
-- **Company Name**: FIFO Solutions (Pty) Ltd
-- **Enterprise Number**: 2026/071559/07
-- **Registration Date**: 2026-01-26
-- **Director**: Riaan Potas (sole director)
-- **Bank**: Capitec Business (selected, awaiting account setup)
+- **Company**: FIFO Solutions (Pty) Ltd (2026/071559/07), registered 2026-01-26; Riaan sole director; Capitec Business bank.
+- **Sales motion (July 2026)**: cold **email campaign** → landing-page demo-request form → manual onboarding; **direct invoicing + EFT** (no payment gateway — Stripe removed; use an external invoicing tool). HR-consultants-as-resellers remains the parallel channel (50% reseller / 30% Riaan / 20% ops split).
+- **Pricing**: 6 annual tiers, R5,000–R25,000/yr + setup. ⚠️ Tiers 4-6 priced well below market (~R6.25/emp/mo vs competitors' R24-R50) — review with Adam before scaling; +R360k/yr upside at 300 clients.
+- **⚠️ Campaign rule**: never send cold email from `file@fifo.systems` or the SendGrid transactional identity — its reputation carries legal warning-delivery emails. Use a separate warmed-up domain with SPF/DKIM/DMARC + POPIA §69 opt-out.
 
-#### Pricing Model (Current - Adam's Proposal)
-
-**Commission Split**: 50% Reseller → 30% Owner (Riaan) → 20% File Operations
-
-| Tier | Employees | Annual | Setup | Reseller 50% | Per Emp/Month |
-|------|-----------|--------|-------|--------------|---------------|
-| 1 | 0-20 | R5,000 | R1,000 | R2,500/yr | R41.70 ✅ |
-| 2 | 21-50 | R8,000 | R1,500 | R4,000/yr | R19.05 ⚠️ |
-| 3 | 51-100 | R12,000 | R2,500 | R6,000/yr | R13.33 ⚠️ |
-| 4 | 101-300 | R15,000 | R2,500 | R7,500/yr | R6.25 ❌ |
-| 5 | 301-500 | R20,000 | R2,500 | R10,000/yr | R4.17 ❌ |
-| 6 | 500+ | R25,000 | R2,500 | R12,500/yr | R3.47 ❌ |
-
-#### ⚠️ IMPORTANT: Pricing Review Required
-
-**Analysis (Session 54):** Adam's pricing is fine for Tier 1-2 (market rate) but **leaves significant money on table for Tiers 4-6**. Competitors charge R24-R50/employee/month. A 200-employee company paying R15,000/year (R6.25/emp) is 77% cheaper than Sage HR.
-
-**Recommendation:**
-- Keep Tiers 1-3 for market entry (first 50 clients)
-- After proving model, introduce "2026 pricing" for new customers:
-  - Tier 4: R25,000-R30,000 (not R15,000)
-  - Tier 5: R35,000-R45,000 (not R20,000)
-  - Tier 6: R50,000-R60,000 (not R25,000)
-
-**Revenue Impact:** Same 300 clients with adjusted Tier 4-6 = +R360,000/year more for you.
-
-**Decision:** Discuss with Adam. Option to grandfather early clients at current rates.
-
-#### ✅ Completed
-- ✅ **Company Registered** - FIFO Solutions (Pty) Ltd (2026/071559/07)
-- ✅ **Name Reserved** - Approved 2026-01-12
-- ✅ **Bank Selected** - Capitec Business (low fees, best app)
-- ✅ **Legal Documents** - All ready in `legal/` folder
-- ✅ **Marketing Materials** - Complete sales toolkit in `marketing/` folder
-- ✅ **NotebookLM Content** - 3 videos created, slides & infographic sources ready
-
-#### ⏳ Next Steps (Priority Order)
-1. **Download CIPC docs** - MOI, registration cert (wait for director status to sync)
-2. **Capitec account setup** - They will contact you
-3. **SARS registration** - Tax number needed to invoice clients
-4. **Sign reseller agreement** - Adam ready to go
-5. **Onboard first client** - Adam has leads
-6. **Review pricing with Adam** - Consider raising Tiers 4-6 for future clients
-
-#### 🎯 Go-To-Market Strategy: HR Consultants as Resellers
-
-**Validated approach (Session 54):** Target independent HR consultants/representatives as resellers.
-
-**Why it works:**
-- They manage 10-50 employer clients each
-- They experience the "no documentation" pain weekly (CCMA frustration)
-- They have existing trust relationships (warm intros, not cold sales)
-- File makes their job easier + they earn 50% passive income
-- ~3,000-5,000 independent HR consultants in SA (SABPP data)
-
-**Market size:**
-- 52,000 unfair dismissal cases/year at CCMA
-- 50,000+ target businesses (10-500 employees, formal sector)
-- <1% market penetration needed for R2.5M+ revenue
-
-**Created content for recruiting HR consultant partners:**
-- `hr-consultant-partner-pitch-short.md` - 2-min video source (NotebookLM)
-- `hr-consultant-partner-pitch-long.md` - 7-min deep dive (NotebookLM)
-- `hr-consultant-whatsapp-intro.md` - WhatsApp message templates
-
-**Projection:** 25 resellers × 12 clients each = 300 clients = R2.6M revenue = R780K/year for you
-
-#### Key Folders
-| Folder | Contents |
-|--------|----------|
-| `legal/` | Terms of Service, Privacy Policy, Reseller Agreement |
-| `marketing/sales/` | One-pager, pricing sheet, feature highlights |
-| `marketing/sales/meeting-forms/` | Discovery form, quote calculator, order form, onboarding form, follow-up templates |
-| `marketing/demo/` | Demo script, objection handling |
-| `marketing/onboarding/` | Quick start, admin checklist, HOD training, FAQ |
-| `marketing/audio-sources/` | Product overview, ROI deep-dive, manager training (for NotebookLM) |
-| `marketing/notebooklm-sources/` | Slide deck, infographic, **HR consultant partner pitches** |
-| `marketing/pdf/` | All materials converted to PDF |
+#### ⏳ Immediate pendings (2026-07-17)
+1. **Deploy the go-to-market hardening** — `firebase deploy --only functions,hosting,firestore:rules` (wizard password fix, suspend/trial kill-switch, lead-capture form/function, endpoint throttling are committed but NOT live).
+2. **Backend error alerting** — 5-min one-time setup with Riaan's owner account per `MONITORING_SETUP.md` (service account can't do it).
+3. **Dry-run a fake client end-to-end** — wizard → import → warning → all 4 delivery methods → respond link → appeal (also covers untested Gaps 4/5).
+4. SARS registration → invoice clients; sign reseller agreement with Adam; onboard first client (Insitu Construction closest).
 
 ---
 
@@ -401,7 +324,7 @@ See `RECENT_UPDATES.md` for detailed session history including Sessions 57-66.
 This project reports to **FIFO Ops** (ops.fifo.systems) for centralized task and context tracking across all FIFO Solutions projects.
 
 ### Reading from Ops
-At session start, check `/home/aiguy/projects/fifo-ops/FIFO_OPS_STATE.md` for current business priorities and cross-project context.
+At session start, check `/home/cat/development/projects/fifo-ops/FIFO_OPS_STATE.md` for current business priorities and cross-project context.
 
 ### Writing to Ops
 When working in this project, if you identify:
