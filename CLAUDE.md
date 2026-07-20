@@ -79,7 +79,7 @@ export GOOGLE_APPLICATION_CREDENTIALS="/home/cat/development/projects/hr-discipl
 **IMPORTANT**: This file is size-limited to maintain context efficiency.
 
 - **Size Limit**: 500 lines maximum (target: 400-470 lines)
-- **Current Size**: 470 lines ✅ (2026-07-17 condensed the "Priority 0: FIFO Business Launch" pricing tables/GTM detail into a pointer to `legal/BUSINESS_LAUNCH_TRACKER.md`)
+- **Current Size**: ~470 lines ✅ (2026-07-20 condensed older "Previous" session entries into pointers to `RECENT_UPDATES.md`)
 - **Policy**: See `DOCUMENTATION_POLICY.md` for complete maintenance rules
 - **Before Adding Sessions**: Check size with `wc -l CLAUDE.md`
 - **If > 450 lines**: Move previous session to RECENT_UPDATES.md first
@@ -215,11 +215,12 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 - **Pricing**: 6 annual tiers, R5,000–R25,000/yr + setup. ⚠️ Tiers 4-6 priced well below market (~R6.25/emp/mo vs competitors' R24-R50) — review with Adam before scaling; +R360k/yr upside at 300 clients.
 - **⚠️ Campaign rule**: never send cold email from `file@fifo.systems` or the SendGrid transactional identity — its reputation carries legal warning-delivery emails. Use a separate warmed-up domain with SPF/DKIM/DMARC + POPIA §69 opt-out.
 
-#### ⏳ Immediate pendings (2026-07-17)
-1. **Deploy the go-to-market hardening** — `firebase deploy --only functions,hosting,firestore:rules` (wizard password fix, suspend/trial kill-switch, lead-capture form/function, endpoint throttling are committed but NOT live).
+#### ⏳ Immediate pendings (updated 2026-07-20)
+1. ~~Deploy the go-to-market hardening~~ ✅ **Deployed 2026-07-20** (functions + hosting + firestore:rules; all 41 functions live).
 2. **Backend error alerting** — 5-min one-time setup with Riaan's owner account per `MONITORING_SETUP.md` (service account can't do it).
-3. **Dry-run a fake client end-to-end** — wizard → import → warning → all 4 delivery methods → respond link → appeal (also covers untested Gaps 4/5).
-4. SARS registration → invoice clients; sign reseller agreement with Adam; onboard first client (Insitu Construction closest).
+3. **Cloudflare purge of old service worker** — Riaan: Custom Purge `https://file.fifo.systems/sw.js` (Caching → Configuration → Purge Cache); until then existing users keep the retired caching worker.
+4. **Dry-run a fake client end-to-end** — wizard → import → warning → all 4 delivery methods → respond link → appeal (also covers untested Gaps 4/5; can include the new setup-checklist/practice-warning flow).
+5. SARS registration → invoice clients; sign reseller agreement with Adam; onboard first client (Insitu Construction closest).
 
 ---
 
@@ -287,12 +288,16 @@ The system uses a 3-layer architecture for legal compliance and organizational f
 
 **For complete change history, see `RECENT_UPDATES.md` (Sessions 20-52) and `SESSION_HISTORY.md` (Sessions 5-19)**
 
-### Most Recent (Go-To-Market Hardening, 2026-07-17) — ⚠️ NOT YET DEPLOYED
-- **Onboarding wizard**: hardcoded `temp123` replaced with a crypto-random one-time password shown once on a new success screen (copy button); admin creation confirmed server-side (no logout bug — stale comments removed); `requirePasswordChange` honored server-side.
-- **Suspend kill-switch + trials**: `subscriptionStatus` `active`/`trial`(+`trialEndsAt` Timestamp)/`suspended` enforced in rules (`activeOrgMember()`, 42 sharded call sites) + `MainLayout` lock screen/trial banner (`utils/subscription.ts`); SuperAdminDashboard Status column + Suspend/Reactivate; wizard step 1 offers Active vs Free trial (14–90d).
-- **Lead capture**: public `submitDemoRequest` fn (honeypot, per-IP 5/hr) → `leads` collection + email to Riaan; landing page "Book a Demo" form (`#demo`) replaces the dead "Start Free Trial"→login CTAs; landing CSP updated.
-- **Respond endpoints throttled** (submit/appeal/upload — per-token 20/hr). **Repo**: June-4 prod code finally committed, merged to master, pushed; dead `lib/billing.js` deleted; corrupt-git dir evicted. **Monitoring**: frontend Sentry DSN verified in prod bundle; **backend error alerting needs Riaan** — see `MONITORING_SETUP.md`.
+### Most Recent (Launch-window session, 2026-07-20) — ✅ ALL DEPLOYED
+- **Go-to-market hardening deployed** (functions + hosting + firestore:rules; `resetDemoOrganization` needed 3 retries — transient Cloud Run CPU-quota during mass deploys).
+- **PWA cleanup**: caching `sw.js` replaced with a self-cleanup worker (keep deployed until old workers gone); SW registration removed; `manifest.json` `start_url` → `/dashboard`. ⏳ Riaan: Cloudflare purge of `/sw.js`.
+- **Hosting cache headers**: catch-all `**` → no-cache before asset rules (later matching header block wins); hashed js/css immutable; images 1d. Fixes SPA routes being cached 1h and makes forced-update reliable.
+- **Per-org feature toggles**: super-user ("Features" button per org) + reseller ("Features" tab) can disable `reportAbsence`/`hrMeetings`/`recognition`/`historicalWarnings`/`reviewFollowups` per org. `features` map on org doc — absent = enabled. Both dashboards + route guards (`FeatureProtectedRoute`); `constants/orgFeatures.ts`, `useOrgFeature`.
+- **In-app help & guidance**: global Help & Support modal in profile dropdown (role quick-start from `config/roleContent.ts`, feature/permission-filtered "How do I…" from `config/helpTasks.ts`, `SUPPORT_EMAIL`); shared `InfoBanner`/`EmptyState`/`ExplainerPanel` components (PhaseGuidance now wraps InfoBanner); legal explainers at recommendation card, delivery methods, and appeal review (`constants/legalExplainers.ts`, `constants/appealGrounds.ts` — single source incl. per-ground `hrGuidance`); setup checklist extracted to `SetupChecklist.tsx` + new steps: review categories (new read-only Categories tab on HR dashboard) and practice warning (`/warnings/create?practice=1` → wizard `startInPracticeMode`; completion writes `setupSkipped.practiceWarning`). Existing orgs see the Getting Started card once more (one-click skip).
 - Full detail in `RECENT_UPDATES.md`.
+
+### Previous (Go-To-Market Hardening, 2026-07-17 — deployed 2026-07-20)
+Onboarding wizard: crypto-random one-time admin password (no more `temp123`), shown once with copy button. Suspend kill-switch + trials: `subscriptionStatus` `active`/`trial`(+`trialEndsAt`)/`suspended` enforced in rules (`activeOrgMember()`) + MainLayout lock screen/trial banner; SuperAdmin Status column + Suspend/Reactivate. Lead capture: public `submitDemoRequest` → `leads` + email to Riaan; landing "Book a Demo" form. Respond endpoints throttled per-token 20/hr. Detail in `RECENT_UPDATES.md`.
 
 ### Previous (Step 5 delivery completed — WhatsApp + Printed, 2026-06-04)
 All four Step 5 delivery methods functional (WhatsApp = wa.me + durable 180-day respond link; Printed = `awaiting_collection` + `notifyHRPrintedCollection`, HR completes via PrintDeliveryGuide); fixed `ReviewDashboard` writing `status` instead of `deliveryStatus`. Self-finalizing-panel pattern: Email/WhatsApp/Printed excluded from generic Finalize; only QR uses it. Deployed 2026-06-04. Detail in `RECENT_UPDATES.md`.
@@ -300,11 +305,8 @@ All four Step 5 delivery methods functional (WhatsApp = wa.me + durable 180-day 
 ### Previous (Node 22 + firebase-functions v7 upgrade, 2026-05-19)
 Runtime Node 20 → 22; `firebase-functions` → 7.2.5, `firebase-admin` → 13.x; 3 residual files migrated v1→v2. Gen-1→gen-2 in-place upgrade is blocked (delete+recreate + explicit public IAM). `firebase functions:list` reports configured runtime, not what's serving — cross-check `gcloud run services describe` after partial-failure deploys. Full detail + gotchas in `lessons.md` and `RECENT_UPDATES.md`.
 
-### Previous (Pre-Launch Cleanup, 2026-05-11)
-Phases 2/4/5 over Sessions 68–73: tsc 903 → 647, ~10,000 LOC removed; `DataService` → `ShardedDataService` + `AdminDataService`; `EmployeeService`/`DataServiceV2`/`NestedDataService`/`CategoryService` deleted; types unified to `types/core.ts`; PDF generator 4,135→958 LOC (byte-identical v1.0.0/v1.1.0); `npm run lint` clean. Full detail in `RECENT_UPDATES.md`.
-
-### Previous Sessions (52-66)
-See `RECENT_UPDATES.md` for detailed session history including Sessions 57-66.
+### Previous Sessions (52-73, incl. Pre-Launch Cleanup 2026-05-11)
+See `RECENT_UPDATES.md` for detailed session history.
 
 **For complete session history, see:**
 - `RECENT_UPDATES.md` - Sessions 20-63 (current)
@@ -315,7 +317,7 @@ See `RECENT_UPDATES.md` for detailed session history including Sessions 57-66.
 
 *System is **enterprise-ready** with A-grade security, production monitoring, 2,700+ org scalability, progressive enhancement for 2012-2025 devices, **unified design system**, **DashboardShell** across all dashboards, **WCAG AA compliance**, **versioned PDF generation**, **per-org PDF templates**, **SVG signatures**, **10-phase unified warning wizard**, **link-based employee response/appeal system** with token auth and PDF viewing, **HR email notifications via SendGrid**, **evidence upload on appeals with client-side image optimization**, **per-organization multi-dashboard theming** (Manager, HR, Executive views with per-view metric card colors), **optimized warning data loading with staleness detection**, **session guard with auto-logout + forced app updates**, and **CCMA-ready PDFs with section labels, continuation headers, electronic signature notation, and page initials**.*
 
-*Last Updated: 2026-07-17 - Go-to-market hardening: onboarding wizard password fix, suspend/trial kill-switch (rules + UI), landing-page lead capture, respond-endpoint throttling. NOT yet deployed — deploy functions + hosting + firestore:rules after review.*
+*Last Updated: 2026-07-20 - Launch-window session, all deployed: go-to-market hardening live, PWA caching SW retired + cache headers fixed, per-org feature toggles (super-user + reseller), in-app help & guidance (Help modal, legal explainers, instructive empty states, extended setup checklist). Pending owner tasks: backend error alerting, Cloudflare `/sw.js` purge, end-to-end dry-run.*
 
 ---
 

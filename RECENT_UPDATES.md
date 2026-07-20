@@ -6,9 +6,29 @@ Latest session updates and recent changes to the HR Disciplinary System.
 
 ---
 
+## Launch-window session — hardening deployed, PWA cleanup, feature toggles, in-app help (2026-07-20)
+
+Four rounds in one window; everything below is **committed, merged to master, pushed, and deployed** (functions + hosting + firestore:rules for the hardening; hosting-only for the rest).
+
+**Go-to-market hardening deployed.** The 2026-07-17 round (wizard password, suspend/trial kill-switch, lead capture, endpoint throttling) went live: `firebase deploy --only functions,hosting,firestore:rules --project hr-disciplinary-system`. All 41 functions deployed; `resetDemoOrganization` needed 3 attempts (transient Cloud Run CPU-quota pressure during mass deploys — retry after cooldown works). Reminder: no `.firebaserc` on machine "cat", always pass `--project`.
+
+**PWA cleanup (commit `56edac6e`).** The old caching service worker was serving stale bundles and fighting the forced-update mechanism. Replaced `frontend/public/sw.js` with a self-cleanup worker (skipWaiting → delete all caches → unregister → reload clients — must stay deployed until old workers are gone), removed the SW registration from `index.html`, fixed `manifest.json` `start_url` → `/dashboard` (was landing on the marketing page). App remains installable (manifest-only PWA). **Residual owner task:** Cloudflare Custom Purge of `https://file.fifo.systems/sw.js` (CF edge cached the old worker with immutable headers; Firebase deploys can't purge it).
+
+**Hosting cache headers (commit `653b21a6`).** SPA routes (`/login` etc.) were browser-cached 1h because the no-cache rule only matched literal `/index.html`. `firebase.json` now has: catch-all `**` → no-cache (placed *before* asset rules — later matching header block wins), hashed `js|css` → immutable, images/fonts → `max-age=86400`, `/sw.js` → no-cache. Verified live.
+
+**Per-org feature toggles (commit `3d46c9f7`).** Super-users (SuperAdminDashboard → per-org "Features" button) and resellers (ClientOrganizationManager → "Features" tab) can disable per org: `reportAbsence`, `hrMeetings`, `recognition`, `historicalWarnings`, `reviewFollowups` (core warnings always on). Optional `features` map on the org doc — absent = enabled, only explicit `false` disables (zero migration, no rules changes). When OFF the feature vanishes on both manager and HR dashboards and direct URLs redirect to `/dashboard` (`FeatureProtectedRoute`). Registry/helper: `constants/orgFeatures.ts` (`isOrgFeatureEnabled`), `hooks/useOrgFeature.ts`, shared `OrgFeatureToggleGrid`. Tenants pick up changes on next reload (org doc cached per session).
+
+**In-app help & guidance (commit `56522e9b`).** Four work items:
+1. *Global Help & Support modal* — profile-dropdown entry (all roles), lazy-loaded `components/help/HelpSupportModal.tsx`: role quick-start (shared `config/roleContent.ts`, extracted from `FirstTimeWelcomeModal` which shrank ~270 lines; icons are now `LucideIcon` refs), ~14 "How do I…" walkthroughs (`config/helpTasks.ts`, filtered by role + org feature toggles + `hodPermissions`; legacy `department-manager` handled via `HelpRoleId` union since it's not in `UserRoleId`), support mailto (`SUPPORT_EMAIL` const, also used by the trial-lockout screen), and re-show-welcome button.
+2. *Shared guidance components* — `common/InfoBanner.tsx` (wizard's `PhaseGuidance` is now a thin wrapper over it; children pass through so the `wizard-v2-guidance` aria id keeps working), `common/EmptyState.tsx`, `common/ExplainerPanel.tsx` (click-toggle disclosure — no hover tooltips, mobile/keyboard safe). Instructive empty states on `ReviewDashboard` (with "Issue a warning" CTA), `AbsenceReportReview`, `HRMeetingReview`, `ReviewFollowUpDashboard`.
+3. *Legal explainers* — `constants/legalExplainers.ts` (`WARNING_LEVEL_EXPLAINERS`, `DELIVERY_PROOF_EXPLAINERS`, `PROGRESSIVE_DISCIPLINE_SUMMARY`) + `constants/appealGrounds.ts` (single source for the public respond page AND `AppealReviewModal`, adds per-ground `hrGuidance` with Schedule 8 checks). Wired: "Why this level?" on the recommendation card (`CategoryRecommendationPhase`, uses `EscalationRecommendation.explanation`/`legalBasis` — already populated), "How is delivery proven?" under the delivery-method cards (`DeliveryPhase`), "What this ground means" in HR appeal review.
+4. *Extended setup checklist* — extracted to `dashboard/SetupChecklist.tsx` (auto-numbered steps). New steps: "Review your warning categories" (opens a new read-only Categories tab on the HR dashboard rendering `OrganizationCategoriesViewer`; click-through marks done — no data signal exists) and "Practice a test warning" (`/warnings/create?practice=1` → wizard `startInPracticeMode` prop jumps straight into the existing test mode; finishing writes `setupSkipped.practiceWarning` on the org doc via `onPracticeComplete`, passed only for the query-param entry so organic HOD practice runs don't attempt the write; step auto-hides for orgs with any warnings). Skips persist in the existing `setupSkipped.{key}` org-doc map. **Existing orgs see the Getting Started card once more** (categories step) — one-click skip.
+
+---
+
 ## Go-To-Market Hardening — commercial-path gaps closed (2026-07-17)
 
-Pre-launch session ahead of the email campaign (direct invoicing + EFT). Full assessment + remaining owner-tasks in `MONITORING_SETUP.md` and the session summary. **Not yet deployed** — needs `firebase deploy` (functions + hosting + firestore:rules) after review.
+Pre-launch session ahead of the email campaign (direct invoicing + EFT). Full assessment + remaining owner-tasks in `MONITORING_SETUP.md` and the session summary. ~~Not yet deployed~~ **Deployed 2026-07-20** (functions + hosting + firestore:rules).
 
 **Repo safety.** The 2026-06-04 production-deployed working tree (35 files) was finally committed; `prelaunch-tier0-tier1` merged → `master`, both pushed. Stale dead `functions/lib/billing.js` removed. `.git.corrupt-laptop/` (120MB) moved out to `~/development/backups/`.
 
