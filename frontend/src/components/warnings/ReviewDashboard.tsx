@@ -6,7 +6,9 @@ import Logger from '../../utils/logger';
 // ✅ Proper error boundaries and data handling
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useModal } from '../../hooks/useModal';
+import { EmptyState } from '../common/EmptyState';
 import {
   Search, Filter, Calendar, Download, Eye, Printer, AlertTriangle,
   CheckCircle, Clock, Shield, RefreshCw, ChevronDown, ChevronUp,
@@ -79,6 +81,7 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
   initialWarningsLoading,
 }) => {
   const { user, organization } = useAuth();
+  const navigate = useNavigate();
   const organizationId = propOrganizationId || organization?.id;
   
   Logger.debug('🔧 [WarningsReviewDashboard] Using API layer version')
@@ -995,28 +998,34 @@ export const WarningsReviewDashboard: React.FC<WarningsReviewProps> = ({
 
       {/* Compact Empty State */}
       {filteredWarnings.length === 0 && !loading && (
-        <div className="text-center py-8">
-          <Shield className="w-8 h-8 text-gray-400 mx-auto mb-3" />
-          <h3 className="text-md font-medium text-gray-900 mb-1">No warnings found</h3>
-          <p className="text-sm text-gray-600 mb-3">
-            {searchTerm || filterStatus !== 'all' || filterLevel !== 'all' || filterDepartment !== 'all'
-              ? 'Try adjusting your search criteria or filters.'
-              : 'No warnings have been created yet.'}
-          </p>
-          {(searchTerm || filterStatus !== 'all' || filterLevel !== 'all' || filterDepartment !== 'all') && (
-            <button
-              onClick={() => {
+        (searchTerm || filterStatus !== 'all' || filterLevel !== 'all' || filterDepartment !== 'all') ? (
+          <EmptyState
+            compact
+            icon={Shield}
+            title="No matching warnings"
+            description="Try adjusting your search criteria or filters."
+            secondaryAction={{
+              label: 'Clear all filters',
+              onClick: () => {
                 setSearchTerm('');
                 setFilterStatus('all');
                 setFilterLevel('all');
                 setFilterDepartment('all');
-              }}
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-            >
-              Clear all filters
-            </button>
-          )}
-        </div>
+              }
+            }}
+          />
+        ) : (
+          <EmptyState
+            compact
+            icon={Shield}
+            title="No warnings yet"
+            description="When a manager issues a warning it appears here for review and delivery."
+            action={{
+              label: 'Issue a warning',
+              onClick: () => navigate('/warnings/create')
+            }}
+          />
+        )
       )}
 
       {/* Compact Pagination */}

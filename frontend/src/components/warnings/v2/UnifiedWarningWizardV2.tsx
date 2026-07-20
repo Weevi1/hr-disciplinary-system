@@ -138,6 +138,8 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
   preSelectedCategoryId,
   isFullScreen: _isFullScreen,
   preloadedWarnings,
+  startInPracticeMode,
+  onPracticeComplete,
 }) => {
   const { user } = useAuth();
   const { organization } = useOrganization();
@@ -662,6 +664,15 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
     setShowSuccessCelebration(true);
   }, []);
 
+  // Setup-checklist entry (/warnings/create?practice=1): jump straight into practice
+  const practiceStartedRef = useRef(false);
+  useEffect(() => {
+    if (startInPracticeMode && !practiceStartedRef.current) {
+      practiceStartedRef.current = true;
+      handleStartTestRun();
+    }
+  }, [startInPracticeMode, handleStartTestRun]);
+
   const goToPhase = useCallback((phase: PhaseV2) => {
     if (phase <= currentPhase || completedPhases.has(phase)) {
       setCurrentPhase(phase);
@@ -925,8 +936,11 @@ export const UnifiedWarningWizardV2: React.FC<UnifiedWarningWizardProps> = ({
 
   const handleCelebrationComplete = useCallback(() => {
     setShowSuccessCelebration(false);
+    if (isTestMode) {
+      onPracticeComplete?.();
+    }
     onComplete();
-  }, [onComplete]);
+  }, [onComplete, onPracticeComplete, isTestMode]);
 
   // PDF blob generator (used by QR + email — identical to V1)
   const generatePDFBlob = async (): Promise<Blob> => {

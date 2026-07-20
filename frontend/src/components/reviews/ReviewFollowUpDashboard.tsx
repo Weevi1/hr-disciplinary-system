@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useReviewFollowUps, type WarningWithReview } from '../../hooks/useReviewFollowUps';
 import { ThemedCard, ThemedBadge, ThemedAlert } from '../common/ThemedCard';
+import { EmptyState } from '../common/EmptyState';
 import { ThemedButton } from '../common/ThemedButton';
 import ThemedTabNavigation from '../common/ThemedTabNavigation';
 import { ReviewFollowUpModal } from './ReviewFollowUpModal';
@@ -385,15 +386,15 @@ export const ReviewFollowUpDashboard: React.FC = () => {
       <div className="space-y-3">
         {filteredWarnings.length === 0 ? (
           <ThemedCard padding="lg">
-            <div className="text-center py-8">
-              <CheckCircle className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--color-text-secondary)', opacity: 0.5 }} />
-              <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                No reviews {activeTab === 'due-soon' ? 'due soon' : activeTab === 'overdue' ? 'overdue' : 'completed'}
-              </p>
-              <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                {activeTab === 'completed' ? 'Completed reviews will appear here' : 'All caught up!'}
-              </p>
-            </div>
+            <EmptyState
+              compact
+              icon={CheckCircle}
+              title={`No reviews ${activeTab === 'due-soon' ? 'due soon' : activeTab === 'overdue' ? 'overdue' : 'completed'}`}
+              description={activeTab === 'completed'
+                ? 'Completed reviews will appear here.'
+                : 'All caught up! When a warning includes a review date, its follow-up appears here automatically.'
+              }
+            />
           </ThemedCard>
         ) : (
           filteredWarnings.map(warning => (

@@ -10,6 +10,8 @@ import React from 'react';
 import { Scale, AlertTriangle, CheckCircle, ChevronRight } from 'lucide-react';
 import { CategorySelector } from '../steps/components/CategorySelector';
 import { ThemedCard } from '../../../common/ThemedCard';
+import { ExplainerPanel } from '../../../common/ExplainerPanel';
+import { WARNING_LEVEL_EXPLAINERS, PROGRESSIVE_DISCIPLINE_SUMMARY } from '../../../../constants/legalExplainers';
 import { getWarningLevelInfo } from '../wizardHelpers';
 import type { Category, FormData } from '../wizardTypes';
 import type { EscalationRecommendation } from '@/services/WarningService';
@@ -93,6 +95,19 @@ export const CategoryRecommendationPhase: React.FC<CategoryRecommendationPhasePr
             <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
               {lraRecommendation.reason}
             </p>
+
+            <ExplainerPanel label="Why this level?" variant="legal" className="mt-1">
+              {WARNING_LEVEL_EXPLAINERS[lraRecommendation.suggestedLevel] && (
+                <p className="mb-2">{WARNING_LEVEL_EXPLAINERS[lraRecommendation.suggestedLevel]}</p>
+              )}
+              {lraRecommendation.explanation && (
+                <p className="mb-2">{lraRecommendation.explanation}</p>
+              )}
+              <p>{PROGRESSIVE_DISCIPLINE_SUMMARY}</p>
+              {lraRecommendation.legalBasis && (
+                <p className="mt-2 text-xs italic">Legal basis: {lraRecommendation.legalBasis}</p>
+              )}
+            </ExplainerPanel>
 
             {/* Active warnings on file - clickable for details */}
             {lraRecommendation.activeWarnings && lraRecommendation.activeWarnings.length > 0 && (

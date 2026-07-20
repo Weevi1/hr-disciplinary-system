@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import { ThemedAlert } from '../../../common/ThemedCard';
 import { ThemedButton } from '../../../common/ThemedButton';
+import { ExplainerPanel } from '../../../common/ExplainerPanel';
+import { DELIVERY_PROOF_EXPLAINERS } from '../../../../constants/legalExplainers';
 import type { Employee } from '../wizardTypes';
 
 export type EmailDeliveryStatus =
@@ -185,6 +187,20 @@ export const DeliveryPhase: React.FC<DeliveryPhaseProps> = ({
           </button>
         ))}
       </div>
+
+      <ExplainerPanel label="How is delivery proven?">
+        <p className="mb-2">
+          For a warning to hold up later (including at the CCMA), you must be able to show the employee actually received it.
+          Each method produces its own proof:
+        </p>
+        <ul className="space-y-1.5">
+          {DELIVERY_PROOF_EXPLAINERS.map(({ method, label, proof }) => (
+            <li key={method}>
+              <span className="font-semibold">{label}:</span> {proof}
+            </li>
+          ))}
+        </ul>
+      </ExplainerPanel>
 
       {/* Email expanded panel */}
       {showEmailPanel && emailDeliveryStatus !== 'success' && (

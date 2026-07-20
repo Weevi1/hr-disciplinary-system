@@ -8,6 +8,8 @@ import Logger from '../../../utils/logger';
 import { usePreventBodyScroll } from '../../../hooks/usePreventBodyScroll';
 import { useModalDialog } from '../../../hooks/useFocusTrap';
 import { Z_INDEX } from '../../../constants/zIndex';
+import { APPEAL_GROUNDS_MAP } from '../../../constants/appealGrounds';
+import { ExplainerPanel } from '../../common/ExplainerPanel';
 import {
   X,
   Scale,
@@ -122,15 +124,6 @@ const WARNING_LEVELS = [
   { value: 'final_written', label: 'Final Written Warning', severity: 5 }
 ];
 
-// Appeal grounds labels
-const APPEAL_GROUNDS_LABELS: Record<string, string> = {
-  'procedural_unfair': 'Procedural Unfairness',
-  'substantive_unfair': 'Substantive Unfairness',
-  'bias_prejudice': 'Bias or Prejudice',
-  'insufficient_evidence': 'Insufficient Evidence',
-  'inconsistent_treatment': 'Inconsistent Treatment',
-  'other': 'Other Grounds'
-};
 
 export const AppealReviewModal: React.FC<AppealReviewModalProps> = ({
   isOpen,
@@ -297,8 +290,14 @@ export const AppealReviewModal: React.FC<AppealReviewModalProps> = ({
                 <div>
                   <span className="text-sm font-medium text-gray-700">Appeal Grounds:</span>
                   <p className="text-sm mt-1 px-3 py-2 bg-white rounded border">
-                    {APPEAL_GROUNDS_LABELS[warning.appealDetails.grounds] || warning.appealDetails.grounds}
+                    {APPEAL_GROUNDS_MAP[warning.appealDetails.grounds]?.label || warning.appealDetails.grounds}
                   </p>
+                  {APPEAL_GROUNDS_MAP[warning.appealDetails.grounds] && (
+                    <ExplainerPanel label="What this ground means" variant="legal">
+                      <p className="mb-2">{APPEAL_GROUNDS_MAP[warning.appealDetails.grounds].description}.</p>
+                      <p>{APPEAL_GROUNDS_MAP[warning.appealDetails.grounds].hrGuidance}</p>
+                    </ExplainerPanel>
+                  )}
                 </div>
                 <div>
                   <span className="text-sm font-medium text-gray-700">Employee's Statement:</span>

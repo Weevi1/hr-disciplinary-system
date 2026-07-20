@@ -16,13 +16,20 @@ import {
   Settings,
   Key,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  HelpCircle
 } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
 import { BrandedLogo } from '../components/common/BrandedLogo';
 import { ThemeBrandingProvider } from '../contexts/ThemeBrandingContext';  // 🚀 WEEK 4 OPTIMIZATION: Combined provider
 import { UnifiedModal } from '../components/common/UnifiedModal';
 import { FirstTimeWelcomeModal } from '../components/auth/FirstTimeWelcomeModal';
+import { SUPPORT_EMAIL } from '../config/helpTasks';
+
+// Lazy: MainLayout wraps every page; the help modal is only needed on demand
+const HelpSupportModal = React.lazy(() =>
+  import('../components/help/HelpSupportModal').then(m => ({ default: m.HelpSupportModal }))
+);
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '../config/firebase';
 import { DatabaseShardingService } from '../services/DatabaseShardingService';
@@ -92,6 +99,7 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
   // 🚀 REFACTORED: Migrated to useModal hook
   const resetPasswordModal = useModal();
   const welcomeModal = useModal();
+  const helpModal = useModal();
 
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
@@ -398,6 +406,29 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
 
                     <button
                       onClick={() => {
+                        helpModal.open();
+                        setUserMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 sm:gap-3 px-3 py-2.5 sm:px-4 sm:py-2 text-sm transition-colors"
+                      style={{
+                        color: 'var(--color-text-secondary)',
+                        minHeight: '44px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--color-nav-hover)';
+                        e.currentTarget.style.color = 'var(--color-text)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'var(--color-text-secondary)';
+                      }}
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                      <span>Help & Support</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
                         resetPasswordModal.open(); // 🚀 REFACTORED: Using useModal hook
                         setUserMenuOpen(false);
                       }}
@@ -516,7 +547,7 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
               : `Access for ${organization?.name || 'your organization'} is currently suspended. Please contact FIFO Solutions to restore access.`}
           </p>
           <div className="space-y-2 mb-6 text-sm">
-            <a href="mailto:riaan@fifo.systems" className="block font-medium text-blue-600 hover:underline">riaan@fifo.systems</a>
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="block font-medium text-blue-600 hover:underline">{SUPPORT_EMAIL}</a>
             <a href="https://wa.me/27825254011" target="_blank" rel="noopener noreferrer" className="block font-medium text-green-600 hover:underline">WhatsApp: +27 82 525 4011</a>
           </div>
           <button
@@ -646,6 +677,20 @@ const MainLayoutContent = ({ children, onNavigate, currentView = 'dashboard' }: 
           onConfirm={handleWelcomeConfirm}
           hodPermissions={user.hodPermissions}
         />
+      )}
+
+      {/* Help & Support Modal — lazy-loaded, opened from the profile dropdown */}
+      {helpModal.isOpen && (
+        <React.Suspense fallback={null}>
+          <HelpSupportModal
+            isOpen={helpModal.isOpen}
+            onClose={helpModal.close}
+            onShowWelcome={() => {
+              helpModal.close();
+              welcomeModal.open();
+            }}
+          />
+        </React.Suspense>
       )}
 
       {/* Main Content Area - Constrained to match header */}

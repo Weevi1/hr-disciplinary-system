@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { getLevelLabel } from '../services/UniversalCategories';
+import { APPEAL_GROUNDS } from '../constants/appealGrounds';
 import { PublicEvidenceUploader } from '../components/public/PublicEvidenceUploader';
 import {
   FileText,
@@ -55,14 +56,6 @@ type ActiveTab = 'respond' | 'appeal';
 
 const FUNCTIONS_BASE_URL = 'https://us-central1-hr-disciplinary-system.cloudfunctions.net';
 
-const APPEAL_GROUNDS = [
-  { value: 'procedural_unfair', label: 'Procedural Unfairness', description: 'The disciplinary process was not followed correctly' },
-  { value: 'substantive_unfair', label: 'Substantive Unfairness', description: 'The warning was not justified by the facts' },
-  { value: 'bias_prejudice', label: 'Bias or Prejudice', description: 'The decision was influenced by bias or unfair treatment' },
-  { value: 'insufficient_evidence', label: 'Insufficient Evidence', description: 'Not enough evidence to support the warning' },
-  { value: 'inconsistent_treatment', label: 'Inconsistent Treatment', description: 'Others were treated differently for similar conduct' },
-  { value: 'other', label: 'Other Grounds', description: 'Different reason (explain in details below)' },
-];
 
 function formatDate(date: any): string {
   if (!date) return 'N/A';

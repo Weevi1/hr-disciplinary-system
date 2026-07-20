@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../../auth/AuthContext';
+import { EmptyState } from '../common/EmptyState';
 import { FirebaseService } from '../../services/FirebaseService';
 import { TimeService } from '../../services/TimeService';
 
@@ -461,18 +462,14 @@ export const AbsenceReportReview: React.FC = () => {
           </div>
           
           {filteredReports.length === 0 ? (
-            <div className="p-12 text-center">
-              <UserX className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                {absenceReports.length === 0 ? 'No Absence Reports' : 'No Matching Reports'}
-              </h3>
-              <p className="text-gray-600">
-                {absenceReports.length === 0 
-                  ? 'No managers have submitted absence reports yet.'
-                  : 'Try adjusting your search or filter criteria.'
-                }
-              </p>
-            </div>
+            <EmptyState
+              icon={UserX}
+              title={absenceReports.length === 0 ? 'No absence reports yet' : 'No matching reports'}
+              description={absenceReports.length === 0
+                ? 'Managers submit these from their dashboard using the Report Absence action — they’ll land here for your review.'
+                : 'Try adjusting your search or filter criteria.'
+              }
+            />
           ) : (
             <div className="divide-y divide-gray-200">
               {filteredReports.map((report) => {

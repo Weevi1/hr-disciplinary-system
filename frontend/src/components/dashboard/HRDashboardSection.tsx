@@ -18,9 +18,11 @@ import {
   Clock,
   FileText,
   TrendingUp,
-  ArrowRight,
-  X
+  X,
+  Tags,
+  GraduationCap
 } from 'lucide-react';
+import { SetupChecklist, type SetupStep, type SetupStepKey } from './SetupChecklist';
 import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { isOrgFeatureEnabled } from '../../constants/orgFeatures';
@@ -56,6 +58,9 @@ const FinalWarningsWatchList = React.lazy(() =>
 );
 const ReviewFollowUpDashboard = React.lazy(() =>
   import('../reviews/ReviewFollowUpDashboard').then(m => ({ default: m.ReviewFollowUpDashboard }))
+);
+const OrganizationCategoriesViewer = React.lazy(() =>
+  import('../organization/OrganizationCategoriesViewer').then(m => ({ default: m.OrganizationCategoriesViewer }))
 );
 
 // Import themed components
@@ -125,10 +130,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
   const [setupDataLoaded, setSetupDataLoaded] = useState(false); // Track if setup data has been loaded
 
   // Track which setup tasks have been skipped
-  const [skippedSetupTasks, setSkippedSetupTasks] = useState<{
-    departments?: boolean;
-    employees?: boolean;
-  }>({});
+  const [skippedSetupTasks, setSkippedSetupTasks] = useState<Partial<Record<SetupStepKey, boolean>>>({});
 
   // Fetch departments and skipped setup tasks
   useEffect(() => {
@@ -165,7 +167,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
   }, [organization?.id]); // Fetch once when organization loads
 
   // Handler to skip a setup task
-  const handleSkipSetupTask = useCallback(async (taskType: 'departments' | 'employees') => {
+  const handleSkipSetupTask = useCallback(async (taskType: SetupStepKey) => {
     if (!organization?.id) return;
 
     try {
@@ -358,12 +360,70 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
 
     const needsEmployees = regularEmployees.length === 0 && !skippedSetupTasks.employees;
 
+    // Categories: no data signal for "reviewed", so visible until clicked or skipped
+    const needsCategoryReview = !skippedSetupTasks.categories;
+
+    // Practice warning: auto-hides once the org has any real warning on record
+    const needsPracticeWarning = (warnings?.length ?? 0) === 0 && !skippedSetupTasks.practiceWarning;
+
     return {
       needsDepartments,
       needsEmployees,
-      hasSetupTasks: needsDepartments || needsEmployees
+      needsCategoryReview,
+      needsPracticeWarning,
+      hasSetupTasks: needsDepartments || needsEmployees || needsCategoryReview || needsPracticeWarning
     };
-  }, [departmentCount, employees, skippedSetupTasks]);
+  }, [departmentCount, employees, warnings, skippedSetupTasks]);
+
+  // 🎯 SETUP CHECKLIST STEPS — visible steps in order; SetupChecklist numbers them
+  const setupSteps = useMemo<SetupStep[]>(() => {
+    const steps: SetupStep[] = [];
+    if (setupStatus.needsDepartments) {
+      steps.push({
+        key: 'departments',
+        title: 'Set Up Departments',
+        description: 'Create departments to organize your employees (e.g., Sales, Operations, Admin)',
+        icon: Building2,
+        tileClass: 'bg-blue-100', iconClass: 'text-blue-600', badgeClass: 'bg-blue-100 text-blue-800',
+        onClick: () => setActiveView('departments')
+      });
+    }
+    if (setupStatus.needsEmployees) {
+      steps.push({
+        key: 'employees',
+        title: 'Add Your Employees',
+        description: 'Import employee data via CSV or add them manually to start managing your team',
+        icon: Users,
+        tileClass: 'bg-green-100', iconClass: 'text-green-600', badgeClass: 'bg-green-100 text-green-800',
+        onClick: () => setActiveView('employees')
+      });
+    }
+    if (setupStatus.needsCategoryReview) {
+      steps.push({
+        key: 'categories',
+        title: 'Review Your Warning Categories',
+        description: 'Categories define the escalation path every warning follows — check they match your disciplinary code',
+        icon: Tags,
+        tileClass: 'bg-orange-100', iconClass: 'text-orange-600', badgeClass: 'bg-orange-100 text-orange-800',
+        onClick: () => {
+          setActiveView('categories');
+          // Click-through counts as done — there's no data signal for "reviewed"
+          handleSkipSetupTask('categories');
+        }
+      });
+    }
+    if (setupStatus.needsPracticeWarning) {
+      steps.push({
+        key: 'practiceWarning',
+        title: 'Practice a Test Warning',
+        description: 'Run through the warning wizard with a practice employee — nothing is saved or sent',
+        icon: GraduationCap,
+        tileClass: 'bg-purple-100', iconClass: 'text-purple-600', badgeClass: 'bg-purple-100 text-purple-800',
+        onClick: () => navigate('/warnings/create?practice=1')
+      });
+    }
+    return steps;
+  }, [setupStatus, handleSkipSetupTask, navigate]);
 
   // Tabs configuration
   const dashboardTabs: TabConfig[] = useMemo(() => [
@@ -376,82 +436,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
         <div className="space-y-4">
           {/* Setup Tasks - Only show for new organizations AND after data is loaded */}
           {setupDataLoaded && setupStatus.hasSetupTasks && (
-            <div className="bg-white rounded-lg border border-blue-200 shadow-sm">
-              <div className="p-4 border-b border-blue-100 bg-blue-50">
-                <h3 className="text-lg font-semibold text-blue-900 flex items-center gap-2">
-                  <Building2 className="w-5 h-5" />
-                  Getting Started - Setup Your Organization
-                </h3>
-                <p className="text-sm text-blue-700 mt-1">Complete these steps to get your HR system ready</p>
-              </div>
-              <div className="divide-y divide-gray-100">
-                {/* Setup Departments First */}
-                {setupStatus.needsDepartments && (
-                  <div className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => setActiveView('departments')}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Building2 className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-semibold text-gray-900">Set Up Departments</div>
-                          <div className="text-sm text-gray-600">Create departments to organize your employees (e.g., Sales, Operations, Admin)</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSkipSetupTask('departments');
-                          }}
-                          className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                          title="Skip this step"
-                        >
-                          Skip
-                        </button>
-                        <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
-                          Step 1
-                        </span>
-                        <ArrowRight className="w-4 h-4 text-gray-400" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Add Employees Second */}
-                {setupStatus.needsEmployees && (
-                  <div className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => setActiveView('employees')}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 flex-1">
-                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <Users className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-semibold text-gray-900">Add Your Employees</div>
-                          <div className="text-sm text-gray-600">Import employee data via CSV or add them manually to start managing your team</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSkipSetupTask('employees');
-                          }}
-                          className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
-                          title="Skip this step"
-                        >
-                          Skip
-                        </button>
-                        <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
-                          {setupStatus.needsDepartments ? 'Step 2' : 'Step 1'}
-                        </span>
-                        <ArrowRight className="w-4 h-4 text-gray-400" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <SetupChecklist steps={setupSteps} onSkip={handleSkipSetupTask} />
           )}
 
           {/* Priority Tasks List */}
@@ -762,9 +747,24 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
           <ManagerManagement />
         </React.Suspense>
       )
+    },
+    {
+      id: 'categories',
+      label: 'Categories',
+      icon: Tags,
+      content: (
+        <React.Suspense fallback={<LoadingSkeleton />}>
+          <OrganizationCategoriesViewer
+            onClose={() => setActiveView('urgent')}
+            inline={true}
+          />
+        </React.Suspense>
+      )
     }
   ].filter(tab => tab.id !== 'review-followups' || followupsEnabled), [
     setupStatus,
+    setupSteps,
+    setupDataLoaded,
     hrReportsCount,
     warningStats,
     employeeStats,

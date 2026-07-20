@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../../auth/AuthContext';
+import { EmptyState } from '../common/EmptyState';
 import { FirebaseService } from '../../services/FirebaseService';
 import { TimeService } from '../../services/TimeService';
 
@@ -385,18 +386,14 @@ export const HRMeetingReview: React.FC = () => {
           </div>
           
           {filteredRequests.length === 0 ? (
-            <div className="p-12 text-center">
-              <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                {meetingRequests.length === 0 ? 'No Meeting Requests' : 'No Matching Requests'}
-              </h3>
-              <p className="text-gray-600">
-                {meetingRequests.length === 0 
-                  ? 'No managers have submitted meeting requests yet.'
-                  : 'Try adjusting your search or filter criteria.'
-                }
-              </p>
-            </div>
+            <EmptyState
+              icon={Calendar}
+              title={meetingRequests.length === 0 ? 'No meeting requests yet' : 'No matching requests'}
+              description={meetingRequests.length === 0
+                ? 'Managers book HR meetings from their dashboard — requests appear here for you to schedule and review.'
+                : 'Try adjusting your search or filter criteria.'
+              }
+            />
           ) : (
             <div className="divide-y divide-gray-200">
               {filteredRequests.map((request) => {

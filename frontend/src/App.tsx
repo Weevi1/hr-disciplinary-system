@@ -1,7 +1,7 @@
 import Logger from './utils/logger';
 // frontend/src/App.tsx - PERFORMANCE OPTIMIZED - Code Splitting Implementation
 import React, { useState, useEffect, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { MainLayout } from './layouts/MainLayout';
 import { DashboardRouter } from './components/dashboard/DashboardRouter';
@@ -131,6 +131,9 @@ const ErrorScreen = ({ error }: { error: string }) => (
 const UnifiedWarningWizardWrapper: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // Setup-checklist entry: /warnings/create?practice=1 starts the wizard in practice mode
+  const isPracticeEntry = searchParams.get('practice') === '1';
 
   // 🔧 FIX: Use safe hook that returns null for resellers and super-users
   const orgContext = useOrganizationSafe();
@@ -241,6 +244,24 @@ const UnifiedWarningWizardWrapper: React.FC = () => {
         organizationName={organization?.name || 'Your Organization'}
         onComplete={() => navigate('/dashboard')}
         onCancel={() => navigate('/dashboard')}
+        startInPracticeMode={isPracticeEntry}
+        onPracticeComplete={
+          // Only the checklist entry marks the setup step done — organic practice
+          // runs (HODs from the Overview card) must not attempt an org-doc write.
+          isPracticeEntry && organization?.id
+            ? async () => {
+                try {
+                  const { doc, updateDoc } = await import('firebase/firestore');
+                  const { db } = await import('./config/firebase');
+                  await updateDoc(doc(db, 'organizations', organization.id), {
+                    'setupSkipped.practiceWarning': true
+                  });
+                } catch (err) {
+                  Logger.error('Failed to record practice-warning completion:', err);
+                }
+              }
+            : undefined
+        }
       />
     </Suspense>
   );

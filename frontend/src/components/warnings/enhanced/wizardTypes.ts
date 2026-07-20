@@ -62,6 +62,10 @@ export interface UnifiedWarningWizardProps {
   isFullScreen?: boolean;
   /** Optional: Preloaded warnings from dashboard, used to skip Cloud Function call for employee history. */
   preloadedWarnings?: any[];
+  /** Optional: Skip the overview and start directly in practice/test mode (setup-checklist entry). */
+  startInPracticeMode?: boolean;
+  /** Optional: Called when a practice run finishes (before onComplete). */
+  onPracticeComplete?: () => void;
 }
 
 // ============================================
