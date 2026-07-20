@@ -29,6 +29,7 @@ import { ResellerManagement } from './ResellerManagement';
 import { AudioCleanupDashboard } from './AudioCleanupDashboard';
 import { FinancialDashboard } from './FinancialDashboard';
 import { OrganizationCategoriesViewer } from '../organization/OrganizationCategoriesViewer';
+import { OrganizationFeaturesModal } from './OrganizationFeaturesModal';
 import { EnhancedOrganizationWizard } from './EnhancedOrganizationWizard';
 import { PDFTemplateManager } from './PDFTemplateManager';
 import Logger from '../../utils/logger';
@@ -115,6 +116,10 @@ export const SuperAdminDashboard = () => {
     isOpen: false,
     organizationId: '',
     organizationName: ''
+  });
+  const [featuresModal, setFeaturesModal] = useState<{ isOpen: boolean; org: Organization | null }>({
+    isOpen: false,
+    org: null
   });
 
   // Load data
@@ -237,6 +242,10 @@ export const SuperAdminDashboard = () => {
       organizationId: org.id,
       organizationName: org.name
     });
+  };
+
+  const handleFeaturesManagement = (org: Organization) => {
+    setFeaturesModal({ isOpen: true, org });
   };
 
   const handleWizardSuccess = async (result: any) => {
@@ -709,6 +718,12 @@ export const SuperAdminDashboard = () => {
                             >
                               Categories
                             </button>
+                            <button
+                              onClick={() => handleFeaturesManagement(org)}
+                              className="text-xs px-3 py-1 rounded font-semibold bg-indigo-600 text-white hover:bg-indigo-700"
+                            >
+                              Features
+                            </button>
                             {!org.isDemo && (
                               org.subscriptionStatus === 'suspended' ? (
                                 <button
@@ -804,6 +819,16 @@ export const SuperAdminDashboard = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Organization Features Modal */}
+        {featuresModal.isOpen && featuresModal.org && (
+          <OrganizationFeaturesModal
+            isOpen={featuresModal.isOpen}
+            organization={featuresModal.org}
+            onSuccess={loadDashboardData}
+            onClose={() => setFeaturesModal({ isOpen: false, org: null })}
+          />
         )}
       </>
     );

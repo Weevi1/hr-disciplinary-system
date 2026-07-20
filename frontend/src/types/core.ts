@@ -286,6 +286,14 @@ export interface DashboardThemeSettings {
   };
 }
 
+// 🎛️ Per-organization feature toggle keys (see constants/orgFeatures.ts for registry)
+export type OrgFeatureKey =
+  | 'reportAbsence'
+  | 'hrMeetings'
+  | 'recognition'
+  | 'historicalWarnings'
+  | 'reviewFollowups';
+
 export interface Organization {
   id: string;
   name: string;
@@ -337,6 +345,11 @@ export interface Organization {
     enablePrintDelivery: boolean;
     enableAudioRecording: boolean;
   };
+
+  // 🎛️ Per-organization feature toggles (super-user/reseller managed).
+  // Absent field or absent key = feature ENABLED; only explicit false disables.
+  // UI metadata (labels, icons) lives in constants/orgFeatures.ts.
+  features?: Partial<Record<OrgFeatureKey, boolean>>;
 
   // 📄 PDF Template Settings - Per-organization PDF customization
   pdfSettings?: PDFTemplateSettings;

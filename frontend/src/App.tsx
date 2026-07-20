@@ -8,6 +8,7 @@ import { DashboardRouter } from './components/dashboard/DashboardRouter';
 import { LoginForm } from './auth/LoginForm';
 import { ErrorBoundary, WarningErrorBoundary, EmployeeErrorBoundary, DashboardErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './components/common/ToastContainer';
+import { FeatureProtectedRoute } from './components/common/FeatureProtectedRoute';
 // 🚀 WEEK 4: Using combined ThemeBrandingProvider (replaces old ThemeProvider)
 import { ThemeBrandingProvider } from './contexts/ThemeBrandingContext';
 
@@ -344,26 +345,34 @@ const AppRoutes: React.FC = () => {
         
         {/* New Feature Routes */}
         <Route path="/book-hr-meeting" element={
-          <Suspense fallback={<ComponentLoader text="Loading HR Meeting Form..." />}>
-            <BookHRMeeting />
-          </Suspense>
+          <FeatureProtectedRoute feature="hrMeetings">
+            <Suspense fallback={<ComponentLoader text="Loading HR Meeting Form..." />}>
+              <BookHRMeeting />
+            </Suspense>
+          </FeatureProtectedRoute>
         } />
         <Route path="/report-absence" element={
-          <Suspense fallback={<ComponentLoader text="Loading Absence Report..." />}>
-            <ReportAbsence />
-          </Suspense>
+          <FeatureProtectedRoute feature="reportAbsence">
+            <Suspense fallback={<ComponentLoader text="Loading Absence Report..." />}>
+              <ReportAbsence />
+            </Suspense>
+          </FeatureProtectedRoute>
         } />
 
         {/* HR Review Routes */}
         <Route path="/hr/absence-reports" element={
-          <Suspense fallback={<ComponentLoader text="Loading Absence Reviews..." />}>
-            <AbsenceReportReview />
-          </Suspense>
+          <FeatureProtectedRoute feature="reportAbsence">
+            <Suspense fallback={<ComponentLoader text="Loading Absence Reviews..." />}>
+              <AbsenceReportReview />
+            </Suspense>
+          </FeatureProtectedRoute>
         } />
         <Route path="/hr/meeting-requests" element={
-          <Suspense fallback={<ComponentLoader text="Loading Meeting Reviews..." />}>
-            <HRMeetingReview />
-          </Suspense>
+          <FeatureProtectedRoute feature="hrMeetings">
+            <Suspense fallback={<ComponentLoader text="Loading Meeting Reviews..." />}>
+              <HRMeetingReview />
+            </Suspense>
+          </FeatureProtectedRoute>
         } />
 
         {/* Reseller Routes */}

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
+import { isOrgFeatureEnabled } from '../../constants/orgFeatures';
 import { useDashboardData } from '../../hooks/dashboard/useDashboardData';
 import { useHRReportsData } from '../../hooks/dashboard/useHRReportsData';
 import { useHistoricalWarningCountdown } from '../../hooks/useHistoricalWarningCountdown';
@@ -261,6 +262,16 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
   // HR metric card color overrides from org dashboard theme
   const hrColors = organization?.dashboardTheme?.hrDashboard?.metricColors;
 
+  // 🎛️ Org-level feature toggles — disabled features vanish from metrics, tabs, and counts
+  const absenceEnabled = isOrgFeatureEnabled(organization, 'reportAbsence');
+  const meetingsEnabled = isOrgFeatureEnabled(organization, 'hrMeetings');
+  const followupsEnabled = isOrgFeatureEnabled(organization, 'reviewFollowups');
+  const historicalEnabled = isOrgFeatureEnabled(organization, 'historicalWarnings');
+
+  // Gated counts — zero when disabled so badges, urgent rows, and empty states follow automatically
+  const absenceUnread = absenceEnabled ? hrReportsCount.absenceReports.unread : 0;
+  const meetingsUnread = meetingsEnabled ? hrReportsCount.hrMeetings.unread : 0;
+
   const dashboardMetrics: MetricCard[] = useMemo(() => [
     {
       id: 'absence-reports',
@@ -315,7 +326,11 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
       customColor: hrColors?.totalEmployees,
       onClick: () => setActiveView('employees')
     }
-  ], [
+  ].filter(metric =>
+    (metric.id !== 'absence-reports' || absenceEnabled) &&
+    (metric.id !== 'meeting-requests' || meetingsEnabled) &&
+    (metric.id !== 'review-followups' || followupsEnabled)
+  ), [
     hrReportsCount,
     hrCountsLoading,
     warningStats,
@@ -323,7 +338,10 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
     reviewsLoading,
     employeeStats,
     navigate,
-    hrColors
+    hrColors,
+    absenceEnabled,
+    meetingsEnabled,
+    followupsEnabled
   ]);
 
   // 🎯 SETUP STATUS - Check if organization needs initial setup
@@ -353,7 +371,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
       id: 'urgent',
       label: 'Urgent Tasks',
       icon: AlertTriangle,
-      badgeCount: hrReportsCount.absenceReports.unread + hrReportsCount.hrMeetings.unread + warningStats.undelivered,
+      badgeCount: absenceUnread + meetingsUnread + warningStats.undelivered,
       content: (
         <div className="space-y-4">
           {/* Setup Tasks - Only show for new organizations AND after data is loaded */}
@@ -447,19 +465,19 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
             </div>
             <div className="divide-y divide-gray-100">
               {/* Unread Absence Reports */}
-              {hrReportsCount.absenceReports.unread > 0 && (
+              {absenceUnread > 0 && (
                 <div className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => navigate('/hr/absence-reports')}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                       <div>
-                        <div className="font-semibold text-gray-900">{hrReportsCount.absenceReports.unread} Unread Absence Reports</div>
+                        <div className="font-semibold text-gray-900">{absenceUnread} Unread Absence Reports</div>
                         <div className="text-sm text-gray-600">Employees reporting absences requiring approval</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-medium">
-                        {hrReportsCount.absenceReports.unread} pending
+                        {absenceUnread} pending
                       </span>
                       <UserX className="w-4 h-4 text-gray-400" />
                     </div>
@@ -468,19 +486,19 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
               )}
 
               {/* Unread Meeting Requests */}
-              {hrReportsCount.hrMeetings.unread > 0 && (
+              {meetingsUnread > 0 && (
                 <div className="p-4 hover:bg-gray-50 cursor-pointer" onClick={() => navigate('/hr/meeting-requests')}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
                       <div>
-                        <div className="font-semibold text-gray-900">{hrReportsCount.hrMeetings.unread} New Meeting Requests</div>
+                        <div className="font-semibold text-gray-900">{meetingsUnread} New Meeting Requests</div>
                         <div className="text-sm text-gray-600">Employees requesting HR consultations</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full font-medium">
-                        {hrReportsCount.hrMeetings.unread} requests
+                        {meetingsUnread} requests
                       </span>
                       <MessageCircle className="w-4 h-4 text-gray-400" />
                     </div>
@@ -531,7 +549,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
               )}
 
               {/* Empty State */}
-              {hrReportsCount.absenceReports.unread === 0 && hrReportsCount.hrMeetings.unread === 0 && warningStats.undelivered === 0 && warningStats.highSeverity === 0 && (
+              {absenceUnread === 0 && meetingsUnread === 0 && warningStats.undelivered === 0 && warningStats.highSeverity === 0 && (
                 <div className="p-8 text-center text-gray-500">
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <Shield className="w-8 h-8 text-green-600" />
@@ -551,14 +569,18 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
                 Today's Activity
               </h4>
               <div className="space-y-2">
+                {absenceEnabled && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">New Reports</span>
-                  <span className="font-medium text-gray-900">{hrReportsCount.absenceReports.unread}</span>
+                  <span className="font-medium text-gray-900">{absenceUnread}</span>
                 </div>
+                )}
+                {meetingsEnabled && (
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Meetings</span>
-                  <span className="font-medium text-gray-900">{hrReportsCount.hrMeetings.unread}</span>
+                  <span className="font-medium text-gray-900">{meetingsUnread}</span>
                 </div>
+                )}
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Warnings</span>
                   <span className="font-medium text-gray-900">{warningStats.undelivered}</span>
@@ -618,7 +640,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
       content: (
         <div className="space-y-4">
           {/* Manual Warning Entry Button with Countdown */}
-          {!countdown.isExpired && (
+          {historicalEnabled && !countdown.isExpired && (
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Warnings Management</h3>
@@ -741,7 +763,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
         </React.Suspense>
       )
     }
-  ], [
+  ].filter(tab => tab.id !== 'review-followups' || followupsEnabled), [
     setupStatus,
     hrReportsCount,
     warningStats,
@@ -753,7 +775,13 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
     refreshData,
     organization,
     navigate,
-    handleSkipSetupTask
+    handleSkipSetupTask,
+    absenceEnabled,
+    meetingsEnabled,
+    followupsEnabled,
+    historicalEnabled,
+    absenceUnread,
+    meetingsUnread
   ]);
 
   // ============================================
@@ -778,7 +806,7 @@ export const HRDashboardSection = memo<HRDashboardSectionProps>(({
       />
 
       {/* Manual Warning Entry Modal */}
-      {showManualWarningEntry && user && organization && (
+      {showManualWarningEntry && historicalEnabled && user && organization && (
         <React.Suspense fallback={<LoadingSkeleton />}>
           <ManualWarningEntry
             isOpen={showManualWarningEntry}

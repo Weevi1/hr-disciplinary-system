@@ -51,7 +51,9 @@ import { ShardedDataService } from '../../services/ShardedDataService';
 import { DatabaseShardingService } from '../../services/DatabaseShardingService';
 import { PDFTemplateService } from '../../services/PDFTemplateService';
 import Logger from '../../utils/logger';
-import type { Organization, PDFTemplateSettings, DashboardThemeSettings } from '../../types/core';
+import type { Organization, PDFTemplateSettings, DashboardThemeSettings, OrgFeatureKey } from '../../types/core';
+import { OrgFeatureToggleGrid } from '../common/OrgFeatureToggleGrid';
+import { DEFAULT_ORG_FEATURES } from '../../constants/orgFeatures';
 
 // Extracted tab components (Phase 2 Tier 3D step 5)
 import { ClientOrgAnalyticsTab } from './tabs/ClientOrgAnalyticsTab';
@@ -63,7 +65,7 @@ interface ClientOrganizationManagerProps {
   onUpdate: (clientId: string, updates: Partial<Organization>) => Promise<void>;
 }
 
-type TabType = 'general' | 'branding' | 'categories' | 'analytics';
+type TabType = 'general' | 'branding' | 'features' | 'categories' | 'analytics';
 
 export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps> = ({
   client,
@@ -112,6 +114,13 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
   const [pdfSettingsLoaded, setPdfSettingsLoaded] = useState(false);
   const [showPdfPreview, setShowPdfPreview] = useState(false);
 
+  // Per-org feature toggles state (absent keys = enabled)
+  const [featuresData, setFeaturesData] = useState<Record<OrgFeatureKey, boolean>>({
+    ...DEFAULT_ORG_FEATURES,
+    ...client.features
+  });
+  const [savingFeatures, setSavingFeatures] = useState(false);
+
   // Dashboard theme state
   const [dashTheme, setDashTheme] = useState<DashboardThemeSettings>(client.dashboardTheme || {});
   const [dashPreviewView, setDashPreviewView] = useState<'manager' | 'hr' | 'executive'>('manager');
@@ -145,6 +154,8 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
     setPdfSettingsLoaded(!!client.pdfSettings);
     // Reset dashboard theme
     setDashTheme(client.dashboardTheme || {});
+    // Reset feature toggles
+    setFeaturesData({ ...DEFAULT_ORG_FEATURES, ...client.features });
   }, [client]);
 
   // Load organization statistics
@@ -403,6 +414,19 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
     }
   };
 
+  const handleFeaturesUpdate = async () => {
+    try {
+      setSavingFeatures(true);
+      await onUpdate(client.id, { features: featuresData });
+      Logger.success('Client feature toggles updated successfully');
+    } catch (error) {
+      Logger.error('Failed to update client feature toggles:', error);
+      alert('Failed to save feature changes. Please try again.');
+    } finally {
+      setSavingFeatures(false);
+    }
+  };
+
   const tabs = [
     {
       id: 'general' as TabType,
@@ -415,6 +439,12 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
       label: 'Branding & CI',
       icon: Palette,
       description: 'Logo, brand colors, and PDF document settings'
+    },
+    {
+      id: 'features' as TabType,
+      label: 'Features',
+      icon: Settings,
+      description: 'Enable or disable dashboard features for this organization'
     },
     {
       id: 'categories' as TabType,
@@ -1533,6 +1563,35 @@ export const ClientOrganizationManager: React.FC<ClientOrganizationManagerProps>
           })()}
 
           {/* Warning Categories Tab */}
+          {activeTab === 'features' && (
+            <div className="space-y-6 max-w-3xl">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-900 leading-relaxed">
+                  Disabled features are removed from this organization's manager and HR
+                  dashboards. Core warning management always stays available. Signed-in
+                  users see changes on their next reload or login.
+                </p>
+              </div>
+
+              <OrgFeatureToggleGrid
+                value={featuresData}
+                onChange={setFeaturesData}
+                disabled={savingFeatures}
+              />
+
+              <div className="flex justify-end">
+                <button
+                  onClick={handleFeaturesUpdate}
+                  disabled={savingFeatures}
+                  className="flex items-center gap-2 px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors font-semibold"
+                >
+                  <Save className="w-4 h-4" />
+                  {savingFeatures ? 'Saving...' : 'Save Features'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'categories' && (
             <OrganizationCategoriesViewer
               onClose={() => {}}

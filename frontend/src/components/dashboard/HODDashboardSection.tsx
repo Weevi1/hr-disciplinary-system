@@ -39,6 +39,7 @@ import { useAuth } from '../../auth/AuthContext';
 import { useOrganization } from '../../contexts/OrganizationContext';
 import { useMultiRolePermissions } from '../../hooks/useMultiRolePermissions';
 import { useDashboardData } from '../../hooks/dashboard/useDashboardData';
+import { isOrgFeatureEnabled } from '../../constants/orgFeatures';
 import { QuotesSection } from './QuotesSection';
 import { API } from '../../api';
 import Logger from '../../utils/logger';
@@ -88,6 +89,13 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
     canIssueWarnings: true,
     canBookHRMeetings: true,
     canReportAbsences: true
+  };
+
+  // 🎛️ Org-level feature toggles — ANDed with per-user hodPermissions (org OFF wins)
+  const orgFeaturesEnabled = {
+    hrMeetings: isOrgFeatureEnabled(organization, 'hrMeetings'),
+    reportAbsence: isOrgFeatureEnabled(organization, 'reportAbsence'),
+    recognition: isOrgFeatureEnabled(organization, 'recognition')
   };
 
   const followUpCounts = useMemo(() => ({
@@ -159,7 +167,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
             </button>
           )}
 
-          {hodPermissions.canBookHRMeetings && (
+          {hodPermissions.canBookHRMeetings && orgFeaturesEnabled.hrMeetings && (
             <button
               type="button"
               onClick={() => setShowBookHRMeeting(true)}
@@ -184,7 +192,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
             </button>
           )}
 
-          {hodPermissions.canReportAbsences && (
+          {hodPermissions.canReportAbsences && orgFeaturesEnabled.reportAbsence && (
             <button
               type="button"
               onClick={() => setShowReportAbsence(true)}
@@ -209,6 +217,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
             </button>
           )}
 
+          {orgFeaturesEnabled.recognition && (
           <button
             type="button"
             onClick={() => setShowRecognitionEntry(true)}
@@ -231,6 +240,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
               <span className="font-semibold text-sm leading-tight">Recognition</span>
             </div>
           </button>
+          )}
         </div>
 
         {/* Navigation Cards */}
@@ -382,7 +392,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
         </React.Suspense>
       )}
 
-      {showBookHRMeeting && (
+      {showBookHRMeeting && orgFeaturesEnabled.hrMeetings && (
         <React.Suspense fallback={<LoadingSkeleton />}>
           <UnifiedBookHRMeeting
             isOpen={showBookHRMeeting}
@@ -391,7 +401,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
         </React.Suspense>
       )}
 
-      {showReportAbsence && (
+      {showReportAbsence && orgFeaturesEnabled.reportAbsence && (
         <React.Suspense fallback={<LoadingSkeleton />}>
           <UnifiedReportAbsence
             isOpen={showReportAbsence}
@@ -400,7 +410,7 @@ export const HODDashboardSection = memo<HODDashboardSectionProps>(({ className =
         </React.Suspense>
       )}
 
-      {showRecognitionEntry && (
+      {showRecognitionEntry && orgFeaturesEnabled.recognition && (
         <React.Suspense fallback={<LoadingSkeleton />}>
           <RecognitionEntry
             isOpen={showRecognitionEntry}
