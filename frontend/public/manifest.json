@@ -2,7 +2,7 @@
   "name": "File by Fifo",
   "short_name": "File",
   "description": "Fully Integrated Fully Online disciplinary management system",
-  "start_url": "/",
+  "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
